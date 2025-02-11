@@ -1,8 +1,9 @@
 """Training KGE models based on the LCWA."""
 
 import logging
+from collections.abc import Callable
 from math import ceil
-from typing import Callable, ClassVar, Optional, Union
+from typing import ClassVar
 
 from torch.nn import functional
 from torch.utils.data import DataLoader, Dataset, TensorDataset
@@ -45,7 +46,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     def __init__(
         self,
         *,
-        target: Union[None, str, int] = None,
+        target: None | str | int = None,
         **kwargs,
     ):
         """
@@ -84,7 +85,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
     # docstr-coverage: inherited
     def _create_training_data_loader(
-        self, triples_factory: CoreTriplesFactory, sampler: Optional[str], **kwargs
+        self, triples_factory: CoreTriplesFactory, sampler: str | None, **kwargs
     ) -> DataLoader[LCWABatchType]:  # noqa: D102
         if sampler:
             raise NotImplementedError(
@@ -105,13 +106,13 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         model: Model,
         score_method: Callable,
         loss: Loss,
-        num_targets: Optional[int],
-        mode: Optional[InductiveMode],
+        num_targets: int | None,
+        mode: InductiveMode | None,
         batch: LCWABatchType,
-        start: Optional[int],
-        stop: Optional[int],
+        start: int | None,
+        stop: int | None,
         label_smoothing: float = 0.0,
-        slice_size: Optional[int] = None,
+        slice_size: int | None = None,
     ) -> FloatTensor:
         # Split batch components
         batch_pairs, batch_labels_full = batch
@@ -139,7 +140,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
-        slice_size: Optional[int] = None,
+        slice_size: int | None = None,
     ) -> FloatTensor:  # noqa: D102
         return self._process_batch_static(
             model=self.model,
@@ -220,7 +221,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
                 " which is not implemented for this model yet."
             )
         else:
-            report = "This model doesn't support sub-batching and slicing is not" " implemented for this model yet."
+            report = "This model doesn't support sub-batching and slicing is not implemented for this model yet."
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
 
@@ -250,7 +251,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedT
 
     # docstr-coverage: inherited
     def _create_training_data_loader(
-        self, triples_factory: CoreTriplesFactory, sampler: Optional[str], **kwargs
+        self, triples_factory: CoreTriplesFactory, sampler: str | None, **kwargs
     ) -> DataLoader[tuple[MappedTriples]]:  # noqa: D102
         assert sampler is None
         return DataLoader(dataset=TensorDataset(triples_factory.mapped_triples), **kwargs)
@@ -262,7 +263,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedT
         start: int,
         stop: int,
         label_smoothing: float = 0,
-        slice_size: Optional[int] = None,
+        slice_size: int | None = None,
     ) -> FloatTensor:  # noqa: D102
         # unpack
         hrt_batch = batch[0]
@@ -302,7 +303,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedT
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
 
 
-def create_lcwa_instances(tf: CoreTriplesFactory, target: Optional[int] = None) -> Dataset:
+def create_lcwa_instances(tf: CoreTriplesFactory, target: int | None = None) -> Dataset:
     """Create LCWA instances for this factory's triples."""
     return LCWAInstances.from_triples(
         mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),

@@ -2,7 +2,6 @@
 
 from collections import ChainMap
 from collections.abc import Mapping, Sequence
-from typing import Optional
 
 from class_resolver import OneOrManyHintOrType, OneOrManyOptionalKwargs
 from torch import nn
@@ -34,7 +33,7 @@ class InductiveERModel(ERModel):
         entity_representations_kwargs: OneOrManyOptionalKwargs = None,
         # inductive factories
         validation_factory: CoreTriplesFactory,
-        testing_factory: Optional[CoreTriplesFactory] = None,
+        testing_factory: CoreTriplesFactory | None = None,
         **kwargs,
     ) -> None:
         """Initialize the inductive model.
@@ -96,7 +95,7 @@ class InductiveERModel(ERModel):
 
     # docstr-coverage: inherited
     def _get_entity_representations_from_inductive_mode(
-        self, *, mode: Optional[InductiveMode]
+        self, *, mode: InductiveMode | None
     ) -> Sequence[Representation]:  # noqa: D102
         if mode is None:
             raise ValueError(
@@ -108,5 +107,5 @@ class InductiveERModel(ERModel):
         raise ValueError(f"{self.__class__.__name__} does not support mode={mode}")
 
     # docstr-coverage: inherited
-    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> Optional[int]:  # noqa: D102
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int | None:  # noqa: D102
         return self._get_entity_representations_from_inductive_mode(mode=mode)[0].max_id

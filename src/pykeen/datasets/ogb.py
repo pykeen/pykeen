@@ -10,7 +10,7 @@ import logging
 import pathlib
 import typing
 from collections.abc import Sequence
-from typing import ClassVar, Generic, Literal, TypedDict, TypeVar, Union, cast, overload
+from typing import ClassVar, Generic, Literal, TypedDict, TypeVar, cast, overload
 
 import click
 import numpy
@@ -37,7 +37,7 @@ LOGGER = logging.getLogger(__name__)
 # Type annotation for split types
 TrainKey = Literal["train"]
 EvalKey = Literal["valid", "test"]
-SplitKey = Union[TrainKey, EvalKey]
+SplitKey = TrainKey | EvalKey
 
 # type variables for dictionaries of preprocessed data loaded through torch.load
 PreprocessedTrainDictType = TypeVar("PreprocessedTrainDictType")
@@ -179,16 +179,17 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
     # docstr-coverage: inherited
     def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:  # noqa: D102
         df_ent = pandas.read_csv(mapping_root.joinpath("nodeidx2entityid.csv.gz"))
-        entity_to_id = dict(zip(df_ent["entity id"].tolist(), df_ent["node idx"].tolist()))
+        entity_to_id = dict(zip(df_ent["entity id"].tolist(), df_ent["node idx"].tolist(), strict=False))
         df_rel = pandas.read_csv(mapping_root.joinpath("reltype2relid.csv.gz"))
-        relation_to_id = dict(zip(df_rel["rel id"].tolist(), df_rel["reltype"].tolist()))
+        relation_to_id = dict(zip(df_rel["rel id"].tolist(), df_rel["reltype"].tolist(), strict=False))
         return entity_to_id, relation_to_id
 
     # docstr-coverage: inherited
     def _load_data_dict_for_split(self, dataset, which):
         # noqa: D102
         data_dict = torch.load(
-            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt")
+            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
+            weights_only=False,
         )
         if which == "train":
             data_dict = cast(WikiKG2TrainDict, data_dict)
@@ -263,7 +264,7 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
     def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:  # noqa: D102
         df_rel = pandas.read_csv(mapping_root.joinpath("relidx2relname.csv.gz"))
         LOGGER.info(f"Loaded relation mapping for {len(df_rel)} relations.")
-        relation_to_id = dict(zip(df_rel["rel name"].tolist(), df_rel["rel idx"].tolist()))
+        relation_to_id = dict(zip(df_rel["rel name"].tolist(), df_rel["rel idx"].tolist(), strict=False))
 
         # entity mappings are separate for each node type -> combine
         entity_mapping_df = pandas.concat(
@@ -279,7 +280,7 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
         # we need the entity dataframe for fast re-mapping later on
         self.df_ent = entity_mapping_df[["index", "local_entity_id", "entity_type"]]
 
-        entity_to_id = dict(zip(entity_mapping_df["name"].tolist(), entity_mapping_df["index"].tolist()))
+        entity_to_id = dict(zip(entity_mapping_df["name"].tolist(), entity_mapping_df["index"].tolist(), strict=False))
 
         return entity_to_id, relation_to_id
 
@@ -297,7 +298,8 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
     # docstr-coverage: inherited
     def _load_data_dict_for_split(self, dataset, which):  # noqa: D102
         data_dict = torch.load(
-            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt")
+            pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
+            weights_only=False,
         )
         if which == "train":
             data_dict = cast(BioKGTrainDict, data_dict)

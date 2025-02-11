@@ -38,7 +38,7 @@ class TestLeakage(unittest.TestCase):
                         [str(i), test_relation, str(j + 1 + n)],
                         [str(j + 1 + n), test_relation_inverse, str(i)],
                     ]
-                    for i, j in zip(range(n), range(n))
+                    for i, j in zip(range(n), range(n), strict=False)
                 )
             )
         )
@@ -191,7 +191,7 @@ class TestLeakage(unittest.TestCase):
     def test_jaccard_similarity_scipy(self):
         """Test :func:`jaccard_similarity_scipy`."""
         triples_factory = Nations().training
-        rel, inv = triples_factory_to_sparse_matrices(triples_factory)
+        rel = triples_factory_to_sparse_matrices(triples_factory)[0]
         sim = jaccard_similarity_scipy(a=rel, b=rel)
         # check type
         assert isinstance(sim, numpy.ndarray)

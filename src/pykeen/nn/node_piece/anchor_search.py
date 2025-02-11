@@ -3,7 +3,6 @@
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from typing import Optional
 
 import numpy
 import scipy.sparse
@@ -37,7 +36,7 @@ class AnchorSearcher(ExtraReprMixin, ABC):
 
     @abstractmethod
     def __call__(
-        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
     ) -> numpy.ndarray:
         """
         Find the $k$ closest anchor nodes for each entity.
@@ -98,7 +97,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
 
     # docstr-coverage: inherited
     def __call__(
-        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
     ) -> numpy.ndarray:  # noqa: D102
         # convert to adjacency matrix
         adjacency = edge_index_to_sparse_matrix(edge_index=torch.as_tensor(edge_index, dtype=torch.long)).coalesce()
@@ -134,7 +133,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         yield f"max_iter={self.max_iter}"
 
     @staticmethod
-    def create_adjacency(edge_index: numpy.ndarray, num_entities: Optional[int] = None) -> scipy.sparse.spmatrix:
+    def create_adjacency(edge_index: numpy.ndarray, num_entities: int | None = None) -> scipy.sparse.spmatrix:
         """
         Create a sparse adjacency matrix from a given edge index.
 
@@ -255,7 +254,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 
     # docstr-coverage: inherited
     def __call__(
-        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
     ) -> numpy.ndarray:  # noqa: D102
         adjacency = self.create_adjacency(edge_index=edge_index, num_entities=num_entities)
         pool = self.bfs(anchors=anchors, adjacency=adjacency, max_iter=self.max_iter, k=k)
@@ -284,7 +283,7 @@ class SparseBFSSearcher(AnchorSearcher):
     @staticmethod
     def create_adjacency(
         edge_index: numpy.ndarray,
-        num_entities: Optional[int] = None,
+        num_entities: int | None = None,
     ) -> torch.tensor:
         """
         Create a sparse adjacency matrix (in the form of the edge list) from a given edge index.
@@ -424,7 +423,7 @@ class SparseBFSSearcher(AnchorSearcher):
 
     # docstr-coverage: inherited
     def __call__(
-        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
     ) -> numpy.ndarray:  # noqa: D102
         edge_list = self.create_adjacency(edge_index=edge_index, num_entities=num_entities)
         pool = self.bfs(anchors=anchors, edge_list=edge_list, max_iter=self.max_iter, k=k, device=self.device)
@@ -489,7 +488,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
 
     # docstr-coverage: inherited
     def __call__(
-        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: Optional[int] = None
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
     ) -> numpy.ndarray:  # noqa: D102
         num_entities = ensure_num_entities(edge_index, num_entities=num_entities)
         result = numpy.full(shape=(num_entities, k), fill_value=-1)
@@ -503,7 +502,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
 
     @torch.inference_mode()
     def _iter_ppr(
-        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, num_entities: Optional[int] = None
+        self, edge_index: numpy.ndarray, anchors: numpy.ndarray, num_entities: int | None = None
     ) -> Iterable[torch.Tensor]:
         """
         Yield batches of PPR values for each anchor from each entities' perspective.

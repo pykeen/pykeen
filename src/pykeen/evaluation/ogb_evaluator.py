@@ -159,7 +159,7 @@ def evaluate_ogb(
     # filter supported metrics
     metrics: list[RankBasedMetric] = []
     for metric in evaluator.metrics:
-        if not isinstance(metric, (HitsAtK, InverseHarmonicMeanRank)) or (
+        if not isinstance(metric, HitsAtK | InverseHarmonicMeanRank) or (
             isinstance(metric, HitsAtK) and metric.k not in {1, 3, 10}
         ):
             logger.warning(f"{metric} is not supported by OGB evaluator")
@@ -251,7 +251,7 @@ def _evaluate_ogb(
     # iterate over batches
     offset = 0
     for hrt_batch, negatives_batch in zip(
-        mapped_triples.split(split_size=batch_size), negatives.split(split_size=batch_size)
+        mapped_triples.split(split_size=batch_size), negatives.split(split_size=batch_size), strict=False
     ):
         # combine ids, shape: (batch_size, num_negatives + 1)
         ids = torch.cat([hrt_batch[:, 2, None], negatives_batch], dim=1)

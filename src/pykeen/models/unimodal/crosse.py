@@ -1,7 +1,7 @@
 """Implementation of CrossE."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from class_resolver import HintOrType, ResolverKey, update_docstring_with_resolver_keys
 from torch import FloatTensor, nn
@@ -46,8 +46,8 @@ class CrossE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         *,
         embedding_dim: int = 50,
         combination_activation: HintOrType[nn.Module] = nn.Tanh,
-        combination_activation_kwargs: Optional[Mapping[str, Any]] = None,
-        combination_dropout: Optional[float] = 0.5,
+        combination_activation_kwargs: Mapping[str, Any] | None = None,
+        combination_dropout: float | None = 0.5,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         relation_initializer: Hint[Initializer] = xavier_uniform_,
         relation_interaction_initializer: Hint[Initializer] = xavier_uniform_,

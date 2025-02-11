@@ -4,7 +4,7 @@ These are useful for baselines.
 """
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import torch
 
@@ -58,7 +58,7 @@ class FixedModel(Model):
     def collect_regularization_term(self):  # noqa: D102
         return 0.0
 
-    def _get_entity_len(self, mode: Optional[InductiveMode]) -> int:
+    def _get_entity_len(self, mode: InductiveMode | None) -> int:
         if mode is not None:
             raise NotImplementedError
         return self.num_entities
@@ -81,19 +81,19 @@ class FixedModel(Model):
         return self._generate_fake_scores(*hrt_batch.t()).unsqueeze(dim=-1)
 
     # docstr-coverage: inherited
-    def score_t(self, hr_batch: LongTensor, tails: Optional[LongTensor] = None, **kwargs) -> FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: LongTensor, tails: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
         if tails is None:
             tails = torch.arange(self.num_entities, device=hr_batch.device).unsqueeze(dim=0)
         return self._generate_fake_scores(h=hr_batch[:, 0:1], r=hr_batch[:, 1:2], t=tails)
 
     # docstr-coverage: inherited
-    def score_r(self, ht_batch: LongTensor, relations: Optional[LongTensor] = None, **kwargs) -> FloatTensor:  # noqa: D102
+    def score_r(self, ht_batch: LongTensor, relations: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
         if relations is None:
             relations = torch.arange(self.num_relations, device=ht_batch.device).unsqueeze(dim=0)
         return self._generate_fake_scores(h=ht_batch[:, 0:1], r=relations, t=ht_batch[:, 1:2])
 
     # docstr-coverage: inherited
-    def score_h(self, rt_batch: LongTensor, heads: Optional[LongTensor] = None, **kwargs) -> FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: LongTensor, heads: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
         if heads is None:
             heads = torch.arange(self.num_entities, device=rt_batch.device).unsqueeze(dim=0)
         return self._generate_fake_scores(h=heads, r=rt_batch[:, 0:1], t=rt_batch[:, 1:2])

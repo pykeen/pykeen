@@ -309,7 +309,7 @@ class Model(nn.Module, ABC):
         :param path:
             Path of the file where to load the state from.
         """
-        self.load_state_dict(torch.load(path, map_location=self.device))
+        self.load_state_dict(torch.load(path, map_location=self.device, weights_only=False))
 
     """Prediction methods"""
 

@@ -7,7 +7,6 @@ import math
 import pathlib
 from collections.abc import Iterable, Mapping, MutableMapping
 from textwrap import dedent
-from typing import Optional, Union
 
 import click
 import docdata
@@ -51,7 +50,7 @@ def main():
 @dataset_regex_option
 @min_triples_option
 @max_triples_option
-def summarize(dataset_regex: Optional[str], min_triples: Optional[int], max_triples: Optional[int]):
+def summarize(dataset_regex: str | None, min_triples: int | None, max_triples: int | None):
     """Load all datasets."""
     for name, dataset in iter_dataset_instances(
         regex_name_filter=dataset_regex, min_triples=min_triples, max_triples=max_triples
@@ -73,9 +72,9 @@ def summarize(dataset_regex: Optional[str], min_triples: Optional[int], max_trip
 @click.option("--countplots", is_flag=True)
 @click.option("-d", "--directory", type=click.Path(dir_okay=True, file_okay=False, resolve_path=True))
 def analyze(
-    dataset_regex: Optional[str],
-    min_triples: Optional[int],
-    max_triples: Optional[int],
+    dataset_regex: str | None,
+    min_triples: int | None,
+    max_triples: int | None,
     force: bool,
     countplots: bool,
     directory,
@@ -98,7 +97,7 @@ def _analyze(
     dataset: Dataset,
     force: bool,
     countplots: bool,
-    directory: Union[None, str, pathlib.Path],
+    directory: None | str | pathlib.Path,
 ):
     from . import analysis
 
@@ -140,7 +139,7 @@ def _analyze(
         hue="support",
         ax=ax,
     )
-    ax.set_title(f'{docdata.get_docdata(dataset.__class__)["name"]} Relation Injectivity')
+    ax.set_title(f"{docdata.get_docdata(dataset.__class__)['name']} Relation Injectivity")
     fig.tight_layout()
     fig.savefig(d.joinpath("relation_injectivity.svg"))
     plt.close(fig)
@@ -152,7 +151,7 @@ def _analyze(
         y="inverse_functionality",
         ax=ax,
     )
-    ax.set_title(f'{docdata.get_docdata(dataset.__class__)["name"]} Relation Functionality')
+    ax.set_title(f"{docdata.get_docdata(dataset.__class__)['name']} Relation Functionality")
     fig.tight_layout()
     fig.savefig(d.joinpath("relation_functionality.svg"))
     plt.close(fig)
@@ -207,7 +206,7 @@ def _get_plotting_libraries():
 @dataset_regex_option
 @min_triples_option
 @max_triples_option
-def verify(dataset_regex: Optional[str], min_triples: Optional[int], max_triples: Optional[int]):
+def verify(dataset_regex: str | None, min_triples: int | None, max_triples: int | None):
     """Verify dataset integrity."""
     data = []
     keys = None
@@ -260,9 +259,9 @@ def verify(dataset_regex: Optional[str], min_triples: Optional[int], max_triples
 @force_option
 @click.option("--output-directory", default=PYKEEN_DATASETS, type=pathlib.Path, show_default=True)
 def expected_metrics(
-    dataset_regex: Optional[str],
-    max_triples: Optional[int],
-    min_triples: Optional[int],
+    dataset_regex: str | None,
+    max_triples: int | None,
+    min_triples: int | None,
     log_level: str,
     samples: int,
     force: bool,
@@ -388,10 +387,10 @@ def _summarize_degree_distribution(factory: CoreTriplesFactory) -> Iterable[list
 @click.option("--plot", is_flag=True)
 @click.option("-o", "--output-root", type=pathlib.Path, default=PYKEEN_DATASETS.joinpath("analysis"))
 def degree(
-    dataset_regex: Optional[str],
-    min_triples: Optional[int],
-    max_triples: Optional[int],
-    restrict_split: Optional[str],
+    dataset_regex: str | None,
+    min_triples: int | None,
+    max_triples: int | None,
+    restrict_split: str | None,
     force: bool,
     plot: bool,
     output_root: pathlib.Path,

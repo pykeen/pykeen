@@ -300,7 +300,7 @@ class SimpleMessagePassingRepresentation(MessagePassingRepresentation):
 
     # docstr-coverage: inherited
     def pass_messages(self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None) -> FloatTensor:  # noqa: D102
-        for layer, activation in zip(self.layers, self.activations):
+        for layer, activation in zip(self.layers, self.activations, strict=False):
             x = activation(layer(x, edge_index=edge_index))
         return x
 
@@ -355,7 +355,7 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
     # docstr-coverage: inherited
     def pass_messages(self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None) -> FloatTensor:  # noqa: D102
         edge_type = self._get_edge_type(edge_mask=edge_mask)
-        for layer, activation in zip(self.layers, self.activations):
+        for layer, activation in zip(self.layers, self.activations, strict=False):
             x = activation(layer(x, edge_index=edge_index, edge_type=edge_type))
         return x
 
@@ -427,7 +427,7 @@ class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
         # get initial relation representations
         x_rel = self.relation_representation(indices=None)
         n_layer = len(self.layers)
-        for i, (layer, activation) in enumerate(zip(self.layers, self.activations)):
+        for i, (layer, activation) in enumerate(zip(self.layers, self.activations, strict=False)):
             # select edge attributes from relation representations according to relation type
             edge_attr = x_rel[edge_type]
             # perform message passing

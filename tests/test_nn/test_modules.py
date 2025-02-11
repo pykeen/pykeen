@@ -3,7 +3,7 @@
 import logging
 import unittest
 from collections.abc import MutableMapping, Sequence
-from typing import Any, Union
+from typing import Any
 from unittest import SkipTest
 
 import numpy
@@ -15,7 +15,7 @@ import pykeen.nn.modules
 import pykeen.nn.sim
 import pykeen.utils
 from pykeen.nn import quaternion
-from pykeen.typing import Representation, Sign
+from pykeen.typing import Representation
 from pykeen.utils import (
     clamp_norm,
     complex_normalize,
@@ -461,9 +461,8 @@ class SimplEInteractionTests(cases.InteractionTestCase):
         h_fwd, h_bwd = h
         r_fwd, r_bwd = r
         t_fwd, t_bwd = t
-        return 0.5 * pykeen.nn.modules.DistMultInteraction.func(
-            h_fwd, r_fwd, t_fwd
-        ) + 0.5 * pykeen.nn.modules.DistMultInteraction.func(t_bwd, r_bwd, h_bwd)
+        dist_mult = pykeen.nn.modules.DistMultInteraction()
+        return 0.5 * dist_mult(h_fwd, r_fwd, t_fwd) + 0.5 * dist_mult(t_bwd, r_bwd, h_bwd)
 
 
 class MuRETests(cases.TranslationalInteractionTests):
@@ -498,7 +497,7 @@ class TorusETests(cases.TranslationalInteractionTests):
         h: torch.FloatTensor,
         r: torch.FloatTensor,
         t: torch.FloatTensor,
-        p: Union[int, str] = 2,
+        p: int | str = 2,
         power_norm: bool = False,
     ) -> torch.FloatTensor:
         assert not power_norm
@@ -600,7 +599,6 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules
     base_test = cases.InteractionTestCase
     skip_cls = {
         pykeen.nn.modules.Interaction,
-        pykeen.nn.modules.FunctionalInteraction,
         pykeen.nn.modules.NormBasedInteraction,
         pykeen.nn.modules.ClampedInteraction,
         pykeen.nn.modules.DirectionAverageInteraction,
@@ -623,7 +621,7 @@ class ParallelSliceBatchesTest(unittest.TestCase):
         if torch.is_tensor(z):
             assert torch.is_tensor(z_batch)
             assert z.ndim == z_batch.ndim
-            for i, (d, d_batch) in enumerate(zip(z.shape, z_batch.shape)):
+            for i, (d, d_batch) in enumerate(zip(z.shape, z_batch.shape, strict=False)):
                 if i == dim:
                     assert d_batch <= split_size
                     assert d_batch <= d
@@ -632,12 +630,12 @@ class ParallelSliceBatchesTest(unittest.TestCase):
         else:
             assert not torch.is_tensor(z_batch)
             assert len(z) == len(z_batch)
-            for y, y_batch in zip(z, z_batch):
+            for y, y_batch in zip(z, z_batch, strict=False):
                 self._verify(z=y, z_batch=y_batch, dim=dim, split_size=split_size)
 
     def _generate(
         self,
-        shape: Union[tuple[int, ...], Sequence[tuple[int, ...]]],
+        shape: tuple[int, ...] | Sequence[tuple[int, ...]],
     ) -> Representation:
         """Generate dummy representations for the given shape(s)."""
         if not shape:
@@ -650,9 +648,9 @@ class ParallelSliceBatchesTest(unittest.TestCase):
 
     def _test(
         self,
-        h_shape: Union[tuple[int, ...], Sequence[tuple[int, ...]]],
-        r_shape: Union[tuple[int, ...], Sequence[tuple[int, ...]]],
-        t_shape: Union[tuple[int, ...], Sequence[tuple[int, ...]]],
+        h_shape: tuple[int, ...] | Sequence[tuple[int, ...]],
+        r_shape: tuple[int, ...] | Sequence[tuple[int, ...]],
+        t_shape: tuple[int, ...] | Sequence[tuple[int, ...]],
         dim: int,
         split_size: int,
     ):
@@ -660,7 +658,7 @@ class ParallelSliceBatchesTest(unittest.TestCase):
         h, r, t = (self._generate(s) for s in (h_shape, r_shape, t_shape))
         for batch in pykeen.nn.modules.parallel_slice_batches(h, r, t, split_size=split_size, dim=dim):
             assert len(batch) == 3
-            for old, new in zip((h, r, t), batch):
+            for old, new in zip((h, r, t), batch, strict=False):
                 self._verify(old, new, dim, split_size)
 
     def test_score_t(self):
@@ -709,14 +707,12 @@ class AutoSFTests(cases.InteractionTestCase):
     )
 
     def _exp_score(
-        self,
-        h: Sequence[torch.FloatTensor],
-        r: Sequence[torch.FloatTensor],
-        t: Sequence[torch.FloatTensor],
-        coefficients: Sequence[tuple[int, int, int, Sign]],
+        self, h: Sequence[torch.FloatTensor], r: Sequence[torch.FloatTensor], t: Sequence[torch.FloatTensor]
     ) -> torch.FloatTensor:  # noqa: D102
         h, r, t = ensure_tuple(h, r, t)
-        return sum(s * (h[i] * r[j] * t[k]).sum(dim=-1) for i, j, k, s in coefficients)
+        instance = self.instance
+        assert isinstance(instance, pykeen.nn.modules.AutoSFInteraction)
+        return sum(s * (h[i] * r[j] * t[k]).sum(dim=-1) for i, j, k, s in instance.coefficients)
 
 
 class LineaRETests(cases.TranslationalInteractionTests):

@@ -854,7 +854,7 @@ def _handle_random_seed(
         checkpoint_directory.mkdir(parents=True, exist_ok=True)
         checkpoint_path = checkpoint_directory / checkpoint_name
         if checkpoint_path.is_file():
-            checkpoint_dict = torch.load(checkpoint_path)
+            checkpoint_dict = torch.load(checkpoint_path, weights_only=False)
             _random_seed = checkpoint_dict["random_seed"]
             logger.info("loaded random seed %s from checkpoint.", _random_seed)
             # We have to set clear optimizer to False since training should be continued
@@ -1234,7 +1234,7 @@ def _handle_evaluation(
         popped_additional_filter_triples = evaluation_kwargs.pop("additional_filter_triples", [])
         if popped_additional_filter_triples:
             additional_filter_triples_names["custom"] = triple_hash(*popped_additional_filter_triples)
-        if isinstance(popped_additional_filter_triples, (list, tuple)):
+        if isinstance(popped_additional_filter_triples, list | tuple):
             additional_filter_triples.extend(popped_additional_filter_triples)
         elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
             additional_filter_triples.append(popped_additional_filter_triples)

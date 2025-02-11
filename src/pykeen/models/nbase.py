@@ -212,6 +212,7 @@ def _prepare_representation_module_list(
         *zip(
             (r.shape for r in rs),
             shapes,
+            strict=False,
         ),
         raise_on_errors=True,
     )
@@ -418,7 +419,7 @@ class ERModel(
         )
 
         # normalize input
-        if isinstance(parameter, (str, nn.Parameter)):
+        if isinstance(parameter, str | nn.Parameter):
             parameter = [parameter]
         weights: Mapping[str, nn.Parameter] = dict(self.named_parameters())
         for param in parameter:

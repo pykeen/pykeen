@@ -1,7 +1,8 @@
 """Composition modules."""
 
 from abc import ABC, abstractmethod
-from typing import Callable, ClassVar
+from collections.abc import Callable
+from typing import ClassVar
 
 import torch
 from class_resolver import ClassResolver

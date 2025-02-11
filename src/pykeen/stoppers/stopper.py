@@ -4,7 +4,7 @@ import logging
 import pathlib
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from typing import Any, Union
+from typing import Any
 
 import torch
 
@@ -62,7 +62,7 @@ class Stopper(ABC):
         pass
 
     @staticmethod
-    def load_summary_dict_from_training_loop_checkpoint(path: Union[str, pathlib.Path]) -> Mapping[str, Any]:
+    def load_summary_dict_from_training_loop_checkpoint(path: str | pathlib.Path) -> Mapping[str, Any]:
         """Load the summary dict from a training loop checkpoint.
 
         :param path:
@@ -72,7 +72,7 @@ class Stopper(ABC):
             The summary dict of the stopper at the time of saving the checkpoint.
         """
         logger.info(f"=> loading stopper summary dict from training loop checkpoint in '{path}'")
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, weights_only=False)
         logger.info(f"=> loaded stopper summary dictionary from checkpoint in '{path}'")
         return checkpoint["stopper_dict"]
 

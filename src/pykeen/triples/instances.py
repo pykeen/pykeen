@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
-from typing import Callable, Generic, NamedTuple, Optional, TypeVar
+from collections.abc import Callable, Iterable, Iterator
+from typing import Generic, NamedTuple, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -28,7 +28,7 @@ SampleType = TypeVar("SampleType")
 BatchType = TypeVar("BatchType")
 LCWASampleType = tuple[MappedTriples, FloatTensor]
 LCWABatchType = tuple[MappedTriples, FloatTensor]
-SLCWASampleType = tuple[MappedTriples, MappedTriples, Optional[BoolTensor]]
+SLCWASampleType = tuple[MappedTriples, MappedTriples, BoolTensor | None]
 
 
 class SLCWABatch(NamedTuple):
@@ -133,7 +133,7 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
         """Collate samples."""
         # each shape: (1, 3), (1, k, 3), (1, k, 3)?
         masks: LongTensor | None
-        positives, negatives, masks = zip(*samples)
+        positives, negatives, masks = zip(*samples, strict=False)
         positives = torch.cat(positives, dim=0)
         negatives = torch.cat(negatives, dim=0)
         mask_batch: BoolTensor | None

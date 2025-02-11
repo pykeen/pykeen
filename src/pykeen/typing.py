@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping, Sequence
-from typing import Callable, Literal, NamedTuple, TypeVar, Union, cast
+from collections.abc import Callable, Collection, Mapping, Sequence
+from typing import Literal, NamedTuple, TypeAlias, TypeVar, cast
 
 import numpy as np
 import torch
 from class_resolver import Hint, HintOrType, HintType
-from typing_extensions import TypeAlias  # Python <=3.10
 
 __all__ = [
     # General types
@@ -71,19 +70,19 @@ LongTensor: TypeAlias = torch.Tensor  # replace by torch.LongTensor
 
 #: A function that mutates the input and returns a new object of the same type as output
 Mutation = Callable[[X], X]
-OneOrSequence = Union[X, Sequence[X]]
+OneOrSequence: TypeAlias = X | Sequence[X]
 
-LabeledTriples = np.ndarray
-MappedTriples = LongTensor
-EntityMapping = Mapping[str, int]
-RelationMapping = Mapping[str, int]
+LabeledTriples: TypeAlias = np.ndarray
+MappedTriples: TypeAlias = LongTensor
+EntityMapping: TypeAlias = Mapping[str, int]
+RelationMapping: TypeAlias = Mapping[str, int]
 
 #: A function that can be applied to a tensor to initialize it
-Initializer = Mutation[FloatTensor]
+Initializer: TypeAlias = Mutation[FloatTensor]
 #: A function that can be applied to a tensor to normalize it
-Normalizer = Mutation[FloatTensor]
+Normalizer: TypeAlias = Mutation[FloatTensor]
 #: A function that can be applied to a tensor to constrain it
-Constrainer = Mutation[FloatTensor]
+Constrainer: TypeAlias = Mutation[FloatTensor]
 
 
 def cast_constrainer(f) -> Constrainer:
@@ -94,7 +93,7 @@ def cast_constrainer(f) -> Constrainer:
 #: A hint for a :class:`torch.device`
 DeviceHint = Hint[torch.device]
 #: A hint for a :class:`torch.Generator`
-TorchRandomHint = Union[None, int, torch.Generator]
+TorchRandomHint = None | int | torch.Generator
 
 Representation = TypeVar("Representation", bound=OneOrSequence[FloatTensor])
 #: A type variable for head representations used in :class:`pykeen.models.Model`,
@@ -164,7 +163,7 @@ def normalize_rank_type(rank: str | None) -> RankType:
 
 TargetBoth = Literal["both"]
 SIDE_BOTH: TargetBoth = "both"
-ExtendedTarget = Union[Target, TargetBoth]
+ExtendedTarget = Target | TargetBoth
 SIDES: Collection[ExtendedTarget] = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
 SIDE_MAPPING = {LABEL_HEAD: [LABEL_HEAD], LABEL_TAIL: [LABEL_TAIL], SIDE_BOTH: [LABEL_HEAD, LABEL_TAIL]}
 

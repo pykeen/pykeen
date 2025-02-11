@@ -27,7 +27,7 @@ from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
 from ..typing import MappedTriples, TorchRandomHint
-from ..utils import ExtraReprMixin, normalize_path, normalize_string
+from ..utils import ExtraReprMixin, format_relative_comparison, normalize_path, normalize_string
 
 __all__ = [
     # Base classes
@@ -80,6 +80,20 @@ def _map_ids(x: torch.Tensor, kept_old_ids: torch.Tensor) -> torch.Tensor:
     return map_t[x]
 
 
+def _filter_mapped_triples(
+    mapped_triples: MappedTriples,
+    kept_old_entity_ids_t: torch.Tensor,
+    kept_old_relation_ids_t: torch.Tensor,
+) -> MappedTriples:
+    heads, tails = _map_ids(mapped_triples[:, ::2], kept_old_ids=kept_old_entity_ids_t).unbind(dim=-1)
+    relations = _map_ids(mapped_triples[:, 1], kept_old_ids=kept_old_relation_ids_t)
+    mapped_triples = cast(MappedTriples, torch.stack([heads, relations, tails], dim=-1))
+    # We can only keep triples where none of the IDs have been filtered.
+    keep_mask = (mapped_triples >= 0).all(dim=-1)
+    logger.info(f"keeping {format_relative_comparison(keep_mask.sum().item(), keep_mask.numel())} triples.")
+    return mapped_triples[keep_mask]
+
+
 def _update_eval_triples_factory(
     factory: TriplesFactory,
     kept_old_entity_ids_t: torch.Tensor,
@@ -87,9 +101,11 @@ def _update_eval_triples_factory(
     entity_to_id: Mapping[str, int],
     relation_to_id: Mapping[str, int],
 ) -> TriplesFactory:
-    heads, tails = _map_ids(factory.mapped_triples[:, ::2], kept_old_ids=kept_old_entity_ids_t).unbind(dim=-1)
-    relations = _map_ids(factory.mapped_triples[:, 1], kept_old_ids=kept_old_relation_ids_t)
-    mapped_triples = cast(MappedTriples, torch.stack([heads, relations, tails], dim=-1))
+    mapped_triples = _filter_mapped_triples(
+        mapped_triples=factory.mapped_triples,
+        kept_old_entity_ids_t=kept_old_entity_ids_t,
+        kept_old_relation_ids_t=kept_old_relation_ids_t,
+    )
     return TriplesFactory(
         mapped_triples=mapped_triples,
         entity_to_id=entity_to_id,
@@ -104,9 +120,11 @@ def _update_eval_triples_factory(
 def _update_eval_core_factory(
     factory: CoreTriplesFactory, kept_old_entity_ids_t: torch.Tensor, kept_old_relation_ids_t: torch.Tensor
 ) -> CoreTriplesFactory:
-    heads, tails = _map_ids(factory.mapped_triples[:, ::2], kept_old_ids=kept_old_entity_ids_t).unbind(dim=-1)
-    relations = _map_ids(factory.mapped_triples[:, 1], kept_old_ids=kept_old_relation_ids_t)
-    mapped_triples = cast(MappedTriples, torch.stack([heads, relations, tails], dim=-1))
+    mapped_triples = _filter_mapped_triples(
+        mapped_triples=factory.mapped_triples,
+        kept_old_entity_ids_t=kept_old_entity_ids_t,
+        kept_old_relation_ids_t=kept_old_relation_ids_t,
+    )
     return CoreTriplesFactory(
         mapped_triples=mapped_triples,
         create_inverse_triples=factory.create_inverse_triples,
@@ -206,7 +224,7 @@ class Dataset(ExtraReprMixin):
         return [
             (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
             for label, triples_factory in zip(
-                ("Training", "Testing", "Validation"), (self.training, self.testing, self.validation)
+                ("Training", "Testing", "Validation"), (self.training, self.testing, self.validation), strict=False
             )
         ]
 
@@ -260,7 +278,8 @@ class Dataset(ExtraReprMixin):
             else:
                 logger.warning(f"{tf_path.as_uri()} does not exist.")
         metadata_path = path.joinpath(cls.metadata_file_name)
-        metadata = torch.load(metadata_path) if metadata_path.is_file() else None
+        # TODO: consider restricting metadata to JSON
+        metadata = torch.load(metadata_path, weights_only=False) if metadata_path.is_file() else None
         return EagerDataset(**tfs, metadata=metadata)
 
     def to_directory_binary(self, path: str | pathlib.Path) -> None:
@@ -467,6 +486,11 @@ class Dataset(ExtraReprMixin):
 
         # compose restricted dataset
         return EagerDataset(training=training, testing=testing, validation=validation, metadata=metadata)
+
+    def merged(self) -> CoreTriplesFactory:
+        """Return a single triples factory with all triples."""
+        training, *rest = self._tup()
+        return training.merge(*rest)
 
 
 class EagerDataset(Dataset):

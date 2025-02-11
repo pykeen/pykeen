@@ -2,8 +2,8 @@
 
 import logging
 import pathlib
-from collections.abc import Iterable
-from typing import Callable, NamedTuple, Optional, Union
+from collections.abc import Callable, Iterable
+from typing import NamedTuple
 
 import torch
 from class_resolver import (
@@ -74,7 +74,7 @@ class TokenizationRepresentation(Representation):
         assignment: LongTensor,
         token_representation: HintOrType[Representation] = None,
         token_representation_kwargs: OptionalKwargs = None,
-        shape: Optional[OneOrSequence[int]] = None,
+        shape: OneOrSequence[int] | None = None,
         **kwargs,
     ) -> None:
         """
@@ -195,7 +195,7 @@ class TokenizationRepresentation(Representation):
     # docstr-coverage: inherited
     def _plain_forward(
         self,
-        indices: Optional[LongTensor] = None,
+        indices: LongTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # get token IDs, shape: (*, num_chosen_tokens)
         token_ids = self.assignment
@@ -271,9 +271,9 @@ class NodePieceRepresentation(CombinedRepresentation):
         tokenizers: OneOrManyHintOrType[Tokenizer] = None,
         tokenizers_kwargs: OneOrManyOptionalKwargs = None,
         num_tokens: OneOrSequence[int] = 2,
-        aggregation: Union[None, str, Callable[[FloatTensor, int], FloatTensor]] = None,
+        aggregation: None | str | Callable[[FloatTensor, int], FloatTensor] = None,
         aggregation_kwargs: OptionalKwargs = None,
-        max_id: Optional[int] = None,
+        max_id: int | None = None,
         **kwargs,
     ):
         """
@@ -342,6 +342,7 @@ class NodePieceRepresentation(CombinedRepresentation):
                 token_representations,
                 token_representations_kwargs,
                 num_tokens,
+                strict=False,
             )
         ]
 

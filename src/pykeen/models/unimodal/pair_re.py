@@ -1,7 +1,7 @@
 """Implementation of PairRE."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from torch.nn import functional
 from torch.nn.init import uniform_
@@ -43,7 +43,7 @@ class PairRE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
     #: the default loss function is the self-adversarial negative sampling loss
     loss_default: ClassVar[type[Loss]] = NSSALoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Optional[Mapping[str, Any]]] = dict(
+    loss_default_kwargs: ClassVar[Mapping[str, Any] | None] = dict(
         margin=12.0, adversarial_temperature=1.0, reduction="mean"
     )
 
@@ -61,11 +61,11 @@ class PairRE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         p: int = 1,
         power_norm: bool = False,
         entity_initializer: Hint[Initializer] = uniform_,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_initializer_kwargs: Mapping[str, Any] | None = None,
         entity_normalizer: Hint[Normalizer] = functional.normalize,
-        entity_normalizer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_normalizer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = uniform_,
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         r"""Initialize the model.
@@ -132,7 +132,7 @@ class PairRE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
 
     @staticmethod
     def _update_embedding_init_with_default(
-        init_kwargs: Optional[Mapping[str, Any]],
+        init_kwargs: Mapping[str, Any] | None,
         embedding_dim: int,
     ) -> Mapping[str, float]:
         """Update kwargs by dimension-based default init range."""
@@ -143,7 +143,7 @@ class PairRE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         return init_kwargs
 
 
-def _resolve_kwargs(kwargs: Optional[Mapping[str, Any]], default_kwargs: Mapping[str, Any]) -> Mapping[str, Any]:
+def _resolve_kwargs(kwargs: Mapping[str, Any] | None, default_kwargs: Mapping[str, Any]) -> Mapping[str, Any]:
     kwargs = dict(kwargs or {})
     for k, v in default_kwargs.items():
         kwargs.setdefault(k, v)

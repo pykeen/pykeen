@@ -837,7 +837,7 @@ def build_representation(
     )
     if representation.max_id != max_id:
         raise ValueError(
-            f"Representations should provide {max_id} representations, " f"but have {representation.max_id}",
+            f"Representations should provide {max_id} representations, but have {representation.max_id}",
         )
     return representation
 
@@ -945,7 +945,7 @@ class CombinedCompGCNRepresentations(nn.Module):
 
         # Create message passing layers
         layers = []
-        for input_dim_, output_dim in zip(itertools.chain([input_dim], dims), dims):
+        for input_dim_, output_dim in zip(itertools.chain([input_dim], dims), dims, strict=False):
             layers.append(
                 CompGCNLayer(
                     input_dim=input_dim_,
@@ -1069,8 +1069,7 @@ def _clean_labels(labels: Sequence[str | None], missing_action: Literal["error",
         idx = [i for i, label in enumerate(labels) if label is None]
         if idx:
             raise ValueError(
-                f"The labels at the following indexes were none. "
-                f"Consider an alternate `missing_action` policy.\n{idx}",
+                f"The labels at the following indexes were none. Consider an alternate `missing_action` policy.\n{idx}",
             )
         return cast(Sequence[str], labels)
     elif missing_action == "blank":
@@ -1796,7 +1795,7 @@ class TensorTrainRepresentation(Representation):
         terms: list[list[str]] = []
         out_term: list[str] = ["..."]
         i = 0
-        for n_i, (rank_in, rank_out) in zip(ns, more_itertools.pairwise([None, *ranks, None])):
+        for n_i, (rank_in, rank_out) in zip(ns, more_itertools.pairwise([None, *ranks, None]), strict=False):
             shape = []
             term = ["..."]
 
@@ -1940,7 +1939,9 @@ class TensorTrainRepresentation(Representation):
         # create base representations
         self.bases = nn.ModuleList(
             representation_resolver.make(base, base_kwargs, max_id=m_i, shape=shape)
-            for base, base_kwargs, m_i, shape in zip(*broadcast_upgrade_to_sequences(bases, bases_kwargs, ms, shapes))
+            for base, base_kwargs, m_i, shape in zip(
+                *broadcast_upgrade_to_sequences(bases, bases_kwargs, ms, shapes), strict=False
+            )
         )
 
     # docstr-coverage: inherited
@@ -1954,6 +1955,6 @@ class TensorTrainRepresentation(Representation):
         assignment = self.assignment
         if indices is not None:
             assignment = assignment[indices]
-        return einsum(self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases))).view(
-            *assignment.shape[:-1], *self.shape
-        )
+        return einsum(
+            self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases, strict=False))
+        ).view(*assignment.shape[:-1], *self.shape)

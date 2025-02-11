@@ -5,7 +5,7 @@ import re
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, MutableMapping
 from re import Pattern
-from typing import Any, Optional, Union
+from typing import Any
 
 from tqdm.auto import tqdm
 
@@ -22,17 +22,17 @@ __all__ = [
 class ResultTracker:
     """A class that tracks the results from a pipeline run."""
 
-    def start_run(self, run_name: Optional[str] = None) -> None:
+    def start_run(self, run_name: str | None = None) -> None:
         """Start a run with an optional name."""
 
-    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:
+    def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:
         """Log parameters to result store."""
 
     def log_metrics(
         self,
         metrics: Mapping[str, float],
-        step: Optional[int] = None,
-        prefix: Optional[str] = None,
+        step: int | None = None,
+        prefix: str | None = None,
     ) -> None:
         """Log metrics to result store.
 
@@ -74,7 +74,7 @@ class PythonResultTracker(ResultTracker):
     """
 
     #: The name of the run
-    run_name: Optional[str]
+    run_name: str | None
 
     #: The configuration dictionary, a mapping from name -> value
     configuration: MutableMapping[str, Any]
@@ -83,7 +83,7 @@ class PythonResultTracker(ResultTracker):
     store_metrics: bool
 
     #: The metrics, a mapping from step -> (name -> value)
-    metrics: MutableMapping[Optional[int], MutableMapping[str, float]]
+    metrics: MutableMapping[int | None, MutableMapping[str, float]]
 
     def __init__(self, store_metrics: bool = True) -> None:
         """Initialize the tracker."""
@@ -94,11 +94,11 @@ class PythonResultTracker(ResultTracker):
         self.run_name = None
 
     # docstr-coverage: inherited
-    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
+    def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         self.run_name = run_name
 
     # docstr-coverage: inherited
-    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+    def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:  # noqa: D102
         if prefix is not None:
             params = {f"{prefix}.{key}": value for key, value in params.items()}
         self.configuration.update(params)
@@ -107,8 +107,8 @@ class PythonResultTracker(ResultTracker):
     def log_metrics(
         self,
         metrics: Mapping[str, float],
-        step: Optional[int] = None,
-        prefix: Optional[str] = None,
+        step: int | None = None,
+        prefix: str | None = None,
     ) -> None:  # noqa: D102
         if not self.store_metrics:
             return
@@ -125,9 +125,9 @@ class ConsoleResultTracker(ResultTracker):
         self,
         *,
         track_parameters: bool = True,
-        parameter_filter: Union[None, str, Pattern[str]] = None,
+        parameter_filter: None | str | Pattern[str] = None,
         track_metrics: bool = True,
-        metric_filter: Union[None, str, Pattern[str]] = None,
+        metric_filter: None | str | Pattern[str] = None,
         start_end_run: bool = False,
         writer: str = "tqdm",
     ):
@@ -167,12 +167,12 @@ class ConsoleResultTracker(ResultTracker):
             self.write = logging.getLogger("pykeen").info
 
     # docstr-coverage: inherited
-    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
+    def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         if run_name is not None and self.start_end_run:
             self.write(f"Starting run: {run_name}")
 
     # docstr-coverage: inherited
-    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+    def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:  # noqa: D102
         if not self.track_parameters:
             return
 
@@ -184,8 +184,8 @@ class ConsoleResultTracker(ResultTracker):
     def log_metrics(
         self,
         metrics: Mapping[str, float],
-        step: Optional[int] = None,
-        prefix: Optional[str] = None,
+        step: int | None = None,
+        prefix: str | None = None,
     ) -> None:  # noqa: D102
         if not self.track_metrics:
             return
@@ -204,7 +204,7 @@ class ConsoleResultTracker(ResultTracker):
 
 
 #: A hint for constructing a :class:`MultiResultTracker`
-TrackerHint = Union[None, ResultTracker, Iterable[ResultTracker]]
+TrackerHint = None | ResultTracker | Iterable[ResultTracker]
 
 
 class MultiResultTracker(ResultTracker):
@@ -227,12 +227,12 @@ class MultiResultTracker(ResultTracker):
             self.trackers = list(trackers)
 
     # docstr-coverage: inherited
-    def start_run(self, run_name: Optional[str] = None) -> None:  # noqa: D102
+    def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         for tracker in self.trackers:
             tracker.start_run(run_name=run_name)
 
     # docstr-coverage: inherited
-    def log_params(self, params: Mapping[str, Any], prefix: Optional[str] = None) -> None:  # noqa: D102
+    def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:  # noqa: D102
         for tracker in self.trackers:
             tracker.log_params(params=params, prefix=prefix)
 
@@ -240,8 +240,8 @@ class MultiResultTracker(ResultTracker):
     def log_metrics(
         self,
         metrics: Mapping[str, float],
-        step: Optional[int] = None,
-        prefix: Optional[str] = None,
+        step: int | None = None,
+        prefix: str | None = None,
     ) -> None:  # noqa: D102
         for tracker in self.trackers:
             tracker.log_metrics(metrics=metrics, step=step, prefix=prefix)

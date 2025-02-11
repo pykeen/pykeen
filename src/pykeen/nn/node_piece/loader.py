@@ -86,7 +86,7 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
 
     # docstr-coverage: inherited
     def __call__(self, path: pathlib.Path) -> tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
-        c = torch.load(path)
+        c = torch.load(path, weights_only=False)
         order = c["order"]
         logger.info(f"Loaded precomputed pools of shape {order.shape}.")
         num_anchors = c["anchors"].shape[0]

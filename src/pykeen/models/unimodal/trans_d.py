@@ -1,7 +1,7 @@
 """Implementation of TransD."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from class_resolver import OptionalKwargs
 
@@ -48,7 +48,7 @@ class TransD(
         self,
         *,
         embedding_dim: int = 50,
-        relation_dim: Optional[int] = None,
+        relation_dim: int | None = None,
         interaction_kwargs: OptionalKwargs = None,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore

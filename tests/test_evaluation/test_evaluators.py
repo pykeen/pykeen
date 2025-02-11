@@ -235,12 +235,12 @@ class EvaluatorUtilsTests(unittest.TestCase):
         batch = all_triples[:batch_size, :]
 
         # head based filter
-        sparse_positives, relation_filter = create_sparse_positive_filter_(
+        sparse_positives = create_sparse_positive_filter_(
             hrt_batch=batch,
             all_pos_triples=all_triples,
             relation_filter=None,
             filter_col=0,
-        )
+        )[0]
 
         # preprocessing for faster lookup
         triples = set()
@@ -430,9 +430,9 @@ class TestEvaluationStructure(unittest.TestCase):
             use_tqdm=False,
         )
         self.assertIsInstance(eval_results, DummyMetricResults)
-        assert eval_results.get_metric(name=LABEL_HEAD) == eval_results.get_metric(
-            name=LABEL_TAIL
-        ), "Should be evaluated on the same number of batches per side"
+        assert eval_results.get_metric(name=LABEL_HEAD) == eval_results.get_metric(name=LABEL_TAIL), (
+            "Should be evaluated on the same number of batches per side"
+        )
 
 
 class TestEvaluationFiltering(unittest.TestCase):
@@ -553,7 +553,7 @@ def test_sample_negatives():
             ).tolist(),
         )
     )
-    for i, negatives in zip((0, 2), (head_negatives, tail_negatives)):
+    for i, negatives in zip((0, 2), (head_negatives, tail_negatives), strict=False):
         assert torch.is_tensor(negatives)
         assert negatives.dtype == torch.long
         assert negatives.shape == (num_triples, num_negatives)
