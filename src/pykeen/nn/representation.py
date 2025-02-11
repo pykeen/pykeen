@@ -1575,7 +1575,13 @@ class BackfillRepresentation(PartitionRepresentation):
 
         base_ids = sorted(set(base_ids))
         base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
-
+        # if a pre-instantiated `base` was passed, the following does not necessarily need to hold
+        if max(base_ids) >= base.max_id:
+            raise ValueError(f"Some of the {base_ids=} exceed {base.max_id}")
+        if len(base_ids) != base.max_id:
+            raise ValueError(f"{len(base_ids)=} != {base.max_id}. If you only want to re-use some of the indices, take a look at SubsetRepresentation."}
+        
+        
         backfill_max_id = max_id - base.max_id
         if backfill_max_id == 0:
             logger.warning(
