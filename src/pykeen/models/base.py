@@ -316,12 +316,7 @@ class Model(nn.Module, ABC):
 
     """Extended scoring methods"""
 
-    def _prepare_batch(
-        self,
-        batch: LongTensor | None,
-        index_relation: int,
-        invert_relation: bool
-    ) -> LongTensor:
+    def _prepare_batch(self, batch: LongTensor | None, index_relation: int, invert_relation: bool) -> LongTensor:
         if invert_relation and not self.use_inverse_triples:
             raise ValueError("Can only invert relations if use_inverse_relations is set to True")
 

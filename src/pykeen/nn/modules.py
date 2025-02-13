@@ -10,12 +10,7 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
-from typing import
-    Any,
-    ClassVar,
-    Generic,
-    cast,
-overload
+from typing import Any, ClassVar, Generic, cast, overload
 
 import more_itertools
 import numpy
@@ -157,6 +152,7 @@ def parallel_slice_batches(
 # docstr-coverage:excused `overload`
 @overload
 def parallel_unsqueeze(x: Sequence[FloatTensor], dim: int) -> Sequence[FloatTensor]: ...
+
 
 # docstr-coverage:excused `overload`
 @overload

@@ -5,7 +5,7 @@ import logging
 from abc import abstractmethod
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping
-from typing import Any, Generic, TypeAlias, TypeVar, cast
+from typing import Any, Generic, TypeAlias, TypeVar
 
 import numpy
 import pandas

@@ -51,7 +51,8 @@ class InductiveDataset:
                     self.inductive_inference,
                     self.inductive_testing,
                     self.inductive_validation,
-                ), strict=False,
+                ),
+                strict=False,
             )
         ]
 

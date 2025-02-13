@@ -3,18 +3,13 @@
 import dataclasses
 import logging
 import pathlib
-import warnings
 from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
 from typing import (
     Any,
     ClassVar,
     TextIO,
-    Union,
     cast,
 )
-import re
-from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
-from typing import Any, ClassVar, TextIO, cast
 
 import numpy as np
 import pandas as pd
@@ -1268,7 +1263,8 @@ class TriplesFactory(CoreTriplesFactory):
                         (self.relation_labeling, unknown_relation_label),
                         (self.entity_labeling, unknown_entity_label),
                     ],
-                    triples.t().numpy(), strict=False,
+                    triples.t().numpy(),
+                    strict=False,
                 )
             ],
             axis=1,

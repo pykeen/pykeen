@@ -430,9 +430,9 @@ class TestEvaluationStructure(unittest.TestCase):
             use_tqdm=False,
         )
         self.assertIsInstance(eval_results, DummyMetricResults)
-        assert eval_results.get_metric(name=LABEL_HEAD) == eval_results.get_metric(name=LABEL_TAIL), (
-            "Should be evaluated on the same number of batches per side"
-        )
+        assert eval_results.get_metric(name=LABEL_HEAD) == eval_results.get_metric(
+            name=LABEL_TAIL
+        ), "Should be evaluated on the same number of batches per side"
 
 
 class TestEvaluationFiltering(unittest.TestCase):

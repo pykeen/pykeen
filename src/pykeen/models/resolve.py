@@ -75,7 +75,9 @@ logger = logging.getLogger(__name__)
 
 def make_model(
     dimensions: int | Mapping[str, int],
-    interaction: str | Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation] | type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+    interaction: str
+    | Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]
+    | type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
     interaction_kwargs: Mapping[str, Any] | None = None,
     entity_representations_kwargs: OptionalKwargs = None,
     relation_representations_kwargs: OptionalKwargs = None,
@@ -113,7 +115,9 @@ class DimensionError(ValueError):
 
 def make_model_cls(
     dimensions: int | Mapping[str, int],
-    interaction: str | Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation] | type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+    interaction: str
+    | Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]
+    | type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
     interaction_kwargs: Mapping[str, Any] | None = None,
     entity_representations_kwargs: OptionalKwargs = None,
     relation_representations_kwargs: OptionalKwargs = None,

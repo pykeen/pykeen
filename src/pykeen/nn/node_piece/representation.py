@@ -338,7 +338,8 @@ class NodePieceRepresentation(CombinedRepresentation):
                 tokenizer_resolver.make_many(queries=tokenizers, kwargs=tokenizers_kwargs),
                 token_representations,
                 token_representations_kwargs,
-                num_tokens, strict=False,
+                num_tokens,
+                strict=False,
             )
         ]
 

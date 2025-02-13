@@ -499,7 +499,8 @@ def get_relation_counts(
         data=dict(
             zip(
                 [RELATION_ID_COLUMN_NAME, COUNT_COLUMN_NAME],
-                _get_counts(mapped_triples=mapped_triples, column=1), strict=False,
+                _get_counts(mapped_triples=mapped_triples, column=1),
+                strict=False,
             )
         )
     )

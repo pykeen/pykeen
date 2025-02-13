@@ -3,7 +3,6 @@
 import logging
 from collections.abc import Callable
 from math import ceil
-from typing import ClassVar
 
 from torch.nn import functional
 from torch.utils.data import DataLoader, Dataset, TensorDataset

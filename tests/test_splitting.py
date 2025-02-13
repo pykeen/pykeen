@@ -22,7 +22,8 @@ def test_get_absolute_split_sizes():
     """Test get_absolute_split_sizes."""
     for num_splits, n_total in zip(
         (2, 3, 4),
-        (100, 200, 10412), strict=False,
+        (100, 200, 10412),
+        strict=False,
     ):
         # generate random ratios
         ratios = numpy.random.uniform(size=(num_splits,))
