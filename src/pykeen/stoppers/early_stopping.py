@@ -194,8 +194,7 @@ class EarlyStopper(Stopper):
             logger.info(f"Inferred checkpoint path for best model weights: {self.best_model_path}")
         if self.best_model_path.is_file():
             logger.warning(
-                f"Checkpoint path for best weights does already exist ({self.best_model_path})."
-                f"It will be overwritten."
+                f"Checkpoint path for best weights does already exist ({self.best_model_path}).It will be overwritten."
             )
 
     @property

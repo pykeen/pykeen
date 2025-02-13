@@ -790,7 +790,7 @@ def build_representation(
     )
     if representation.max_id != max_id:
         raise ValueError(
-            f"Representations should provide {max_id} representations, " f"but have {representation.max_id}",
+            f"Representations should provide {max_id} representations, but have {representation.max_id}",
         )
     return representation
 
@@ -985,8 +985,7 @@ def _clean_labels(labels: Sequence[str | None], missing_action: Literal["error",
         idx = [i for i, label in enumerate(labels) if label is None]
         if idx:
             raise ValueError(
-                f"The labels at the following indexes were none. "
-                f"Consider an alternate `missing_action` policy.\n{idx}",
+                f"The labels at the following indexes were none. Consider an alternate `missing_action` policy.\n{idx}",
             )
         return cast(Sequence[str], labels)
     elif missing_action == "blank":

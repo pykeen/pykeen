@@ -1,4 +1,5 @@
 """Write a checkpoint every 10 steps, but keep only the last one and one every 50 steps."""
+
 from pykeen.pipeline import pipeline
 
 result = pipeline(
@@ -17,7 +18,7 @@ result = pipeline(
             keeper_kwargs=dict(
                 bases=["modulo", "last"],
                 bases_kwargs=[dict(divisor=50), None],
-            )
-        )
+            ),
+        ),
     ),
 )

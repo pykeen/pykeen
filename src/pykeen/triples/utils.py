@@ -120,8 +120,7 @@ def tensor_to_df(
     forbidden = additional_columns.intersection(TRIPLES_DF_COLUMNS)
     if len(forbidden) > 0:
         raise ValueError(
-            f"The key-words for additional arguments must not be in {TRIPLES_DF_COLUMNS}, but {forbidden} were "
-            f"used.",
+            f"The key-words for additional arguments must not be in {TRIPLES_DF_COLUMNS}, but {forbidden} were used.",
         )
 
     # convert to numpy
