@@ -12,6 +12,7 @@ from class_resolver import ClassResolver, normalize_string
 from torch import nn
 from torch.nn import functional
 
+from .typing import FloatTensor
 from .utils import lp_norm, powersum_norm
 
 __all__ = [
@@ -38,10 +39,10 @@ class Regularizer(nn.Module, ABC):
     """A base class for all regularizers."""
 
     #: The overall regularization weight
-    weight: torch.FloatTensor
+    weight: FloatTensor
 
     #: The current regularization term (a scalar)
-    regularization_term: torch.FloatTensor
+    regularization_term: FloatTensor
 
     #: Should the regularization only be applied once? This was used for ConvKB and defaults to False.
     apply_only_once: bool
@@ -88,11 +89,11 @@ class Regularizer(nn.Module, ABC):
         self.updated = False
 
     @abstractmethod
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+    def forward(self, x: FloatTensor) -> FloatTensor:
         """Compute the regularization term for one tensor."""
         raise NotImplementedError
 
-    def update(self, *tensors: torch.FloatTensor) -> None:
+    def update(self, *tensors: FloatTensor) -> None:
         """Update the regularization term based on passed tensors."""
         if not self.training or not torch.is_grad_enabled() or (self.apply_only_once and self.updated):
             return
@@ -100,11 +101,11 @@ class Regularizer(nn.Module, ABC):
         self.updated = True
 
     @property
-    def term(self) -> torch.FloatTensor:
+    def term(self) -> FloatTensor:
         """Return the weighted regularization term."""
         return self.regularization_term * self.weight
 
-    def pop_regularization_term(self) -> torch.FloatTensor:
+    def pop_regularization_term(self) -> FloatTensor:
         """Return the weighted regularization term, and reset the regularize afterwards."""
         # If there are tracked parameters, update based on them
         if self.tracked_parameters:
@@ -137,12 +138,12 @@ class NoRegularizer(Regularizer):
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
     # docstr-coverage: inherited
-    def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
+    def update(self, *tensors: FloatTensor) -> None:  # noqa: D102
         # no need to compute anything
         pass
 
     # docstr-coverage: inherited
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         # always return zero
         return torch.zeros(1, dtype=x.dtype, device=x.device)
 
@@ -191,7 +192,7 @@ class LpRegularizer(Regularizer):
         self.p = p
 
     # docstr-coverage: inherited
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         return lp_norm(x=x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
 
@@ -235,7 +236,7 @@ class PowerSumRegularizer(Regularizer):
         self.p = p
 
     # docstr-coverage: inherited
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         return powersum_norm(x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
 
@@ -281,7 +282,7 @@ class NormLimitRegularizer(Regularizer):
         self.power_norm = power_norm
 
     # docstr-coverage: inherited
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         if self.power_norm:
             norm = powersum_norm(x, p=self.p, dim=self.dim, normalize=False)
         else:
@@ -318,11 +319,11 @@ class OrthogonalityRegularizer(Regularizer):
         self.epsilon = epsilon
 
     # docstr-coverage: inherited
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         raise NotImplementedError(f"{self.__class__.__name__} regularizer is order-sensitive!")
 
     # docstr-coverage: inherited
-    def update(self, *tensors: torch.FloatTensor) -> None:  # noqa: D102
+    def update(self, *tensors: FloatTensor) -> None:  # noqa: D102
         if len(tensors) != 2:
             raise ValueError("Expects exactly two tensors")
         if self.apply_only_once and self.updated:
@@ -338,7 +339,7 @@ class CombinedRegularizer(Regularizer):
     """A convex combination of regularizers."""
 
     # The normalization factor to balance individual regularizers' contribution.
-    normalization_factor: torch.FloatTensor
+    normalization_factor: FloatTensor
 
     hpo_default = dict(total_weight=dict(type=float, low=0.01, high=1.0, scale="log"), regularizers=tuple())
 
@@ -378,11 +379,11 @@ class CombinedRegularizer(Regularizer):
         return any(r.normalize for r in self.regularizers)
 
     # docstr-coverage: inherited
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)
 
 
+#: A resolver for regularizers
 regularizer_resolver: ClassResolver[Regularizer] = ClassResolver.from_subclasses(
-    base=Regularizer,
-    default=NoRegularizer,
+    base=Regularizer, default=NoRegularizer, location="pykeen.regularizers.regularizer_resolver"
 )

@@ -37,20 +37,14 @@ def is_improvement(
     larger_is_better: bool,
     relative_delta: float = 0.0,
 ) -> bool:
-    """
-    Decide whether the current value is an improvement over the best value.
+    """Decide whether the current value is an improvement over the best value.
 
-    :param best_value:
-        The best value so far.
-    :param current_value:
-        The current value.
-    :param larger_is_better:
-        Whether a larger value is better.
-    :param relative_delta:
-        A minimum relative improvement until it is considered as an improvement.
+    :param best_value: The best value so far.
+    :param current_value: The current value.
+    :param larger_is_better: Whether a larger value is better.
+    :param relative_delta: A minimum relative improvement until it is considered as an improvement.
 
-    :return:
-        Whether the current value is better.
+    :returns: Whether the current value is better.
     """
     better = current_value > best_value if larger_is_better else current_value < best_value
     return better and not math.isclose(current_value, best_value, rel_tol=relative_delta)
@@ -93,19 +87,14 @@ class EarlyStoppingLogic:
         )
 
     def report_result(self, metric: float, epoch: int) -> bool:
-        """
-        Report a result at the given epoch.
+        """Report a result at the given epoch.
 
-        :param metric:
-            The result metric.
-        :param epoch:
-            The epoch.
+        :param metric: The result metric.
+        :param epoch: The epoch.
 
-        :return:
-            If the result did not improve more than delta for patience evaluations
+        :returns: If the result did not improve more than delta for patience evaluations
 
-        :raises ValueError:
-            if more than one metric is reported for a single epoch
+        :raises ValueError: if more than one metric is reported for a single epoch
         """
         if self.best_epoch is not None and epoch <= self.best_epoch:
             raise ValueError("Cannot report more than one metric for one epoch")
@@ -194,7 +183,7 @@ class EarlyStopper(Stopper):
             logger.info(f"Inferred checkpoint path for best model weights: {self.best_model_path}")
         if self.best_model_path.is_file():
             logger.warning(
-                f"Checkpoint path for best weights does already exist ({self.best_model_path}).It will be overwritten."
+                f"Checkpoint path for best weights does already exist ({self.best_model_path}). It will be overwritten."
             )
 
     @property
@@ -264,7 +253,7 @@ class EarlyStopper(Stopper):
             for stopped_callback in self.stopped_callbacks:
                 stopped_callback(self, result, epoch)
             logger.info(f"Re-loading weights from best epoch from {self.best_model_path}")
-            self.model.load_state_dict(torch.load(self.best_model_path))
+            self.model.load_state_dict(torch.load(self.best_model_path, weights_only=False))
             if self.clean_up_checkpoint:
                 self.best_model_path.unlink()
                 logger.debug(f"Clean up checkpoint with best weights: {self.best_model_path}")

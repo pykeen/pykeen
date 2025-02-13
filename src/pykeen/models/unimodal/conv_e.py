@@ -13,7 +13,7 @@ from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.init import xavier_normal_
 from ...nn.modules import ConvEInteraction
 from ...triples import CoreTriplesFactory
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "ConvE",
@@ -22,77 +22,19 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class ConvE(ERModel):
+class ConvE(ERModel[FloatTensor, FloatTensor, tuple[FloatTensor, FloatTensor]]):
     r"""An implementation of ConvE from [dettmers2018]_.
 
-    ConvE  is a CNN-based approach. For each triple $(h,r,t)$, the input to ConvE is a matrix
-    $\mathbf{A} \in \mathbb{R}^{2 \times d}$ where the first row of $\mathbf{A}$ represents
-    $\mathbf{h} \in \mathbb{R}^d$ and the second row represents $\mathbf{r} \in \mathbb{R}^d$. $\mathbf{A}$ is
-    reshaped to a matrix $\mathbf{B} \in \mathbb{R}^{m \times n}$ where the first $m/2$ half rows represent
-    $\mathbf{h}$ and the remaining $m/2$ half rows represent $\mathbf{r}$. In the convolution layer, a set of
-    \textit{2-dimensional} convolutional filters
-    $\Omega = \{\omega_i \ | \ \omega_i \in \mathbb{R}^{r \times c}\}$ are applied on
-    $\mathbf{B}$ that capture interactions between $\mathbf{h}$ and $\mathbf{r}$. The resulting feature maps are
-    reshaped and concatenated in order to create a feature vector $\mathbf{v} \in \mathbb{R}^{|\Omega|rc}$. In the
-    next step, $\mathbf{v}$ is mapped into the entity space using a linear transformation
-    $\mathbf{W} \in \mathbb{R}^{|\Omega|rc \times d}$, that is $\mathbf{e}_{h,r} = \mathbf{v}^{T} \mathbf{W}$.
-    The score for the triple $(h,r,t) \in \mathbb{K}$ is then given by:
+    ConvE represents entities using a $d$-dimensional embedding and a scalar tail bias.
+    Relations are represented by a $d$-dimensional vector.
+    All three components can be stored as :class:`~pykeen.nn.representation.Embedding`.
 
-    .. math::
+    On top of these representations, this model uses the :class:`~pykeen.nn.modules.ConvEInteraction` to calculate
+    scores.
 
-        f(h,r,t) = \mathbf{e}_{h,r} \mathbf{t}
+    Example::
+        .. literalinclude:: ../examples/models/conv_e.py
 
-    Since the interaction model can be decomposed into
-    $f(h,r,t) = \left\langle f'(\mathbf{h}, \mathbf{r}), \mathbf{t} \right\rangle$, the model is particularly
-    designed to 1-N scoring, i.e. efficient computation of scores for $(h,r,t)$ for fixed $h,r$ and
-    many different $t$.
-
-    .. seealso::
-
-        - Official Implementation: https://github.com/TimDettmers/ConvE/blob/master/model.py
-
-    The default setting uses batch normalization. Batch normalization normalizes the output of the activation functions,
-    in order to ensure that the weights of the NN don't become imbalanced and to speed up training.
-    However, batch normalization is not the only way to achieve more robust and effective training [santurkar2018]_.
-    Therefore, we added the flag 'apply_batch_normalization' to turn batch normalization on/off (it's turned on as
-    default).
-
-    Example usage:
-
-    >>> # Step 1: Get triples
-    >>> from pykeen.datasets import Nations
-    >>> dataset = Nations()
-    >>> # Step 2: Configure the model
-    >>> from pykeen.models import ConvE
-    >>> model = ConvE(
-    ...     embedding_dim       = 200,
-    ...     input_channels      = 1,
-    ...     output_channels     = 32,
-    ...     embedding_height    = 10,
-    ...     embedding_width     = 20,
-    ...     kernel_height       = 3,
-    ...     kernel_width        = 3,
-    ...     input_dropout       = 0.2,
-    ...     feature_map_dropout = 0.2,
-    ...     output_dropout      = 0.3,
-    ...     create_inverse_triples = True,
-    ... )
-    >>> # Step 3: Configure the loop
-    >>> from torch.optim import Adam
-    >>> optimizer = Adam(params=model.get_grad_params())
-    >>> from pykeen.training import LCWATrainingLoop
-    >>> training_loop = LCWATrainingLoop(model=model, optimizer=optimizer)
-    >>> # Step 4: Train
-    >>> losses = training_loop.train(num_epochs=5, batch_size=256)
-    >>> # Step 5: Evaluate the model
-    >>> from pykeen.evaluation import RankBasedEvaluator
-    >>> evaluator = RankBasedEvaluator()
-    >>> metric_result = evaluator.evaluate(
-    ...     model=model,
-    ...     mapped_triples=dataset.testing.mapped_triples,
-    ...     additional_filter_triples=dataset.training.mapped_triples,
-    ...     batch_size=8192,
-    ... )
     ---
     citation:
         author: Dettmers

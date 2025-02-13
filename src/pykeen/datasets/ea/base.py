@@ -36,25 +36,17 @@ class EADataset(EagerDataset):
         combination_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
-        """
-        Initialize the dataset.
+        """Initialize the dataset.
 
-        :param side:
-            the side, if only a single graph should be considered, or `None` to combine the two graphs into a
+        :param side: the side, if only a single graph should be considered, or `None` to combine the two graphs into a
             single one, using `combination`.
-        :param random_state:
-            the random state to use for reproducible splits
-        :param split_ratios:
-            the split ratios used to perform the train/test/validation split.
-        :param combination:
-            the graph combination. only effective if side is `None`
-        :param combination_kwargs:
-            additional keyword-based parameters for the graph combination
-        :param kwargs:
-            any additional keyword-based parameters are passed to :meth:`EagerDataset.__init__`.
+        :param random_state: the random state to use for reproducible splits
+        :param split_ratios: the split ratios used to perform the train/test/validation split.
+        :param combination: the graph combination. only effective if side is `None`
+        :param combination_kwargs: additional keyword-based parameters for the graph combination
+        :param kwargs: any additional keyword-based parameters are passed to :meth:`EagerDataset.__init__`.
 
-        :raises ValueError:
-            if an invalid side is passed
+        :raises ValueError: if an invalid side is passed
         """
         if side is None:
             # load both graphs

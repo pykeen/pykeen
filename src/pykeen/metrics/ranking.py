@@ -549,9 +549,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
             weights=weights,
         )
 
-    def adjust(
-        self, base_metric_result: float, num_candidates: np.ndarray, weights: np.ndarray | None = None
-    ) -> float:
+    def adjust(self, base_metric_result: float, num_candidates: np.ndarray, weights: np.ndarray | None = None) -> float:
         """
         Adjust base metric results based on the number of candidates.
 
@@ -1004,9 +1002,7 @@ class GeometricMeanRank(RankBasedMetric):
         return x2 - individual_expectation**2
 
     @classmethod
-    def _individual_expectation(
-        cls, num_candidates: np.ndarray, weights: np.ndarray | None
-    ) -> tuple[bool, np.ndarray]:
+    def _individual_expectation(cls, num_candidates: np.ndarray, weights: np.ndarray | None) -> tuple[bool, np.ndarray]:
         if weights is None:
             return True, cls._log_individual_expectation_no_weight(num_candidates=num_candidates)
         return False, cls._individual_expectation_weighted(num_candidates=num_candidates, weights=weights)

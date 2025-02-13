@@ -18,7 +18,7 @@ from torch.nn import functional
 from .text import TextEncoder, text_encoder_resolver
 from .utils import iter_matrix_power, safe_diagonal
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import Initializer, MappedTriples, OneOrSequence
+from ..typing import FloatTensor, Initializer, LongTensor, MappedTriples, OneOrSequence
 from ..utils import compose, get_edge_index, iter_weisfeiler_lehman, upgrade_to_sequence
 
 __all__ = [
@@ -167,9 +167,7 @@ uniform_norm_p1_: Initializer = cast(
 )
 
 
-def init_quaternions(
-    x: torch.FloatTensor,
-) -> torch.FloatTensor:
+def init_quaternions(x: FloatTensor) -> FloatTensor:
     """
     Initialize quaternion.
 
@@ -185,17 +183,18 @@ def init_quaternions(
     if x.ndim < 2 or x.shape[-1] != 4:
         raise ValueError(f"shape must be (..., 4) but is {x.shape}.")
     *shape, dim = x.shape[:-1]
+    device = x.device
     num_elements = math.prod(shape)
     # scaling factor
     s = 1.0 / math.sqrt(2 * num_elements)
     # modulus ~ Uniform[-s, s]
-    modulus = 2 * s * torch.rand(num_elements, dim) - s
+    modulus = 2 * s * torch.rand(num_elements, dim, device=device) - s
     # phase ~ Uniform[0, 2*pi]
-    phase = 2 * math.pi * torch.rand(num_elements, dim)
+    phase = 2 * math.pi * torch.rand(num_elements, dim, device=device)
     # real part
     real = (modulus * phase.cos()).unsqueeze(dim=-1)
     # purely imaginary quaternions unitary
-    imag = torch.rand(num_elements, dim, 3)
+    imag = torch.rand(num_elements, dim, 3, device=device)
     imag = functional.normalize(imag, p=2, dim=-1)
     imag = imag * (modulus * phase.sin()).unsqueeze(dim=-1)
     return torch.cat([real, imag], dim=-1)
@@ -227,7 +226,7 @@ class PretrainedInitializer:
         )
     """
 
-    def __init__(self, tensor: torch.FloatTensor) -> None:
+    def __init__(self, tensor: FloatTensor) -> None:
         """
         Initialize the initializer.
 
@@ -356,9 +355,9 @@ class WeisfeilerLehmanInitializer(PretrainedInitializer):
         color_initializer_kwargs: OptionalKwargs = None,
         shape: OneOrSequence[int] = 32,
         # variants for the edge index
-        edge_index: torch.LongTensor | None = None,
+        edge_index: LongTensor | None = None,
         num_entities: int | None = None,
-        mapped_triples: torch.LongTensor | None = None,
+        mapped_triples: LongTensor | None = None,
         triples_factory: CoreTriplesFactory | None = None,
         # additional parameters for iter_weisfeiler_lehman
         **kwargs,
@@ -469,6 +468,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         )
         # create random walk matrix
         rw = torch_ppr.utils.prepare_page_rank_adjacency(edge_index=edge_index, num_nodes=num_entities)
+        # TODO replace iter_matrix_power and safe_diagonal with torch_ppr functions?
         # stack diagonal entries of powers of rw
         tensor = torch.stack(
             [
@@ -481,6 +481,19 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
         super().__init__(tensor=tensor)
 
 
+# TODO: replace by automatically generated list
+#: A resolver for initializers, including elements from :mod:`pykeen.nn.init`
+#:
+#: - :func:`pykeen.nn.init.init_phases`
+#: - :func:`pykeen.nn.init.init_quaternions`
+#: - :func:`pykeen.nn.init.normal_norm_`
+#: - :func:`pykeen.nn.init.uniform_norm_`
+#: - :func:`pykeen.nn.init.xavier_uniform_`
+#: - :func:`pykeen.nn.init.xavier_uniform_norm`
+#: - :func:`pykeen.nn.init.xavier_normal_`
+#: - :func:`pykeen.nn.init.xavier_normal_norm_`
+#:
+#: as well as initializers from :mod:`torch.nn.init`.
 initializer_resolver: FunctionResolver[Initializer] = FunctionResolver(
     [
         getattr(torch.nn.init, func)
@@ -488,6 +501,7 @@ initializer_resolver: FunctionResolver[Initializer] = FunctionResolver(
         if not func.startswith("_") and func.endswith("_") and func not in {"xavier_normal_", "xavier_uniform_"}
     ],
     default=torch.nn.init.normal_,
+    location="pykeen.nn.init.initializer_resolver",
 )
 for func in [
     xavier_normal_,

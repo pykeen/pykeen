@@ -145,7 +145,9 @@ class Objective:
         def _stopped_callback(_early_stopper: EarlyStopper, _result: float | int, epoch: int) -> None:
             trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
 
-        for key, callback in zip(("result_callbacks", "stopped_callbacks"), (_result_callback, _stopped_callback), strict=False):
+        for key, callback in zip(
+            ("result_callbacks", "stopped_callbacks"), (_result_callback, _stopped_callback), strict=False
+        ):
             stopper_kwargs.setdefault(key, []).append(callback)
 
     def __call__(self, trial: Trial) -> float | None:

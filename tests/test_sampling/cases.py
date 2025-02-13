@@ -10,6 +10,7 @@ import unittest_templates
 from pykeen.datasets import Nations
 from pykeen.sampling import NegativeSampler
 from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
+from pykeen.training.slcwa import create_slcwa_instances
 from pykeen.triples import Instances, TriplesFactory
 
 __all__ = [
@@ -47,7 +48,7 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
     def pre_setup_hook(self) -> None:
         """Set up the test case with a triples factory, training instances, and a default positive batch."""
         self.triples_factory = Nations().training
-        self.training_instances = self.triples_factory.create_slcwa_instances()
+        self.training_instances = create_slcwa_instances(self.triples_factory)
         random_state = numpy.random.RandomState(seed=self.seed)
         batch_indices = random_state.randint(low=0, high=len(self.training_instances), size=(self.batch_size,))
         self.positive_batch = self.training_instances.mapped_triples[batch_indices]

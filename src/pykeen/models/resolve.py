@@ -126,7 +126,7 @@ def make_model_cls(
 
     entity_representations_kwargs, relation_representations_kwargs = _normalize_representation_kwargs(
         dimensions=dimensions,
-        interaction=interaction_instance.__class__,  # type: ignore
+        interaction=interaction_instance,  # type: ignore
         entity_representations_kwargs=entity_representations_kwargs,
         relation_representations_kwargs=relation_representations_kwargs,
     )
@@ -153,7 +153,7 @@ def make_model_cls(
 
 def _normalize_representation_kwargs(
     dimensions: int | Mapping[str, int],
-    interaction: type[Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation]],
+    interaction: Interaction[HeadRepresentation, RelationRepresentation, TailRepresentation],
     entity_representations_kwargs: OptionalKwargs,
     relation_representations_kwargs: OptionalKwargs,
 ) -> tuple[Sequence[OptionalKwargs], Sequence[OptionalKwargs]]:
@@ -161,12 +161,9 @@ def _normalize_representation_kwargs(
     if isinstance(dimensions, int):
         dimensions = {"d": dimensions}
     assert isinstance(dimensions, dict)
-    if set(dimensions) < interaction.get_dimensions():
-        raise DimensionError(set(dimensions), interaction.get_dimensions())
+    if set(dimensions) < interaction.dimensions:
+        raise DimensionError(set(dimensions), interaction.dimensions)
     if entity_representations_kwargs is None:
-        # TODO: Does not work for interactions with separate tail_entity_shape (i.e., ConvE)
-        if interaction._tail_entity_shape is not None:
-            raise NotImplementedError
         entity_representations_kwargs = [
             dict(shape=tuple(dimensions[d] for d in shape)) for shape in interaction.entity_shape
         ]

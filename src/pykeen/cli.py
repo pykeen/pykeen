@@ -5,10 +5,12 @@ later, but that will cause problems - the code will get executed twice:
 
 - When you run ``python -m pykeen`` python will execute``__main__.py`` as a script. That means there won't be any
   ``pykeen.__main__`` in ``sys.modules``.
-- When you import __main__ it will get executed again (as a module) because
-  there's no ``pykeen.__main__`` in ``sys.modules``.
+- When you import __main__ it will get executed again (as a module) because there's no ``pykeen.__main__`` in
+  ``sys.modules``.
 
-.. seealso:: http://click.pocoo.org/5/setuptools/#setuptools-integration
+.. seealso::
+
+    http://click.pocoo.org/5/setuptools/#setuptools-integration
 """
 
 import importlib
@@ -87,16 +89,12 @@ def models(tablefmt: str):
 
 
 def format_class(cls: type, module: str | None = None) -> str:
-    """
-    Generate the fully-qualified class name.
+    """Generate the fully-qualified class name.
 
-    :param cls:
-        the class
-    :param module:
-        the module name to use instead of `cls.__module__`
+    :param cls: the class
+    :param module: the module name to use instead of `cls.__module__`
 
-    :return:
-        the fully qualified class name
+    :returns: the fully qualified class name
     """
     if module is None:
         module = cls.__module__
@@ -111,17 +109,13 @@ def _citation(dd):
 
 
 def _format_reference(reference: str | None, link_fmt: str | None, alt_reference: str | None = None) -> str:
-    """
-    Format a reference.
+    """Format a reference.
 
-    :param reference:
-        the reference
-    :param link_fmt:
-        the link format
-    :param alt_reference:
-        the link target. Defaults to the reference.
-    :return:
-        a Markdown reference
+    :param reference: the reference
+    :param link_fmt: the link format
+    :param alt_reference: the link target. Defaults to the reference.
+
+    :returns: a Markdown reference
     """
     if reference is None:
         return ""

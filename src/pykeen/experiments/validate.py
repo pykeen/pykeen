@@ -5,7 +5,6 @@ import pathlib
 from collections.abc import Callable, Iterable
 from typing import Optional, Union
 
-import torch
 from class_resolver import Hint
 from torch import nn
 
@@ -19,6 +18,7 @@ from ..optimizers import optimizer_resolver
 from ..regularizers import regularizer_resolver
 from ..sampling import negative_sampler_resolver
 from ..training import training_loop_resolver
+from ..typing import FloatTensor
 from ..utils import CONFIGURATION_FILE_FORMATS, load_configuration, normalize_string
 
 _SKIP_NAMES = {
@@ -34,18 +34,18 @@ _SKIP_NAMES = {
 }
 _SKIP_ANNOTATIONS = {
     nn.Embedding,
-    Optional[nn.Embedding],
+    Optional[nn.Embedding],  # noqa:UP007
     type[nn.Embedding],
-    Optional[type[nn.Embedding]],
+    Optional[type[nn.Embedding]],  # noqa:UP007
     nn.Module,
-    Optional[nn.Module],
+    Optional[nn.Module],  # noqa:UP007
     type[nn.Module],
-    Optional[type[nn.Module]],
+    Optional[type[nn.Module]],  # noqa:UP007
     Model,
-    Optional[Model],
+    Optional[Model],  # noqa:UP007
     type[Model],
-    Optional[type[Model]],
-    Union[str, Callable[[torch.FloatTensor], torch.FloatTensor]],
+    Optional[type[Model]],  # noqa:UP007
+    Union[str, Callable[[FloatTensor], FloatTensor]],  # noqa:UP007
     Hint[nn.Module],
 }
 _SKIP_EXTRANEOUS = {

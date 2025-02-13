@@ -65,7 +65,9 @@ class TriplePredictionsTest(cases.PredictionTestCase):
         data = {
             f"{label}_id": torch.randint(max_id, size=(5,), generator=generator).numpy()
             for label, max_id in zip(
-                COLUMN_LABELS, [self.dataset.num_entities, self.dataset.num_relations, self.dataset.num_entities], strict=False
+                COLUMN_LABELS,
+                [self.dataset.num_entities, self.dataset.num_relations, self.dataset.num_entities],
+                strict=False,
             )
         }
         data["score"] = torch.rand(size=(5,), generator=generator).numpy()
@@ -239,9 +241,11 @@ def test_predict_triples(
 def _iter_get_input_batch_inputs() -> Iterable[
     tuple[
         CoreTriplesFactory | None,
-        None | int | str,
-        None | int | str,
-        None | int | str,
+        int | str | None,
+        int,
+        str | None,
+        int,
+        str | None,
         pykeen.typing.Target,
     ]
 ]:
@@ -330,7 +334,7 @@ def test_get_targets(
     if exp_tensor is None:
         assert ids_tensor is None
     else:
-        assert (ids_tensor == exp_tensor).all()
+        assert (ids_tensor == exp_tensor.to(device=device)).all()
 
 
 def _iter_predict_target_inputs() -> Iterable[

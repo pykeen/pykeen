@@ -9,12 +9,11 @@ from typing import NamedTuple, cast
 
 import numpy
 import numpy as np
-import torch
 
 from .evaluator import Evaluator, MetricResults
 from ..constants import TARGET_TO_INDEX
 from ..metrics.classification import ClassificationMetric, classification_metric_resolver
-from ..typing import SIDE_BOTH, ExtendedTarget, MappedTriples, Target, normalize_target
+from ..typing import SIDE_BOTH, ExtendedTarget, FloatTensor, MappedTriples, Target, normalize_target
 
 __all__ = [
     "ClassificationEvaluator",
@@ -100,11 +99,9 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
     all_positives: MutableMapping[Target, MutableMapping[tuple[int, int], np.ndarray]]
 
     def __init__(self, **kwargs):
-        """
-        Initialize the evaluator.
+        """Initialize the evaluator.
 
-        :param kwargs:
-            keyword-based parameters passed to :meth:`Evaluator.__init__`.
+        :param kwargs: keyword-based parameters passed to :meth:`Evaluator.__init__`.
         """
         super().__init__(
             filtered=False,
@@ -123,16 +120,16 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        scores: torch.FloatTensor,
-        true_scores: torch.FloatTensor | None = None,
-        dense_positive_mask: torch.FloatTensor | None = None,
+        scores: FloatTensor,
+        true_scores: FloatTensor | None = None,
+        dense_positive_mask: FloatTensor | None = None,
     ) -> None:  # noqa: D102
         if dense_positive_mask is None:
             raise KeyError("Sklearn evaluators need the positive mask!")
 
         # Transfer to cpu and convert to numpy
-        scores = scores.detach().cpu().numpy()
-        dense_positive_mask = dense_positive_mask.detach().cpu().numpy()
+        scores_np = scores.detach().cpu().numpy()
+        dense_positive_mask_np = dense_positive_mask.detach().cpu().numpy()
         remaining = [i for i in range(hrt_batch.shape[1]) if i != TARGET_TO_INDEX[target]]
         keys = hrt_batch[:, remaining].detach().cpu().numpy()
 
@@ -141,8 +138,8 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
             key = tuple(map(int, keys[i]))
             assert len(key) == 2
             key = cast(tuple[int, int], key)
-            self.all_scores[target][key] = scores[i]
-            self.all_positives[target][key] = dense_positive_mask[i]
+            self.all_scores[target][key] = scores_np[i]
+            self.all_positives[target][key] = dense_positive_mask_np[i]
 
     # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102

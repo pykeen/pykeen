@@ -126,3 +126,6 @@ References
 
 .. [koenigs2022] Königs, C., *et al* (2022) `The heterogeneous pharmacological medical biochemical
    network PharMeBINet <https://doi.org/10.1038/s41597-022-01510-3>`_, *Scientific Data*, **9**, 393.
+
+.. [yin2022] Yin, C., *et al* (2022) `Nimble GNN Embedding with Tensor-Train Decomposition
+   <https://arxiv.org/abs/2206.10581>`_, *SIGKDD'22*.

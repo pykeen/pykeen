@@ -7,6 +7,8 @@ import numpy
 import torch
 from tqdm.auto import tqdm
 
+from ...typing import LongTensor
+
 __all__ = [
     "random_sample_no_replacement",
     "ensure_num_entities",
@@ -20,21 +22,18 @@ def random_sample_no_replacement(
     pool: Mapping[int, Collection[int]],
     num_tokens: int,
     num_entities: int | None = None,
-) -> torch.LongTensor:
+) -> LongTensor:
     """Sample randomly without replacement num_tokens relations for each entity.
 
     If a graph has disconnected nodes, then num_entities > number of rows in the pool.
 
-    :param pool:
-        a dictionary of entity: [relations]
-    :param num_tokens:
-        the number of tokens to sample for each entity
-    :param num_entities:
-        the total number of nodes in the graph, might be bigger than the pool size for graphs with disconnected nodes.
-        If not given, is calculated based the length of ``pool``.
+    :param pool: a dictionary of entity: [relations]
+    :param num_tokens: the number of tokens to sample for each entity
+    :param num_entities: the total number of nodes in the graph, might be bigger than the pool size for graphs with
+        disconnected nodes. If not given, is calculated based the length of ``pool``.
 
-    :return: shape: (num_entities, num_tokens), -1 <= res < vocabulary_size
-        the selected relation IDs for each entity. -1 is used as a padding token.
+    :returns: shape: (num_entities, num_tokens), -1 <= res < vocabulary_size the selected relation IDs for each entity.
+        -1 is used as a padding token.
     """
     if num_entities is None:
         num_entities = len(pool)
@@ -58,7 +57,7 @@ def ensure_num_entities(edge_index: numpy.ndarray, num_entities: int | None = No
     return edge_index.max().item() + 1
 
 
-def prepare_edges_for_metis(edge_index: torch.Tensor) -> torch.LongTensor:
+def prepare_edges_for_metis(edge_index: torch.Tensor) -> LongTensor:
     """Prepare the edge index for METIS partitioning to prevent segfaults."""
     # remove self-loops
     mask = edge_index[0] != edge_index[1]

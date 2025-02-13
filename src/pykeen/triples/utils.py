@@ -9,7 +9,7 @@ import pandas
 import torch
 from class_resolver import FunctionResolver
 
-from ..typing import LabeledTriples, MappedTriples
+from ..typing import LabeledTriples, LongTensor, MappedTriples
 
 __all__ = [
     "compute_compressed_adjacency_list",
@@ -42,13 +42,14 @@ def load_triples(
 ) -> LabeledTriples:
     """Load triples saved as tab separated values.
 
-    :param path: The key for the data to be loaded. Typically, this will be a file path ending in ``.tsv``
-        that points to a file with three columns - the head, relation, and tail. This can also be used to
-        invoke PyKEEN data importer entrypoints (see below).
+    :param path: The key for the data to be loaded. Typically, this will be a file path ending in ``.tsv`` that points
+        to a file with three columns - the head, relation, and tail. This can also be used to invoke PyKEEN data
+        importer entrypoints (see below).
     :param delimiter: The delimiter between the columns in the file
     :param encoding: The encoding for the file. Defaults to utf-8.
-    :param column_remapping: A remapping if the three columns do not follow the order head-relation-tail.
-        For example, if the order is head-tail-relation, pass ``(0, 2, 1)``
+    :param column_remapping: A remapping if the three columns do not follow the order head-relation-tail. For example,
+        if the order is head-tail-relation, pass ``(0, 2, 1)``
+
     :returns: A numpy array representing "labeled" triples.
 
     :raises ValueError: if a column remapping was passed, but it was not a length 3 sequence
@@ -87,33 +88,29 @@ def load_triples(
     return df.to_numpy()
 
 
-def get_entities(triples: torch.LongTensor) -> set[int]:
+def get_entities(triples: LongTensor) -> set[int]:
     """Get all entities from the triples."""
     return set(triples[:, [0, 2]].flatten().tolist())
 
 
-def get_relations(triples: torch.LongTensor) -> set[int]:
+def get_relations(triples: LongTensor) -> set[int]:
     """Get all relations from the triples."""
     return set(triples[:, 1].tolist())
 
 
 def tensor_to_df(
-    tensor: torch.LongTensor,
+    tensor: LongTensor,
     **kwargs: torch.Tensor | np.ndarray | Sequence,
 ) -> pandas.DataFrame:
     """Take a tensor of triples and make a pandas dataframe with labels.
 
-    :param tensor: shape: (n, 3)
-        The triples, ID-based and in format (head_id, relation_id, tail_id).
-    :param kwargs:
-        Any additional number of columns. Each column needs to be of shape (n,). Reserved column names:
+    :param tensor: shape: (n, 3) The triples, ID-based and in format (head_id, relation_id, tail_id).
+    :param kwargs: Any additional number of columns. Each column needs to be of shape (n,). Reserved column names:
         {"head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label"}.
 
-    :return:
-        A dataframe with n rows, and 3 + len(kwargs) columns.
+    :returns: A dataframe with n rows, and 3 + len(kwargs) columns.
 
-    :raises ValueError:
-        If a reserved column name appears in kwargs.
+    :raises ValueError: If a reserved column name appears in kwargs.
     """
     # Input validation
     additional_columns = set(kwargs.keys())
@@ -145,17 +142,15 @@ def tensor_to_df(
 def compute_compressed_adjacency_list(
     mapped_triples: MappedTriples,
     num_entities: int | None = None,
-) -> tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
+) -> tuple[LongTensor, LongTensor, LongTensor]:
     """Compute compressed undirected adjacency list representation for efficient sampling.
 
     The compressed adjacency list format is inspired by CSR sparse matrix format.
 
-    :param mapped_triples:
-        the ID-based triples
-    :param num_entities:
-        the number of entities.
+    :param mapped_triples: the ID-based triples
+    :param num_entities: the number of entities.
 
-    :return: a tuple `(degrees, offsets, compressed_adj_lists)` where
+    :returns: a tuple `(degrees, offsets, compressed_adj_lists)` where
 
             - degrees: shape: `(num_entities,)`
             - offsets: shape: `(num_entities,)`
@@ -163,7 +158,7 @@ def compute_compressed_adjacency_list(
 
         with
 
-        .. code::
+        .. code-block::
 
             adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
     """

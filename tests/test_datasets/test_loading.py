@@ -118,7 +118,9 @@ class MockZipFileRemoteDataset(PackedZipRemoteDataset):
 class TestSingle(cases.CachedDatasetCase):
     """Test the base classes.
 
-    .. note:: This uses the nations training dataset
+    .. note::
+
+        This uses the nations training dataset
     """
 
     exp_num_entities = 14
@@ -132,7 +134,9 @@ class TestSingle(cases.CachedDatasetCase):
 class TestTarFileSingle(cases.CachedDatasetCase):
     """Test the base classes.
 
-    .. note:: This uses the nations training dataset
+    .. note::
+
+        This uses the nations training dataset
     """
 
     exp_num_entities = 14

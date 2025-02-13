@@ -42,6 +42,8 @@ class ResultListenerAdapter(ResultTracker):
 
     def __post_init__(self):
         self.best = float("-inf") if self.metric_selection.maximize else float("+inf")
+        self.base_log_metrics = self.base.log_metrics
+        self.base.log_metrics = self.log_metrics
 
     # docstr-coverage: inherited
     def log_metrics(
@@ -50,6 +52,7 @@ class ResultListenerAdapter(ResultTracker):
         step: int | None = None,
         prefix: str | None = None,
     ) -> None:
+        self.base_log_metrics(metrics=metrics, step=step, prefix=prefix)
         self.last_step = step
 
         # prefix filter

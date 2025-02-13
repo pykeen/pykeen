@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import torch
 
-from ..typing import RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC, RankType
+from ..typing import RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC, FloatTensor, LongTensor, RankType
 
 __all__ = [
     "Ranks",
@@ -20,28 +20,28 @@ class Ranks:
     #: The optimistic rank is the rank when assuming all options with an equal score are placed
     #: behind the current test triple.
     #: shape: (batch_size,)
-    optimistic: torch.FloatTensor
+    optimistic: FloatTensor
 
     #: The realistic rank is the average of the optimistic and pessimistic rank, and hence the expected rank
     #: over all permutations of the elements with the same score as the currently considered option.
     #: shape: (batch_size,)
-    realistic: torch.FloatTensor
+    realistic: FloatTensor
 
     #: The pessimistic rank is the rank when assuming all options with an equal score are placed
     #: in front of current test triple.
     #: shape: (batch_size,)
-    pessimistic: torch.FloatTensor
+    pessimistic: FloatTensor
 
     #: The number of options is the number of items considered in the ranking. It may change for
     #: filtered evaluation
     #: shape: (batch_size,)
-    number_of_options: torch.LongTensor
+    number_of_options: LongTensor
 
-    def items(self) -> Iterable[tuple[RankType, torch.FloatTensor]]:
+    def items(self) -> Iterable[tuple[RankType, FloatTensor]]:
         """Iterate over pairs of rank types and their associated tensors."""
         yield from self.to_type_dict().items()
 
-    def to_type_dict(self) -> Mapping[RankType, torch.FloatTensor]:
+    def to_type_dict(self) -> Mapping[RankType, FloatTensor]:
         """Return mapping from rank-type to rank value tensor."""
         return {
             RANK_OPTIMISTIC: self.optimistic,
@@ -52,8 +52,8 @@ class Ranks:
     @classmethod
     def from_scores(
         cls,
-        true_score: torch.FloatTensor,
-        all_scores: torch.FloatTensor,
+        true_score: FloatTensor,
+        all_scores: FloatTensor,
     ) -> "Ranks":
         """Compute ranks given scores.
 
@@ -130,6 +130,8 @@ class RankBuilder:
     "sub-batch" / "slice" basis rather than batch level.
     """
 
+    # TODO: unused?
+
     #: the scores of the true choice, shape: (*bs), dtype: float
     y_true: torch.Tensor
 
@@ -142,7 +144,7 @@ class RankBuilder:
     #: the total number of compared scores, shape: (*bs), dtype: long
     total: torch.Tensor | int = 0
 
-    def update(self, y_pred: torch.FloatTensor) -> "RankBuilder":
+    def update(self, y_pred: FloatTensor) -> "RankBuilder":
         """Update the rank builder with a batch of scores.
 
         :param y_pred: shape: (*bs, partial_num_choices)
@@ -158,7 +160,7 @@ class RankBuilder:
             total=self.total + torch.isfinite(y_pred).sum(dim=-1),
         )
 
-    def compute(self) -> torch.Tensor:
+    def compute(self) -> Ranks:
         """Calculate the ranks for the aggregated counts.
 
         :return:

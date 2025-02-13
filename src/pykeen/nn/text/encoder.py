@@ -14,10 +14,11 @@ from torch import nn
 from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 
-from ..utils import determine_maximum_batch_size, get_preferred_device, resolve_device, upgrade_to_sequence
+from ...typing import FloatTensor
+from ...utils import determine_maximum_batch_size, get_preferred_device, resolve_device, upgrade_to_sequence
 
 if TYPE_CHECKING:
-    from .representation import Representation
+    from ..representation import Representation
 
 __all__ = [
     # abstract
@@ -61,7 +62,7 @@ def _encode_all_memory_utilization_optimized(
 class TextEncoder(nn.Module):
     """An encoder for text."""
 
-    def forward(self, labels: str | Sequence[str]) -> torch.FloatTensor:
+    def forward(self, labels: str | Sequence[str]) -> FloatTensor:
         """
         Encode a batch of text.
 
@@ -76,7 +77,7 @@ class TextEncoder(nn.Module):
         return self.forward_normalized(texts=labels)
 
     @abstractmethod
-    def forward_normalized(self, texts: Sequence[str]) -> torch.FloatTensor:
+    def forward_normalized(self, texts: Sequence[str]) -> FloatTensor:
         """
         Encode a batch of text.
 
@@ -93,7 +94,7 @@ class TextEncoder(nn.Module):
         self,
         labels: Sequence[str],
         batch_size: int | None = None,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         """Encode all labels (inference mode & batched).
 
         :param labels:
@@ -109,7 +110,7 @@ class TextEncoder(nn.Module):
         :returns: shape: (len(labels), dim)
             a tensor representing the encodings for all labels
         """
-        determine_maximum_batch_size(
+        batch_size = determine_maximum_batch_size(
             batch_size=batch_size, device=get_preferred_device(self), maximum_batch_size=len(labels)
         )
         return _encode_all_memory_utilization_optimized(encoder=self, labels=labels, batch_size=batch_size).detach()
@@ -139,7 +140,7 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
         dim: int = 32,
         character_representation: HintOrType["Representation"] = None,
         vocabulary: str = string.printable,
-        aggregation: Hint[Callable[..., torch.FloatTensor]] = None,
+        aggregation: Hint[Callable[..., FloatTensor]] = None,
     ) -> None:
         """Initialize the encoder.
 
@@ -149,7 +150,7 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
         :param aggregation: the aggregation to use to pool the character embeddings
         """
         super().__init__()
-        from . import representation_resolver
+        from .. import representation_resolver
 
         self.aggregation = aggregation_resolver.make(aggregation, dim=-2)
         self.vocabulary = vocabulary
@@ -162,7 +163,7 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
         )
 
     # docstr-coverage: inherited
-    def forward_normalized(self, texts: Sequence[str]) -> torch.FloatTensor:  # noqa: D102
+    def forward_normalized(self, texts: Sequence[str]) -> FloatTensor:  # noqa: D102
         # tokenize
         token_ids = [[self.token_to_id.get(c, self.unknown_idx) for c in text] for text in texts]
         # pad
@@ -218,7 +219,7 @@ class TransformerTextEncoder(TextEncoder):
         self.max_length = max_length or 512
 
     # docstr-coverage: inherited
-    def forward_normalized(self, texts: Sequence[str]) -> torch.FloatTensor:  # noqa: D102
+    def forward_normalized(self, texts: Sequence[str]) -> FloatTensor:  # noqa: D102
         return self.model(
             **self.tokenizer(
                 texts,

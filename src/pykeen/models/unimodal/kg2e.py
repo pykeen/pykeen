@@ -4,13 +4,14 @@ from collections.abc import Mapping
 from typing import Any, ClassVar
 
 import torch
-import torch.autograd
+from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch.nn.init import uniform_
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import KG2EInteraction
-from ...typing import Constrainer, Hint, Initializer
+from ...nn.sim import KG2ESimilarity
+from ...typing import Constrainer, FloatTensor, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -18,31 +19,18 @@ __all__ = [
 ]
 
 
-class KG2E(ERModel):
+class KG2E(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]]):
     r"""An implementation of KG2E from [he2015]_.
 
     KG2E aims to explicitly model (un)certainties in entities and relations (e.g. influenced by the number of triples
     observed for these entities and relations). Therefore, entities and relations are represented by probability
-    distributions, in particular by multi-variate Gaussian distributions $\mathcal{N}_i(\mu_i,\Sigma_i)$
-    where the mean $\mu_i \in \mathbb{R}^d$ denotes the position in the vector space and the diagonal variance
-    $\Sigma_i \in \mathbb{R}^{d \times d}$ models the uncertainty.
-    Inspired by the :class:`pykeen.models.TransE` model, relations are modeled as transformations from head to tail
-    entities: $\mathcal{H} - \mathcal{T} \approx \mathcal{R}$ where
-    $\mathcal{H} \sim \mathcal{N}_h(\mu_h,\Sigma_h)$, $\mathcal{H} \sim \mathcal{N}_t(\mu_t,\Sigma_t)$,
-    $\mathcal{R} \sim \mathcal{P}_r = \mathcal{N}_r(\mu_r,\Sigma_r)$, and
-    $\mathcal{H} - \mathcal{T} \sim \mathcal{P}_e = \mathcal{N}_{h-t}(\mu_h - \mu_t,\Sigma_h + \Sigma_t)$
-    (since head and tail entities are considered to be independent with regards to the relations).
-    The interaction model measures the similarity between $\mathcal{P}_e$ and $\mathcal{P}_r$ by
-    means of the Kullback-Liebler Divergence (:meth:`KG2E.kullback_leibler_similarity`).
+    distributions, in particular by multi-variate Gaussian distributions $\mathcal{N}(\mu, \Sigma)$
+    where the mean $\mu \in \mathbb{R}^d$ denotes the position in the vector space and the *diagonal* variance
+    $\Sigma = diag(\sigma_1, \ldots, \sigma_d) \in \mathbb{R}^{d \times d}$ models the uncertainty.
 
-    .. math::
-            f(h,r,t) = \mathcal{D_{KL}}(\mathcal{P}_e, \mathcal{P}_r)
-
-    Besides the asymmetric KL divergence, the authors propose a symmetric variant which uses the expected
-    likelihood (:meth:`KG2E.expected_likelihood`)
-
-    .. math::
-            f(h,r,t) = \mathcal{D_{EL}}(\mathcal{P}_e, \mathcal{P}_r)
+    Thus, we have two $d$-dimensional vectors each stored in an :class:`~pykeen.nn.representation.Embedding` matrix for
+    entities and also relations. The representations are then passed to the :class:`~pykeen.nn.modules.KG2EInteraction`
+    function to obtain scores.
     ---
     citation:
         author: He
@@ -60,11 +48,15 @@ class KG2E(ERModel):
     #: The default settings for the entity constrainer
     constrainer_default_kwargs = dict(maxnorm=1.0, p=2, dim=-1)
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="dist_similarity", resolver="pykeen.nn.sim.kg2e_similarity_resolver")
+    )
     def __init__(
         self,
         *,
         embedding_dim: int = 50,
-        dist_similarity: str | None = None,
+        dist_similarity: HintOrType[KG2ESimilarity] = None,
+        dist_similarity_kwargs: OptionalKwargs = None,
         c_min: float = 0.05,
         c_max: float = 5.0,
         entity_initializer: Hint[Initializer] = uniform_,
@@ -78,7 +70,11 @@ class KG2E(ERModel):
         r"""Initialize KG2E.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 350]$.
-        :param dist_similarity: Either 'KL' for Kullback-Leibler or 'EL' for expected likelihood. Defaults to KL.
+        :param dist_similarity:
+            The similarity measures for gaussian distributions. Defaults to
+            :class:`~pykeen.nn.sim.NegativeKullbackLeiblerDivergence`.
+        :param dist_similarity_kwargs:
+            Additional keyword-based parameters used to instantiate the similarity.
         :param c_min: covariance clamp minimum bound
         :param c_max: covariance clamp maximum bound
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
@@ -93,6 +89,7 @@ class KG2E(ERModel):
             interaction=KG2EInteraction,
             interaction_kwargs=dict(
                 similarity=dist_similarity,
+                similarity_kwargs=dist_similarity_kwargs,
             ),
             entity_representations_kwargs=[
                 # mean

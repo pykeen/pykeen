@@ -191,7 +191,7 @@ class TestLeakage(unittest.TestCase):
     def test_jaccard_similarity_scipy(self):
         """Test :func:`jaccard_similarity_scipy`."""
         triples_factory = Nations().training
-        rel, inv = triples_factory_to_sparse_matrices(triples_factory)
+        rel = triples_factory_to_sparse_matrices(triples_factory)[0]
         sim = jaccard_similarity_scipy(a=rel, b=rel)
         # check type
         assert isinstance(sim, numpy.ndarray)

@@ -6,15 +6,21 @@ from typing import Any, ClassVar
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import CPInteraction
-from ...typing import Hint, Initializer, Normalizer
+from ...typing import FloatTensor, Hint, Initializer, Normalizer
 
 __all__ = [
     "CP",
 ]
 
 
-class CP(ERModel):
+class CP(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of CP as described in [lacroix2018]_ based on [hitchcock1927]_.
+
+    It has separate entity representations for the head and tail role, both a $r \times d$-dimensional matrices.
+    Relations are also represented by a $r \times d$-dimensional matrix.
+    All three components can be stored as :class:`~pykeen.nn.representation.Embedding`.
+
+    On top of these, :class:`~pykeen.nn.modules.CPInteraction` is applied to obtain scores.
 
     ---
     name: Canonical Tensor Decomposition
@@ -43,7 +49,7 @@ class CP(ERModel):
         relation_initializer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
-        r"""Initialize CP via the :class:`pykeen.nn.modules.CPInteraction` interaction.
+        r"""Initialize the model.
 
         :param embedding_dim: The entity embedding dimension $d$.
         :param rank: The tensor decomposition rank $k$.
@@ -53,7 +59,7 @@ class CP(ERModel):
         :param entity_normalizer_kwargs: Keyword arguments to be used when calling the entity normalizer
         :param relation_initializer: Relation initializer function. Defaults to None
         :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer
-        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
+        :param kwargs: Remaining keyword arguments passed through to :class:`~pykeen.models.ERModel`.
         """
         super().__init__(
             interaction=CPInteraction,

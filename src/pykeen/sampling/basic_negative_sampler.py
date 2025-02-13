@@ -7,7 +7,7 @@ import torch
 
 from .negative_sampler import NegativeSampler
 from ..constants import LABEL_HEAD, LABEL_TAIL, TARGET_TO_INDEX
-from ..typing import Target
+from ..typing import LongTensor, Target
 
 __all__ = [
     "BasicNegativeSampler",
@@ -15,20 +15,14 @@ __all__ = [
 ]
 
 
-def random_replacement_(batch: torch.LongTensor, index: int, selection: slice, size: int, max_index: int) -> None:
-    """
-    Replace a column of a batch of indices by random indices.
+def random_replacement_(batch: LongTensor, index: int, selection: slice, size: int, max_index: int) -> None:
+    """Replace a column of a batch of indices by random indices.
 
-    :param batch: shape: `(*batch_dims, d)`
-        the batch of indices
-    :param index:
-        the index (of the last axis) which to replace
-    :param selection:
-        a selection of the batch, e.g., a slice or a mask
-    :param size:
-        the size of the selection
-    :param max_index:
-        the maximum index value at the chosen position
+    :param batch: shape: `(*batch_dims, d)` the batch of indices
+    :param index: the index (of the last axis) which to replace
+    :param selection: a selection of the batch, e.g., a slice or a mask
+    :param size: the size of the selection
+    :param max_index: the maximum index value at the chosen position
     """
     # At least make sure to not replace the triples by the original value
     # To make sure we don't replace the {head, relation, tail} by the
@@ -51,16 +45,17 @@ class BasicNegativeSampler(NegativeSampler):
 
     Steps:
 
-    1. Randomly (uniformly) determine whether $h$, $r$ or $t$ shall be corrupted for a positive triple
-       $(h,r,t) \in \mathcal{K}$.
+    1. Randomly (uniformly) determine whether $h$, $r$ or $t$ shall be corrupted for a positive triple $(h,r,t) \in
+       \mathcal{K}$.
     2. Randomly (uniformly) sample an entity $e \in \mathcal{E}$ or relation $r' \in \mathcal{R}$ for selection to
        corrupt the triple.
 
        - If $h$ was selected before, the corrupted triple is $(e,r,t)$
        - If $r$ was selected before, the corrupted triple is $(h,r',t)$
        - If $t$ was selected before, the corrupted triple is $(h,r,e)$
-    3. If ``filtered`` is set to ``True``, all proposed corrupted triples that also exist as
-       actual positive triples $(h,r,t) \in \mathcal{K}$ will be removed.
+
+    3. If ``filtered`` is set to ``True``, all proposed corrupted triples that also exist as actual positive triples
+       $(h,r,t) \in \mathcal{K}$ will be removed.
     """
 
     def __init__(
@@ -71,10 +66,8 @@ class BasicNegativeSampler(NegativeSampler):
     ) -> None:
         """Initialize the basic negative sampler with the given entities.
 
-        :param corruption_scheme:
-            What sides ('h', 'r', 't') should be corrupted. Defaults to head and tail ('h', 't').
-        :param kwargs:
-            Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
+        :param corruption_scheme: What sides ('h', 'r', 't') should be corrupted. Defaults to head and tail ('h', 't').
+        :param kwargs: Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
         """
         super().__init__(**kwargs)
         self.corruption_scheme = corruption_scheme or (LABEL_HEAD, LABEL_TAIL)
@@ -82,7 +75,7 @@ class BasicNegativeSampler(NegativeSampler):
         self._corruption_indices = [TARGET_TO_INDEX[side] for side in self.corruption_scheme]
 
     # docstr-coverage: inherited
-    def corrupt_batch(self, positive_batch: torch.LongTensor) -> torch.LongTensor:  # noqa: D102
+    def corrupt_batch(self, positive_batch: LongTensor) -> LongTensor:  # noqa: D102
         batch_shape = positive_batch.shape[:-1]
 
         # clone positive batch for corruption (.repeat_interleave creates a copy)

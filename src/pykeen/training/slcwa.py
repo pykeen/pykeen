@@ -1,18 +1,19 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
+import warnings
+from typing import Any
 
-import torch.utils.data
 from class_resolver import HintOrType, OptionalKwargs
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 from .training_loop import TrainingLoop
 from ..losses import Loss
 from ..models.base import Model
 from ..sampling import NegativeSampler
 from ..triples import CoreTriplesFactory
-from ..triples.instances import SLCWABatch, SLCWASampleType
-from ..typing import InductiveMode
+from ..triples.instances import BatchedSLCWAInstances, SLCWABatch, SLCWASampleType, SubGraphSLCWAInstances
+from ..typing import FloatTensor, InductiveMode
 
 __all__ = [
     "SLCWATrainingLoop",
@@ -51,7 +52,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
     ) -> DataLoader[SLCWABatch]:  # noqa: D102
         assert "batch_sampler" not in kwargs
         return DataLoader(
-            dataset=triples_factory.create_slcwa_instances(
+            dataset=create_slcwa_instances(
+                triples_factory,
                 batch_size=batch_size,
                 shuffle=kwargs.pop("shuffle", True),
                 drop_last=drop_last,
@@ -80,7 +82,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         stop: int | None,
         label_smoothing: float = 0.0,
         slice_size: int | None = None,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         # Slicing is not possible in sLCWA training loops
         if slice_size is not None:
             raise AttributeError("Slicing is not possible for sLCWA training loops.")
@@ -126,7 +128,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         stop: int,
         label_smoothing: float = 0.0,
         slice_size: int | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    ) -> FloatTensor:  # noqa: D102
         return self._process_batch_static(
             model=self.model,
             loss=self.loss,
@@ -154,3 +156,24 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
             report = "This model doesn't support sub-batching and slicing is not possible for sLCWA"
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
+
+
+def create_slcwa_instances(
+    triples_factory: CoreTriplesFactory,
+    *,
+    sampler: str | None = None,
+    **kwargs: Any,
+) -> Dataset:
+    """Create sLCWA instances for this factory's triples."""
+    cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
+    if "shuffle" in kwargs:
+        if kwargs.pop("shuffle"):
+            warnings.warn("Training instances are always shuffled.", DeprecationWarning, stacklevel=2)
+        else:
+            raise AssertionError("If shuffle is provided, it must be True.")
+    return cls(
+        mapped_triples=triples_factory._add_inverse_triples_if_necessary(mapped_triples=triples_factory.mapped_triples),
+        num_entities=triples_factory.num_entities,
+        num_relations=triples_factory.num_relations,
+        **kwargs,
+    )

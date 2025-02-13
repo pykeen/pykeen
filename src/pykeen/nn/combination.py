@@ -6,14 +6,23 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
 
 import torch
-from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
+from class_resolver import (
+    ClassResolver,
+    Hint,
+    HintOrType,
+    OptionalKwargs,
+    ResolverKey,
+    update_docstring_with_resolver_keys,
+)
 from class_resolver.contrib.torch import activation_resolver, aggregation_resolver
 from torch import nn
 
+from ..typing import FloatTensor
 from ..utils import ExtraReprMixin, combine_complex, split_complex
 
 __all__ = [
     "Combination",
+    "combination_resolver",
     # Concrete classes
     "ComplexSeparatedCombination",
     "ConcatCombination",
@@ -29,30 +38,25 @@ class Combination(nn.Module, ExtraReprMixin, ABC):
     """Base class for combinations."""
 
     @abstractmethod
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
-        """
-        Combine a sequence of individual representations.
+    def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:
+        """Combine a sequence of individual representations.
 
-        :param xs: shape: `(*batch_dims, *input_dims_i)`
-            the individual representations
+        :param xs: shape: `(*batch_dims, *input_dims_i)` the individual representations
 
-        :return: shape: `(*batch_dims, *output_dims)`
-            a combined representation
+        :returns: shape: `(*batch_dims, *output_dims)` a combined representation
         """
         raise NotImplementedError
 
     def output_shape(self, input_shapes: Sequence[tuple[int, ...]]) -> tuple[int, ...]:
-        """
-        Calculate the output shape for the given input shapes.
+        """Calculate the output shape for the given input shapes.
 
-        .. note ::
+        .. note::
+
             this method runs a single forward pass if no symbolic computation is available.
 
-        :param input_shapes:
-            the input shapes without the batch dimensions
+        :param input_shapes: the input shapes without the batch dimensions
 
-        :return:
-            the output shape
+        :returns: the output shape
         """
         logger.warning("No symbolic computation of output shape.")
         return self(xs=[torch.empty(size=shape) for shape in input_shapes]).shape
@@ -62,17 +66,15 @@ class ConcatCombination(Combination):
     """Combine representation by concatenation."""
 
     def __init__(self, dim: int = -1) -> None:
-        """
-        Initialize the combination.
+        """Initialize the combination.
 
-        :param dim:
-            the concatenation dimension
+        :param dim: the concatenation dimension
         """
         super().__init__()
         self.dim = dim
 
     # docstr-coverage: inherited
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         return torch.cat(xs, dim=self.dim)
 
     # docstr-coverage: inherited
@@ -93,24 +95,16 @@ class ConcatProjectionCombination(ConcatCombination):
         activation: HintOrType[nn.Module] = nn.Identity,
         activation_kwargs: OptionalKwargs = None,
     ) -> None:
-        """
-        Initialize the combination.
+        """Initialize the combination.
 
-        :param input_dims:
-            the input dimensions
-        :param output_dim:
-            the output dimension. Defaults to the first input dimension
-        :param bias:
-            whether to add a bias term in between the linear projection and the activation
-        :param dropout:
-            dropout to use before the activation
-        :param activation:
-            the activation, or a hint thereof
-        :param activation_kwargs:
-            additional keyword-based parameters used to instantiate the activation
+        :param input_dims: the input dimensions
+        :param output_dim: the output dimension. Defaults to the first input dimension
+        :param bias: whether to add a bias term in between the linear projection and the activation
+        :param dropout: dropout to use before the activation
+        :param activation: the activation, or a hint thereof
+        :param activation_kwargs: additional keyword-based parameters used to instantiate the activation
 
-        :raises ValueError:
-            if `input_dims` is empty
+        :raises ValueError: if `input_dims` is empty
         """
         super().__init__()
         if not input_dims:
@@ -123,32 +117,34 @@ class ConcatProjectionCombination(ConcatCombination):
         )
 
     # docstr-coverage: inherited
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         return self.projection(super().forward(xs))
 
 
 class ConcatAggregationCombination(ConcatCombination):
     """Combine representation by concatenation followed by an aggregation along the same axis."""
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("aggregation", resolver="class_resolver.contrib.torch.aggregation_resolver"),
+    )
     def __init__(
         self,
-        aggregation: Hint[Callable[[torch.FloatTensor], torch.FloatTensor]] = None,
+        aggregation: Hint[Callable[[FloatTensor], FloatTensor]] = None,
+        aggregation_kwargs: OptionalKwargs = None,
         dim: int = -1,
     ) -> None:
-        """
-        Initialize the combination.
+        """Initialize the combination.
 
-        :param aggregation:
-            the aggregation, or a hint thereof, cf. :data:`class_resolver.contrib.torch.aggregation_resolver`
-        :param dim:
-            the concatenation and reduction dimension.
+        :param aggregation: The aggregation, or a hint thereof.
+        :param aggregation_kwargs: Additional keyword-based parameters.
+        :param dim: the concatenation and reduction dimension.
         """
         super().__init__(dim=dim)
         self.dim = dim
-        self.aggregation = aggregation_resolver.make(aggregation)
+        self.aggregation = aggregation_resolver.make(aggregation, aggregation_kwargs)
 
     # docstr-coverage: inherited
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         return self.aggregation(super().forward(xs=xs), dim=self.dim)
 
     # docstr-coverage: inherited
@@ -167,20 +163,17 @@ class ComplexSeparatedCombination(Combination):
         imag_combination: HintOrType[Combination] = None,
         imag_combination_kwargs: OptionalKwargs = None,
     ):
-        """
-        Initialize the combination.
+        """Initialize the combination.
 
-        .. note ::
+        .. note::
+
             if non-instantiated combinations are passed, separate instances will be created for real and imaginary parts
 
-        :param combination:
-            the real combination, or a hint thereof
-        :param combination_kwargs:
-            keyword-based parameters for the real combination
-        :param imag_combination:
-            the imaginary combination, or a hint thereof. If None, use combination for both.
-        :param imag_combination_kwargs:
-            keyword-based parameters for the imaginary combination; only used if imag_combination is not None
+        :param combination: the real combination, or a hint thereof
+        :param combination_kwargs: keyword-based parameters for the real combination
+        :param imag_combination: the imaginary combination, or a hint thereof. If None, use combination for both.
+        :param imag_combination_kwargs: keyword-based parameters for the imaginary combination; only used if
+            imag_combination is not None
         """
         super().__init__()
         # input normalization
@@ -191,7 +184,7 @@ class ComplexSeparatedCombination(Combination):
         self.imag_combination = combination_resolver.make(imag_combination, imag_combination_kwargs)
 
     # docstr-coverage: inherited
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         if not any(x.is_complex() for x in xs):
             raise ValueError(
                 f"{self.__class__} is a combination for complex representations, but none of the inputs was of "
@@ -215,35 +208,35 @@ class ComplexSeparatedCombination(Combination):
 class GatedCombination(Combination):
     r"""A module that implements a gated linear transformation for the combination of entities and literals.
 
-    Compared to the other Combinations, this combination makes use of a gating mechanism commonly found in RNNs.
-    The main goal of this gating mechanism is to learn which parts of the additional literal information is
-    useful or not and act accordingly, by incorporating them into the new combined embedding or discarding them.
+    Compared to the other Combinations, this combination makes use of a gating mechanism commonly found in RNNs. The
+    main goal of this gating mechanism is to learn which parts of the additional literal information is useful or not
+    and act accordingly, by incorporating them into the new combined embedding or discarding them.
 
-    For given entity representation $\mathbf{x}_e \in \mathbb{R}^{d_e}$ and literal representation
-    $\mathbf{x}_l \in \mathbb{R}^{d_l}$, the module calculates
+    For given entity representation $\mathbf{x}_e \in \mathbb{R}^{d_e}$ and literal representation $\mathbf{x}_l \in
+    \mathbb{R}^{d_l}$, the module calculates
 
-    .. math ::
+    .. math::
 
         z = f_{gate}(\mathbf{W}_e x_e + \mathbf{W}_l x_l + \mathbf{b})
         h = f_{hidden}(\mathbf{W} [x_e; x_l])
         y = Dropout(z \odot h + (1 - z) \odot x)
 
-    where $\mathbf{W}_e \in \mathbb{R}^{d_e \times d_e}$,$\mathbf{W}_l \in \mathbb{R}^{d_l \times d_e}$,
-    $\mathbf{W} \in \mathbb{R}^{(d_e + d_l) \ times d_e}$, and $\mathbf{b} \in \mathbb{R}^{d_e}$ are trainable
-    parameters, $f_{gate}$ and $f_{hidden}$ are activation functions, defaulting to sigmoid and tanh, $\odot$ denotes
-    the element-wise multiplication, and $[x_e; x_l]$ the concatenation operation.
+    where $\mathbf{W}_e \in \mathbb{R}^{d_e \times d_e}$,$\mathbf{W}_l \in \mathbb{R}^{d_l \times d_e}$, $\mathbf{W} \in
+    \mathbb{R}^{(d_e + d_l) times d_e}$, and $\mathbf{b} \in \mathbb{R}^{d_e}$ are trainable parameters, $f_{gate}$ and
+    $f_{hidden}$ are activation functions, defaulting to sigmoid and tanh, $\odot$ denotes the element-wise
+    multiplication, and $[x_e; x_l]$ the concatenation operation.
 
-    .. note ::
+    .. note::
 
         We can alternatively express the gate
 
-        .. math ::
+        .. math::
 
             z = f_{gate}(\mathbf{W}_e x_e + \mathbf{W}_l x_l + \mathbf{b})
 
         as
 
-        .. math ::
+        .. math::
 
             z = f_{gate}(\mathbf{W}_{el} [x_e; x_l] + \mathbf{b})
 
@@ -264,22 +257,15 @@ class GatedCombination(Combination):
     ) -> None:
         """Instantiate the module.
 
-        :param entity_dim:
-            the dimension of the entity representations.
-        :param literal_dim:
-            the dimension of the literals; defaults to entity_dim
-        :param input_dropout:
-            the dropout to use
-        :param gate_activation:
-            the activation to use on the gate, or a hint thereof
-        :param gate_activation_kwargs:
-            the keyword arguments to be used to instantiate the `gate_activation` if
-            a class or name is given instead of a pre-instantiated activation module
-        :param hidden_activation:
-            the activation to use in the hidden layer, or a hint thereof
-        :param hidden_activation_kwargs:
-            the keyword arguments to be used to instantiate the hidden activation if
-            a class or name is given instead of a pre-instantiated activation module
+        :param entity_dim: the dimension of the entity representations.
+        :param literal_dim: the dimension of the literals; defaults to entity_dim
+        :param input_dropout: the dropout to use
+        :param gate_activation: the activation to use on the gate, or a hint thereof
+        :param gate_activation_kwargs: the keyword arguments to be used to instantiate the `gate_activation` if a class
+            or name is given instead of a pre-instantiated activation module
+        :param hidden_activation: the activation to use in the hidden layer, or a hint thereof
+        :param hidden_activation_kwargs: the keyword arguments to be used to instantiate the hidden activation if a
+            class or name is given instead of a pre-instantiated activation module
         """
         super().__init__()
         literal_dim = literal_dim or entity_dim
@@ -302,14 +288,16 @@ class GatedCombination(Combination):
         )
 
     # docstr-coverage: inherited
-    def forward(self, xs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         assert len(xs) == 2
         z = self.gate(xs)
         h = self.combination(xs)
         return self.dropout(z * h + (1 - z) * xs[0])
 
 
+#: Resolve combinations
 combination_resolver: ClassResolver[Combination] = ClassResolver.from_subclasses(
     base=Combination,
     default=ConcatCombination,
+    location="pykeen.nn.combination.combination_resolver",
 )

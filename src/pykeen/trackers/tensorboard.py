@@ -28,14 +28,11 @@ class TensorBoardResultTracker(ResultTracker):
         experiment_path: None | str | pathlib.Path = None,
         experiment_name: str | None = None,
     ):
-        """
-        Initialize result tracking via Tensorboard.
+        """Initialize result tracking via Tensorboard.
 
-        :param experiment_path:
-            The experiment path. A custom path at which the tensorboard logs will be saved.
-        :param experiment_name:
-            The name of the experiment, will be used as a sub directory name for the logging. If no default is given,
-            the current time is used. If set, experiment_path is set, this argument has no effect.
+        :param experiment_path: The experiment path. A custom path at which the tensorboard logs will be saved.
+        :param experiment_name: The name of the experiment, will be used as a sub directory name for the logging. If no
+            default is given, the current time is used. If set, experiment_path is set, this argument has no effect.
         """
         import torch.utils.tensorboard
 

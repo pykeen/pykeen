@@ -28,9 +28,11 @@ __all__ = [
     "metric_resolver",
 ]
 
+#: A resolver for evaluators
 evaluator_resolver: ClassResolver[Evaluator] = ClassResolver.from_subclasses(
     base=Evaluator,
     default=RankBasedEvaluator,
 )
 
+#: A resolver for metric results
 metric_resolver: ClassResolver[MetricResults] = ClassResolver.from_subclasses(MetricResults)

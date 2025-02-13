@@ -8,7 +8,8 @@ import torch
 from class_resolver import ClassResolver
 from torch import nn
 
-from .functional import circular_correlation
+from ..typing import FloatTensor
+from ..utils import circular_correlation
 
 __all__ = [
     # Base
@@ -23,23 +24,22 @@ __all__ = [
 ]
 
 
-Composition = Callable[[torch.FloatTensor, torch.FloatTensor], torch.FloatTensor]
+Composition = Callable[[FloatTensor, FloatTensor], FloatTensor]
 
 
 class CompositionModule(nn.Module, ABC):
     """An (element-wise) composition function for vectors."""
 
     @abstractmethod
-    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:
+    def forward(self, a: FloatTensor, b: FloatTensor) -> FloatTensor:
         """Compose two batches of vectors.
 
         The tensors have to be broadcastable.
 
-        :param a: shape: s_1
-            The first tensor.
-        :param b: shape: s_2
-            The second tensor.
-        :return: shape: s
+        :param a: shape: s_1 The first tensor.
+        :param b: shape: s_2 The second tensor.
+
+        :returns: shape: s
         """
 
 
@@ -50,7 +50,7 @@ class FunctionalCompositionModule(CompositionModule):
     func: ClassVar[Composition]
 
     # docstr-coverage: inherited
-    def forward(self, a: torch.FloatTensor, b: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def forward(self, a: FloatTensor, b: FloatTensor) -> FloatTensor:  # noqa: D102
         return self.__class__.func(a, b)
 
 
@@ -77,10 +77,12 @@ class CircularCorrelationCompositionModule(FunctionalCompositionModule):
     func: ClassVar[Composition] = circular_correlation
 
 
+#: A resolver for compositions
 composition_resolver: ClassResolver[CompositionModule] = ClassResolver.from_subclasses(
     CompositionModule,
     default=MultiplicationCompositionModule,
     skip={
         FunctionalCompositionModule,
     },
+    location="pykeen.nn.compositions.composition_resolver",
 )

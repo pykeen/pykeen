@@ -6,14 +6,14 @@ from typing import Any, ClassVar
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import TorusEInteraction
-from ...typing import Hint, Initializer, Normalizer
+from ...typing import FloatTensor, Hint, Initializer, Normalizer
 
 __all__ = [
     "TorusE",
 ]
 
 
-class TorusE(ERModel):
+class TorusE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of TorusE from [ebisu2018]_.
 
     ---
@@ -47,8 +47,13 @@ class TorusE(ERModel):
         r"""Initialize TorusE via the :class:`pykeen.nn.modules.TorusEInteraction` interaction.
 
         :param embedding_dim: The entity embedding dimension $d$.
-        :param p: The p for the norm.
-        :param power_norm: Whether to use the p-th power of the L_p norm instead.
+
+        :param p:
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
+
         :param entity_initializer: Entity initializer function. Defaults to None
         :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer
         :param entity_normalizer: Entity normalizer function. Defaults to None

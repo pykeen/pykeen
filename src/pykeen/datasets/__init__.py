@@ -1,9 +1,9 @@
 """Built-in datasets for PyKEEN.
 
 New datasets (inheriting from :class:`pykeen.datasets.Dataset`) can be registered with PyKEEN using the
-:mod:`pykeen.datasets` group in Python entrypoints in your own `setup.py`, `setup.cfg`, `pyproject.toml`,
-or other package configuration. They are loaded automatically with :func:`importlib.metadata.entry_points`
-via :mod:`class_resolver`.
+:mod:`pykeen.datasets` group in Python entrypoints in your own `setup.py`, `setup.cfg`, `pyproject.toml`, or other
+package configuration. They are loaded automatically with :func:`importlib.metadata.entry_points` via
+:mod:`class_resolver`.
 """
 
 import logging
@@ -102,6 +102,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+#: A resolver for datasets
 dataset_resolver: ClassResolver[Dataset] = ClassResolver.from_subclasses(
     base=Dataset,
     skip={

@@ -5,6 +5,7 @@ import json
 import logging
 import pathlib
 import sys
+import typing as t
 from collections.abc import Mapping
 from typing import Any, Optional, Union
 
@@ -26,7 +27,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-_OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}
+_OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}  # noqa:UP007
 _SKIP_ARGS = {
     "return",
     "triples_factory",
@@ -40,12 +41,12 @@ _SKIP_ARGS = {
     "coefficients",  # from AutoSF
 }
 _SKIP_ANNOTATIONS = {
-    Optional[nn.Embedding],
-    Optional[nn.Parameter],
-    Optional[nn.Module],
-    Optional[Mapping[str, Any]],
-    Union[None, str, nn.Module],
-    Union[None, str, Decomposition],
+    Optional[nn.Embedding],  # noqa:UP007
+    Optional[nn.Parameter],  # noqa:UP007
+    Optional[nn.Module],  # noqa:UP007
+    Optional[Mapping[str, Any]],  # noqa:UP007
+    Union[None, str, nn.Module],  # noqa:UP007
+    Union[None, str, Decomposition],  # noqa:UP007
 }
 _SKIP_HINTS = {
     Hint[Initializer],
@@ -59,14 +60,12 @@ _SKIP_HINTS = {
 def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
     """Build a :mod:`click` command line interface for a KGE model.
 
-    Allows users to specify all of the (hyper)parameters to the
-    model via command line options using :class:`click.Option`.
+    Allows users to specify all of the (hyper)parameters to the model via command line options using
+    :class:`click.Option`.
 
-    :param model:
-        the model class
+    :param model: the model class
 
-    :return:
-        a click command for training a model of the given class
+    :returns: a click command for training a model of the given class
     """
     signature = inspect.signature(model.__init__)
 
@@ -78,7 +77,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
             elif name in CLI_OPTIONS:
                 option = CLI_OPTIONS[name]
 
-            elif annotation in {Optional[int], Optional[str]}:
+            elif annotation in {t.Optional[int], t.Optional[str]}:  # noqa:UP007
                 option = click.option(f"--{name.replace('_', '-')}", type=_OPTIONAL_MAP[annotation])
 
             else:
@@ -152,7 +151,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
         """CLI for PyKEEN."""
         click.echo(
             f"Training {model.__name__} with "
-            f"{training_loop.__name__[: -len('TrainingLoop')]} using "
+            f"{training_loop.__name__.removesuffix('TrainingLoop')} using "
             f"{optimizer.__name__} and {evaluator.__name__}",
         )
         from ...pipeline import pipeline

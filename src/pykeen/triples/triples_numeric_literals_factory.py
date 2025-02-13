@@ -11,7 +11,7 @@ import torch
 
 from .triples_factory import TriplesFactory
 from .utils import load_triples
-from ..typing import EntityMapping, LabeledTriples, MappedTriples
+from ..typing import EntityMapping, FloatTensor, LabeledTriples, MappedTriples
 
 __all__ = [
     "TriplesNumericLiteralsFactory",
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_matrix_of_literals(
-    numeric_triples: np.array,
+    numeric_triples: np.ndarray,
     entity_to_id: EntityMapping,
 ) -> tuple[np.ndarray, dict[str, int]]:
     """Create matrix of literals where each row corresponds to an entity and each column to a literal."""
@@ -57,12 +57,10 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     ) -> None:
         """Initialize the multi-modal triples factory.
 
-        :param numeric_literals: shape: (num_entities, num_literals)
-            the numeric literals as a dense matrix.
-        :param literals_to_id:
-            a mapping from literal names to their IDs, i.e., the columns in the `numeric_literals` matrix.
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`TriplesFactory.__init__`.
+        :param numeric_literals: shape: (num_entities, num_literals) the numeric literals as a dense matrix.
+        :param literals_to_id: a mapping from literal names to their IDs, i.e., the columns in the `numeric_literals`
+            matrix.
+        :param kwargs: additional keyword-based parameters passed to :meth:`TriplesFactory.__init__`.
         """
         super().__init__(**kwargs)
         self.numeric_literals = numeric_literals
@@ -106,7 +104,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=literals_to_id,
         )
 
-    def get_numeric_literals_tensor(self) -> torch.FloatTensor:
+    def get_numeric_literals_tensor(self) -> FloatTensor:
         """Return the numeric literals as a tensor."""
         return torch.as_tensor(self.numeric_literals, dtype=torch.float32)
 

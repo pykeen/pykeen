@@ -8,6 +8,7 @@ from collections.abc import Collection, Iterable, Mapping
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -15,7 +16,9 @@ import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
-from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory
+from pykeen.training.lcwa import create_lcwa_instances
+from pykeen.training.slcwa import create_slcwa_instances
+from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory, generation
 from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import _map_triples_elements_to_ids, get_mapped_triples
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
@@ -74,6 +77,38 @@ class TestTriplesFactory(unittest.TestCase):
     def setUp(self) -> None:
         """Instantiate test instance."""
         self.factory = Nations().training
+
+    def test_correct_inverse_creation(self):
+        """Test if the triples and the corresponding inverses are created."""
+        t = [
+            ["e1", "a.", "e5"],
+            ["e1", "a", "e2"],
+        ]
+        t = np.array(t, dtype=str)
+        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
+        instances = create_slcwa_instances(factory)
+        assert len(instances) == 4
+
+    def test_automatic_incomplete_inverse_detection(self):
+        """Test detecting that the triples contain inverses, warns about them, and filters them out."""
+        # comment(mberr): from my pov this behaviour is faulty: the triples factory is expected to say it contains
+        # inverse relations, although the triples contained in it are not the same we would have when removing the
+        # first triple, and passing create_inverse_triples=True.
+        t = [
+            ["e3", f"a.{INVERSE_SUFFIX}", "e10"],
+            ["e1", "a", "e2"],
+            ["e1", "a.", "e5"],
+        ]
+        t = np.array(t, dtype=str)
+        for create_inverse_triples in (False, True):
+            with patch("pykeen.triples.triples_factory.logger.warning") as warning:
+                factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=create_inverse_triples)
+                # check for warning
+                warning.assert_called()
+                # check for filtered triples
+                assert factory.num_triples == 2
+                # check for correct inverse triples flag
+                assert factory.create_inverse_triples == create_inverse_triples
 
     def test_id_to_label(self):
         """Test ID-to-label conversion."""
@@ -185,7 +220,7 @@ class TestTriplesFactory(unittest.TestCase):
     def test_create_lcwa_instances(self):
         """Test create_lcwa_instances."""
         factory = Nations().training
-        instances = factory.create_lcwa_instances()
+        instances = create_lcwa_instances(factory)
         assert isinstance(instances, LCWAInstances)
 
         # check compressed triples
@@ -233,16 +268,28 @@ class TestSplit(unittest.TestCase):
         self.triples_factory = self.dataset.training
         self.assertEqual(1592, self.triples_factory.num_triples)
 
-    def _test_invariants(self, training_triples_factory: TriplesFactory, *other_factories: TriplesFactory) -> None:
+    def _test_invariants_shared(self, *factories: TriplesFactory, lossy: bool = False) -> None:
+        # verify that the type got correctly promoted
+        for factory in factories:
+            self.assertEqual(type(factory), type(self.triples_factory))
+            # we only support inductive *entity* splits for now
+            self.assertEqual(factory.num_relations, self.triples_factory.num_relations)
+        # verify that no triple got lost
+        total_num_triples = sum(t.num_triples for t in factories)
+        if lossy:
+            self.assertLessEqual(total_num_triples, self.triples_factory.num_triples)
+        else:
+            self.assertEqual(total_num_triples, self.triples_factory.num_triples)
+
+    def _test_invariants_transductive(
+        self, training_triples_factory: TriplesFactory, *other_factories: TriplesFactory, lossy: bool = False
+    ) -> None:
         """Test invariants for result of triples factory splitting."""
         # verify that all entities and relations are present in the training factory
         self.assertEqual(training_triples_factory.num_entities, self.triples_factory.num_entities)
-        self.assertEqual(training_triples_factory.num_relations, self.triples_factory.num_relations)
 
         all_factories = (training_triples_factory, *other_factories)
-
-        # verify that no triple got lost
-        self.assertEqual(sum(t.num_triples for t in all_factories), self.triples_factory.num_triples)
+        self._test_invariants_shared(*all_factories, lossy=lossy)
 
         # verify that the label-to-id mappings match
         self.assertSetEqual(
@@ -273,12 +320,56 @@ class TestSplit(unittest.TestCase):
             with self.subTest(method=method, ratios=ratios):
                 factories_1 = self.triples_factory.split(ratios, method=method, random_state=0)
                 self.assertEqual(n, len(factories_1))
-                self._test_invariants(*factories_1)
+                self._test_invariants_transductive(*factories_1)
 
                 factories_2 = self.triples_factory.split(ratios, method=method, random_state=0)
                 self.assertEqual(n, len(factories_2))
-                self._test_invariants(*factories_2)
+                self._test_invariants_transductive(*factories_2)
 
+                self._compare_factories(factories_1, factories_2)
+
+    def test_semi_inductive_split(self) -> None:
+        """Test semi-inductive splitting."""
+        cases = [
+            (2, 0.8),
+            (2, [0.8]),
+            (3, [0.80, 0.10]),
+            (3, [0.80, 0.10, 0.10]),
+        ]
+        for n, ratios in cases:
+            with self.subTest(ratios=ratios):
+                factories_1 = self.triples_factory.split_semi_inductive(ratios, random_state=0)
+                self.assertEqual(n, len(factories_1))
+                self._test_invariants_transductive(*factories_1, lossy=True)
+                # TODO: there are other invariants to check than for transductive splits
+
+                # check for reproducibility, by splitting a second time with the same seed
+                factories_2 = self.triples_factory.split_semi_inductive(ratios, random_state=0)
+                self._compare_factories(factories_1, factories_2)
+
+    def test_fully_inductive_split(self) -> None:
+        """Test semi-inductive splitting."""
+        cases = [
+            (3, 0.5, 0.8),
+            (3, 0.5, [0.8]),
+            (4, 0.6, [0.80, 0.10]),
+            (4, 0.4, [0.80, 0.10, 0.10]),
+        ]
+        for n, entity_split, triple_ratios in cases:
+            with self.subTest(entity_split=entity_split, triple_ratios=triple_ratios):
+                factories_1 = self.triples_factory.split_fully_inductive(
+                    entity_split_train_ratio=entity_split, evaluation_triples_ratios=triple_ratios, random_state=0
+                )
+                self.assertEqual(n, len(factories_1))
+                # in the fully inductive setting, we have two separate graphs, with all but the training factory
+                # in the inference graph.
+                self._test_invariants_shared(*factories_1[1:], lossy=True)
+                # TODO: there are other invariants to check than for transductive splits
+
+                # check for reproducibility, by splitting a second time with the same seed
+                factories_2 = self.triples_factory.split_fully_inductive(
+                    entity_split_train_ratio=entity_split, evaluation_triples_ratios=triple_ratios, random_state=0
+                )
                 self._compare_factories(factories_1, factories_2)
 
     def test_load_model(self):
@@ -307,9 +398,9 @@ class TestSplit(unittest.TestCase):
 
     def _compare_factories(self, factories_1, factories_2, msg=None) -> None:
         for factory_1, factory_2 in zip(factories_1, factories_2, strict=False):
-            triples_1 = factory_1.mapped_triples.detach().cpu().numpy()
-            triples_2 = factory_2.mapped_triples.detach().cpu().numpy()
-            self.assertTrue((triples_1 == triples_2).all(), msg=msg)
+            triples_1 = factory_1.mapped_triples
+            triples_2 = factory_2.mapped_triples
+            self.assertTrue(torch.equal(triples_1, triples_2), msg=msg)
 
 
 class TestLiterals(unittest.TestCase):
@@ -404,7 +495,9 @@ class TestUtils(unittest.TestCase):
     def test_load_triples_with_nans(self):
         """Test loading triples that have a ``nan`` string.
 
-        .. seealso:: https://github.com/pykeen/pykeen/pull/883
+        .. seealso::
+
+            https://github.com/pykeen/pykeen/pull/883
         """
         path = RESOURCES.joinpath("test_nans.tsv")
         expected_triples = [
@@ -511,3 +604,24 @@ def test_get_mapped_triples(x, inputs: Mapping[str, Any]):
     assert mapped_triples.dtype == torch.long
     assert mapped_triples.ndim == 2
     assert mapped_triples.shape[-1] == 3
+
+
+@pytest.fixture()
+def tf_one_hole() -> CoreTriplesFactory:
+    """Create a condensable triples factory."""
+    # create (already condensed) triples factory
+    tf = generation.generate_triples_factory(random_state=42)
+    # remove all triples with entity or relation ID 0
+    keep_mask = (tf.mapped_triples != 0).all(dim=-1)
+    tf.mapped_triples = tf.mapped_triples[keep_mask]
+    return tf
+
+
+@pytest.mark.parametrize(("entities", "relations"), itt.product((False, True), repeat=2))
+def test_condense(tf_one_hole: CoreTriplesFactory, entities: bool, relations: bool) -> None:
+    """Test condensation."""
+    tf_new = tf_one_hole.condense(entities=entities, relations=relations)
+    expected_num_entities = tf_one_hole.num_entities - 1 if entities else tf_one_hole.num_entities
+    assert tf_new.num_entities == expected_num_entities
+    expected_num_relations = tf_one_hole.num_relations - 1 if relations else tf_one_hole.num_relations
+    assert tf_new.num_relations == expected_num_relations

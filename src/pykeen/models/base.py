@@ -18,7 +18,16 @@ from torch import nn
 from ..inverse import RelationInverter, relation_inverter_resolver
 from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..triples import KGInfo
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
+from ..typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    FloatTensor,
+    InductiveMode,
+    LongTensor,
+    MappedTriples,
+    Target,
+)
 from ..utils import NoRandomSeedNecessary, get_preferred_device, set_random_seed
 
 __all__ = [
@@ -62,10 +71,6 @@ class Model(nn.Module, ABC):
     #: applied to the logits during evaluation and also for predictions
     #: after training, but has no effect on the training.
     predict_with_sigmoid: bool
-
-    can_slice_h: ClassVar[bool]
-    can_slice_r: ClassVar[bool]
-    can_slice_t: ClassVar[bool]
 
     def __init__(
         self,
@@ -175,7 +180,7 @@ class Model(nn.Module, ABC):
     """Abstract methods - Scoring"""
 
     @abstractmethod
-    def score_hrt(self, hrt_batch: torch.LongTensor, *, mode: InductiveMode | None = None) -> torch.FloatTensor:
+    def score_hrt(self, hrt_batch: LongTensor, *, mode: InductiveMode | None = None) -> FloatTensor:
         """Forward pass.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -192,12 +197,12 @@ class Model(nn.Module, ABC):
     @abstractmethod
     def score_t(
         self,
-        hr_batch: torch.LongTensor,
+        hr_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
-        tails: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:
+        tails: LongTensor | None = None,
+    ) -> FloatTensor:
         """Forward pass using right side (tail) prediction.
 
         This method calculates the score for all possible tails for each (head, relation) pair.
@@ -219,12 +224,12 @@ class Model(nn.Module, ABC):
     @abstractmethod
     def score_r(
         self,
-        ht_batch: torch.LongTensor,
+        ht_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
-        relations: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:
+        relations: LongTensor | None = None,
+    ) -> FloatTensor:
         """Forward pass using middle (relation) prediction.
 
         This method calculates the score for all possible relations for each (head, tail) pair.
@@ -248,12 +253,12 @@ class Model(nn.Module, ABC):
     @abstractmethod
     def score_h(
         self,
-        rt_batch: torch.LongTensor,
+        rt_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
-        heads: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:
+        heads: LongTensor | None = None,
+    ) -> FloatTensor:
         """Forward pass using left side (head) prediction.
 
         This method calculates the score for all possible heads for each (relation, tail) pair.
@@ -273,7 +278,7 @@ class Model(nn.Module, ABC):
         """
 
     @abstractmethod
-    def collect_regularization_term(self) -> torch.FloatTensor:
+    def collect_regularization_term(self) -> FloatTensor:
         """Get the regularization term for the loss function."""
 
     """Concrete methods"""
@@ -307,16 +312,16 @@ class Model(nn.Module, ABC):
         :param path:
             Path of the file where to load the state from.
         """
-        self.load_state_dict(torch.load(path, map_location=self.device))
+        self.load_state_dict(torch.load(path, map_location=self.device, weights_only=False))
 
     """Extended scoring methods"""
 
     def _prepare_batch(
         self,
-        batch: torch.LongTensor | None,
+        batch: LongTensor | None,
         index_relation: int,
-        invert_relation: bool,
-    ) -> torch.LongTensor:
+        invert_relation: bool
+    ) -> LongTensor:
         if invert_relation and not self.use_inverse_triples:
             raise ValueError("Can only invert relations if use_inverse_relations is set to True")
 
@@ -449,7 +454,7 @@ class Model(nn.Module, ABC):
 
     """Prediction methods"""
 
-    def predict_hrt(self, hrt_batch: torch.LongTensor, *, mode: InductiveMode | None = None) -> torch.FloatTensor:
+    def predict_hrt(self, hrt_batch: LongTensor, *, mode: InductiveMode | None = None) -> FloatTensor:
         """Calculate the scores for triples.
 
         This method takes head, relation and tail of each triple and calculates the corresponding score.
@@ -472,9 +477,9 @@ class Model(nn.Module, ABC):
 
     def predict_h(
         self,
-        rt_batch: torch.LongTensor,
+        rt_batch: LongTensor,
         **kwargs,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
 
         This method calculates the score for all possible heads for each (relation, tail) pair.
@@ -508,9 +513,9 @@ class Model(nn.Module, ABC):
 
     def predict_t(
         self,
-        hr_batch: torch.LongTensor,
+        hr_batch: LongTensor,
         **kwargs,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
 
         This method calculates the score for all possible tails for each (head, relation) pair.
@@ -542,9 +547,9 @@ class Model(nn.Module, ABC):
 
     def predict_r(
         self,
-        ht_batch: torch.LongTensor,
+        ht_batch: LongTensor,
         **kwargs,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
 
         This method calculates the score for all possible relations for each (head, tail) pair.
@@ -570,9 +575,9 @@ class Model(nn.Module, ABC):
         hrt_batch: MappedTriples,
         target: Target,
         full_batch: bool = True,
-        ids: torch.LongTensor | None = None,
+        ids: LongTensor | None = None,
         **kwargs,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         """
         Predict scores for the given target.
 
@@ -612,7 +617,7 @@ class Model(nn.Module, ABC):
 
     """Inverse scoring"""
 
-    def _prepare_inverse_batch(self, batch: torch.LongTensor, index_relation: int) -> torch.LongTensor:
+    def _prepare_inverse_batch(self, batch: LongTensor, index_relation: int) -> LongTensor:
         if not self.use_inverse_triples:
             raise ValueError(
                 "Your model is not configured to predict with inverse relations."
@@ -623,10 +628,10 @@ class Model(nn.Module, ABC):
 
     def score_hrt_inverse(
         self,
-        hrt_batch: torch.LongTensor,
+        hrt_batch: LongTensor,
         *,
         mode: InductiveMode | None = None,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         r"""
         Score triples based on inverse triples, i.e., compute $f(h,r,t)$ based on $f(t,r_{inv},h)$.
 
@@ -644,10 +649,10 @@ class Model(nn.Module, ABC):
         """
         return self.score_hrt_extended(hrt_batch=hrt_batch.flip(1), mode=mode, invert_relation=True)
 
-    def score_t_inverse(self, hr_batch: torch.LongTensor, *, tails: torch.LongTensor | None = None, **kwargs):
+    def score_t_inverse(self, hr_batch: LongTensor, *, tails: LongTensor | None = None, **kwargs):
         """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
         return self.score_h_extended(rt_batch=hr_batch.flip(1), heads=tails, invert_relation=True, **kwargs)
 
-    def score_h_inverse(self, rt_batch: torch.LongTensor, *, heads: torch.LongTensor | None = None, **kwargs):
+    def score_h_inverse(self, rt_batch: LongTensor, *, heads: LongTensor | None = None, **kwargs):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
         return self.score_t_extended(hr_batch=rt_batch.flip(1), tails=heads, invert_relation=True, **kwargs)

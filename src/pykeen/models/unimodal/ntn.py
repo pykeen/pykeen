@@ -3,44 +3,44 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
-from class_resolver import Hint, HintOrType
+from class_resolver import Hint, HintOrType, ResolverKey, update_docstring_with_resolver_keys
 from torch import nn
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import NTNInteraction
-from ...typing import Initializer
+from ...typing import FloatTensor, Initializer
 
 __all__ = [
     "NTN",
 ]
 
 
-class NTN(ERModel):
+class NTN(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor, FloatTensor, FloatTensor], FloatTensor]):
     r"""An implementation of NTN from [socher2013]_.
 
-    NTN uses a bilinear tensor layer instead of a standard linear neural network layer:
+    NTN represents entities using a $d$-dimensional vector.
+    Relations are represented by
 
-    .. math::
+        - a $k \times d \times d$-dimensional tensor, $\mathbf{W} \in \mathbb{R}^{k \times d \times d}$,
+        - a $2k \times d$-dimensional matrix, $\mathbf{V} \in \mathbb{R}^{k \times 2d}$, and
+        - two $k$-dimensional vectors, $\mathbf{b}, \mathbf{u} \in \mathbb{R}^{k}$.
 
-        f(h,r,t) = \textbf{u}_{r}^{T} \cdot \tanh(\textbf{h} \mathfrak{W}_{r} \textbf{t}
-        + \textbf{V}_r [\textbf{h};\textbf{t}] + \textbf{b}_r)
+    Denoting the number of entities by $E$ and the number of relations by $R$, the total number of parameters is thus
+    given by
 
-    where $\mathfrak{W}_r \in \mathbb{R}^{d \times d \times k}$ is the relation specific tensor, and the weight
-    matrix $\textbf{V}_r \in \mathbb{R}^{k \times 2d}$, and the bias vector $\textbf{b}_r$ and
-    the weight vector $\textbf{u}_r \in \mathbb{R}^k$ are the standard
-    parameters of a neural network, which are also relation specific. The result of the tensor product
-    $\textbf{h} \mathfrak{W}_{r} \textbf{t}$ is a vector $\textbf{x} \in \mathbb{R}^k$ where each entry $x_i$ is
-    computed based on the slice $i$ of the tensor $\mathfrak{W}_{r}$:
-    $\textbf{x}_i = \textbf{h}\mathfrak{W}_{r}^{i} \textbf{t}$. As indicated by the interaction model, NTN defines
-    for each relation a separate neural network which makes the model very expressive, but at the same time
-    computationally expensive.
+    .. math ::
+
+        dE + k(d^2 + 2d + 2)R
+
+    All representations are stored as :class:`~pykeen.nn.representation.Embedding`.
+    :class:`~pykeen.nn.modules.NTNInteraction` is used as interaction upon those representations.
 
     .. note::
 
-        We split the original $V_r$ matrix into two parts, to separate $V_r [h; r] = V_r^h h + V_r^t t$.
-        The latter is more efficient, if $h$ and $t$ are not of the same shape,
-        e.g., since we are in a :meth:`score_h` / :meth:`score_t` setting.
+        We split the original $k \times 2d$-dimensional $\mathbf{V}$ matrix into two parts of shape $k \times d$ to
+        support more efficient 1:n scoring, e.g., in the :meth:`~pykeen.models.Model.score_h` or
+        :meth:`~pykeen.models.Model.score_t` setting.
 
     .. seealso::
 
@@ -61,6 +61,9 @@ class NTN(ERModel):
         num_slices=dict(type=int, low=2, high=4),
     )
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="non_linearity", resolver="class_resolver.contrib.torch.activation_resolver")
+    )
     def __init__(
         self,
         *,
@@ -81,7 +84,7 @@ class NTN(ERModel):
             are used during its instantiation.
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.EntityEmbeddingModel`
+            Remaining keyword arguments to forward to :class:`~pykeen.models.ERModel`
         """
         super().__init__(
             interaction=NTNInteraction(

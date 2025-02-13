@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Iterator
 from typing import Generic, NamedTuple, TypeVar
@@ -15,7 +14,8 @@ from torch.utils import data
 
 from .utils import compute_compressed_adjacency_list
 from ..sampling import NegativeSampler, negative_sampler_resolver
-from ..typing import MappedTriples
+from ..typing import BoolTensor, FloatTensor, LongTensor, MappedTriples
+from ..utils import split_workload
 
 __all__ = [
     "Instances",
@@ -26,22 +26,22 @@ __all__ = [
 # TODO: the same
 SampleType = TypeVar("SampleType")
 BatchType = TypeVar("BatchType")
-LCWASampleType = tuple[MappedTriples, torch.FloatTensor]
-LCWABatchType = tuple[MappedTriples, torch.FloatTensor]
-SLCWASampleType = tuple[MappedTriples, MappedTriples, torch.BoolTensor | None]
+LCWASampleType = tuple[MappedTriples, FloatTensor]
+LCWABatchType = tuple[MappedTriples, FloatTensor]
+SLCWASampleType = tuple[MappedTriples, MappedTriples, BoolTensor | None]
 
 
 class SLCWABatch(NamedTuple):
     """A batch for sLCWA training."""
 
     #: the positive triples, shape: (batch_size, 3)
-    positives: torch.LongTensor
+    positives: LongTensor
 
     #: the negative triples, shape: (batch_size, num_negatives_per_positive, 3)
-    negatives: torch.LongTensor
+    negatives: LongTensor
 
     #: filtering masks for negative triples, shape: (batch_size, num_negatives_per_positive)
-    masks: torch.BoolTensor | None
+    masks: BoolTensor | None
 
 
 class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
@@ -66,18 +66,14 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
     ) -> Instances:
         """Create instances from mapped triples.
 
-        :param mapped_triples: shape: (num_triples, 3)
-            The ID-based triples.
-        :param num_entities: >0
-            The number of entities.
-        :param num_relations: >0
-            The number of relations.
-        :param kwargs:
-            additional keyword-based parameters.
+        :param mapped_triples: shape: (num_triples, 3) The ID-based triples.
+        :param num_entities: >0 The number of entities.
+        :param num_relations: >0 The number of relations.
+        :param kwargs: additional keyword-based parameters.
 
-        :return:
-            The instances.
+        :returns: The instances.
 
+        # noqa:DAR201
         # noqa:DAR202
         # noqa:DAR401
         """
@@ -98,16 +94,11 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
     ):
         """Initialize the sLCWA instances.
 
-        :param mapped_triples: shape: (num_triples, 3)
-            the ID-based triples, passed to the negative sampler
-        :param num_entities: >0
-            the number of entities, passed to the negative sampler
-        :param num_relations: >0
-            the number of relations, passed to the negative sampler
-        :param negative_sampler:
-            the negative sampler, or a hint thereof
-        :param negative_sampler_kwargs:
-            additional keyword-based arguments passed to the negative sampler
+        :param mapped_triples: shape: (num_triples, 3) the ID-based triples, passed to the negative sampler
+        :param num_entities: >0 the number of entities, passed to the negative sampler
+        :param num_relations: >0 the number of relations, passed to the negative sampler
+        :param negative_sampler: the negative sampler, or a hint thereof
+        :param negative_sampler_kwargs: additional keyword-based arguments passed to the negative sampler
         """
         self.mapped_triples = mapped_triples
         self.sampler = negative_sampler_resolver.make(
@@ -132,11 +123,11 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
     def collate(samples: Iterable[SLCWASampleType]) -> SLCWABatch:
         """Collate samples."""
         # each shape: (1, 3), (1, k, 3), (1, k, 3)?
-        masks: torch.LongTensor | None
+        masks: LongTensor | None
         positives, negatives, masks = zip(*samples, strict=False)
         positives = torch.cat(positives, dim=0)
         negatives = torch.cat(negatives, dim=0)
-        mask_batch: torch.BoolTensor | None
+        mask_batch: BoolTensor | None
         if masks[0] is None:
             assert all(m is None for m in masks)
             mask_batch = None
@@ -162,10 +153,10 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
 
 
 class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
-    """
-    Pre-batched training instances for the sLCWA training loop.
+    """Pre-batched training instances for the sLCWA training loop.
 
-    .. note ::
+    .. note::
+
         this class is intended to be used with automatic batching disabled, i.e., both parameters `batch_size` and
         `batch_sampler` of torch.utils.data.DataLoader` are set to `None`.
     """
@@ -180,23 +171,15 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
     ):
-        """
-        Initialize the dataset.
+        """Initialize the dataset.
 
-        :param mapped_triples: shape: (num_triples, 3)
-            the mapped triples
-        :param batch_size:
-            the batch size
-        :param drop_last:
-            whether to drop the last (incomplete) batch
-        :param num_entities: >0
-            the number of entities, passed to the negative sampler
-        :param num_relations: >0
-            the number of relations, passed to the negative sampler
-        :param negative_sampler:
-            the negative sampler, or a hint thereof
-        :param negative_sampler_kwargs:
-            additional keyword-based parameters used to instantiate the negative sampler
+        :param mapped_triples: shape: (num_triples, 3) the mapped triples
+        :param batch_size: the batch size
+        :param drop_last: whether to drop the last (incomplete) batch
+        :param num_entities: >0 the number of entities, passed to the negative sampler
+        :param num_relations: >0 the number of relations, passed to the negative sampler
+        :param negative_sampler: the negative sampler, or a hint thereof
+        :param negative_sampler_kwargs: additional keyword-based parameters used to instantiate the negative sampler
         """
         self.mapped_triples = mapped_triples
         self.batch_size = batch_size
@@ -214,20 +197,6 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         positive_batch = self.mapped_triples[item]
         negative_batch, masks = self.negative_sampler.sample(positive_batch=positive_batch)
         return SLCWABatch(positives=positive_batch, negatives=negative_batch, masks=masks)
-
-    def split_workload(self, n: int) -> range:
-        """Split workload for multi-processing."""
-        # cf. https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset
-        worker_info = torch.utils.data.get_worker_info()
-        if worker_info is None:  # single-process data loading, return the full iterator
-            workload = range(n)
-        else:
-            num_workers = worker_info.num_workers
-            worker_id = worker_info.id  # 1-based
-            start = math.ceil(n / num_workers * worker_id)
-            stop = math.ceil(n / num_workers * (worker_id + 1))
-            workload = range(start, stop)
-        return workload
 
     @abstractmethod
     def iter_triple_ids(self) -> Iterable[list[int]]:
@@ -253,7 +222,7 @@ class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
     # docstr-coverage: inherited
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
         yield from data.BatchSampler(
-            sampler=data.RandomSampler(data_source=self.split_workload(len(self.mapped_triples))),
+            sampler=data.RandomSampler(data_source=split_workload(len(self.mapped_triples))),
             batch_size=self.batch_size,
             drop_last=self.drop_last,
         )
@@ -263,11 +232,9 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
     """Pre-batched training instances for SLCWA of coherent subgraphs."""
 
     def __init__(self, **kwargs):
-        """
-        Initialize the instances.
+        """Initialize the instances.
 
-        :param kwargs:
-            keyword-based parameters passed to :meth:`BaseBatchedSLCWAInstances.__init__`
+        :param kwargs: keyword-based parameters passed to :meth:`BaseBatchedSLCWAInstances.__init__`
         """
         super().__init__(**kwargs)
         # indexing
@@ -329,7 +296,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
 
     # docstr-coverage: inherited
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
-        yield from (self.subgraph_sample() for _ in self.split_workload(n=len(self)))
+        yield from (self.subgraph_sample() for _ in split_workload(len(self)))
 
 
 class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
@@ -354,22 +321,15 @@ class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
         target: int | None = None,
         **kwargs,
     ) -> Instances:
-        """
-        Create LCWA instances from triples.
+        """Create LCWA instances from triples.
 
-        :param mapped_triples: shape: (num_triples, 3)
-            The ID-based triples.
-        :param num_entities:
-            The number of entities.
-        :param num_relations:
-            The number of relations.
-        :param target:
-            The column to predict
-        :param kwargs:
-            Keyword arguments (thrown out)
+        :param mapped_triples: shape: (num_triples, 3) The ID-based triples.
+        :param num_entities: The number of entities.
+        :param num_relations: The number of relations.
+        :param target: The column to predict
+        :param kwargs: Keyword arguments (thrown out)
 
-        :return:
-            The instances.
+        :returns: The instances.
         """
         if target is None:
             target = 2

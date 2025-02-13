@@ -18,26 +18,18 @@ def create_inductive_dataset(
     random_state: int = 42,
     # num_triples_validation: Optional[int],
 ) -> InductiveDataset:
-    """
-    Create a random inductive dataset.
+    """Create a random inductive dataset.
 
-    :param num_relations:
-        the number of relations
-    :param num_entities_transductive:
-        the number of entities in the transductive part
-    :param num_triples_training:
-        the number of (transductive) training triples
-    :param num_entities_inductive:
-        the number of entities in the inductive part. defaults to `num_entities_transductive`
-    :param num_triples_inference:
-        the number of (inductive) inference triples. defaults to `num_triples_training`
-    :param num_triples_testing:
-        the number of (inductive) testing triples. defaults to `num_triples_training`
+    :param num_relations: the number of relations
+    :param num_entities_transductive: the number of entities in the transductive part
+    :param num_triples_training: the number of (transductive) training triples
+    :param num_entities_inductive: the number of entities in the inductive part. defaults to `num_entities_transductive`
+    :param num_triples_inference: the number of (inductive) inference triples. defaults to `num_triples_training`
+    :param num_triples_testing: the number of (inductive) testing triples. defaults to `num_triples_training`
     :param random_state:
         the random state to use.
 
-    :return:
-        an inductive dataset with random triples
+    :returns: an inductive dataset with random triples
     """
     return EagerInductiveDataset(
         transductive_training=generate_triples_factory(

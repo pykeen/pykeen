@@ -1,8 +1,7 @@
-"""
-Checkpoint cleanup methods.
+"""Checkpoint cleanup methods.
 
-The cleanup methods determine, for any given set of existing checkpoints, which of them can be pruned.
-We provide a set of basic rules that can be easily combined into more complex logic.
+The cleanup methods determine, for any given set of existing checkpoints, which of them can be pruned. We provide a set
+of basic rules that can be easily combined into more complex logic.
 """
 
 import abc
@@ -32,11 +31,11 @@ class CheckpointKeeper(abc.ABC):
     def __call__(self, steps: Sequence[int]) -> Iterator[int]:
         """Iterate over the steps for which checkpoints should be kept.
 
-        :param steps:
-            the sorted list of steps at which checkpoints were written.
+        :param steps: the sorted list of steps at which checkpoints were written.
 
-        :yields:
-            the steps for which checkpoints should be kept
+        :yields: the steps for which checkpoints should be kept
+
+        # noqa:DAR302
         """
 
 

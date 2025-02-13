@@ -7,7 +7,7 @@ import pathlib
 import tarfile
 import zipfile
 from abc import abstractmethod
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from io import BytesIO
 from typing import Any, ClassVar, cast
 
@@ -19,14 +19,15 @@ import torch
 from more_click import verbose_option
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
+from typing_extensions import Self
 
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
-from ..typing import TorchRandomHint
-from ..utils import ExtraReprMixin, normalize_path, normalize_string
+from ..typing import MappedTriples, TorchRandomHint
+from ..utils import ExtraReprMixin, format_relative_comparison, normalize_path, normalize_string
 
 __all__ = [
     # Base classes
@@ -55,17 +56,86 @@ def dataset_similarity(a: Dataset, b: Dataset, metric: str | None = None) -> flo
 
     :param a: The reference dataset
     :param b: The target dataset
-    :param metric: The similarity metric to use. Defaults to `tanimoto`. Could either be a symmetric
-        or asymmetric metric.
-    :returns: A scalar value between 0 and 1 where closer to 1 means the datasets are more
-        similar based on the metric.
+    :param metric: The similarity metric to use. Defaults to `tanimoto`. Could either be a symmetric or asymmetric
+        metric.
 
-    :raises ValueError: if an invalid metric type is passed. Right now, there's only `tanimoto`,
-        but this could change in later.
+    :returns: A scalar value between 0 and 1 where closer to 1 means the datasets are more similar based on the metric.
+
+    :raises ValueError: if an invalid metric type is passed. Right now, there's only `tanimoto`, but this could change
+        in later.
     """
     if metric == "tanimoto" or metric is None:
         return splits_similarity(a._tup(), b._tup())
     raise ValueError(f"invalid metric: {metric}")
+
+
+def _map_ids(x: torch.Tensor, kept_old_ids: torch.Tensor) -> torch.Tensor:
+    """Vectorized re-mapping of ids."""
+    # note: this needs `O(old_max_id)` memory.
+    # note: this is quite similar to pykeen.triples.triples_factory._map_triples_elements_to_ids
+    old_max_id = int(x.max())
+    new_max_id = len(kept_old_ids)
+    map_t = torch.full(size=(old_max_id + 1,), fill_value=-1)
+    map_t[kept_old_ids] = torch.arange(new_max_id)
+    return map_t[x]
+
+
+def _filter_mapped_triples(
+    mapped_triples: MappedTriples,
+    kept_old_entity_ids_t: torch.Tensor,
+    kept_old_relation_ids_t: torch.Tensor,
+) -> MappedTriples:
+    heads, tails = _map_ids(mapped_triples[:, ::2], kept_old_ids=kept_old_entity_ids_t).unbind(dim=-1)
+    relations = _map_ids(mapped_triples[:, 1], kept_old_ids=kept_old_relation_ids_t)
+    mapped_triples = cast(MappedTriples, torch.stack([heads, relations, tails], dim=-1))
+    # We can only keep triples where none of the IDs have been filtered.
+    keep_mask = (mapped_triples >= 0).all(dim=-1)
+    logger.info(f"keeping {format_relative_comparison(keep_mask.sum().item(), keep_mask.numel())} triples.")
+    return mapped_triples[keep_mask]
+
+
+def _update_eval_triples_factory(
+    factory: TriplesFactory,
+    kept_old_entity_ids_t: torch.Tensor,
+    kept_old_relation_ids_t: torch.Tensor,
+    entity_to_id: Mapping[str, int],
+    relation_to_id: Mapping[str, int],
+) -> TriplesFactory:
+    mapped_triples = _filter_mapped_triples(
+        mapped_triples=factory.mapped_triples,
+        kept_old_entity_ids_t=kept_old_entity_ids_t,
+        kept_old_relation_ids_t=kept_old_relation_ids_t,
+    )
+    return TriplesFactory(
+        mapped_triples=mapped_triples,
+        entity_to_id=entity_to_id,
+        relation_to_id=relation_to_id,
+        create_inverse_triples=factory.create_inverse_triples,
+        metadata=factory.metadata,
+        num_entities=len(kept_old_entity_ids_t),
+        num_relations=len(kept_old_relation_ids_t),
+    )
+
+
+def _update_eval_core_factory(
+    factory: CoreTriplesFactory, kept_old_entity_ids_t: torch.Tensor, kept_old_relation_ids_t: torch.Tensor
+) -> CoreTriplesFactory:
+    mapped_triples = _filter_mapped_triples(
+        mapped_triples=factory.mapped_triples,
+        kept_old_entity_ids_t=kept_old_entity_ids_t,
+        kept_old_relation_ids_t=kept_old_relation_ids_t,
+    )
+    return CoreTriplesFactory(
+        mapped_triples=mapped_triples,
+        create_inverse_triples=factory.create_inverse_triples,
+        metadata=factory.metadata,
+        num_entities=len(kept_old_entity_ids_t),
+        num_relations=len(kept_old_relation_ids_t),
+    )
+
+
+def _restrict_mapping(id_to_label: Mapping[int, str], kept_ids: Sequence[int]) -> Mapping[str, int]:
+    return {id_to_label[old_id]: new_id for new_id, old_id in enumerate(kept_ids)}
 
 
 class Dataset(ExtraReprMixin):
@@ -201,7 +271,8 @@ class Dataset(ExtraReprMixin):
             else:
                 logger.warning(f"{tf_path.as_uri()} does not exist.")
         metadata_path = path.joinpath(cls.metadata_file_name)
-        metadata = torch.load(metadata_path) if metadata_path.is_file() else None
+        # TODO: consider restricting metadata to JSON
+        metadata = torch.load(metadata_path, weights_only=False) if metadata_path.is_file() else None
         return EagerDataset(**tfs, metadata=metadata)
 
     def to_directory_binary(self, path: str | pathlib.Path) -> None:
@@ -266,9 +337,12 @@ class Dataset(ExtraReprMixin):
 
         :param other: The other shuffling of the dataset
         :param metric: The metric to use. Defaults to `tanimoto`.
-        :return: A float of the similarity
 
-        .. seealso:: :func:`pykeen.triples.triples_factory.splits_similarity`.
+        :returns: A float of the similarity
+
+        .. seealso::
+
+            :func:`pykeen.triples.triples_factory.splits_similarity`.
         """
         return dataset_similarity(self, other, metric=metric)
 
@@ -276,6 +350,138 @@ class Dataset(ExtraReprMixin):
         if self.validation is None:
             return self.training, self.testing
         return self.training, self.testing, self.validation
+
+    def restrict(
+        self,
+        entities: None | Collection[int] | Collection[str] = None,
+        relations: None | Collection[int] | Collection[str] = None,
+        invert_entity_selection: bool = False,
+        invert_relation_selection: bool = False,
+    ) -> EagerDataset | Self:
+        """Restrict a dataset to the given entities/relations.
+
+        >>> from pykeen.datasets import get_dataset
+        >>> full_dataset = get_dataset(dataset="nations")
+        >>> restricted_dataset = full_dataset.restrict(entities={"burma", "china", "india", "indonesia"})
+
+        :param entities: The entities to keep (or discard, cf. `invert_entity_selection`). `None` corresponds to
+            selecting all entities (but is handled more efficiently).
+        :param relations: The relations to keep (or discard, cf. `invert_relation_selection`). `None` corresponds to
+            selecting all relations (but is handled more efficiently).
+        :param invert_entity_selection: Whether to invert the entity selection, i.e., discard the selected entities
+            rather than all remaining ones.
+        :param invert_relation_selection: Whether to invert the relation selection, i.e., discard the selected relations
+            rather than all remaining ones.
+
+        :returns: a new dataset with different entity and relation mappins and a restricted set of triples.
+
+        .. warning::
+
+            This is different to :meth:`pykeen.triples.triples_factory.CoreTriplesFactory.new_with_restriction` as it
+            does modify the label to id mapping.
+        """
+        # early termination for simple case
+        if entities is None and relations is None:
+            return self
+
+        # restrict triples factories (without modifying the entity to id mapping)
+        training = self.training.new_with_restriction(
+            entities=entities,
+            relations=relations,
+            invert_entity_selection=invert_entity_selection,
+            invert_relation_selection=invert_relation_selection,
+        )
+
+        # collapse entity and relation ids
+        kept_entity_ids_t, entity_ids_inv_t = training.mapped_triples[:, 0::2].unique(return_inverse=True)
+        kept_relation_ids_t, relation_ids_inv_t = training.mapped_triples[:, 1].unique(return_inverse=True)
+        num_entities = len(kept_entity_ids_t)
+        num_relations = len(kept_relation_ids_t)
+        new_training_triples = torch.stack([entity_ids_inv_t[:, 0], relation_ids_inv_t, entity_ids_inv_t[:, 1]], dim=-1)
+
+        # help mypy
+        testing: CoreTriplesFactory
+        validation: CoreTriplesFactory | None
+        # update factories
+        if isinstance(training, TriplesFactory):
+            assert isinstance(self.testing, TriplesFactory)
+            assert self.validation is None or isinstance(self.validation, TriplesFactory)
+            entity_to_id = _restrict_mapping(
+                id_to_label=training.entity_id_to_label, kept_ids=kept_entity_ids_t.tolist()
+            )
+            relation_to_id = _restrict_mapping(
+                id_to_label=training.relation_id_to_label, kept_ids=kept_relation_ids_t.tolist()
+            )
+            training = TriplesFactory(
+                mapped_triples=cast(MappedTriples, new_training_triples),
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+                create_inverse_triples=training.create_inverse_triples,
+                metadata=training.metadata,
+                num_entities=num_entities,
+                num_relations=num_relations,
+            )
+            # also update testing and validation
+            testing = _update_eval_triples_factory(
+                factory=self.testing,
+                kept_old_entity_ids_t=kept_entity_ids_t,
+                kept_old_relation_ids_t=kept_relation_ids_t,
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+            )
+            validation = (
+                None
+                if self.validation is None
+                else _update_eval_triples_factory(
+                    factory=self.validation,
+                    kept_old_entity_ids_t=kept_entity_ids_t,
+                    kept_old_relation_ids_t=kept_relation_ids_t,
+                    entity_to_id=entity_to_id,
+                    relation_to_id=relation_to_id,
+                )
+            )
+        else:
+            training = CoreTriplesFactory(
+                mapped_triples=cast(MappedTriples, new_training_triples),
+                create_inverse_triples=training.create_inverse_triples,
+                metadata=training.metadata,
+                num_entities=num_entities,
+                num_relations=num_relations,
+            )
+            testing = _update_eval_core_factory(
+                factory=self.testing,
+                kept_old_entity_ids_t=kept_entity_ids_t,
+                kept_old_relation_ids_t=kept_relation_ids_t,
+            )
+            validation = (
+                None
+                if self.validation is None
+                else _update_eval_core_factory(
+                    factory=self.validation,
+                    kept_old_entity_ids_t=kept_entity_ids_t,
+                    kept_old_relation_ids_t=kept_relation_ids_t,
+                )
+            )
+
+        # update metadata
+        metadata = dict(self.metadata or {})
+        restriction_meta = {"base": metadata.pop("name", None) or self.get_normalized_name()}
+        if entities:
+            # note:
+            # - we convert to list to make sure that the metadata is JSON-serializable
+            # - we sort because the order does not matter for the functionality of this method
+            restriction_meta |= {"entities": sorted(entities), "invert_entity_selection": invert_entity_selection}
+        if relations:
+            restriction_meta |= {"relations": sorted(relations), "invert_relation_selection": invert_relation_selection}
+        metadata["restriction"] = restriction_meta
+
+        # compose restricted dataset
+        return EagerDataset(training=training, testing=testing, validation=validation, metadata=metadata)
+
+    def merged(self) -> CoreTriplesFactory:
+        """Return a single triples factory with all triples."""
+        training, *rest = self._tup()
+        return training.merge(*rest)
 
 
 class EagerDataset(Dataset):
@@ -361,10 +567,10 @@ class LazyDataset(Dataset):
     def _help_cache(self, cache_root: None | str | pathlib.Path) -> pathlib.Path:
         """Get the appropriate cache root directory.
 
-        :param cache_root: If none is passed, defaults to a subfolder of the
-            PyKEEN home directory defined in :data:`pykeen.constants.PYKEEN_HOME`.
-            The subfolder is named based on the class inheriting from
+        :param cache_root: If none is passed, defaults to a subfolder of the PyKEEN home directory defined in
+            :data:`pykeen.constants.PYKEEN_HOME`. The subfolder is named based on the class inheriting from
             :class:`pykeen.datasets.base.Dataset`.
+
         :returns: A path object for the calculated cache root directory
         """
         cache_root = normalize_path(cache_root, *self._cache_sub_directories(), mkdir=True, default=PYKEEN_DATASETS)
@@ -394,8 +600,8 @@ class PathDataset(LazyDataset):
         :param testing_path: Path to the testing triples file or testing triples file.
         :param validation_path: Path to the validation triples file or validation triples file.
         :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
-            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
+        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path` and ultimately through
+            to :func:`pykeen.triples.utils.load_triples`.
         """
         self.training_path = pathlib.Path(training_path)
         self.testing_path = pathlib.Path(testing_path)
@@ -459,13 +665,13 @@ class UnpackedRemoteDataset(PathDataset):
         :param training_url: The URL of the training file
         :param testing_url: The URL of the testing file
         :param validation_url: The URL of the validation file
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.data/pykeen``.
         :param force: If true, redownload any cached files
         :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
-            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
+        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path` and ultimately through
+            to :func:`pykeen.triples.utils.load_triples`.
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
         """
         self.cache_root = self._help_cache(cache_root)
@@ -513,14 +719,13 @@ class RemoteDataset(PathDataset):
     ):
         """Initialize dataset.
 
-        :param url:
-            The url where to download the dataset from.
+        :param url: The url where to download the dataset from.
         :param relative_training_path: The path inside the cache root where the training path gets extracted
         :param relative_testing_path: The path inside the cache root where the testing path gets extracted
         :param relative_validation_path: The path inside the cache root where the validation path gets extracted
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.data/pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param timeout: The timeout number of seconds for waiting to download the dataset. Defaults to 60.
         """
@@ -604,13 +809,11 @@ class PackedZipRemoteDataset(LazyDataset):
         :param relative_training_path: The path inside the zip file for the training data
         :param relative_testing_path: The path inside the zip file for the testing data
         :param relative_validation_path: The path inside the zip file for the validation data
-        :param url:
-            The url where to download the dataset from
-        :param name:
-            The name of the file. If not given, tries to get the name from the end of the URL
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param url: The url where to download the dataset from
+        :param name: The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
 
         :raises ValueError: if there's no URL specified and there is no data already at the calculated path
@@ -697,19 +900,15 @@ class CompressedSingleDataset(LazyDataset):
     ):
         """Initialize dataset.
 
-        :param url:
-            The url where to download the dataset from
-        :param relative_path:
-            The path inside the archive to the contained dataset.
-        :param name:
-            The name of the file. If not given, tries to get the name from the end of the URL
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param url: The url where to download the dataset from
+        :param relative_path: The path inside the archive to the contained dataset.
+        :param name: The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
-        :param delimiter:
-            The delimiter for the contained dataset.
+        :param delimiter: The delimiter for the contained dataset.
         :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
         """
         self.cache_root = self._help_cache(cache_root)
@@ -809,9 +1008,9 @@ class TabbedDataset(LazyDataset):
     ):
         """Initialize dataset.
 
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         """
@@ -872,13 +1071,11 @@ class SingleTabbedDataset(TabbedDataset):
     ):
         """Initialize dataset.
 
-        :param url:
-            The url where to download the dataset from
-        :param name:
-            The name of the file. If not given, tries to get the name from the end of the URL
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param url: The url where to download the dataset from
+        :param name: The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         :param download_kwargs: Keyword arguments to pass through to :func:`pystow.utils.download`.

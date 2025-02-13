@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Collection, Mapping, Sequence
-from typing import Literal, NamedTuple, TypeVar, Union, cast
+from typing import Literal, NamedTuple, TypeAlias, TypeVar, cast
 
 import numpy as np
 import torch
@@ -61,21 +61,28 @@ __all__ = [
 
 X = TypeVar("X")
 
+# some PyTorch functions to not properly propagate types (e.g., float() does not return FloatTensor but Tensor)
+# however it is still useful to distinguish float tensors from long ones
+# to make the switch easier once PyTorch improves typing, we use a global type alias inside PyKEEN.
+BoolTensor: TypeAlias = torch.Tensor  # replace by torch.BoolTensor
+FloatTensor: TypeAlias = torch.Tensor  # replace by torch.FloatTensor
+LongTensor: TypeAlias = torch.Tensor  # replace by torch.LongTensor
+
 #: A function that mutates the input and returns a new object of the same type as output
 Mutation = Callable[[X], X]
-OneOrSequence = Union[X, Sequence[X]]
+OneOrSequence: TypeAlias = X | Sequence[X]
 
-LabeledTriples = np.ndarray
-MappedTriples = torch.LongTensor
-EntityMapping = Mapping[str, int]
-RelationMapping = Mapping[str, int]
+LabeledTriples: TypeAlias = np.ndarray
+MappedTriples: TypeAlias = LongTensor
+EntityMapping: TypeAlias = Mapping[str, int]
+RelationMapping: TypeAlias = Mapping[str, int]
 
 #: A function that can be applied to a tensor to initialize it
-Initializer = Mutation[torch.FloatTensor]
+Initializer: TypeAlias = Mutation[FloatTensor]
 #: A function that can be applied to a tensor to normalize it
-Normalizer = Mutation[torch.FloatTensor]
+Normalizer: TypeAlias = Mutation[FloatTensor]
 #: A function that can be applied to a tensor to constrain it
-Constrainer = Mutation[torch.FloatTensor]
+Constrainer: TypeAlias = Mutation[FloatTensor]
 
 
 def cast_constrainer(f) -> Constrainer:
@@ -86,25 +93,25 @@ def cast_constrainer(f) -> Constrainer:
 #: A hint for a :class:`torch.device`
 DeviceHint = Hint[torch.device]
 #: A hint for a :class:`torch.Generator`
-TorchRandomHint = Union[None, int, torch.Generator]
+TorchRandomHint = None | int | torch.Generator
 
-Representation = TypeVar("Representation", bound=OneOrSequence[torch.FloatTensor])
+Representation = TypeVar("Representation", bound=OneOrSequence[FloatTensor])
 #: A type variable for head representations used in :class:`pykeen.models.Model`,
 #: :class:`pykeen.nn.modules.Interaction`, etc.
-HeadRepresentation = TypeVar("HeadRepresentation", bound=OneOrSequence[torch.FloatTensor])
+HeadRepresentation = TypeVar("HeadRepresentation", bound=OneOrSequence[FloatTensor])
 #: A type variable for relation representations used in :class:`pykeen.models.Model`,
 #: :class:`pykeen.nn.modules.Interaction`, etc.
-RelationRepresentation = TypeVar("RelationRepresentation", bound=OneOrSequence[torch.FloatTensor])
+RelationRepresentation = TypeVar("RelationRepresentation", bound=OneOrSequence[FloatTensor])
 #: A type variable for tail representations used in :class:`pykeen.models.Model`,
 #: :class:`pykeen.nn.modules.Interaction`, etc.
-TailRepresentation = TypeVar("TailRepresentation", bound=OneOrSequence[torch.FloatTensor])
+TailRepresentation = TypeVar("TailRepresentation", bound=OneOrSequence[FloatTensor])
 
 
 class GaussianDistribution(NamedTuple):
     """A gaussian distribution with diagonal covariance matrix."""
 
-    mean: torch.FloatTensor
-    diagonal_covariance: torch.FloatTensor
+    mean: FloatTensor
+    diagonal_covariance: FloatTensor
 
 
 Sign = Literal[-1, 1]
@@ -156,7 +163,7 @@ def normalize_rank_type(rank: str | None) -> RankType:
 
 TargetBoth = Literal["both"]
 SIDE_BOTH: TargetBoth = "both"
-ExtendedTarget = Union[Target, TargetBoth]
+ExtendedTarget = Target | TargetBoth
 SIDES: Collection[ExtendedTarget] = {LABEL_HEAD, LABEL_TAIL, SIDE_BOTH}
 SIDE_MAPPING = {LABEL_HEAD: [LABEL_HEAD], LABEL_TAIL: [LABEL_TAIL], SIDE_BOTH: [LABEL_HEAD, LABEL_TAIL]}
 

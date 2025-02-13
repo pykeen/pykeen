@@ -7,29 +7,20 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_
 from ...nn.modules import UMInteraction
-from ...typing import Hint, Initializer
+from ...typing import FloatTensor, Hint, Initializer
 
 __all__ = [
     "UM",
 ]
 
 
-class UM(ERModel):
+class UM(ERModel[FloatTensor, tuple[()], FloatTensor]):
     r"""An implementation of the Unstructured Model (UM) published by [bordes2014]_.
 
-    UM computes the distance between head and tail entities then applies the $l_p$ norm.
+    This model represents entities as $d$-dimensional vectors stored in :class:`~pykeen.nn.representation.Embedding`.
+    It does not have any relation representations. The :class:`~pykeen.nn.modules.UMInteraction` is used to
+    calculate scores.
 
-    .. math::
-
-        f(h, r, t) = - \|\textbf{e}_h  - \textbf{e}_t\|_p^2
-
-    A small distance between the embeddings for the head and tail entity indicates a plausible triple. It is
-    appropriate for networks with a single relationship type that is undirected.
-
-    .. warning::
-
-        In UM, neither the relations nor the directionality are considered, so it can't distinguish between them.
-        However, it may serve as a baseline for comparison against relation-aware models.
     ---
     name: Unstructured Model
     citation:
@@ -49,20 +40,28 @@ class UM(ERModel):
         *,
         embedding_dim: int = 50,
         scoring_fct_norm: int = 1,
+        power_norm: bool = False,
         entity_initializer: Hint[Initializer] = xavier_normal_,
         **kwargs,
     ) -> None:
         r"""Initialize UM.
 
         :param embedding_dim: The entity embedding dimension $d$. Is usually $d \in [50, 300]$.
-        :param scoring_fct_norm: The $l_p$ norm. Usually 1 for UM.
+
+        :param scoring_fct_norm:
+            The norm used with :func:`torch.linalg.vector_norm`. Typically is 1 or 2.
+        :param power_norm:
+            Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
+            and numerically more stable.
+
         :param entity_initializer: The initializer for the entity embeddings.
-            Defaults to the xavier normal distribution.
-        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
+            Defaults to :func:`pykeen.nn.init.xavier_normal`.
+
+        :param kwargs: Remaining keyword arguments passed through to :class:`~pykeen.models.ERModel`.
         """
         super().__init__(
             interaction=UMInteraction,
-            interaction_kwargs=dict(p=scoring_fct_norm),
+            interaction_kwargs=dict(p=scoring_fct_norm, power_norm=power_norm),
             entity_representations_kwargs=dict(
                 shape=embedding_dim,
                 initializer=entity_initializer,

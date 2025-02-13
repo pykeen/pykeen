@@ -10,7 +10,7 @@ from ..nbase import ERModel
 from ...nn.init import init_phases, xavier_uniform_
 from ...nn.modules import RotatEInteraction
 from ...regularizers import Regularizer
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, FloatTensor, Hint, Initializer
 from ...utils import complex_normalize
 
 __all__ = [
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class RotatE(ERModel):
+class RotatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of RotatE from [sun2019]_.
 
     RotatE models relations as rotations from head to tail entities in complex space:

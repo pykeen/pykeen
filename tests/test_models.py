@@ -28,6 +28,7 @@ from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
+from tests.test_batch_size_reduction import MockModel
 
 SKIP_MODULES = {
     Model,
@@ -38,6 +39,7 @@ SKIP_MODULES = {
     InductiveERModel,
     FixedModel,
     EvaluationOnlyModel,
+    MockModel,
 }
 SKIP_MODULES.update(LiteralModel.__subclasses__())
 SKIP_MODULES.update(EvaluationOnlyModel.__subclasses__())
@@ -161,7 +163,7 @@ class TestKG2EWithKL(cases.BaseKG2ETest):
     """Test the KG2E model with KL similarity."""
 
     kwargs = {
-        "dist_similarity": "KL",
+        "dist_similarity": "negativekullbackleiblerdivergence",
     }
 
 
@@ -176,7 +178,7 @@ class TestKG2EWithEL(cases.BaseKG2ETest):
     """Test the KG2E model with EL similarity."""
 
     kwargs = {
-        "dist_similarity": "EL",
+        "dist_similarity": "expectedlikelihood",
     }
 
 
@@ -681,8 +683,11 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
 
                 for name in dir(module):
                     value = getattr(module, name)
-                    if isinstance(value, type) and issubclass(value, Model):
-                        model_names.add(value.__name__)
+                    try:
+                        if isinstance(value, type) and issubclass(value, Model):
+                            model_names.add(value.__name__)
+                    except TypeError:
+                        continue
 
         star_model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES)
         # FIXME definitely a type mismatch going on here
@@ -774,6 +779,22 @@ class ERModelTests(cases.ModelTestCase):
 
     def test_has_hpo_defaults(self):  # noqa: D102
         raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
+
+    def test_multi_t_and_slicing(self):
+        """Test whether we can use multi-tail scoring with slicing."""
+        hr_batch = torch.stack(
+            [
+                torch.randint(self.instance.num_entities, size=(self.batch_size,), generator=self.generator),
+                torch.randint(self.instance.num_relations, size=(self.batch_size,), generator=self.generator),
+            ],
+            dim=-1,
+        )
+        tails = torch.randint(
+            self.instance.num_entities, size=(self.instance.num_entities // 2,), generator=self.generator
+        )
+        sliced_ts = self.instance.score_t(hr_batch=hr_batch, slice_size=2, tails=tails)
+        ts = self.instance.score_t(hr_batch=hr_batch, tails=tails)
+        torch.allclose(sliced_ts, ts)
 
 
 class CooccurrenceFilteredModelTests(cases.ModelTestCase):

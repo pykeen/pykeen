@@ -50,7 +50,7 @@ copyright = f"2019-{date.today().year}, PyKEEN Project Team"
 author = "PyKEEN Project Team"
 
 # The full version, including alpha/beta/rc tags.
-release = "1.10.3-dev"
+release = "1.11.1-dev"
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -86,7 +86,6 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
-    # "sphinx_autodoc_typehints",
     "sphinx_click.ext",
     "sphinx_automodapi.automodapi",
     "texext",
@@ -102,10 +101,7 @@ autosummary_generate = True
 templates_path = ["_templates"]
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
-source_suffix = ".rst"
+source_suffix = {".rst": "restructuredtext"}
 
 # The master toctree document.
 master_doc = "index"
@@ -222,7 +218,7 @@ texinfo_documents = [
         "PyKEEN Documentation",
         author,
         "PyKEEN Project Team",
-        "Training and evaluatation knowledge graph embedding models.",
+        "Training and evaluation knowledge graph embedding models.",
         "Miscellaneous",
     ),
 ]

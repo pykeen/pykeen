@@ -9,7 +9,7 @@ from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_, xavier_uniform_, xavier_uniform_norm_
 from ...nn.modules import TransDInteraction
-from ...typing import Constrainer, Hint, Initializer
+from ...typing import Constrainer, FloatTensor, Hint, Initializer
 from ...utils import clamp_norm
 
 __all__ = [
@@ -17,32 +17,16 @@ __all__ = [
 ]
 
 
-class TransD(ERModel):
+class TransD(
+    ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTensor]]
+):
     r"""An implementation of TransD from [ji2015]_.
 
-    TransD is an extension of :class:`pykeen.models.TransR` that, like TransR, considers entities and relations
-    as objects living in different vector spaces. However, instead of performing the same relation-specific
-    projection for all entity embeddings, entity-relation-specific projection matrices
-    $\textbf{M}_{r,h}, \textbf{M}_{t,h}  \in \mathbb{R}^{k \times d}$ are constructed.
-
-    To do so, all head entities, tail entities, and relations are represented by two vectors,
-    $\textbf{e}_h, \hat{\textbf{e}}_h, \textbf{e}_t, \hat{\textbf{e}}_t \in \mathbb{R}^d$ and
-    $\textbf{r}_r, \hat{\textbf{r}}_r \in \mathbb{R}^k$, respectively. The first set of embeddings is used for
-    calculating the entity-relation-specific projection matrices:
-
-    .. math::
-
-        \textbf{M}_{r,h} = \hat{\textbf{r}}_r \hat{\textbf{e}}_h^{T} + \tilde{\textbf{I}}
-
-        \textbf{M}_{r,t} = \hat{\textbf{r}}_r \hat{\textbf{e}}_t^{T} + \tilde{\textbf{I}}
-
-    where $\tilde{\textbf{I}} \in \mathbb{R}^{k \times d}$ is a $k \times d$ matrix with ones on the diagonal and
-    zeros elsewhere. Next, $\textbf{e}_h$ and $\textbf{e}_t$ are projected into the relation space by means of the
-    constructed projection matrices. Finally, the plausibility score for $(h,r,t) \in \mathbb{K}$ is given by:
-
-    .. math::
-
-        f(h,r,t) = -\|\textbf{M}_{r,h} \textbf{e}_h + \textbf{r}_r - \textbf{M}_{r,t} \textbf{e}_t\|_{2}^2
+    This model represents both entities as pairs of $d$-dimensional vectors,
+    and relations as pairs of $k$-dimensional vectors.
+    Both, entity and relation embedding vectors are constrained to $\|\cdot\|_2 \leq 1$.
+    They are stored in an :class:`~pykeen.nn.representation.Embedding` matrix.
+    The representations are then passed to the :class:`~pykeen.nn.modules.TransDInteraction` function to obtain scores.
 
     .. seealso::
 
@@ -67,8 +51,8 @@ class TransD(ERModel):
         relation_dim: int | None = None,
         interaction_kwargs: OptionalKwargs = None,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
-        relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
         relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
         **kwargs,
     ) -> None:
@@ -76,21 +60,24 @@ class TransD(ERModel):
         Initialize the model.
 
         :param embedding_dim:
-            the (entity) embedding dimension
+            The (entity) embedding dimension.
         :param relation_dim:
-            the relation embedding dimension. Defaults to `embedding_dim`.
+            The relation embedding dimension. Defaults to ``embedding_dim``.
         :param interaction_kwargs:
-            additional keyword-based parameters passed to :meth:`TransDInteraction.__init__`
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.modules.TransDInteraction`.
+
         :param entity_initializer:
-            the entity representation initializer
-        :param relation_initializer:
-            the relation representation initializer
+            The entity representation initializer. Defaults to :func:`pykeen.nn.init.xavier_uniform_`.
         :param entity_constrainer:
-            the entity representation constrainer
+            The entity representation constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
+
+        :param relation_initializer:
+            The relation representation initializer. Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`.
         :param relation_constrainer:
-            the relation representation constrainer
+            The relation representation constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
+
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+            Additional keyword-based parameters passed to :class:`~pykeen.models.ERModel`.
         """
         relation_dim = relation_dim or embedding_dim
         super().__init__(

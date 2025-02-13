@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import AutoSFInteraction
-from ...typing import Sign
+from ...typing import Representation, Sign
 
 __all__ = [
     "AutoSF",
@@ -24,7 +24,7 @@ YAGO310_COEFFICIENTS: Sequence[tuple[int, int, int, Sign]] = [
 ]
 
 
-class AutoSF(ERModel):
+class AutoSF(ERModel[Representation, Representation, Representation]):
     r"""An implementation of AutoSF from [zhang2020]_.
 
     The AutoSF model combines one or more :class:`pykeen.nn.Embedding`s for entities and relations with a

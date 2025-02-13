@@ -34,10 +34,10 @@ class PrecomputedTokenizerLoader(ABC):
 
 
 class GalkinPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
-    """
-    A loader for pickle files provided by Galkin *et al*.
+    """A loader for pickle files provided by Galkin *et al*.
 
-    .. seealso ::
+    .. seealso::
+
         https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/download_data.sh
         https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/ogb/download.sh
     """
@@ -63,15 +63,11 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
 
     @staticmethod
     def save(path: pathlib.Path, order: numpy.ndarray, anchor_ids: numpy.ndarray) -> None:
-        """
-        Save tokenization to path.
+        """Save tokenization to path.
 
-        :param path:
-            the output path
-        :param order: shape: (num_entities, num_anchors)
-            the sorted `anchor_ids`' ids per entity
-        :param anchor_ids: shape: (num_anchors,)
-            the anchor entity IDs
+        :param path: the output path
+        :param order: shape: (num_entities, num_anchors) the sorted `anchor_ids`' ids per entity
+        :param anchor_ids: shape: (num_anchors,) the anchor entity IDs
         """
         # ensure parent directory exists
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -86,7 +82,7 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
 
     # docstr-coverage: inherited
     def __call__(self, path: pathlib.Path) -> tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
-        c = torch.load(path)
+        c = torch.load(path, weights_only=False)
         order = c["order"]
         logger.info(f"Loaded precomputed pools of shape {order.shape}.")
         num_anchors = c["anchors"].shape[0]
@@ -95,6 +91,7 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
         return {i: anchor_ids.tolist() for i, anchor_ids in enumerate(order)}, num_anchors  # type: ignore
 
 
+#: A resolver for NodePiece precomputed tokenizer loaders
 precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
     base=PrecomputedTokenizerLoader,
     default=GalkinPrecomputedTokenizerLoader,

@@ -11,7 +11,7 @@ import traceback
 import unittest
 from abc import ABC, abstractmethod
 from collections import ChainMap, Counter
-from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, MutableMapping, Sequence
 from typing import (
     Any,
     ClassVar,
@@ -43,6 +43,7 @@ import pykeen.nn.representation
 import pykeen.nn.text
 import pykeen.nn.weighting
 import pykeen.predict
+from pykeen.checkpoints import CheckpointKeeper, CheckpointSchedule
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.ea.combination import GraphPairCombinator
@@ -60,9 +61,8 @@ from pykeen.metrics.ranking import (
 )
 from pykeen.models import RESCAL, ERModel, Model, TransE
 from pykeen.models.cli import build_cli_from_cls
-from pykeen.models.meta.filtered import CooccurrenceFilteredModel
 from pykeen.models.mocks import FixedModel
-from pykeen.nn.modules import DistMultInteraction, FunctionalInteraction, Interaction
+from pykeen.nn.modules import DistMultInteraction, Interaction
 from pykeen.nn.representation import Representation
 from pykeen.nn.utils import adjacency_tensor_to_stacked_matrix
 from pykeen.optimizers import optimizer_resolver
@@ -483,8 +483,7 @@ class InteractionTestCase(
                 for weight_shape in weight_shapes
             )
             for prefix_shape, weight_shapes in zip(
-                shapes,
-                [self.instance.entity_shape, self.instance.relation_shape, self.instance.tail_entity_shape], strict=False,
+                shapes, [self.instance.head_shape, self.instance.relation_shape, self.instance.tail_shape], strict=False
             )
         )
         return unpack_singletons(*result)
@@ -653,20 +652,6 @@ class InteractionTestCase(
             expected_shape = self._get_output_shape(hs, rs, ts)
             self._check_scores(scores=scores, exp_shape=expected_shape)
 
-    def test_forward_consistency_with_functional(self):
-        """Test forward's consistency with functional."""
-        if not isinstance(self.instance, FunctionalInteraction):
-            self.skipTest("Not a functional interaction")
-
-        # set in eval mode (otherwise there are non-deterministic factors like Dropout
-        self.instance.eval()
-        for hs, rs, ts in self._get_test_shapes():
-            h, r, t = self._get_hrt(hs, rs, ts)
-            scores = self.instance(h=h, r=r, t=t)
-            kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
-            scores_f = self.cls.func(**kwargs)
-            assert torch.allclose(scores, scores_f)
-
     def test_scores(self):
         """Test individual scores."""
         # set in eval mode (otherwise there are non-deterministic factors like Dropout
@@ -675,17 +660,10 @@ class InteractionTestCase(
             # test multiple different initializations
             self.instance.reset_parameters()
             h, r, t = self._get_hrt(tuple(), tuple(), tuple())
-
-            if isinstance(self.instance, FunctionalInteraction):
-                kwargs = self.instance._prepare_for_functional(h=h, r=r, t=t)
-                # calculate by functional
-                scores_f = self.cls.func(**kwargs).view(-1)
-            else:
-                kwargs = dict(h=h, r=r, t=t)
-                scores_f = self.instance(h=h, r=r, t=t)
+            scores_f = self.instance(h=h, r=r, t=t)
 
             # calculate manually
-            scores_f_manual = self._exp_score(**kwargs).view(-1)
+            scores_f_manual = self._exp_score(h=h, r=r, t=t).view(-1)
             if not torch.allclose(scores_f, scores_f_manual, rtol=self.rtol, atol=self.atol):
                 # allclose checks: | input - other | < atol + rtol * |other|
                 a_delta = (scores_f_manual - scores_f).abs()
@@ -1052,9 +1030,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         with tempfile.TemporaryDirectory() as temp_directory:
             torch.save(self.instance, os.path.join(temp_directory, "model.pickle"))
 
-    def _test_score(
-        self, score: Callable, columns: Sequence[int] | slice, shape: tuple[int, ...], **kwargs
-    ) -> None:
+    def _test_score(self, score: Callable, columns: Sequence[int] | slice, shape: tuple[int, ...], **kwargs) -> None:
         """Test score functions."""
         batch = self.factory.mapped_triples[: self.batch_size, columns].to(self.instance.device)
         try:
@@ -1350,41 +1326,6 @@ Traceback
     def _check_constraints(self):
         """Check model constraints."""
 
-    def _test_score_equality(self, columns: slice | list[int], name: str) -> None:
-        """Migration tests for non-ERModel models testing for consistent optimized score implementations."""
-        if isinstance(self.instance, ERModel):
-            raise SkipTest("ERModel fulfils this by design.")
-        if isinstance(self.instance, CooccurrenceFilteredModel):
-            raise SkipTest("CooccurrenceFilteredModel fulfils this if its base model fulfils it.")
-        batch = self.factory.mapped_triples[: self.batch_size, columns].to(self.instance.device)
-        self.instance.eval()
-        try:
-            scores = getattr(self.instance, name)(batch)
-            scores_super = getattr(super(self.instance.__class__, self.instance), name)(batch)
-        except NotImplementedError:
-            self.fail(msg=f"{name} not yet implemented")
-        except RuntimeError as e:
-            if str(e) == "fft: ATen not compiled with MKL support":
-                self.skipTest(str(e))
-            else:
-                raise e
-
-        self.assertIsNotNone(scores)
-        self.assertIsNotNone(scores_super)
-        assert torch.allclose(scores, scores_super, atol=1e-06)
-
-    def test_score_h_with_score_hrt_equality(self) -> None:
-        """Test the equality of the model's  ``score_h()`` and ``score_hrt()`` function."""
-        self._test_score_equality(columns=slice(1, None), name="score_h")
-
-    def test_score_r_with_score_hrt_equality(self) -> None:
-        """Test the equality of the model's  ``score_r()`` and ``score_hrt()`` function."""
-        self._test_score_equality(columns=[0, 2], name="score_r")
-
-    def test_score_t_with_score_hrt_equality(self) -> None:
-        """Test the equality of the model's  ``score_t()`` and ``score_hrt()`` function."""
-        self._test_score_equality(columns=slice(2), name="score_t")
-
     def test_reset_parameters_constructor_call(self):
         """Tests whether reset_parameters is called in the constructor."""
         with patch.object(self.cls, "reset_parameters_", return_value=None) as mock_method:
@@ -1420,8 +1361,8 @@ class BaseKG2ETest(ModelTestCase):
     def _check_constraints(self):
         """Check model constraints.
 
-        * Entity and relation embeddings have to have at most unit L2 norm.
-        * Covariances have to have values between c_min and c_max
+        - Entity and relation embeddings have to have at most unit L2 norm.
+        - Covariances have to have values between c_min and c_max
         """
         self.instance: ERModel
         (e_mean, e_cov), (r_mean, r_cov) = self.instance.entity_representations, self.instance.relation_representations
@@ -1680,14 +1621,11 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
             assert y.shape == (self.x.shape[0], self.output_dim)
 
     def prepare_adjacency(self, horizontal: bool) -> torch.Tensor:
-        """
-        Prepare adjacency matrix for the given stacking direction.
+        """Prepare adjacency matrix for the given stacking direction.
 
-        :param horizontal:
-            whether to stack horizontally or vertically
+        :param horizontal: whether to stack horizontally or vertically
 
-        :return:
-            the adjacency matrix
+        :returns: the adjacency matrix
         """
         return adjacency_tensor_to_stacked_matrix(
             num_relations=self.factory.num_relations,
@@ -1751,8 +1689,6 @@ class InitializerTestCase(unittest.TestCase):
     def test_model(self):
         """Test whether initializer can be used for a model."""
         triples_factory = generation.generate_triples_factory(num_entities=self.num_entities)
-        # actual number may be different...
-        self.num_entities = triples_factory.num_entities
         model = pykeen.models.ERModel(
             triples_factory=triples_factory,
             interaction=self.interaction,
@@ -2239,7 +2175,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             raise SkipTest("no implementation of closed-form expectation") from error
 
         generator = numpy.random.default_rng(seed=0)
-        low, simulated, high = self.instance.numeric_expected_value_with_ci(
+        low, _simulated, high = self.instance.numeric_expected_value_with_ci(
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
             generator=generator,
@@ -2267,7 +2203,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         self.assertLessEqual(0, closed)
 
         generator = numpy.random.default_rng(seed=0)
-        low, simulated, high = self.instance.numeric_variance_with_ci(
+        low, _simulated, high = self.instance.numeric_variance_with_ci(
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
             generator=generator,
@@ -2493,8 +2429,7 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
         self._test_combination(labels=False)
 
     def test_manual(self):
-        """
-        Smoke-test on a manual example.
+        """Smoke-test on a manual example.
 
         cf. https://github.com/pykeen/pykeen/pull/893#discussion_r861553903
         """
@@ -2529,7 +2464,7 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
             ],
             columns=[EA_SIDE_LEFT, EA_SIDE_RIGHT],
         )
-        combined_tf, alignment_t = self.instance(left=left_tf, right=right_tf, alignment=test_links)
+        combined_tf = self.instance(left=left_tf, right=right_tf, alignment=test_links)[0]
         self._verify_manual(combined_tf=combined_tf)
 
     @abstractmethod
@@ -2725,3 +2660,40 @@ class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.Score
     def check(self):
         """Perform additional verification."""
         pass
+
+
+class CheckpointScheduleTests(GenericTestCase[CheckpointSchedule]):
+    """Generic tests for checkpoint schedules."""
+
+    def test_call(self) -> None:
+        """Smoke-test for calling."""
+        for step in self.iter_steps():
+            _result = self.instance(step=step)
+
+    def iter_steps(self) -> Iterator[int]:
+        """Iterate over steps."""
+        yield from range(20)
+
+
+class CheckpointKeeperTests(GenericTestCase[CheckpointKeeper]):
+    """Generic tests for checkpoint keepers."""
+
+    def test_call(self) -> None:
+        """Test calling."""
+        for steps in self.iter_steps():
+            steps_copy = [s for s in steps]
+            kept = list(self.instance(steps=steps))
+            # check for unique values
+            assert len(kept) == len(set(kept))
+            # check for subset property
+            assert set(kept).issubset(steps_copy)
+            # maybe additional checks
+            self.check_result(steps=steps_copy, kept=kept)
+
+    def check_result(self, steps: list[int], kept: list[int]) -> None:
+        """Check result."""
+
+    def iter_steps(self) -> Iterator[list[int]]:
+        """Iterate over steps."""
+        yield list(range(10))
+        yield list(range(20))

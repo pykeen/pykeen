@@ -27,8 +27,10 @@ from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, InductiveMode, MappedTriples, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, BoolTensor, InductiveMode, MappedTriples, Target
 from ..utils import (
+    FloatTensor,
+    LongTensor,
     determine_maximum_batch_size,
     flatten_dictionary,
     format_relative_comparison,
@@ -63,14 +65,11 @@ class MetricResults(Generic[MetricKeyType]):
     @classmethod
     @abstractmethod
     def key_from_string(cls, s: str | None) -> MetricKeyType:
-        """
-        Parse the metric key from a (un-normalized) string.
+        """Parse the metric key from a (un-normalized) string.
 
-        :param s:
-            the metric key, or `None` to get the default key.
+        :param s: the metric key, or `None` to get the default key.
 
-        :return:
-            the fully resolved key as a named tuple
+        :returns: the fully resolved key as a named tuple
         """
         raise NotImplementedError
 
@@ -90,6 +89,7 @@ class MetricResults(Generic[MetricKeyType]):
         """Get the given metric from the results.
 
         :param name: The name of the metric
+
         :returns: The value for the metric
         """
         return self.data[self.string_or_key_to_key(name)]
@@ -114,6 +114,7 @@ class MetricResults(Generic[MetricKeyType]):
         """Output the metrics as a pandas dataframe."""
         one_key = next(iter(self.data.keys()))
         # assert isinstance(one_key, NamedTuple)
+        # TODO: should we enforce this?
         one_key_nt = cast(NamedTuple, one_key)
         columns = [field.capitalize() for field in one_key_nt._fields] + ["Value"]
         return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
@@ -143,8 +144,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         :param requires_positive_mask: Does the evaluator need access to the masks?
         :param batch_size: >0. Evaluation batch size.
         :param slice_size: >0. The divisor for the scoring function when using slicing
-        :param mode:
-            the inductive mode, or None for transductive evaluation
+        :param mode: the inductive mode, or None for transductive evaluation
         """
         self.filtered = filtered
         self.requires_positive_mask = requires_positive_mask
@@ -162,19 +162,18 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        scores: torch.FloatTensor,
-        true_scores: torch.FloatTensor | None = None,
-        dense_positive_mask: torch.FloatTensor | None = None,
+        scores: FloatTensor,
+        true_scores: FloatTensor | None = None,
+        dense_positive_mask: FloatTensor | None = None,
     ) -> None:
         """Process a batch of triples with their computed scores for all entities.
 
         :param hrt_batch: shape: (batch_size, 3)
-        :param target:
-            the prediction target
+        :param target: the prediction target
         :param scores: shape: (batch_size, num_entities)
         :param true_scores: shape: (batch_size, 1)
-        :param dense_positive_mask: shape: (batch_size, num_entities)
-            An optional binary (0/1) tensor indicating other true entities.
+        :param dense_positive_mask: shape: (batch_size, num_entities) An optional binary (0/1) tensor indicating other
+            true entities.
         """
         raise NotImplementedError
 
@@ -206,58 +205,44 @@ class Evaluator(ABC, Generic[MetricKeyType]):
     ) -> MetricResults[MetricKeyType]:
         """Evaluate metrics for model on mapped triples.
 
-        :param model:
-            The model to evaluate.
-        :param mapped_triples:
-            The triples on which to evaluate. The mapped triples should *never* contain inverse triples - these are
-            created by the model class on the fly.
-        :param batch_size: >0
-            A positive integer used as batch size. Generally chosen as large as possible. Defaults to 1 if None.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing.
-        :param device:
-            The device on which the evaluation shall be run. If None is given, use the model's device.
-        :param use_tqdm:
-            Should a progress bar be displayed?
-        :param tqdm_kwargs:
-            Additional keyword based arguments passed to the progress bar.
-        :param restrict_entities_to:
-            Optionally restrict the evaluation to the given entity IDs. This may be useful if one is only interested in
-            a part of the entities, e.g. due to type constraints, but wants to train on all available data. For ranking
-            the entities, we still compute all scores for all possible replacement entities to avoid irregular access
-            patterns which might decrease performance, but the scores will afterward be filtered to only keep those of
-            interest. If provided, we assume by default that the triples are already filtered, such that it only
-            contains the entities of interest. To explicitly filter within this method, pass
+        :param model: The model to evaluate.
+        :param mapped_triples: The triples on which to evaluate. The mapped triples should *never* contain inverse
+            triples - these are created by the model class on the fly.
+        :param batch_size: >0 A positive integer used as batch size. Generally chosen as large as possible. Defaults to
+            1 if None.
+        :param slice_size: >0 The divisor for the scoring function when using slicing.
+        :param device: The device on which the evaluation shall be run. If None is given, use the model's device.
+        :param use_tqdm: Should a progress bar be displayed?
+        :param tqdm_kwargs: Additional keyword based arguments passed to the progress bar.
+        :param restrict_entities_to: Optionally restrict the evaluation to the given entity IDs. This may be useful if
+            one is only interested in a part of the entities, e.g. due to type constraints, but wants to train on all
+            available data. For ranking the entities, we still compute all scores for all possible replacement entities
+            to avoid irregular access patterns which might decrease performance, but the scores will afterward be
+            filtered to only keep those of interest. If provided, we assume by default that the triples are already
+            filtered, such that it only contains the entities of interest. To explicitly filter within this method, pass
             `pre_filtered_triples=False`.
-        :param restrict_relations_to:
-            Optionally restrict the evaluation to the given relation IDs. This may be useful if one is only interested
-            in a part of the relations, e.g. due to relation types, but wants to train on all available data.
-            If provided, we assume by default that the triples are already filtered, such that it only contains the
-            relations of interest. To explicitly filter within this method, pass `pre_filtered_triples=False`.
-        :param do_time_consuming_checks:
-            Whether to perform some time-consuming checks on the provided arguments. Currently, this encompasses only:
-            If `restrict_entities_to` or `restrict_relations_to` is not `None`, check whether the triples have been
-            filtered. Disabling this option can accelerate the method. Only effective if `pre_filtered_triples` is set
-            to `True`.
-        :param pre_filtered_triples:
-            Whether the triples have been pre-filtered to adhere to `restrict_entities_to` / `restrict_relations_to`.
-            When set to `True`, and the triples have *not* been filtered, the results may be invalid. Pre-filtering the
-            triples accelerates this method, and is recommended when evaluating multiple times on the same set of
-            triples.
-        :param additional_filter_triples:
-            additional true triples to filter out during filtered evaluation.
-        :param targets:
-            the prediction targets
+        :param restrict_relations_to: Optionally restrict the evaluation to the given relation IDs. This may be useful
+            if one is only interested in a part of the relations, e.g. due to relation types, but wants to train on all
+            available data. If provided, we assume by default that the triples are already filtered, such that it only
+            contains the relations of interest. To explicitly filter within this method, pass
+            `pre_filtered_triples=False`.
+        :param do_time_consuming_checks: Whether to perform some time-consuming checks on the provided arguments.
+            Currently, this encompasses only: If `restrict_entities_to` or `restrict_relations_to` is not `None`, check
+            whether the triples have been filtered. Disabling this option can accelerate the method. Only effective if
+            `pre_filtered_triples` is set to `True`.
+        :param pre_filtered_triples: Whether the triples have been pre-filtered to adhere to `restrict_entities_to` /
+            `restrict_relations_to`. When set to `True`, and the triples have *not* been filtered, the results may be
+            invalid. Pre-filtering the triples accelerates this method, and is recommended when evaluating multiple
+            times on the same set of triples.
+        :param additional_filter_triples: additional true triples to filter out during filtered evaluation.
+        :param targets: the prediction targets
 
-        :raises NotImplementedError:
-            if relation prediction evaluation is requested
-        :raises ValueError:
-            if the pre_filtered_triples contain unwanted entities (can only be detected with the time-consuming checks).
-        :raises MemoryError:
-            if the evaluation fails on cpu
+        :returns: the evaluation results
 
-        :return:
-            the evaluation results
+        :raises NotImplementedError: if relation prediction evaluation is requested
+        :raises ValueError: if the pre_filtered_triples contain unwanted entities (can only be detected with the
+            time-consuming checks).
+        :raises MemoryError: if the evaluation fails on cpu
         """
         if LABEL_RELATION in targets:
             raise NotImplementedError("cf. https://github.com/pykeen/pykeen/pull/728")
@@ -399,20 +384,14 @@ class Evaluator(ABC, Generic[MetricKeyType]):
 
     @staticmethod
     def _check_slicing_availability(model: Model, batch_size: int, entities: bool, relations: bool) -> None:
-        """
-        Raise an error if the necessary slicing operations are not supported.
+        """Raise an error if the necessary slicing operations are not supported.
 
-        :param model:
-            the model
-        :param batch_size:
-            the batch-size; only used for creating the error message
-        :param entities:
-            whether entities need to be scored
-        :param relations:
-            whether relations need to be scored
+        :param model: the model
+        :param batch_size: the batch-size; only used for creating the error message
+        :param entities: whether entities need to be scored
+        :param relations: whether relations need to be scored
 
-        :raises MemoryError:
-            if the necessary slicing operations are not supported by the model
+        :raises MemoryError: if the necessary slicing operations are not supported by the model
         """
         reasons = []
         if entities:
@@ -470,31 +449,23 @@ def evaluate(
     targets: Collection[Target],
     **kwargs,
 ) -> MetricResults:
-    """
-    Evaluate a model with the given evaluator.
+    """Evaluate a model with the given evaluator.
 
-    .. note ::
+    .. note::
+
         This method is decorated by maximize_memory_utilization, which reduce the parameters `batch_size` and
         `slice_size`, if necessary due to memory constraints.
 
-    :param evaluator:
-        the evaluator instance that is used for evaluation
-    :param mapped_triples:
-        the evaluation triples
-    :param batch_size:
-        the (maximum) batch size. It will be reduced when (GPU) out-of-memory problems occur.
-    :param slice_size:
-        the (maximum) slice size. It will be reduced when (GPU) out-of-memory problems occur, and batch size reduction
-        could not resolve the issue.
-    :param progress_bar:
-        whether to display a progress bar
-    :param targets:
-        the evaluation targets
-    :param kwargs:
-        additional keyword-based parameters are passed to :meth:`_evaluate_batch`.
+    :param evaluator: the evaluator instance that is used for evaluation
+    :param mapped_triples: the evaluation triples
+    :param batch_size: the (maximum) batch size. It will be reduced when (GPU) out-of-memory problems occur.
+    :param slice_size: the (maximum) slice size. It will be reduced when (GPU) out-of-memory problems occur, and batch
+        size reduction could not resolve the issue.
+    :param progress_bar: whether to display a progress bar
+    :param targets: the evaluation targets
+    :param kwargs: additional keyword-based parameters are passed to :meth:`_evaluate_batch`.
 
-    :return:
-        the evaluation result
+    :returns: the evaluation result
     """
     # todo: maybe we want to have some more keys outside of kwargs for hashing / have more visibility about
     #  what is passed around
@@ -523,10 +494,10 @@ def evaluate(
 
 def create_sparse_positive_filter_(
     hrt_batch: MappedTriples,
-    all_pos_triples: torch.LongTensor,
-    relation_filter: torch.BoolTensor | None = None,
+    all_pos_triples: LongTensor,
+    relation_filter: BoolTensor | None = None,
     filter_col: int = 0,
-) -> tuple[torch.LongTensor, torch.BoolTensor]:
+) -> tuple[LongTensor, BoolTensor]:
     """Compute indices of all positives.
 
     For simplicity, only the head-side is described, i.e. filter_col=0. The tail-side is processed alike.
@@ -534,24 +505,18 @@ def create_sparse_positive_filter_(
     For each (h, r, t) triple in the batch, the entity identifiers are computed such that (h', r, t) exists in all
     positive triples.
 
-    :param hrt_batch: shape: (batch_size, 3)
-        A batch of triples.
-    :param all_pos_triples: shape: (num_positive_triples, 3)
-        All positive triples to base the filtering on.
-    :param relation_filter: shape: (batch_size, num_positive_triples)
-        A boolean mask R[i, j] which is True iff the j-th positive triple contains the same relation as the i-th triple
-        in the batch.
-    :param filter_col:
-        The column along which to filter. Allowed are {0, 2}, where 0 corresponds to filtering head-based and 2
-        corresponds to filtering tail-based.
+    :param hrt_batch: shape: (batch_size, 3) A batch of triples.
+    :param all_pos_triples: shape: (num_positive_triples, 3) All positive triples to base the filtering on.
+    :param relation_filter: shape: (batch_size, num_positive_triples) A boolean mask R[i, j] which is True iff the j-th
+        positive triple contains the same relation as the i-th triple in the batch.
+    :param filter_col: The column along which to filter. Allowed are {0, 2}, where 0 corresponds to filtering head-based
+        and 2 corresponds to filtering tail-based.
 
-    :return:
-        - positives, shape: (2, m)
-            The indices of positives in format [(batch_index, entity_id)].
+    :returns: - positives, shape: (2, m)
+              The indices of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
 
-    :raises NotImplementedError:
-        if the `filter_col` is not in `{0, 2}`
+    :raises NotImplementedError: if the `filter_col` is not in `{0, 2}`
     """
     if filter_col not in {0, 2}:
         raise NotImplementedError(
@@ -575,17 +540,15 @@ def create_sparse_positive_filter_(
 
 
 def create_dense_positive_mask_(
-    zero_tensor: torch.FloatTensor,
-    filter_batch: torch.LongTensor,
-) -> torch.FloatTensor:
+    zero_tensor: FloatTensor,
+    filter_batch: LongTensor,
+) -> FloatTensor:
     """Construct dense positive mask.
 
-    :param zero_tensor: shape: (batch_size, num_entities)
-        A tensor of zeros of suitable shape.
-    :param filter_batch: shape: (m, 2)
-        The indices of all positives in format (batch_index, entity_id)
-    :return:
-        The dense positive mask with x[b, i] = 1 iff (b, i) in filter_batch.
+    :param zero_tensor: shape: (batch_size, num_entities) A tensor of zeros of suitable shape.
+    :param filter_batch: shape: (m, 2) The indices of all positives in format (batch_index, entity_id)
+
+    :returns: The dense positive mask with x[b, i] = 1 iff (b, i) in filter_batch.
     """
     zero_tensor[filter_batch[:, 0], filter_batch[:, 1]] = 1
 
@@ -593,21 +556,19 @@ def create_dense_positive_mask_(
 
 
 def filter_scores_(
-    scores: torch.FloatTensor,
-    filter_batch: torch.LongTensor,
-) -> torch.FloatTensor:
+    scores: FloatTensor,
+    filter_batch: LongTensor,
+) -> FloatTensor:
     """Filter scores by setting true scores to NaN.
 
-    :param scores: shape: (batch_size, num_entities)
-        The scores for all corrupted triples (including the currently considered true triple). Are modified *in-place*.
-    :param filter_batch: (m, 2)
-        The indices of all positives.
+    :param scores: shape: (batch_size, num_entities) The scores for all corrupted triples (including the currently
+        considered true triple). Are modified *in-place*.
+    :param filter_batch: (m, 2) The indices of all positives.
 
-    :return:
-        A reference to the scores, which have been updated in-place.
+    :returns: A reference to the scores, which have been updated in-place.
     """
     # Bind shape
-    batch_size, num_entities = scores.shape
+    num_entities = scores.shape[1]
 
     # Set all filtered triples to NaN to ensure their exclusion in subsequent calculations
     scores[filter_batch[:, 0], filter_batch[:, 1]] = float("nan")
@@ -629,38 +590,27 @@ def _evaluate_batch(
     evaluator: Evaluator,
     slice_size: int | None,
     all_pos_triples: MappedTriples | None,
-    relation_filter: torch.BoolTensor | None,
-    restrict_entities_to: torch.LongTensor | None,
+    relation_filter: BoolTensor | None,
+    restrict_entities_to: LongTensor | None,
     *,
     mode: InductiveMode | None,
-) -> torch.BoolTensor:
-    """
-    Evaluate ranking for batch.
+) -> BoolTensor:
+    """Evaluate ranking for batch.
 
-    :param batch: shape: (batch_size, 3)
-        The batch of currently evaluated triples.
-    :param model:
-        The model to evaluate.
-    :param target:
-        The prediction target.
-    :param evaluator:
-        The evaluator
-    :param slice_size:
-        An optional slice size for computing the scores.
-    :param all_pos_triples:
-        All positive triples (required if filtering is necessary).
-    :param relation_filter:
-        The relation filter. Can be re-used.
-    :param restrict_entities_to:
-        Restriction to evaluate only for these entities.
-    :param mode:
-        the inductive mode, or None for transductive evaluation
+    :param batch: shape: (batch_size, 3) The batch of currently evaluated triples.
+    :param model: The model to evaluate.
+    :param target: The prediction target.
+    :param evaluator: The evaluator
+    :param slice_size: An optional slice size for computing the scores.
+    :param all_pos_triples: All positive triples (required if filtering is necessary).
+    :param relation_filter: The relation filter. Can be re-used.
+    :param restrict_entities_to: Restriction to evaluate only for these entities.
+    :param mode: the inductive mode, or None for transductive evaluation
 
-    :raises ValueError:
-        if all positive triples are required (either due to filtered evaluation, or requiring dense masks).
+    :returns: The relation filter, which can be re-used for the same batch.
 
-    :return:
-        The relation filter, which can be re-used for the same batch.
+    :raises ValueError: if all positive triples are required (either due to filtered evaluation, or requiring dense
+        masks).
     """
     scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size, mode=mode)
 
@@ -727,22 +677,19 @@ def get_candidate_set_size(
     additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
     num_entities: int | None = None,
 ) -> pandas.DataFrame:
-    """
-    Calculate the candidate set sizes for head/tail prediction for the given triples.
+    """Calculate the candidate set sizes for head/tail prediction for the given triples.
 
-    :param mapped_triples: shape: (n, 3)
-        the evaluation triples
-    :param restrict_entities_to:
-        The entity IDs of interest. If None, defaults to all entities. cf. :func:`restrict_triples`.
-    :param restrict_relations_to:
-        The relations IDs of interest. If None, defaults to all relations. cf. :func:`restrict_triples`.
-    :param additional_filter_triples: shape: (n, 3)
-        additional filter triples besides the evaluation triples themselves. cf. `_prepare_filter_triples`.
-    :param num_entities:
-        the number of entities. If not given, this number is inferred from all triples
+    :param mapped_triples: shape: (n, 3) the evaluation triples
+    :param restrict_entities_to: The entity IDs of interest. If None, defaults to all entities. cf.
+        :func:`restrict_triples`.
+    :param restrict_relations_to: The relations IDs of interest. If None, defaults to all relations. cf.
+        :func:`restrict_triples`.
+    :param additional_filter_triples: shape: (n, 3) additional filter triples besides the evaluation triples themselves.
+        cf. `_prepare_filter_triples`.
+    :param num_entities: the number of entities. If not given, this number is inferred from all triples
 
-    :return: columns: "index" | "head" | "relation" | "tail" | "head_candidates" | "tail_candidates"
-        a dataframe of all evaluation triples, with the number of head and tail candidates
+    :returns: columns: "index" | "head" | "relation" | "tail" | "head_candidates" | "tail_candidates" a dataframe of all
+        evaluation triples, with the number of head and tail candidates
     """
     # optionally restrict triples (nop if no restriction)
     mapped_triples = restrict_triples(
@@ -799,16 +746,12 @@ def get_candidate_set_size(
 def normalize_flattened_metric_results(
     result: Mapping[str, Any], metric_result_cls: type[MetricResults] | None = None
 ) -> Mapping[str, Any]:
-    """
-    Flatten metric result dictionary and normalize metric keys.
+    """Flatten metric result dictionary and normalize metric keys.
 
-    :param result:
-        the result dictionary.
-    :param metric_result_cls:
-        the metric result class providing metric name normalization
+    :param result: the result dictionary.
+    :param metric_result_cls: the metric result class providing metric name normalization
 
-    :return:
-        the flattened metric results with normalized metric names.
+    :returns: the flattened metric results with normalized metric names.
     """
     # avoid cyclic imports
     from .rank_based_evaluator import RankBasedMetricResults

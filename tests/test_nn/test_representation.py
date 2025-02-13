@@ -204,7 +204,7 @@ class CachedTextRepresentationTests(TextRepresentationTests):
     """Tests for cached text representations."""
 
     cls = pykeen.nn.representation.CachedTextRepresentation
-    kwargs = dict(encoder="character-embedding", cache=pykeen.nn.utils.IdentityCache())
+    kwargs = dict(encoder="character-embedding", cache=pykeen.nn.text.IdentityCache())
     key_labels: str = "identifiers"
 
 

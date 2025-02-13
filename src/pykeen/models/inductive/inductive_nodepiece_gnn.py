@@ -9,7 +9,13 @@ from torch import nn
 
 from .inductive_nodepiece import InductiveNodePiece
 from ...nn.representation import CompGCNLayer
-from ...typing import HeadRepresentation, InductiveMode, RelationRepresentation, TailRepresentation
+from ...typing import (
+    HeadRepresentation,
+    InductiveMode,
+    LongTensor,
+    RelationRepresentation,
+    TailRepresentation,
+)
 from ...utils import get_edge_index
 
 __all__ = [
@@ -37,13 +43,11 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         gnn_encoder: Iterable[nn.Module] | None = None,
         **kwargs,
     ) -> None:
-        """
-        Initialize the model.
+        """Initialize the model.
 
-        :param gnn_encoder:
-            an iterable of message passing layers. Defaults to 2-layer CompGCN with Hadamard composition.
-        :param kwargs:
-            additional keyword-based parameters passed to `InductiveNodePiece.__init__`.
+        :param gnn_encoder: an iterable of message passing layers. Defaults to 2-layer CompGCN with Hadamard
+            composition.
+        :param kwargs: additional keyword-based parameters passed to `InductiveNodePiece.__init__`.
         """
         super().__init__(**kwargs)
 
@@ -102,9 +106,9 @@ class InductiveNodePieceGNN(InductiveNodePiece):
 
     def _get_representations(
         self,
-        h: torch.LongTensor | None,
-        r: torch.LongTensor | None,
-        t: torch.LongTensor | None,
+        h: LongTensor | None,
+        r: LongTensor | None,
+        t: LongTensor | None,
         invert_relation: bool = False,  # TODO: do we need this here?
         mode: InductiveMode | None = None,
     ) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:

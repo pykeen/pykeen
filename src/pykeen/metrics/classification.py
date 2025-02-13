@@ -1,9 +1,9 @@
-"""
-Classification metrics.
+"""Classification metrics.
 
 The metrics in this module assume the link prediction setting to be a (binary) classification of individual triples.
 
-.. note ::
+.. note::
+
     many metrics in this module use `scikit-learn` under the hood, cf.
     https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
 """
@@ -35,18 +35,13 @@ ZeroDivisionPolicy = Literal["warn", 0, 1]
 
 
 def safe_divide(numerator: float, denominator: float, zero_division: ZeroDivisionPolicy = "warn") -> float:
-    """
-    Perform division and handle divide-by-zero similar to scikit-learn.
+    """Perform division and handle divide-by-zero similar to scikit-learn.
 
-    :param numerator:
-        the numerator
-    :param denominator:
-        the denominator
-    :param zero_division:
-        the zero-division policy; If "warn", act like 0, but warn about the case.
+    :param numerator: the numerator
+    :param denominator: the denominator
+    :param zero_division: the zero-division policy; If "warn", act like 0, but warn about the case.
 
-    :return:
-        the division result
+    :returns: the division result
     """
     # todo: do we need numpy support?
     if denominator != 0:
@@ -64,24 +59,21 @@ def safe_divide(numerator: float, denominator: float, zero_division: ZeroDivisio
 def construct_indicator(*, y_score: numpy.ndarray, y_true: numpy.ndarray) -> numpy.ndarray:
     """Construct binary indicators from a list of scores.
 
-    If there are $n$ positively labeled entries in ``y_true``, this function
-    assigns the top $n$ highest scores in ``y_score`` as positive and remainder
-    as negative.
+    If there are $n$ positively labeled entries in ``y_true``, this function assigns the top $n$ highest scores in
+    ``y_score`` as positive and remainder as negative.
 
-    .. note ::
-        Since the method uses the number of true labels to determine a threshold, the
-        results will typically be overly optimistic estimates of the generalization performance.
+    .. note::
 
-    .. todo ::
-        Add a method which estimates a threshold based on a validation set, and applies this
-        threshold for binarization on the test set.
+        Since the method uses the number of true labels to determine a threshold, the results will typically be overly
+        optimistic estimates of the generalization performance.
 
-    :param y_score:
-        A 1-D array of the score values
-    :param y_true:
-        A 1-D array of binary values (1 and 0)
-    :return:
-        A 1-D array of indicator values
+    .. todo:: Add a method which estimates a threshold based on a validation set, and applies this
+    threshold for binarization on the test set.
+
+    :param y_score: A 1-D array of the score values
+    :param y_true: A 1-D array of binary values (1 and 0)
+
+    :returns: A 1-D array of indicator values
 
     .. seealso::
 
@@ -102,47 +94,37 @@ class ClassificationMetric(Metric, abc.ABC):
     def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
         """Evaluate the metric.
 
-        :param y_true: shape: (num_samples,)
-            the true labels, either 0 or 1.
-        :param y_score: shape: (num_samples,)
-            the predictions, either continuous or binarized.
-        :param weights: shape: (num_samples,)
-            weights for individual predictions
+        :param y_true: shape: (num_samples,) the true labels, either 0 or 1.
+        :param y_score: shape: (num_samples,) the predictions, either continuous or binarized.
+        :param weights: shape: (num_samples,) weights for individual predictions
 
-            .. warning ::
+            .. warning::
+
                 not all metrics support sample weights - check :attr:`supports_weights` first
 
-        :return:
-            the scalar metric value
 
-        :raises ValueError:
-            when weights are provided but the function does not support them.
+        :returns: the scalar metric value
+
+        :raises ValueError: when weights are provided but the function does not support them.
         """
         if weights is None:
             return self.forward(y_true=y_true, y_score=y_score)
         if not self.supports_weights:
-            raise ValueError(
-                f"{self.__call__.__qualname__} does not support sample weights but receivedweights={weights}.",
-            )
+            raise ValueError(f"{self.__call__.__qualname__} does not support sample weights but received {weights=}.")
         return self.forward(y_true=y_true, y_score=y_score, sample_weight=weights)
 
     @abc.abstractmethod
     def forward(
         self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
     ) -> float:
-        """
-        Calculate the metric.
+        """Calculate the metric.
 
-        :param y_true: shape: (num_samples,)
-            the true label, either 0 or 1.
-        :param y_score: shape: (num_samples,)
-            the predictions, either as continuous scores, or as binarized prediction
+        :param y_true: shape: (num_samples,) the true label, either 0 or 1.
+        :param y_score: shape: (num_samples,) the predictions, either as continuous scores, or as binarized prediction
             (depending on the concrete metric at hand).
-        :param sample_weight: shape: (num_samples,)
-            sample weights
+        :param sample_weight: shape: (num_samples,) sample weights
 
-        :return:
-            a scalar metric value
+        :returns: a scalar metric value
 
         # noqa:DAR202
         """
@@ -150,8 +132,7 @@ class ClassificationMetric(Metric, abc.ABC):
 
 @parse_docdata
 class NumScores(ClassificationMetric):
-    """
-    The number of scores.
+    """The number of scores.
 
     Lower numbers may indicate unreliable results.
     ---
@@ -183,8 +164,7 @@ class BinarizedClassificationMetric(ClassificationMetric, abc.ABC):
 
 @parse_docdata
 class BalancedAccuracyScore(BinarizedClassificationMetric):
-    """
-    The average of recall obtained on each class.
+    """The average of recall obtained on each class.
 
     ---
     link: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.balanced_accuracy_score.html
@@ -208,9 +188,10 @@ class BalancedAccuracyScore(BinarizedClassificationMetric):
 class AveragePrecisionScore(ClassificationMetric):
     """The average precision from prediction scores.
 
-    .. note ::
-        this metric is different from the area under the precision-recall curve, which uses
-        interpolation and can be too optimistic.
+    .. note::
+
+        this metric is different from the area under the precision-recall curve, which uses interpolation and can be too
+        optimistic.
 
     ---
     link: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html
@@ -234,8 +215,7 @@ class AveragePrecisionScore(ClassificationMetric):
 
 @parse_docdata
 class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
-    """
-    The area under the receiver operating characteristic curve.
+    """The area under the receiver operating characteristic curve.
 
     ---
     link: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html
@@ -288,10 +268,10 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
 
 @parse_docdata
 class TruePositiveRate(ConfusionMatrixClassificationMetric):
-    """
-    The true positive rate is the probability that the prediction is positive, given the triple is truly positive.
+    """The true positive rate is the probability that the prediction is positive, given the triple is truly positive.
 
-    .. math ::
+    .. math::
+
         TPR = TP / (TP + FN)
 
     ---
@@ -313,15 +293,16 @@ class TruePositiveRate(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class TrueNegativeRate(ConfusionMatrixClassificationMetric):
-    """
-    The true negative rate is the probability that the prediction is negative, given the triple is truly negative.
+    """The true negative rate is the probability that the prediction is negative, given the triple is truly negative.
 
-    .. math ::
+    .. math::
+
         TNR = TN / (TN + FP)
 
-    .. warning ::
-        most knowledge graph datasets do not have true negatives, i.e., verified false facts, but rather are
-        collection of (mostly) true facts, where the missing ones are generally unknown rather than false.
+    .. warning::
+
+        most knowledge graph datasets do not have true negatives, i.e., verified false facts, but rather are collection
+        of (mostly) true facts, where the missing ones are generally unknown rather than false.
 
     ---
     link: https://en.wikipedia.org/wiki/Specificity_(tests)
@@ -342,10 +323,10 @@ class TrueNegativeRate(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class FalsePositiveRate(ConfusionMatrixClassificationMetric):
-    """
-    The false positive rate is the probability that the prediction is positive, given the triple is truly negative.
+    """The false positive rate is the probability that the prediction is positive, given the triple is truly negative.
 
-    .. math ::
+    .. math::
+
         FPR = FP / (FP + TN)
 
     ---
@@ -367,10 +348,10 @@ class FalsePositiveRate(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class FalseNegativeRate(ConfusionMatrixClassificationMetric):
-    """
-    The false negative rate is the probability that the prediction is negative, given the triple is truly positive.
+    """The false negative rate is the probability that the prediction is negative, given the triple is truly positive.
 
-    .. math ::
+    .. math::
+
         FNR = FN / (FN + TP)
 
     ---
@@ -392,10 +373,10 @@ class FalseNegativeRate(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class PositivePredictiveValue(ConfusionMatrixClassificationMetric):
-    """
-    The positive predictive value is the proportion of predicted positives which are true positive.
+    """The positive predictive value is the proportion of predicted positives which are true positive.
 
-    .. math ::
+    .. math::
+
         PPV = TP / (TP + FP)
 
     ---
@@ -417,10 +398,10 @@ class PositivePredictiveValue(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class NegativePredictiveValue(ConfusionMatrixClassificationMetric):
-    """
-    The negative predictive value is the proportion of predicted negatives which are true negative.
+    """The negative predictive value is the proportion of predicted negatives which are true negative.
 
-    .. math ::
+    .. math::
+
         NPV = TN / (TN + FN)
 
     ---
@@ -442,10 +423,10 @@ class NegativePredictiveValue(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class FalseDiscoveryRate(ConfusionMatrixClassificationMetric):
-    """
-    The false discovery rate is the proportion of predicted negatives which are true positive.
+    """The false discovery rate is the proportion of predicted negatives which are true positive.
 
-    .. math ::
+    .. math::
+
         FDR = FP / (FP + TP)
 
     ---
@@ -467,10 +448,10 @@ class FalseDiscoveryRate(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class FalseOmissionRate(ConfusionMatrixClassificationMetric):
-    """
-    The false omission rate is the proportion of predicted positives which are true negative.
+    """The false omission rate is the proportion of predicted positives which are true negative.
 
-    .. math ::
+    .. math::
+
         FOR = FN / (FN + TN)
 
     ---
@@ -492,10 +473,10 @@ class FalseOmissionRate(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class PositiveLikelihoodRatio(ConfusionMatrixClassificationMetric):
-    r"""
-    The positive likelihood ratio is the ratio of true positive rate to false positive rate.
+    r"""The positive likelihood ratio is the ratio of true positive rate to false positive rate.
 
-    .. math ::
+    .. math::
+
         LR+ = TPR / FPR = \frac{TP / (TP + FN)}{FP / (FP + TN)} = \frac{TP \cdot (FP + TN)}{FP \cdot (TP + FN)}
 
     ---
@@ -519,10 +500,10 @@ class PositiveLikelihoodRatio(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class NegativeLikelihoodRatio(ConfusionMatrixClassificationMetric):
-    r"""
-    The negative likelihood ratio is the ratio of false negative rate to true negative rate.
+    r"""The negative likelihood ratio is the ratio of false negative rate to true negative rate.
 
-    .. math ::
+    .. math::
+
         LR- = FNR / TNR = \frac{FN / (TP + FN)}{TN / (FP + TN)} = \frac{FN \cdot (FP + TN)}{TN \cdot (TP + FN)}
 
     ---
@@ -546,10 +527,10 @@ class NegativeLikelihoodRatio(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class DiagnosticOddsRatio(ConfusionMatrixClassificationMetric):
-    r"""
-    The ratio of positive and negative likelihood ratio.
+    r"""The ratio of positive and negative likelihood ratio.
 
-    .. math ::
+    .. math::
+
         DOR = \frac{LR+}{LR-} = \frac{TP \cdot TN}{FP \cdot FN}
 
     ---
@@ -575,10 +556,10 @@ class DiagnosticOddsRatio(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class Accuracy(ConfusionMatrixClassificationMetric):
-    r"""
-    The ratio of the number of correct classifications to the total number.
+    r"""The ratio of the number of correct classifications to the total number.
 
-    .. math ::
+    .. math::
+
         ACC = (TP + TN) / (TP + TN + FP + FN)
 
     ---
@@ -602,10 +583,10 @@ class Accuracy(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class F1Score(ConfusionMatrixClassificationMetric):
-    r"""
-    The harmonic mean of precision and recall.
+    r"""The harmonic mean of precision and recall.
 
-    .. math ::
+    .. math::
+
         F1 = 2TP / (2TP + FP + FN)
 
     ---
@@ -629,10 +610,10 @@ class F1Score(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
-    r"""
-    The prevalence threshold.
+    r"""The prevalence threshold.
 
-    .. math ::
+    .. math::
+
         PT = √FPR / (√TPR + √FPR)
 
     ---
@@ -659,10 +640,10 @@ class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class ThreatScore(ConfusionMatrixClassificationMetric):
-    r"""
-    The threat score.
+    r"""The threat score.
 
-    .. math ::
+    .. math::
+
         TS = TP / (TP + FN + FP)
 
     ---
@@ -686,10 +667,10 @@ class ThreatScore(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
-    r"""
-    The Fowlkes Mallows index.
+    r"""The Fowlkes Mallows index.
 
-    .. math ::
+    .. math::
+
         FM = \sqrt{\frac{TP^2}{(2TP + FP + FN)}}
 
     ---
@@ -715,10 +696,10 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class Informedness(ConfusionMatrixClassificationMetric):
-    r"""
-    The informedness metric.
+    r"""The informedness metric.
 
-    .. math ::
+    .. math::
+
         YI = TPR + TNR - 1 = TP / (TP + FN) + TN / (TN + FP) - 1
 
     ---
@@ -746,12 +727,12 @@ class Informedness(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class MatthewsCorrelationCoefficient(ConfusionMatrixClassificationMetric):
-    r"""
-    The Matthews Correlation Coefficient (MCC).
+    r"""The Matthews Correlation Coefficient (MCC).
 
     A balanced measure applicable even with class imbalance.
 
-    .. math ::
+    .. math::
+
         MCC = (TP * TN - FP * FN) / sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))
 
     ---
@@ -773,6 +754,7 @@ class MatthewsCorrelationCoefficient(ConfusionMatrixClassificationMetric):
         )
 
 
+#: A resolver for classification metrics
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver.from_subclasses(
     base=ClassificationMetric,
     default=AveragePrecisionScore,

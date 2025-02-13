@@ -6,8 +6,16 @@ from collections.abc import Callable, Iterable
 from typing import NamedTuple
 
 import torch
-from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
+from class_resolver import (
+    HintOrType,
+    OneOrManyHintOrType,
+    OneOrManyOptionalKwargs,
+    OptionalKwargs,
+    ResolverKey,
+    update_docstring_with_resolver_keys,
+)
 from docdata import parse_docdata
+from typing_extensions import Self
 
 from .tokenization import Tokenizer, tokenizer_resolver
 from ..combination import ConcatAggregationCombination
@@ -15,7 +23,7 @@ from ..perceptron import ConcatMLP
 from ..representation import CombinedRepresentation, Representation
 from ..utils import ShapeError
 from ...triples import CoreTriplesFactory
-from ...typing import MappedTriples, OneOrSequence
+from ...typing import FloatTensor, LongTensor, MappedTriples, OneOrSequence
 from ...utils import broadcast_upgrade_to_sequences
 
 __all__ = [
@@ -29,15 +37,24 @@ logger = logging.getLogger(__name__)
 
 @parse_docdata
 class TokenizationRepresentation(Representation):
-    """A module holding the result of tokenization.
+    r"""A module holding the result of tokenization.
+
+    It represents each index by the concatenation of representations of the corresponding tokens.
+
+    .. math ::
+        [T[t] | t \in \textit{tok}(i)]
+
+    where $tok(i)$ denotes the sequence of token indices for the given index $i$,
+    and $T$ stores the representations for each token.
 
     ---
     name: Tokenization
     citation:
         author: Galkin
         year: 2021
+        arxiv: 2106.12144
         link: https://arxiv.org/abs/2106.12144
-        github: https://github.com/migalkin/NodePiece
+        github: migalkin/NodePiece
     """
 
     #: the token ID of the padding token
@@ -47,11 +64,14 @@ class TokenizationRepresentation(Representation):
     vocabulary: Representation
 
     #: the assigned tokens for each entity
-    assignment: torch.LongTensor
+    assignment: LongTensor
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey(name="token_representation", resolver="pykeen.nn.representation_resolver")
+    )
     def __init__(
         self,
-        assignment: torch.LongTensor,
+        assignment: LongTensor,
         token_representation: HintOrType[Representation] = None,
         token_representation_kwargs: OptionalKwargs = None,
         shape: OneOrSequence[int] | None = None,
@@ -60,19 +80,20 @@ class TokenizationRepresentation(Representation):
         """
         Initialize the tokenization.
 
-        :param assignment: shape: `(n, num_chosen_tokens)`
-            the token assignment.
-        :param token_representation: shape: `(num_total_tokens, *shape)`
-            the token representations
+        :param assignment: shape: ``(n, num_chosen_tokens)``
+            The token assignment.
+        :param token_representation: shape: ``(num_total_tokens, *shape)``
+            The token representations.
         :param token_representation_kwargs:
-            additional keyword-based parameters
+            Additional keyword-based parameters.
         :param shape:
-            The shape of an individual representation. If provided, has to match.
+            The shape of an individual representation. If provided, has to match
+            ``(assignment.shape[1], *token_representation.shape)``.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Representation.__init__`
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`.
 
-        :raises ValueError: if there's a mismatch between the representation size
-            and the vocabulary size
+        :raises ValueError:
+            If there's a mismatch between the representation size and the vocabulary size.
         """
         # needs to be lazily imported to avoid cyclic imports
         from .. import representation_resolver
@@ -126,37 +147,38 @@ class TokenizationRepresentation(Representation):
         token_representation: HintOrType[Representation] = None,
         token_representation_kwargs: OptionalKwargs = None,
         **kwargs,
-    ) -> "TokenizationRepresentation":
+    ) -> Self:
         """
         Create a tokenization from applying a tokenizer.
 
         :param tokenizer:
-            the tokenizer instance.
+            The tokenizer instance.
         :param num_tokens:
-            the number of tokens to select for each entity.
-        :param token_representation:
-            the pre-instantiated token representations, class, or name of a class
+            The number of tokens to select for each entity.
+        :param token_representation: shape: ``(num_total_tokens, *shape)``
+            The token representations.
         :param token_representation_kwargs:
-            additional keyword-based parameters
+            Additional keyword-based parameters.
         :param mapped_triples:
-            the ID-based triples
+            The ID-based triples.
         :param num_entities:
-            the number of entities
+            The number of entities.
         :param num_relations:
-            the number of relations
+            The number of relations.
         :param kwargs:
-            additional keyword-based parameters passed to TokenizationRepresentation.__init__
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.node_piece.TokenizationRepresentation`.
+
         :return:
-            A tokenization representation by applying the tokenizer
+            A :class:`~pykeen.nn.node_piece.TokenizationRepresentation` by applying the tokenizer.
         """
         # apply tokenizer
-        vocabulary_size, assignment = tokenizer(
+        assignment = tokenizer(
             mapped_triples=mapped_triples,
             num_tokens=num_tokens,
             num_entities=num_entities,
             num_relations=num_relations,
-        )
-        return TokenizationRepresentation(
+        )[1]
+        return cls(
             assignment=assignment,
             token_representation=token_representation,
             token_representation_kwargs=token_representation_kwargs,
@@ -173,8 +195,8 @@ class TokenizationRepresentation(Representation):
     # docstr-coverage: inherited
     def _plain_forward(
         self,
-        indices: torch.LongTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        indices: LongTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         # get token IDs, shape: (*, num_chosen_tokens)
         token_ids = self.assignment
         if indices is not None:
@@ -185,14 +207,14 @@ class TokenizationRepresentation(Representation):
 
     @property
     def num_tokens(self) -> int:
-        """Return the number of selected tokens for ID."""
+        """Return the number of selected tokens for each index."""
         return self.assignment.shape[1]
 
     def save_assignment(self, output_path: pathlib.Path):
         """Save the assignment to a file.
 
         :param output_path:
-            the output file path. Its parent directories will be created if necessary.
+            The output file path. Its parent directories will be created if necessary.
         """
         output_path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(self.assignment, output_path)
@@ -218,13 +240,13 @@ class HashDiversityInfo(NamedTuple):
 @parse_docdata
 class NodePieceRepresentation(CombinedRepresentation):
     r"""
-    Basic implementation of node piece decomposition [galkin2021]_.
+    Basic implementation of NodePiece decomposition [galkin2021]_.
 
     .. math ::
-        x_e = agg(\{T[t] \mid t \in tokens(e) \})
+        x_e = \textit{agg}(\{T[t] \mid t \in \textit{tok}(e) \})
 
-    where $T$ are token representations, $tokens$ selects a fixed number of $k$ tokens for each entity, and $agg$ is
-    an aggregation function, which aggregates the individual token representations to a single entity representation.
+    where $T$ are token representations, *tok* selects a fixed number of $k$ tokens for each index, and *agg* is
+    an aggregation function, which aggregates the individual token representations to a single representation.
 
     ---
     name: NodePiece
@@ -235,6 +257,11 @@ class NodePieceRepresentation(CombinedRepresentation):
         github: https://github.com/migalkin/NodePiece
     """
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("token_representations", resolver="pykeen.nn.representation_resolver"),
+        ResolverKey("tokenizers", resolver="pykeen.nn.node_piece.tokenizer_resolver"),
+        ResolverKey("aggregation", resolver="class_resolver.contrib.torch.aggregation_resolver"),
+    )
     def __init__(
         self,
         *,
@@ -244,7 +271,8 @@ class NodePieceRepresentation(CombinedRepresentation):
         tokenizers: OneOrManyHintOrType[Tokenizer] = None,
         tokenizers_kwargs: OneOrManyOptionalKwargs = None,
         num_tokens: OneOrSequence[int] = 2,
-        aggregation: None | str | Callable[[torch.FloatTensor, int], torch.FloatTensor] = None,
+        aggregation: None | str | Callable[[FloatTensor, int], FloatTensor] = None,
+        aggregation_kwargs: OptionalKwargs = None,
         max_id: int | None = None,
         **kwargs,
     ):
@@ -252,19 +280,22 @@ class NodePieceRepresentation(CombinedRepresentation):
         Initialize the representation.
 
         :param triples_factory:
-            the triples factory
+            The triples factory, required for tokenization.
+
         :param token_representations:
-            the token representation specification, or pre-instantiated representation module.
+            The token representation specification, or pre-instantiated representation module.
         :param token_representations_kwargs:
-            additional keyword-based parameters
+            Additional keyword-based parameters.
+
         :param tokenizers:
-            the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
+            The tokenizer to use.
         :param tokenizers_kwargs:
-            additional keyword-based parameters passed to the tokenizer upon construction.
+            Additional keyword-based parameters passed to the tokenizer upon construction.
+
         :param num_tokens:
-            the number of tokens for each entity.
+            The number of tokens for each entity.
         :param aggregation:
-            aggregation of multiple token representations to a single entity representation. By default,
+            Aggregation of multiple token representations to a single entity representation. By default,
             this uses :func:`torch.mean`. If a string is provided, the module assumes that this refers to a top-level
             torch function, e.g. "mean" for :func:`torch.mean`, or "sum" for func:`torch.sum`. An aggregation can
             also have trainable parameters, .e.g., ``MLP(mean(MLP(tokens)))`` (cf. DeepSets from [zaheer2017]_). In
@@ -275,10 +306,12 @@ class NodePieceRepresentation(CombinedRepresentation):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
+        :param aggregation_kwargs:
+            Additional keyword-based parameters.
         :param max_id:
-            Only pass this to check if the number of entities in the triples factories is the same
+            Only pass this to check if the number of entities in the triples factories is the same.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`CombinedRepresentation.__init__`
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.CombinedRepresentation`.
         """
         if max_id:
             assert max_id == triples_factory.num_entities
@@ -322,7 +355,9 @@ class NodePieceRepresentation(CombinedRepresentation):
             max_id=triples_factory.num_entities,
             base=token_representations,
             combination=ConcatAggregationCombination,
-            combination_kwargs=dict(aggregation=aggregation, dim=-len(token_representations[0].shape)),
+            combination_kwargs=dict(
+                aggregation=aggregation, aggregation_kwargs=aggregation_kwargs, dim=-len(token_representations[0].shape)
+            ),
             **kwargs,
         )
 
@@ -346,20 +381,7 @@ class NodePieceRepresentation(CombinedRepresentation):
 
         Example usage:
 
-        .. code-block::
-
-            from pykeen.model import NodePiece
-
-            model = NodePiece(
-                triples_factory=dataset.training,
-                tokenizers=["AnchorTokenizer", "RelationTokenizer"],
-                num_tokens=[20, 12],
-                embedding_dim=64,
-                interaction="rotate",
-                relation_constrainer="complex_normalize",
-                entity_initializer="xavier_uniform_",
-            )
-            print(model.entity_representations[0].estimate_diversity())
+        .. literalinclude:: ../examples/nn/representation/node_piece_diversity.py
 
         .. seealso:: https://github.com/pykeen/pykeen/pull/896
         """

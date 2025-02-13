@@ -7,6 +7,7 @@ import torch
 from class_resolver import ClassResolver
 from torch import nn
 
+from ..typing import FloatTensor, LongTensor
 from ..utils import einsum
 
 try:
@@ -26,28 +27,21 @@ __all__ = [
 
 def softmax(
     src: torch.Tensor,
-    index: torch.LongTensor,
+    index: LongTensor,
     num_nodes: None | int | torch.Tensor = None,
     dim: int = 0,
 ) -> torch.Tensor:
-    r"""
-    Compute a sparsely evaluated softmax.
+    r"""Compute a sparsely evaluated softmax.
 
-    Given a value tensor :attr:`src`, this function first groups the values
-    along the given dimension based on the indices specified in :attr:`index`,
-    and then proceeds to compute the softmax individually for each group.
+    Given a value tensor :attr:`src`, this function first groups the values along the given dimension based on the
+    indices specified in :attr:`index`, and then proceeds to compute the softmax individually for each group.
 
-    :param src:
-        The source tensor.
-    :param index:
-        The indices of elements for applying the softmax.
-    :param num_nodes:
-        The number of nodes, i.e., :obj:`max_val + 1` of :attr:`index`. (default: :obj:`None`)
-    :param dim:
-        The dimension along which to compute the softmax.
+    :param src: The source tensor.
+    :param index: The indices of elements for applying the softmax.
+    :param num_nodes: The number of nodes, i.e., :obj:`max_val + 1` of :attr:`index`. (default: :obj:`None`)
+    :param dim: The dimension along which to compute the softmax.
 
-    :returns:
-        The softmax-ed tensor.
+    :returns: The softmax-ed tensor.
 
     :raises ImportError: if :mod:`torch_scatter` is not installed
     """
@@ -71,11 +65,9 @@ class EdgeWeighting(nn.Module):
     needs_message: ClassVar[bool] = False
 
     def __init__(self, **kwargs):
-        """
-        Initialize the module.
+        """Initialize the module.
 
-        :param kwargs:
-            ignored keyword-based parameters.
+        :param kwargs: ignored keyword-based parameters.
         """
         # stub init to enable arbitrary arguments in subclasses
         super().__init__()
@@ -83,29 +75,24 @@ class EdgeWeighting(nn.Module):
     @abstractmethod
     def forward(
         self,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        message: torch.FloatTensor | None = None,
-        x_e: torch.FloatTensor | None = None,
-    ) -> torch.FloatTensor:
+        source: LongTensor,
+        target: LongTensor,
+        message: FloatTensor | None = None,
+        x_e: FloatTensor | None = None,
+    ) -> FloatTensor:
         """Compute edge weights.
 
-        :param source: shape: (num_edges,)
-                The source indices.
-        :param target: shape: (num_edges,)
-            The target indices.
-        :param message: shape (num_edges, dim)
-            Actual messages to weight
-        :param x_e: shape (num_nodes, dim)
-            Node states up to the weighting point
+        :param source: shape: (num_edges,) The source indices.
+        :param target: shape: (num_edges,) The target indices.
+        :param message: shape (num_edges, dim) Actual messages to weight
+        :param x_e: shape (num_nodes, dim) Node states up to the weighting point
 
-        :return: shape: (num_edges, dim)
-             Messages weighted with the edge weights.
+        :returns: shape: (num_edges, dim) Messages weighted with the edge weights.
         """
         raise NotImplementedError
 
 
-def _inverse_frequency_weighting(idx: torch.LongTensor) -> torch.FloatTensor:
+def _inverse_frequency_weighting(idx: LongTensor) -> FloatTensor:
     """Calculate inverse relative frequency weighting."""
     # Calculate in-degree, i.e. number of incoming edges
     inv, cnt = torch.unique(idx, return_counts=True, return_inverse=True)[1:]
@@ -118,11 +105,11 @@ class InverseInDegreeEdgeWeighting(EdgeWeighting):
     # docstr-coverage: inherited
     def forward(
         self,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        message: torch.FloatTensor | None = None,
-        x_e: torch.FloatTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        source: LongTensor,
+        target: LongTensor,
+        message: FloatTensor | None = None,
+        x_e: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         weight = _inverse_frequency_weighting(idx=target)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
@@ -136,11 +123,11 @@ class InverseOutDegreeEdgeWeighting(EdgeWeighting):
     # docstr-coverage: inherited
     def forward(
         self,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        message: torch.FloatTensor | None = None,
-        x_e: torch.FloatTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        source: LongTensor,
+        target: LongTensor,
+        message: FloatTensor | None = None,
+        x_e: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         weight = _inverse_frequency_weighting(idx=source)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
@@ -154,11 +141,11 @@ class SymmetricEdgeWeighting(EdgeWeighting):
     # docstr-coverage: inherited
     def forward(
         self,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        message: torch.FloatTensor | None = None,
-        x_e: torch.FloatTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        source: LongTensor,
+        target: LongTensor,
+        message: FloatTensor | None = None,
+        x_e: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         weight = (_inverse_frequency_weighting(idx=source) * _inverse_frequency_weighting(idx=target)).sqrt()
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
@@ -178,16 +165,13 @@ class AttentionEdgeWeighting(EdgeWeighting):
         num_heads: int = 8,
         dropout: float = 0.1,
     ):
-        """
-        Initialize the module.
+        """Initialize the module.
 
-        :param message_dim: >0
-            the message dimension. has to be divisible by num_heads
-            .. todo:: change to multiplicative instead of divisive to make this easier to use
-        :param num_heads: >0
-            the number of attention heads
-        :param dropout:
-            the attention dropout
+        :param message_dim: >0 the message dimension. has to be divisible by num_heads .. todo:: change to
+            multiplicative instead of divisive to make this easier to use
+        :param num_heads: >0 the number of attention heads
+        :param dropout: the attention dropout
+
         :raises ValueError: If ``message_dim`` is not divisible by ``num_heads``
         """
         super().__init__()
@@ -202,11 +186,11 @@ class AttentionEdgeWeighting(EdgeWeighting):
     # docstr-coverage: inherited
     def forward(
         self,
-        source: torch.LongTensor,
-        target: torch.LongTensor,
-        message: torch.FloatTensor | None = None,
-        x_e: torch.FloatTensor | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+        source: LongTensor,
+        target: LongTensor,
+        message: FloatTensor | None = None,
+        x_e: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
         if message is None or x_e is None:
             raise ValueError(f"{self.__class__.__name__} requires message and x_e.")
 
@@ -232,6 +216,9 @@ class AttentionEdgeWeighting(EdgeWeighting):
         return (message_ * alpha.view(-1, self.num_heads, 1)).view(-1, self.num_heads * self.attention_dim)
 
 
+#: A resolver for R-GCN edge weighting implementations
 edge_weight_resolver: ClassResolver[EdgeWeighting] = ClassResolver.from_subclasses(
-    base=EdgeWeighting, default=SymmetricEdgeWeighting
+    base=EdgeWeighting,
+    default=SymmetricEdgeWeighting,
+    location="pykeen.nn.weighting.edge_weight_resolver",
 )

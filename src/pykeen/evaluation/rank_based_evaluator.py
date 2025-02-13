@@ -13,7 +13,6 @@ from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequenc
 from typing import (
     NamedTuple,
     TypeVar,
-    cast,
 )
 
 import numpy as np
@@ -37,6 +36,8 @@ from ..typing import (
     SIDE_BOTH,
     SIDES,
     ExtendedTarget,
+    FloatTensor,
+    LongTensor,
     MappedTriples,
     RankType,
     Target,
@@ -343,9 +344,9 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        scores: torch.FloatTensor,
-        true_scores: torch.FloatTensor | None = None,
-        dense_positive_mask: torch.FloatTensor | None = None,
+        scores: FloatTensor,
+        true_scores: FloatTensor | None = None,
+        dense_positive_mask: FloatTensor | None = None,
     ) -> None:  # noqa: D102
         if true_scores is None:
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
@@ -493,7 +494,7 @@ def sample_negatives(
     additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
     num_samples: int = 50,
     num_entities: int | None = None,
-) -> Mapping[Target, torch.FloatTensor]:
+) -> Mapping[Target, FloatTensor]:
     """
     Sample true negatives for sampled evaluation.
 
@@ -521,7 +522,7 @@ def sample_negatives(
     all_ids = set(range(num_entities))
     negatives = {}
     for side in [LABEL_HEAD, LABEL_TAIL]:
-        this_negatives = cast(torch.FloatTensor, torch.empty(size=(num_triples, num_samples), dtype=torch.long))
+        this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
         other = TARGET_TO_KEY_LABELS[side]
         for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
             by=other,
@@ -551,7 +552,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
     cf. https://arxiv.org/abs/2106.06935.
     """
 
-    negative_samples: Mapping[Target, torch.LongTensor]
+    negative_samples: Mapping[Target, LongTensor]
 
     def __init__(
         self,
@@ -559,8 +560,8 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         *,
         additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
         num_negatives: int | None = None,
-        head_negatives: torch.LongTensor | None = None,
-        tail_negatives: torch.LongTensor | None = None,
+        head_negatives: LongTensor | None = None,
+        tail_negatives: LongTensor | None = None,
         **kwargs,
     ):
         """
@@ -624,9 +625,9 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        scores: torch.FloatTensor,
-        true_scores: torch.FloatTensor | None = None,
-        dense_positive_mask: torch.FloatTensor | None = None,
+        scores: FloatTensor,
+        true_scores: FloatTensor | None = None,
+        dense_positive_mask: FloatTensor | None = None,
     ) -> None:  # noqa: D102
         if true_scores is None:
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
@@ -693,9 +694,9 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        scores: torch.FloatTensor,
-        true_scores: torch.FloatTensor | None = None,
-        dense_positive_mask: torch.FloatTensor | None = None,
+        scores: FloatTensor,
+        true_scores: FloatTensor | None = None,
+        dense_positive_mask: FloatTensor | None = None,
     ) -> None:  # noqa: D102
         super().process_scores_(
             hrt_batch=hrt_batch,

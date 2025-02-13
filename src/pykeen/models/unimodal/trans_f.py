@@ -6,21 +6,26 @@ from typing import Any, ClassVar
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import TransFInteraction
-from ...typing import Hint, Initializer, Normalizer
+from ...typing import FloatTensor, Hint, Initializer, Normalizer
 
 __all__ = [
     "TransF",
 ]
 
 
-class TransF(ERModel):
+class TransF(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of TransF from [feng2016]_.
+
+    This model represents both entities and relations as $d$-dimensional vectors stored in an
+    :class:`~pykeen.nn.representation.Embedding` matrix. The representations are then passed
+    to the :class:`~pykeen.nn.modules.TransFInteraction` function to obtain scores.
 
     ---
     citation:
         author: Feng
         year: 2016
         link: https://www.aaai.org/ocs/index.php/KR/KR16/paper/view/12887
+        arxiv: 1505.05253
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -39,7 +44,7 @@ class TransF(ERModel):
         relation_initializer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
-        r"""Initialize TransF via the :class:`pykeen.nn.modules.TransFInteraction` interaction.
+        r"""Initialize the model.
 
         :param embedding_dim: The entity embedding dimension $d$.
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`

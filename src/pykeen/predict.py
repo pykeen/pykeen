@@ -272,8 +272,6 @@ from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
 from typing import (
     TypeAlias,  # Python <=3.9
-    Union,
-    cast,
 )
 
 import numpy
@@ -292,8 +290,10 @@ from .typing import (
     LABEL_RELATION,
     LABEL_TAIL,
     DeviceHint,
+    FloatTensor,
     InductiveMode,
     LabeledTriples,
+    LongTensor,
     MappedTriples,
     Target,
 )
@@ -310,7 +310,6 @@ __all__ = [
     "CountScoreConsumer",
     "TopKScoreConsumer",
     "AllScoreConsumer",
-    "CountScoreConsumer",
     "ScorePack",
     "Predictions",
     "TriplePredictions",
@@ -447,10 +446,10 @@ class ScorePack:
     """A pair of result triples and scores."""
 
     #: the ID-based triples, shape: (n, 3)
-    result: torch.LongTensor
+    result: LongTensor
 
     #: the scores
-    scores: torch.FloatTensor
+    scores: FloatTensor
 
     def process(self, factory: CoreTriplesFactory | None = None, **kwargs) -> "TriplePredictions":
         """Start post-processing scores."""
@@ -531,7 +530,7 @@ def _get_input_batch(
     head: None | int | str = None,
     relation: None | int | str = None,
     tail: None | int | str = None,
-) -> tuple[Target, torch.LongTensor, tuple[int, int]]:
+) -> tuple[Target, LongTensor, tuple[int, int]]:
     """Prepare input batch for prediction.
 
     :param factory:
@@ -581,21 +580,21 @@ def _get_input_batch(
             f"Exactly one of {{head, relation, tail}} must be None, but got {head}, {relation}, {tail}",
         )
 
-    batch = cast(torch.LongTensor, torch.as_tensor([batch_ids], dtype=torch.long))
+    batch = torch.as_tensor([batch_ids], dtype=torch.long)
     return target, batch, (batch_ids[0], batch_ids[1])
 
 
 # note type alias annotation required,
 # cf. https://mypy.readthedocs.io/en/stable/common_issues.html#variables-vs-type-aliases
 # batch, TODO: ids?
-PredictionBatch: TypeAlias = torch.LongTensor
+PredictionBatch: TypeAlias = LongTensor
 
 
 class ScoreConsumer:
     """A consumer of scores for visitor pattern."""
 
-    result: torch.LongTensor
-    scores: torch.FloatTensor
+    result: LongTensor
+    scores: FloatTensor
     flatten: bool
 
     @abstractmethod
@@ -603,7 +602,7 @@ class ScoreConsumer:
         self,
         batch: PredictionBatch,
         target: Target,
-        scores: torch.FloatTensor,
+        scores: FloatTensor,
     ) -> None:
         """Consume scores for the given hr_batch."""
         raise NotImplementedError
@@ -627,7 +626,7 @@ class CountScoreConsumer(ScoreConsumer):
         self,
         batch: PredictionBatch,
         target: Target,
-        scores: torch.FloatTensor,
+        scores: FloatTensor,
     ) -> None:  # noqa: D102
         self.batch_count += batch.shape[0]
         self.score_count += scores.numel()
@@ -658,7 +657,7 @@ class TopKScoreConsumer(ScoreConsumer):
         self,
         batch: PredictionBatch,
         target: Target,
-        scores: torch.FloatTensor,
+        scores: FloatTensor,
     ) -> None:  # noqa: D102
         batch_size, num_scores = scores.shape
         assert batch.shape == (batch_size, 2)
@@ -695,8 +694,8 @@ class TopKScoreConsumer(ScoreConsumer):
         top_triples = torch.stack(triples, dim=-1)
 
         # append to global top scores
-        self.scores = torch.cat([self.scores, top_scores])
-        self.result = torch.cat([self.result, top_triples])
+        self.scores = torch.cat([self.scores, top_scores.to(device=self.scores.device)])
+        self.result = torch.cat([self.result, top_triples.to(device=self.result.device)])
 
         # reduce size if necessary
         if self.result.shape[0] > self.k:
@@ -736,10 +735,10 @@ class AllScoreConsumer(ScoreConsumer):
         self,
         batch: PredictionBatch,
         target: Target,
-        scores: torch.FloatTensor,
+        scores: FloatTensor,
     ) -> None:  # noqa: D102
         j = 0
-        selectors: list[slice | torch.LongTensor] = []
+        selectors: list[slice | LongTensor] = []
         for col in COLUMN_LABELS:
             if col == target:
                 selector = slice(None)
@@ -805,12 +804,12 @@ class AllPredictionDataset(PredictionDataset):
         return self.num_entities * self.num_relations
 
     # docstr-coverage: inherited
-    def __getitem__(self, item: int) -> torch.LongTensor:  # noqa: D105
+    def __getitem__(self, item: int) -> LongTensor:  # noqa: D105
         quotient, remainder = divmod(item, self.divisor)
         return torch.as_tensor([quotient, remainder])
 
 
-Restriction = Union[torch.LongTensor, Collection[int], int]
+Restriction = LongTensor | Collection[int] | int
 
 
 class PartiallyRestrictedPredictionDataset(PredictionDataset):
@@ -851,7 +850,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
     """
 
     #: the choices for the first and second component of the input batch
-    parts: tuple[torch.LongTensor, torch.LongTensor]
+    parts: tuple[LongTensor, LongTensor]
 
     def __init__(
         self,
@@ -877,7 +876,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
             if the target position is restricted, or any non-target position is not restricted
         """
         super().__init__(target=target)
-        parts: list[torch.LongTensor] = []
+        parts: list[LongTensor] = []
         for restriction, on in zip((heads, relations, tails), COLUMN_LABELS, strict=False):
             if on == target:
                 if restriction is not None:
@@ -953,7 +952,7 @@ def consume_scores(
             consumer(batch, target=dataset.target, scores=scores)
 
 
-def _build_pack(result: torch.LongTensor, scores: torch.FloatTensor, flatten: bool = False) -> ScorePack:
+def _build_pack(result: LongTensor, scores: FloatTensor, flatten: bool = False) -> ScorePack:
     """Sort final result and package in a score pack."""
     scores, indices = torch.sort(scores.flatten() if flatten else scores, descending=True)
     result = result[indices]
@@ -967,7 +966,7 @@ def _predict_triples_batched(
     batch_size: int,
     *,
     mode: InductiveMode | None,
-) -> torch.FloatTensor:
+) -> FloatTensor:
     """Predict scores for triples in batches."""
     return torch.cat(
         [
@@ -1045,7 +1044,7 @@ def predict_target(
     tail: None | int | str = None,
     #
     triples_factory: TriplesFactory | None = None,
-    targets: None | torch.LongTensor | Sequence[int | str] = None,
+    targets: None | LongTensor | Sequence[int | str] = None,
     mode: InductiveMode | None = None,
 ) -> Predictions:
     """Get predictions for the head, relation, and/or tail combination.

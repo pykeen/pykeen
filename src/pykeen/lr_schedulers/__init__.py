@@ -21,20 +21,11 @@ __all__ = [
     "LRScheduler",
     "lr_schedulers_hpo_defaults",
     "lr_scheduler_resolver",
-    # Imported from PyTorch
-    "CosineAnnealingLR",
-    "CosineAnnealingWarmRestarts",
-    "CyclicLR",
-    "ExponentialLR",
-    "LambdaLR",
-    "MultiplicativeLR",
-    "MultiStepLR",
-    "OneCycleLR",
-    "StepLR",
 ]
 
 
-#: The default strategy for optimizing the lr_schedulers' hyper-parameters
+#: The default strategy for optimizing the lr_schedulers' hyper-parameters,
+#: based on :class:`torch.optim.lr_scheduler.LRScheduler`
 lr_schedulers_hpo_defaults: Mapping[type[LRScheduler], Mapping[str, Any]] = {
     CosineAnnealingLR: dict(
         T_max=dict(type=int, low=10, high=1000, step=50),
