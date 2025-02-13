@@ -14,6 +14,7 @@ training_loop = SLCWATrainingLoop(
     mode="training",  # necessary to specify for the inductive mode - training has its own set of nodes
 )
 
+assert dataset.inductive_validation is not None
 valid_evaluator = SampledRankBasedEvaluator(
     mode="validation",  # necessary to specify for the inductive mode - this will use inference nodes
     evaluation_factory=dataset.inductive_validation,  # validation triples to predict

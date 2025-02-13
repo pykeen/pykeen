@@ -34,6 +34,7 @@ training_loop = SLCWATrainingLoop(
 )
 
 # Validation and Test evaluators use a restricted protocol ranking against 50 random negatives
+assert dataset.inductive_validation is not None
 valid_evaluator = SampledRankBasedEvaluator(
     mode="validation",  # necessary to specify for the inductive mode - this will use inference nodes
     evaluation_factory=dataset.inductive_validation,  # validation triples to predict
