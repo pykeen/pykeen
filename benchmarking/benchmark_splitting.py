@@ -43,7 +43,7 @@ columns = [
 
 
 def _log(s):
-    tqdm.write(f'[{datetime.now().strftime("%H:%M:%S")}] {s}')
+    tqdm.write(f"[{datetime.now().strftime('%H:%M:%S')}] {s}")
 
 
 @click.command()

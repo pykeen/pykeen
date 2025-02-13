@@ -1294,7 +1294,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             msg=f"""
 Command
 =======
-$ pykeen train {self.cls.__name__.lower()} {' '.join(map(str, args))}
+$ pykeen train {self.cls.__name__.lower()} {" ".join(map(str, args))}
 
 Output
 ======
@@ -1306,7 +1306,7 @@ Exception
 
 Traceback
 =========
-{''.join(traceback.format_tb(result.exc_info[2]))}
+{"".join(traceback.format_tb(result.exc_info[2]))}
             """,
         )
 

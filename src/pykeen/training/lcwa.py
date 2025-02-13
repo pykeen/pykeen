@@ -231,7 +231,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
                 " which is not implemented for this model yet."
             )
         else:
-            report = "This model doesn't support sub-batching and slicing is not" " implemented for this model yet."
+            report = "This model doesn't support sub-batching and slicing is not implemented for this model yet."
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
 

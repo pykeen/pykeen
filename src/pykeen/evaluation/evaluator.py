@@ -616,7 +616,7 @@ def filter_scores_(
     # (scores != scores) yields true for all NaN instances (IEEE 754), thus allowing to count the filtered triples.
     if ((scores != scores).sum(dim=1) == num_entities).any():
         logger.warning(
-            "User selected filtered metric computation, but all corrupted triples exists also as positive " "triples",
+            "User selected filtered metric computation, but all corrupted triples exists also as positive triples",
         )
 
     return scores

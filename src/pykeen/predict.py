@@ -394,9 +394,7 @@ class TriplePredictions(Predictions):
             raise ValueError(f"df must have a columns named {columns}, but df.columns={self.df.columns}")
 
     # docstr-coverage: inherited
-    def _contains(
-        self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False
-    ) -> numpy.ndarray:  # noqa: D102
+    def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:  # noqa: D102
         contained = (
             isin_many_dim(
                 elements=torch.as_tensor(
@@ -430,9 +428,7 @@ class TargetPredictions(Predictions):
             raise ValueError(f"df must have a column named '{self.target}_id', but df.columns={self.df.columns}")
 
     # docstr-coverage: inherited
-    def _contains(
-        self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False
-    ) -> numpy.ndarray:  # noqa: D102
+    def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:  # noqa: D102
         col = TARGET_TO_INDEX[self.target]
         other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
         device = mapped_triples.device
@@ -1012,7 +1008,7 @@ def predict_all(
     """
     # note: the models' predict method takes care of setting the model to evaluation mode
     logger.warning(
-        f"predict is an expensive operation, involving {model.num_entities ** 2 * model.num_relations:,} "
+        f"predict is an expensive operation, involving {model.num_entities**2 * model.num_relations:,} "
         f"score evaluations.",
     )
 

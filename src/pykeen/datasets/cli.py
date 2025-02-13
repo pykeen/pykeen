@@ -140,7 +140,7 @@ def _analyze(
         hue="support",
         ax=ax,
     )
-    ax.set_title(f'{docdata.get_docdata(dataset.__class__)["name"]} Relation Injectivity')
+    ax.set_title(f"{docdata.get_docdata(dataset.__class__)['name']} Relation Injectivity")
     fig.tight_layout()
     fig.savefig(d.joinpath("relation_injectivity.svg"))
     plt.close(fig)
@@ -152,7 +152,7 @@ def _analyze(
         y="inverse_functionality",
         ax=ax,
     )
-    ax.set_title(f'{docdata.get_docdata(dataset.__class__)["name"]} Relation Functionality')
+    ax.set_title(f"{docdata.get_docdata(dataset.__class__)['name']} Relation Functionality")
     fig.tight_layout()
     fig.savefig(d.joinpath("relation_functionality.svg"))
     plt.close(fig)
