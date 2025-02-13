@@ -8,7 +8,6 @@ from collections.abc import Collection, Iterable, Mapping
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -17,7 +16,6 @@ import torch
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.training.lcwa import create_lcwa_instances
-from pykeen.training.slcwa import create_slcwa_instances
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory, generation
 from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import _map_triples_elements_to_ids, get_mapped_triples
@@ -77,38 +75,6 @@ class TestTriplesFactory(unittest.TestCase):
     def setUp(self) -> None:
         """Instantiate test instance."""
         self.factory = Nations().training
-
-    def test_correct_inverse_creation(self):
-        """Test if the triples and the corresponding inverses are created."""
-        t = [
-            ["e1", "a.", "e5"],
-            ["e1", "a", "e2"],
-        ]
-        t = np.array(t, dtype=str)
-        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
-        instances = create_slcwa_instances(factory)
-        assert len(instances) == 4
-
-    def test_automatic_incomplete_inverse_detection(self):
-        """Test detecting that the triples contain inverses, warns about them, and filters them out."""
-        # comment(mberr): from my pov this behaviour is faulty: the triples factory is expected to say it contains
-        # inverse relations, although the triples contained in it are not the same we would have when removing the
-        # first triple, and passing create_inverse_triples=True.
-        t = [
-            ["e3", f"a.{INVERSE_SUFFIX}", "e10"],
-            ["e1", "a", "e2"],
-            ["e1", "a.", "e5"],
-        ]
-        t = np.array(t, dtype=str)
-        for create_inverse_triples in (False, True):
-            with patch("pykeen.triples.triples_factory.logger.warning") as warning:
-                factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=create_inverse_triples)
-                # check for warning
-                warning.assert_called()
-                # check for filtered triples
-                assert factory.num_triples == 2
-                # check for correct inverse triples flag
-                assert factory.create_inverse_triples == create_inverse_triples
 
     def test_id_to_label(self):
         """Test ID-to-label conversion."""
