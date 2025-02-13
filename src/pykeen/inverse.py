@@ -81,7 +81,7 @@ class BlockRelationInverter(RelationInverter):
     """Keep normal relations' IDs untouched and append additional ones."""
 
     # docstr-coverage: inherited
-    def is_inverse(self, ids: torch.LongTensor) -> torch.BoolTensor:  # noqa: D102
+    def is_inverse(self, ids: LongTensor) -> BoolTensor:  # noqa: D102
         return ids >= self.num_relations
 
     # docstr-coverage: inherited
@@ -89,12 +89,12 @@ class BlockRelationInverter(RelationInverter):
         return relation_id + self.num_relations
 
     # docstr-coverage: inherited
-    def _map(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
+    def _map(self, batch: LongTensor, index: int = 1) -> LongTensor:  # noqa: D102
         # nothing to be done here; maybe verify that the input does not contain any inverses?
         return batch
 
     # docstr-coverage: inherited
-    def invert_(self, batch: torch.LongTensor, index: int = 1) -> torch.LongTensor:  # noqa: D102
+    def invert_(self, batch: LongTensor, index: int = 1) -> LongTensor:  # noqa: D102
         batch[:, index] += self.num_relations
         return batch
 
