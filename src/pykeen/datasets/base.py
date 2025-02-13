@@ -110,7 +110,6 @@ def _update_eval_triples_factory(
         mapped_triples=mapped_triples,
         entity_to_id=entity_to_id,
         relation_to_id=relation_to_id,
-        create_inverse_triples=factory.create_inverse_triples,
         metadata=factory.metadata,
         num_entities=len(kept_old_entity_ids_t),
         num_relations=len(kept_old_relation_ids_t),
@@ -127,7 +126,6 @@ def _update_eval_core_factory(
     )
     return CoreTriplesFactory(
         mapped_triples=mapped_triples,
-        create_inverse_triples=factory.create_inverse_triples,
         metadata=factory.metadata,
         num_entities=len(kept_old_entity_ids_t),
         num_relations=len(kept_old_relation_ids_t),
@@ -416,7 +414,6 @@ class Dataset(ExtraReprMixin):
                 mapped_triples=cast(MappedTriples, new_training_triples),
                 entity_to_id=entity_to_id,
                 relation_to_id=relation_to_id,
-                create_inverse_triples=training.create_inverse_triples,
                 metadata=training.metadata,
                 num_entities=num_entities,
                 num_relations=num_relations,
@@ -443,7 +440,6 @@ class Dataset(ExtraReprMixin):
         else:
             training = CoreTriplesFactory(
                 mapped_triples=cast(MappedTriples, new_training_triples),
-                create_inverse_triples=training.create_inverse_triples,
                 metadata=training.metadata,
                 num_entities=num_entities,
                 num_relations=num_relations,

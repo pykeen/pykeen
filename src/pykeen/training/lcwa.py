@@ -319,7 +319,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedT
 def create_lcwa_instances(tf: CoreTriplesFactory, target: int | None = None) -> Dataset:
     """Create LCWA instances for this factory's triples."""
     return LCWAInstances.from_triples(
-        mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
+        mapped_triples=tf.mapped_triples,
         num_entities=tf.num_entities,
         num_relations=tf.num_relations,
         target=target,

@@ -546,7 +546,6 @@ class CoreTriplesFactory(KGInfo):
             mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
             num_entities=num_entities,
             num_relations=num_relations,
-            create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
 
@@ -640,13 +639,9 @@ class CoreTriplesFactory(KGInfo):
         """
         # Make new triples factories for each group
         return [
-            self.clone_and_exchange_triples(
-                mapped_triples=triples,
-                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                create_inverse_triples=None if i == 0 else False,
-            )
-            for i, triples in enumerate(
-                split_semi_inductive(mapped_triples=self.mapped_triples, ratios=ratios, random_state=random_state)
+            self.clone_and_exchange_triples(mapped_triples=triples)
+            for triples in split_semi_inductive(
+                mapped_triples=self.mapped_triples, ratios=ratios, random_state=random_state
             )
         ]
 
@@ -688,8 +683,7 @@ class CoreTriplesFactory(KGInfo):
         )
         # do not explicitly create inverse triples for testing; this is handled by the evaluation code
         evaluation_tfs = [
-            inference_tf.clone_and_exchange_triples(mapped_triples=mapped_triples, create_inverse_triples=False)
-            for mapped_triples in evaluation
+            inference_tf.clone_and_exchange_triples(mapped_triples=mapped_triples) for mapped_triples in evaluation
         ]
         # Make new triples factories for each group
         return [training_tf, inference_tf] + evaluation_tfs
@@ -721,11 +715,6 @@ class CoreTriplesFactory(KGInfo):
                 raise ValueError(
                     f"Number of relations does not match for others[{i}]: "
                     f"{self.num_relations=} vs. {other.num_relations=}"
-                )
-            if other.create_inverse_triples != self.create_inverse_triples:
-                raise ValueError(
-                    f"Creation of inverse triples does not match for others[{i}]: "
-                    f"{self.create_inverse_triples=} vs. {other.create_inverse_triples=}"
                 )
             mapped_triples.append(other.mapped_triples)
         return self.clone_and_exchange_triples(torch.cat(mapped_triples, dim=0))
@@ -1116,7 +1105,6 @@ class TriplesFactory(CoreTriplesFactory):
             relation_to_id=relation_to_id,
             num_entities=num_entities,
             num_relations=num_relations,
-            create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
 
