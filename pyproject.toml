@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pykeen"
-version = "1.10.3-dev"
+version = "1.11.1-dev"
 description = "A package for training and evaluating multimodal knowledge graph embeddings"
 readme = "README.md"
 authors = [
@@ -31,7 +31,6 @@ classifiers = [
     "Framework :: tox",
     "Framework :: Sphinx",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -56,16 +55,16 @@ keywords = [
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license
 license = { file = "LICENSE" }
 
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "dataclasses-json",
     "numpy",
-    "numpy<2.0.0; sys_platform == 'win32'",
+    "numpy",
     "scipy>=1.7.0",
     "click",
     "click_default_group",
     "scikit-learn",
-    "torch>=2.0,<2.4",
+    "torch>=2.0",
     "tqdm",
     "requests",
     "optuna>=2.0.0",
@@ -75,7 +74,7 @@ dependencies = [
     "more_itertools",
     "pystow>=0.4.3",
     "docdata",
-    "class_resolver>0.4.2",
+    "class_resolver>=0.5.4",
     "pyyaml",
     "torch_max_mem>=0.1.1",
     "torch-ppr>=0.0.7",
@@ -128,9 +127,8 @@ tests = [
     "pytest",
 ]
 docs = [
-    # Sphinx >= 8.0 not supported by rtd theme, cf. https://github.com/readthedocs/sphinx_rtd_theme/issues/1582
-    "sphinx<8",
-    "sphinx-rtd-theme",
+    "sphinx>=8.0",
+    "sphinx-rtd-theme>=3.0",
     "sphinx-click",
     "sphinx_automodapi",
     "texext",
@@ -265,6 +263,10 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Ignore commented out code in Sphinx configuration file
 "docs/source/conf.py" = ["ERA001"]
+"docs/source/examples/**/*.py" = [
+    "E402",  # allow imports not at top for narrative purposes
+    "T201",  # allow prints
+]
 "notebooks/**/*.ipynb" = ["T201"]
 
 [tool.ruff.lint.pydocstyle]
@@ -285,3 +287,38 @@ addopts = "--strict-markers"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')"
 ]
+
+[tool.bumpversion]
+current_version = "1.11.1-dev"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(?:-(?P<release>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+(?P<build>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?"
+serialize = [
+    "{major}.{minor}.{patch}-{release}+{build}",
+    "{major}.{minor}.{patch}+{build}",
+    "{major}.{minor}.{patch}-{release}",
+    "{major}.{minor}.{patch}",
+]
+commit = true
+tag = false
+
+[tool.bumpversion.parts.release]
+optional_value = "production"
+first_value = "dev"
+values = [
+    "dev",
+    "production",
+]
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = "version = \"{current_version}\""
+replace = "version = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = "docs/source/conf.py"
+search = "release = \"{current_version}\""
+replace = "release = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = "src/pykeen/version.py"
+search = "VERSION = \"{current_version}\""
+replace = "VERSION = \"{new_version}\""
