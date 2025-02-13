@@ -150,7 +150,7 @@ def evaluate_ogb(
     # filter supported metrics
     metrics: list[RankBasedMetric] = []
     for metric in evaluator.metrics:
-        if not isinstance(metric, (HitsAtK, InverseHarmonicMeanRank)) or (
+        if not isinstance(metric, HitsAtK | InverseHarmonicMeanRank) or (
             isinstance(metric, HitsAtK) and metric.k not in {1, 3, 10}
         ):
             logger.warning(f"{metric} is not supported by OGB evaluator")

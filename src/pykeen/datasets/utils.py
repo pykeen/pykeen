@@ -141,8 +141,8 @@ def get_dataset(
     if dataset is not None:
         raise TypeError(f"Dataset is invalid type: {type(dataset)}")
 
-    if isinstance(training, (str, pathlib.Path)) and isinstance(testing, (str, pathlib.Path)):
-        if validation is None or isinstance(validation, (str, pathlib.Path)):
+    if isinstance(training, str | pathlib.Path) and isinstance(testing, str | pathlib.Path):
+        if validation is None or isinstance(validation, str | pathlib.Path):
             return PathDataset(
                 training_path=training,
                 testing_path=testing,

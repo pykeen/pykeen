@@ -81,12 +81,12 @@ class VisionDataset(torch.utils.data.Dataset):
     def __getitem__(self, item: int) -> torch.Tensor:  # noqa:D105
         _ensure_vision(self, Image)
         image = self.images[item]
-        if isinstance(image, (str, pathlib.Path)):
+        if isinstance(image, str | pathlib.Path):
             path = pathlib.Path(image)
             if not path.is_absolute():
                 path = self.root.joinpath(path)
             image = Image.open(path)
-        assert isinstance(image, (torch.Tensor, Image.Image))
+        assert isinstance(image, torch.Tensor | Image.Image)
         return self.transforms(image)
 
     # docstr-coverage: inherited

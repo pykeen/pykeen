@@ -229,7 +229,7 @@ def test_predict_triples(
     pack = pykeen.predict.predict_triples(
         model=model, triples=triples, triples_factory=triples_factory, batch_size=batch_size
     )
-    if not isinstance(triples, (torch.Tensor, numpy.ndarray)) and isinstance(triples[0], str):
+    if not isinstance(triples, torch.Tensor | numpy.ndarray) and isinstance(triples[0], str):
         num_triples = 1
     else:
         num_triples = len(triples)

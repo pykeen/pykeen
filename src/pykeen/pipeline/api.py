@@ -1228,7 +1228,7 @@ def _handle_evaluation(
         popped_additional_filter_triples = evaluation_kwargs.pop("additional_filter_triples", [])
         if popped_additional_filter_triples:
             additional_filter_triples_names["custom"] = triple_hash(*popped_additional_filter_triples)
-        if isinstance(popped_additional_filter_triples, (list, tuple)):
+        if isinstance(popped_additional_filter_triples, list | tuple):
             additional_filter_triples.extend(popped_additional_filter_triples)
         elif torch.is_tensor(popped_additional_filter_triples):  # a single MappedTriple
             additional_filter_triples.append(popped_additional_filter_triples)

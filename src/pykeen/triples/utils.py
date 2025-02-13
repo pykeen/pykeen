@@ -58,7 +58,7 @@ def load_triples(
     - :mod:`pybel.io.pykeen`
     - :mod:`bio2bel.io.pykeen`
     """
-    if isinstance(path, (str, pathlib.Path)):
+    if isinstance(path, str | pathlib.Path):
         path = str(path)
         for extension, handler in EXTENSION_IMPORTER_RESOLVER.lookup_dict.items():
             if path.endswith(f".{extension}"):

@@ -1276,7 +1276,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
         if (
-            issubclass(self.cls, (pykeen.models.RGCN, pykeen.models.CooccurrenceFilteredModel))
+            issubclass(self.cls, pykeen.models.RGCN | pykeen.models.CooccurrenceFilteredModel)
             or self.cls is pykeen.models.ERModel
         ):
             self.skipTest(f"Cannot choose interaction via CLI for {self.cls}.")

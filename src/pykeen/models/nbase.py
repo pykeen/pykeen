@@ -406,7 +406,7 @@ class ERModel(
         )
 
         # normalize input
-        if isinstance(parameter, (str, nn.Parameter)):
+        if isinstance(parameter, str | nn.Parameter):
             parameter = [parameter]
         weights: Mapping[str, nn.Parameter] = dict(self.named_parameters())
         for param in parameter:

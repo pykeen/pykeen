@@ -384,7 +384,7 @@ class CoreTriplesFactory(KGInfo):
         yield from super().iter_extra_repr()
         yield f"num_triples={self.num_triples}"
         for k, v in sorted(self.metadata.items()):
-            if isinstance(v, (str, pathlib.Path)):
+            if isinstance(v, str | pathlib.Path):
                 v = f'"{v}"'
             yield f"{k}={v}"
 

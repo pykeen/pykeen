@@ -453,7 +453,7 @@ def _resolve_estimator(estimator: str | Callable[[Sequence[float]], float]) -> C
 def _resolve_confidence(ci: int | str | Callable[[Sequence[float]], float]) -> Callable[[Sequence[float]], float]:
     if callable(ci):
         return ci
-    if isinstance(ci, (int, float)):
+    if isinstance(ci, int | float):
         if ci < 0 or ci > 100:
             raise ValueError(f"Invalid CI value: {ci}. Must be in [0, 100].")
         ci_half = ci / 2.0
