@@ -8,8 +8,6 @@ from typing import (
     Any,
     ClassVar,
     NamedTuple,
-    Optional,
-    Union,
 )
 
 import numpy
@@ -37,7 +35,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> tuple[MappedTriples, torch.LongTensor]:
+def cat_shift_triples(*triples: CoreTriplesFactory | MappedTriples) -> tuple[MappedTriples, torch.LongTensor]:
     """
     Concatenate (shifted) triples.
 
@@ -74,8 +72,8 @@ def cat_shift_triples(*triples: Union[CoreTriplesFactory, MappedTriples]) -> tup
 def merge_label_to_id_mapping(
     *pairs: tuple[str, Mapping[str, int]],
     offsets: torch.LongTensor = None,
-    mappings: Optional[Sequence[Mapping[int, int]]] = None,
-    extra: Optional[Mapping[str, int]] = None,
+    mappings: Sequence[Mapping[int, int]] | None = None,
+    extra: Mapping[str, int] | None = None,
 ) -> dict[str, int]:
     """
     Merge label-to-id mappings.
@@ -129,9 +127,9 @@ def merge_label_to_id_mappings(
     right: TriplesFactory,
     relation_offsets: torch.LongTensor,
     # optional
-    entity_offsets: Optional[torch.LongTensor] = None,
-    entity_mappings: Optional[Sequence[Mapping[int, int]]] = None,
-    extra_relations: Optional[Mapping[str, int]] = None,
+    entity_offsets: torch.LongTensor | None = None,
+    entity_mappings: Sequence[Mapping[int, int]] | None = None,
+    extra_relations: Mapping[str, int] | None = None,
 ) -> tuple[Mapping[str, int], Mapping[str, int]]:
     """
     Merge entity-to-id and relation-to-id mappings.
@@ -194,7 +192,7 @@ def filter_map_alignment(
         if the datatype of the alignment data frame is imcompatible (neither string nor integer).
     """
     # convert labels to IDs
-    for side, tf in zip(EA_SIDES, (left, right)):
+    for side, tf in zip(EA_SIDES, (left, right), strict=False):
         if isinstance(tf, TriplesFactory) and is_string_dtype(alignment[side]):
             logger.debug(f"Mapping label-based alignment for {side}")
             # map labels, using -1 as fill-value for invalid labels
@@ -446,13 +444,13 @@ def iter_entity_mappings(
 
     :yields: explicit id remappings
     """
-    old, new = (torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs))
+    old, new = (torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs, strict=False))
     offsets = offsets.tolist() + [old.max().item() + 1]
-    for low, high in zip(offsets, offsets[1:]):
+    for low, high in zip(offsets, offsets[1:], strict=False):
         mask = (low <= old) & (old < high)
         this_old = old[mask] - low
         this_new = new[mask]
-        yield dict(zip(this_old.tolist(), this_new.tolist()))
+        yield dict(zip(this_old.tolist(), this_new.tolist(), strict=False))
 
 
 class CollapseGraphPairCombinator(GraphPairCombinator):

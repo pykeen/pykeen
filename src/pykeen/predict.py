@@ -270,7 +270,11 @@ import math
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
-from typing import Optional, Union, cast
+from typing import (
+    TypeAlias,  # Python <=3.9
+    Union,
+    cast,
+)
 
 import numpy
 import pandas
@@ -278,7 +282,6 @@ import torch
 import torch.utils.data
 from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
-from typing_extensions import TypeAlias  # Python <=3.9
 
 from .constants import COLUMN_LABELS, TARGET_TO_INDEX
 from .models import Model
@@ -329,7 +332,7 @@ class Predictions(ABC):
     df: pandas.DataFrame
 
     #: an optional factory to use for labeling
-    factory: Optional[CoreTriplesFactory]
+    factory: CoreTriplesFactory | None
 
     def __post_init__(self):
         """Verify constraints."""
@@ -357,7 +360,7 @@ class Predictions(ABC):
         """
         raise NotImplementedError
 
-    def filter_triples(self, *triples: Optional[AnyTriples]) -> pandas.DataFrame:
+    def filter_triples(self, *triples: AnyTriples | None) -> pandas.DataFrame:
         """Filter out known triples."""
         df = self.df
         for mapped_triples in triples:
@@ -370,7 +373,7 @@ class Predictions(ABC):
             ]
         return self.exchange_df(df=df)
 
-    def add_membership_columns(self, **filter_triples: Optional[AnyTriples]) -> pandas.DataFrame:
+    def add_membership_columns(self, **filter_triples: AnyTriples | None) -> pandas.DataFrame:
         """Add columns indicating whether the triples are known."""
         df = self.df.copy()
         for key, mapped_triples in filter_triples.items():
@@ -449,7 +452,7 @@ class ScorePack:
     #: the scores
     scores: torch.FloatTensor
 
-    def process(self, factory: Optional[CoreTriplesFactory] = None, **kwargs) -> "TriplePredictions":
+    def process(self, factory: CoreTriplesFactory | None = None, **kwargs) -> "TriplePredictions":
         """Start post-processing scores."""
         if factory is None:
             df = tensor_to_df(self.result, score=self.scores, **kwargs)
@@ -459,11 +462,11 @@ class ScorePack:
 
 
 def _get_targets(
-    ids: Union[None, torch.Tensor, Collection[Union[str, int]]],
-    triples_factory: Optional[TriplesFactory],
+    ids: None | torch.Tensor | Collection[str | int],
+    triples_factory: TriplesFactory | None,
     device: torch.device,
     entity: bool = True,
-) -> tuple[Optional[Iterable[str]], Optional[Iterable[int]], Optional[torch.Tensor]]:
+) -> tuple[Iterable[str] | None, Iterable[int] | None, torch.Tensor | None]:
     """
     Prepare prediction targets for restricted target prediction.
 
@@ -483,13 +486,13 @@ def _get_targets(
         a 3-tuple of an optional list of labels, a list of ids, and the tensor to pass to the prediction method.
     """
     # 3-tuple for return
-    labels: Optional[Iterable[str]] = None
-    id_list: Optional[Iterable[int]] = None
-    tensor: Optional[torch.Tensor] = None
+    labels: Iterable[str] | None = None
+    id_list: Iterable[int] | None = None
+    tensor: torch.Tensor | None = None
 
     # extract label information, if possible
-    label_to_id: Optional[Mapping[str, int]]
-    id_to_label: Optional[Mapping[int, str]]
+    label_to_id: Mapping[str, int] | None
+    id_to_label: Mapping[int, str] | None
     if isinstance(triples_factory, TriplesFactory):
         label_to_id = triples_factory.entity_to_id if entity else triples_factory.relation_to_id
         id_to_label = invert_mapping(label_to_id)
@@ -523,11 +526,11 @@ def _get_targets(
 
 
 def _get_input_batch(
-    factory: Optional[TriplesFactory] = None,
+    factory: TriplesFactory | None = None,
     # exactly one of them is None
-    head: Union[None, int, str] = None,
-    relation: Union[None, int, str] = None,
-    tail: Union[None, int, str] = None,
+    head: None | int | str = None,
+    relation: None | int | str = None,
+    tail: None | int | str = None,
 ) -> tuple[Target, torch.LongTensor, tuple[int, int]]:
     """Prepare input batch for prediction.
 
@@ -548,7 +551,7 @@ def _get_input_batch(
     """
     # create input batch
     batch_ids: list[int] = []
-    target: Optional[Target] = None
+    target: Target | None = None
     if head is None:
         target = LABEL_HEAD
     else:
@@ -736,7 +739,7 @@ class AllScoreConsumer(ScoreConsumer):
         scores: torch.FloatTensor,
     ) -> None:  # noqa: D102
         j = 0
-        selectors: list[Union[slice, torch.LongTensor]] = []
+        selectors: list[slice | torch.LongTensor] = []
         for col in COLUMN_LABELS:
             if col == target:
                 selector = slice(None)
@@ -853,9 +856,9 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
     def __init__(
         self,
         *,
-        heads: Optional[Restriction] = None,
-        relations: Optional[Restriction] = None,
-        tails: Optional[Restriction] = None,
+        heads: Restriction | None = None,
+        relations: Restriction | None = None,
+        tails: Restriction | None = None,
         target: Target = LABEL_TAIL,
     ) -> None:
         """
@@ -875,7 +878,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
         """
         super().__init__(target=target)
         parts: list[torch.LongTensor] = []
-        for restriction, on in zip((heads, relations, tails), COLUMN_LABELS):
+        for restriction, on in zip((heads, relations, tails), COLUMN_LABELS, strict=False):
             if on == target:
                 if restriction is not None:
                     raise NotImplementedError("Restrictions on the target are not yet supported.")
@@ -906,7 +909,7 @@ def consume_scores(
     dataset: PredictionDataset,
     *consumers: ScoreConsumer,
     batch_size: int = 1,
-    mode: Optional[InductiveMode] = None,
+    mode: InductiveMode | None = None,
 ) -> None:
     """
     Batch-wise calculation of all triple scores and consumption.
@@ -963,7 +966,7 @@ def _predict_triples_batched(
     mapped_triples: MappedTriples,
     batch_size: int,
     *,
-    mode: Optional[InductiveMode],
+    mode: InductiveMode | None,
 ) -> torch.FloatTensor:
     """Predict scores for triples in batches."""
     return torch.cat(
@@ -980,9 +983,9 @@ def _predict_triples_batched(
 def predict_all(
     model: Model,
     *,
-    k: Optional[int] = None,
-    batch_size: Optional[int] = 1,
-    mode: Optional[InductiveMode] = None,
+    k: int | None = None,
+    batch_size: int | None = 1,
+    mode: InductiveMode | None = None,
     target: Target = LABEL_TAIL,
 ) -> ScorePack:
     """Calculate scores for all triples, and either keep all of them or only the top k triples.
@@ -1037,13 +1040,13 @@ def predict_target(
     model: Model,
     *,
     # exactly one of them is None
-    head: Union[None, int, str] = None,
-    relation: Union[None, int, str] = None,
-    tail: Union[None, int, str] = None,
+    head: None | int | str = None,
+    relation: None | int | str = None,
+    tail: None | int | str = None,
     #
-    triples_factory: Optional[TriplesFactory] = None,
-    targets: Union[None, torch.LongTensor, Sequence[Union[int, str]]] = None,
-    mode: Optional[InductiveMode] = None,
+    triples_factory: TriplesFactory | None = None,
+    targets: None | torch.LongTensor | Sequence[int | str] = None,
+    mode: InductiveMode | None = None,
 ) -> Predictions:
     """Get predictions for the head, relation, and/or tail combination.
 
@@ -1109,10 +1112,10 @@ def predict_target(
 def predict_triples(
     model: Model,
     *,
-    triples: Union[None, MappedTriples, LabeledTriples, Union[tuple[str, str, str], Sequence[tuple[str, str, str]]]],
-    triples_factory: Optional[CoreTriplesFactory] = None,
-    batch_size: Optional[int] = None,
-    mode: Optional[InductiveMode] = None,
+    triples: None | MappedTriples | LabeledTriples | tuple[str, str, str] | Sequence[tuple[str, str, str]],
+    triples_factory: CoreTriplesFactory | None = None,
+    batch_size: int | None = None,
+    mode: InductiveMode | None = None,
 ) -> ScorePack:
     """
     Predict on labeled or mapped triples.

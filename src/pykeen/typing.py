@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping, Sequence
-from typing import Callable, Literal, NamedTuple, TypeVar, Union, cast
+from collections.abc import Callable, Collection, Mapping, Sequence
+from typing import Literal, NamedTuple, TypeVar, Union, cast
 
 import numpy as np
 import torch

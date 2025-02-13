@@ -6,8 +6,8 @@ Generally requires :mod:`torchvision` to be installed.
 
 import functools
 import pathlib
-from collections.abc import Sequence
-from typing import Any, Callable, Optional, Union
+from collections.abc import Callable, Sequence
+from typing import Any
 
 import torch
 import torch.nn
@@ -35,7 +35,7 @@ __all__ = [
 ]
 
 
-def _ensure_vision(instance: object, module: Optional[Any]):
+def _ensure_vision(instance: object, module: Any | None):
     if module is None:
         raise ImportError(f"{instance.__class__.__name__} requires `torchvision` to be installed.")
 
@@ -50,9 +50,9 @@ class VisionDataset(torch.utils.data.Dataset):
 
     def __init__(
         self,
-        images: Sequence[Union[str, pathlib.Path, torch.Tensor]],
-        transforms: Optional[Sequence] = None,
-        root: Optional[pathlib.Path] = None,
+        images: Sequence[str | pathlib.Path | torch.Tensor],
+        transforms: Sequence | None = None,
+        root: pathlib.Path | None = None,
     ) -> None:
         """
         Initialize the dataset.
@@ -105,11 +105,11 @@ class VisualRepresentation(Representation):
     def __init__(
         self,
         images: Sequence,
-        encoder: Union[str, torch.nn.Module],
+        encoder: str | torch.nn.Module,
         layer_name: str,
-        max_id: Optional[int] = None,
-        shape: Optional[OneOrSequence[int]] = None,
-        transforms: Optional[Sequence] = None,
+        max_id: int | None = None,
+        shape: OneOrSequence[int] | None = None,
+        transforms: Sequence | None = None,
         encoder_kwargs: OptionalKwargs = None,
         batch_size: int = 32,
         trainable: bool = True,
@@ -197,7 +197,7 @@ class VisualRepresentation(Representation):
         return pool(encoder(images)["feature"])
 
     # docstr-coverage: inherited
-    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: torch.LongTensor | None = None) -> torch.FloatTensor:  # noqa: D102
         dataset = self.images
         if indices is not None:
             dataset = torch.utils.data.Subset(dataset=dataset, indices=indices)
@@ -244,7 +244,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
     """
 
     def __init__(
-        self, wikidata_ids: Sequence[str], max_id: Optional[int] = None, image_kwargs: OptionalKwargs = None, **kwargs
+        self, wikidata_ids: Sequence[str], max_id: int | None = None, image_kwargs: OptionalKwargs = None, **kwargs
     ):
         """
         Initialize the representation.

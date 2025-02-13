@@ -1,7 +1,7 @@
 """Implementation of KG2E."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import torch
 import torch.autograd
@@ -64,15 +64,15 @@ class KG2E(ERModel):
         self,
         *,
         embedding_dim: int = 50,
-        dist_similarity: Optional[str] = None,
+        dist_similarity: str | None = None,
         c_min: float = 0.05,
         c_max: float = 5.0,
         entity_initializer: Hint[Initializer] = uniform_,
         entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_constrainer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = uniform_,
         relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
-        relation_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_constrainer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         r"""Initialize KG2E.

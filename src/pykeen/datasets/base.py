@@ -148,7 +148,7 @@ class Dataset(ExtraReprMixin):
         return [
             (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
             for label, triples_factory in zip(
-                ("Training", "Testing", "Validation"), (self.training, self.testing, self.validation)
+                ("Training", "Testing", "Validation"), (self.training, self.testing, self.validation), strict=False
             )
         ]
 

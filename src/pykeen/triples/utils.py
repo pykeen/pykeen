@@ -1,8 +1,8 @@
 """Instance creation utilities."""
 
 import pathlib
-from collections.abc import Sequence
-from typing import Callable, Optional, TextIO, Union
+from collections.abc import Callable, Sequence
+from typing import TextIO
 
 import numpy as np
 import pandas
@@ -35,10 +35,10 @@ EXTENSION_IMPORTER_RESOLVER: FunctionResolver[Importer] = FunctionResolver.from_
 
 
 def load_triples(
-    path: Union[str, pathlib.Path, TextIO],
+    path: str | pathlib.Path | TextIO,
     delimiter: str = "\t",
-    encoding: Optional[str] = None,
-    column_remapping: Optional[Sequence[int]] = None,
+    encoding: str | None = None,
+    column_remapping: Sequence[int] | None = None,
 ) -> LabeledTriples:
     """Load triples saved as tab separated values.
 
@@ -99,7 +99,7 @@ def get_relations(triples: torch.LongTensor) -> set[int]:
 
 def tensor_to_df(
     tensor: torch.LongTensor,
-    **kwargs: Union[torch.Tensor, np.ndarray, Sequence],
+    **kwargs: torch.Tensor | np.ndarray | Sequence,
 ) -> pandas.DataFrame:
     """Take a tensor of triples and make a pandas dataframe with labels.
 
@@ -125,7 +125,7 @@ def tensor_to_df(
 
     # convert to numpy
     tensor = tensor.cpu().numpy()
-    data = dict(zip(["head_id", "relation_id", "tail_id"], tensor.T))
+    data = dict(zip(["head_id", "relation_id", "tail_id"], tensor.T, strict=False))
 
     # Additional columns
     for key, values in kwargs.items():
@@ -144,7 +144,7 @@ def tensor_to_df(
 
 def compute_compressed_adjacency_list(
     mapped_triples: MappedTriples,
-    num_entities: Optional[int] = None,
+    num_entities: int | None = None,
 ) -> tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]:
     """Compute compressed undirected adjacency list representation for efficient sampling.
 

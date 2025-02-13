@@ -4,7 +4,7 @@ These are useful for baselines.
 """
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import torch
 
@@ -58,7 +58,7 @@ class FixedModel(Model):
     def collect_regularization_term(self):  # noqa: D102
         return 0.0
 
-    def _get_entity_len(self, mode: Optional[InductiveMode]) -> int:
+    def _get_entity_len(self, mode: InductiveMode | None) -> int:
         if mode is not None:
             raise NotImplementedError
         return self.num_entities
@@ -82,7 +82,7 @@ class FixedModel(Model):
 
     # docstr-coverage: inherited
     def score_t(
-        self, hr_batch: torch.LongTensor, tails: Optional[torch.LongTensor] = None, **kwargs
+        self, hr_batch: torch.LongTensor, tails: torch.LongTensor | None = None, **kwargs
     ) -> torch.FloatTensor:  # noqa: D102
         if tails is None:
             tails = torch.arange(self.num_entities, device=hr_batch.device).unsqueeze(dim=0)
@@ -90,7 +90,7 @@ class FixedModel(Model):
 
     # docstr-coverage: inherited
     def score_r(
-        self, ht_batch: torch.LongTensor, relations: Optional[torch.LongTensor] = None, **kwargs
+        self, ht_batch: torch.LongTensor, relations: torch.LongTensor | None = None, **kwargs
     ) -> torch.FloatTensor:  # noqa: D102
         if relations is None:
             relations = torch.arange(self.num_relations, device=ht_batch.device).unsqueeze(dim=0)
@@ -98,7 +98,7 @@ class FixedModel(Model):
 
     # docstr-coverage: inherited
     def score_h(
-        self, rt_batch: torch.LongTensor, heads: Optional[torch.LongTensor] = None, **kwargs
+        self, rt_batch: torch.LongTensor, heads: torch.LongTensor | None = None, **kwargs
     ) -> torch.FloatTensor:  # noqa: D102
         if heads is None:
             heads = torch.arange(self.num_entities, device=rt_batch.device).unsqueeze(dim=0)

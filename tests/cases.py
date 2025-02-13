@@ -11,14 +11,11 @@ import traceback
 import unittest
 from abc import ABC, abstractmethod
 from collections import ChainMap, Counter
-from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
 from typing import (
     Any,
-    Callable,
     ClassVar,
-    Optional,
     TypeVar,
-    Union,
 )
 from unittest.case import SkipTest
 from unittest.mock import Mock, patch
@@ -134,7 +131,7 @@ class DatasetTestCase(unittest.TestCase):
     #: The expected number of triples
     exp_num_triples: ClassVar[int]
     #: The tolerance on expected number of triples, for randomized situations
-    exp_num_triples_tolerance: ClassVar[Optional[int]] = None
+    exp_num_triples_tolerance: ClassVar[int | None] = None
 
     #: The dataset to test
     dataset_cls: ClassVar[type[LazyDataset]]
@@ -221,7 +218,7 @@ class CachedDatasetCase(DatasetTestCase):
     """A test case for datasets that need a cache directory."""
 
     #: The directory, if there is caching
-    directory: Optional[tempfile.TemporaryDirectory]
+    directory: tempfile.TemporaryDirectory | None
 
     def setUp(self):
         """Set up the test with a temporary cache directory."""
@@ -281,7 +278,7 @@ class LossTestCase(GenericTestCase[Loss]):
         self,
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
-        batch_filter: Optional[torch.BoolTensor] = None,
+        batch_filter: torch.BoolTensor | None = None,
     ):
         """Help test processing scores from SLCWA training loop."""
         loss_value = self.instance.process_slcwa_scores(
@@ -487,7 +484,7 @@ class InteractionTestCase(
             )
             for prefix_shape, weight_shapes in zip(
                 shapes,
-                [self.instance.entity_shape, self.instance.relation_shape, self.instance.tail_entity_shape],
+                [self.instance.entity_shape, self.instance.relation_shape, self.instance.tail_entity_shape], strict=False,
             )
         )
         return unpack_singletons(*result)
@@ -641,7 +638,7 @@ class InteractionTestCase(
             components.extend((hs, ts))
         if self.instance.relation_shape:
             components.append(rs)
-        return tuple(max(ds) for ds in zip(*components))
+        return tuple(max(ds) for ds in zip(*components, strict=False))
 
     def test_forward(self):
         """Test forward."""
@@ -822,7 +819,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # Check if regularization term is reset
         self.assertEqual(0.0, self.instance.term)
 
-    def _check_reset(self, instance: Optional[Regularizer] = None):
+    def _check_reset(self, instance: Regularizer | None = None):
         """Verify that the regularizer is in resetted state."""
         if instance is None:
             instance = self.instance
@@ -885,7 +882,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         else:
             assert (expected_penalty == penalty).all()
 
-    def _expected_penalty(self, x: torch.FloatTensor) -> Optional[torch.FloatTensor]:
+    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor | None:
         """Compute expected penalty for given tensor."""
         return None
 
@@ -951,7 +948,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     """A test case for quickly defining common tests for KGE models."""
 
     #: Additional arguments passed to the training loop's constructor method
-    training_loop_kwargs: ClassVar[Optional[Mapping[str, Any]]] = None
+    training_loop_kwargs: ClassVar[Mapping[str, Any] | None] = None
 
     #: The triples factory instance
     factory: TriplesFactory
@@ -966,7 +963,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     create_inverse_triples: bool = False
 
     #: The sampler to use for sLCWA (different e.g. for R-GCN)
-    sampler: Optional[str] = None
+    sampler: str | None = None
 
     #: The batch size for use when testing training procedures
     train_batch_size = 400
@@ -988,7 +985,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     device: torch.device
 
     #: the inductive mode
-    mode: ClassVar[Optional[InductiveMode]] = None
+    mode: ClassVar[InductiveMode | None] = None
 
     def pre_setup_hook(self) -> None:  # noqa: D102
         # for reproducible testing
@@ -1056,7 +1053,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             torch.save(self.instance, os.path.join(temp_directory, "model.pickle"))
 
     def _test_score(
-        self, score: Callable, columns: Union[Sequence[int], slice], shape: tuple[int, ...], **kwargs
+        self, score: Callable, columns: Sequence[int] | slice, shape: tuple[int, ...], **kwargs
     ) -> None:
         """Test score functions."""
         batch = self.factory.mapped_triples[: self.batch_size, columns].to(self.instance.device)
@@ -1353,7 +1350,7 @@ Traceback
     def _check_constraints(self):
         """Check model constraints."""
 
-    def _test_score_equality(self, columns: Union[slice, list[int]], name: str) -> None:
+    def _test_score_equality(self, columns: slice | list[int], name: str) -> None:
         """Migration tests for non-ERModel models testing for consistent optimized score implementations."""
         if isinstance(self.instance, ERModel):
             raise SkipTest("ERModel fulfils this by design.")
@@ -1519,13 +1516,13 @@ class RepresentationTestCase(GenericTestCase[Representation]):
         expected_shape = prefix_shape + self.instance.shape
         self.assertEqual(x.shape, expected_shape)
 
-    def _test_forward(self, indices: Optional[torch.LongTensor]):
+    def _test_forward(self, indices: torch.LongTensor | None):
         """Test forward method."""
         representations = self.instance(indices=indices)
         prefix_shape = (self.instance.max_id,) if indices is None else tuple(indices.shape)
         self._check_result(x=representations, prefix_shape=prefix_shape)
 
-    def _test_indices(self, indices: Optional[torch.LongTensor]):
+    def _test_indices(self, indices: torch.LongTensor | None):
         """Test forward and canonical shape for indices."""
         self._test_forward(indices=indices)
 
@@ -1843,7 +1840,7 @@ class SplitterTestCase(GenericTestCase[Splitter]):
         self.all_entities = set(range(dataset.num_entities))
         self.mapped_triples = dataset.training.mapped_triples
 
-    def _test_split(self, ratios: Union[float, Sequence[float]], exp_parts: int):
+    def _test_split(self, ratios: float | Sequence[float], exp_parts: int):
         """Test splitting."""
         splitted = self.instance.split(
             mapped_triples=self.mapped_triples,
@@ -1885,7 +1882,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     def _get_input(
         self,
         inverse: bool = False,
-    ) -> tuple[torch.LongTensor, torch.FloatTensor, Optional[torch.BoolTensor]]:
+    ) -> tuple[torch.LongTensor, torch.FloatTensor, torch.BoolTensor | None]:
         # Get batch
         hrt_batch = self.factory.mapped_triples[: self.batch_size].to(self.model.device)
 
@@ -2192,7 +2189,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         self.assertIsNotNone(getattr_or_docdata(self.cls, "description"))
         self.assertIsNotNone(self.instance.key)
 
-    def _test_call(self, ranks: numpy.ndarray, num_candidates: Optional[numpy.ndarray]):
+    def _test_call(self, ranks: numpy.ndarray, num_candidates: numpy.ndarray | None):
         """Verify call."""
         x = self.instance(ranks=ranks, num_candidates=num_candidates)
         # data type
@@ -2234,7 +2231,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         else:
             self.assertLessEqual(y, x)
 
-    def _test_expectation(self, weights: Optional[numpy.ndarray]):
+    def _test_expectation(self, weights: numpy.ndarray | None):
         """Test the numeric expectation is close to the closed form one."""
         try:
             closed = self.instance.expected_value(num_candidates=self.num_candidates, weights=weights)
@@ -2259,7 +2256,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         """Test for weighted expectation."""
         self._test_expectation(weights=self._generate_weights())
 
-    def _test_variance(self, weights: Optional[numpy.ndarray]):
+    def _test_variance(self, weights: numpy.ndarray | None):
         """Test the numeric variance is close to the closed form one."""
         try:
             closed = self.instance.variance(num_candidates=self.num_candidates, weights=weights)
@@ -2335,7 +2332,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
         # 1. repeat each rank/candidate pair a random number of times
         repeated_ranks, repeated_num_candidates = [], []
-        for rank, num_candidates, repeat in zip(self.ranks, self.num_candidates, repeats):
+        for rank, num_candidates, repeat in zip(self.ranks, self.num_candidates, repeats, strict=False):
             repeated_ranks.append(numpy.full(shape=(repeat,), fill_value=rank))
             repeated_num_candidates.append(numpy.full(shape=(repeat,), fill_value=num_candidates))
         repeated_ranks = numpy.concatenate(repeated_ranks)
@@ -2651,7 +2648,7 @@ class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combinati
 
             # verify that the input is valid
             assert len(xs) == len(input_shapes)
-            assert all(x.shape == shape for x, shape in zip(xs, input_shapes))
+            assert all(x.shape == shape for x, shape in zip(xs, input_shapes, strict=False))
 
             # combine
             x = self.instance(xs=xs)

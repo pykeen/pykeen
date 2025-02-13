@@ -5,7 +5,7 @@ import itertools as itt
 import logging
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping, Sequence
-from typing import NamedTuple, Optional, Union
+from typing import NamedTuple
 
 import numpy
 import pandas as pd
@@ -76,11 +76,11 @@ SUPPORT_COLUMN_NAME = "support"
 def _add_labels(
     df: pd.DataFrame,
     add_labels: bool,
-    label_to_id: Optional[Mapping[str, int]],
+    label_to_id: Mapping[str, int] | None,
     id_column: str,
     label_column: str,
     label_to_id_mapping_name: str,
-    triples_factory: Optional[TriplesFactory] = None,
+    triples_factory: TriplesFactory | None = None,
 ) -> pd.DataFrame:
     """Add labels to a dataframe."""
     if not add_labels:
@@ -104,8 +104,8 @@ def add_entity_labels(
     *,
     df: pd.DataFrame,
     add_labels: bool,
-    label_to_id: Optional[Mapping[str, int]] = None,
-    triples_factory: Optional[TriplesFactory] = None,
+    label_to_id: Mapping[str, int] | None = None,
+    triples_factory: TriplesFactory | None = None,
 ) -> pd.DataFrame:
     """Add entity labels to a dataframe."""
     return _add_labels(
@@ -123,8 +123,8 @@ def add_relation_labels(
     df: pd.DataFrame,
     *,
     add_labels: bool,
-    label_to_id: Optional[Mapping[str, int]] = None,
-    triples_factory: Optional[TriplesFactory] = None,
+    label_to_id: Mapping[str, int] | None = None,
+    triples_factory: TriplesFactory | None = None,
 ) -> pd.DataFrame:
     """Add relation labels to a dataframe."""
     return _add_labels(
@@ -450,7 +450,7 @@ def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
 
 def _get_counts(
     mapped_triples: MappedTriples,
-    column: Union[int, Sequence[int]],
+    column: int | Sequence[int],
 ) -> tuple[numpy.ndarray, numpy.ndarray]:
     unique, counts = mapped_triples[:, column].view(-1).unique(return_counts=True)
     return unique.numpy(), counts.numpy()
@@ -499,7 +499,7 @@ def get_relation_counts(
         data=dict(
             zip(
                 [RELATION_ID_COLUMN_NAME, COUNT_COLUMN_NAME],
-                _get_counts(mapped_triples=mapped_triples, column=1),
+                _get_counts(mapped_triples=mapped_triples, column=1), strict=False,
             )
         )
     )
@@ -555,7 +555,7 @@ def relation_pattern_types(
 def relation_injectivity(
     mapped_triples: Collection[tuple[int, int, int]],
     add_labels: bool = True,
-    label_to_id: Optional[Mapping[str, int]] = None,
+    label_to_id: Mapping[str, int] | None = None,
 ) -> pd.DataFrame:
     """
     Calculate "soft" injectivity scores for each relation.
@@ -581,7 +581,7 @@ def relation_injectivity(
 def relation_cardinality_types(
     mapped_triples: Collection[tuple[int, int, int]],
     add_labels: bool = True,
-    label_to_id: Optional[Mapping[str, int]] = None,
+    label_to_id: Mapping[str, int] | None = None,
 ) -> pd.DataFrame:
     r"""
     Determine the relation cardinality types.
@@ -668,7 +668,7 @@ def entity_relation_co_occurrence(
 def get_relation_functionality(
     mapped_triples: Collection[tuple[int, int, int]],
     add_labels: bool = True,
-    label_to_id: Optional[Mapping[str, int]] = None,
+    label_to_id: Mapping[str, int] | None = None,
 ) -> pd.DataFrame:
     """Calculate relation functionalities.
 

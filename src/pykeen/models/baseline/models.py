@@ -1,6 +1,5 @@
 """Non-parametric baseline models."""
 
-from typing import Optional
 
 import numpy
 import torch
@@ -37,7 +36,7 @@ class EvaluationOnlyModel(Model):
             random_seed=0,
         )
 
-    def _get_entity_len(self, *, mode: Optional[InductiveMode]) -> int:
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int:
         return self.num_entities
 
     def _reset_parameters_(self):
@@ -159,7 +158,7 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        threshold: Optional[float] = None,
+        threshold: float | None = None,
     ):
         """
         Initialize the model.

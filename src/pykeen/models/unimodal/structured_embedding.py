@@ -1,7 +1,7 @@
 """Implementation of structured model (SE)."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from class_resolver import Hint
 from torch.nn import functional
@@ -52,7 +52,7 @@ class SE(ERModel):
         scoring_fct_norm: int = 1,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_constrainer: Hint[Constrainer] = functional.normalize,
-        entity_constrainer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_constrainer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
         **kwargs,
     ) -> None:

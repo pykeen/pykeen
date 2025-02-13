@@ -1,7 +1,7 @@
 """Implementation of ERMLP."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from torch.nn.init import uniform_
 
@@ -47,7 +47,7 @@ class ERMLP(ERModel):
         self,
         *,
         embedding_dim: int = 64,
-        hidden_dim: Optional[int] = None,
+        hidden_dim: int | None = None,
         entity_initializer: Hint[Initializer] = uniform_,
         relation_initializer: Hint[Initializer] = uniform_,
         **kwargs,

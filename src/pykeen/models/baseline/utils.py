@@ -1,6 +1,5 @@
 """Utilities for non-parametric baseline models."""
 
-from typing import Optional
 
 import numpy
 import scipy.sparse
@@ -22,7 +21,7 @@ def get_csr_matrix(
     col_indices: numpy.ndarray,
     shape: tuple[int, int],
     dtype: numpy.dtype = numpy.float32,
-    norm: Optional[str] = "l1",
+    norm: str | None = "l1",
 ) -> scipy.sparse.csr_matrix:
     """
     Create a sparse matrix, with ones for the given non-zero locations.
@@ -54,8 +53,8 @@ def get_csr_matrix(
 
 def marginal_score(
     entity_relation_batch: torch.LongTensor,
-    per_entity: Optional[scipy.sparse.csr_matrix],
-    per_relation: Optional[scipy.sparse.csr_matrix],
+    per_entity: scipy.sparse.csr_matrix | None,
+    per_relation: scipy.sparse.csr_matrix | None,
     num_entities: int,
 ) -> torch.FloatTensor:
     """Shared code for computing entity scores from marginals."""
@@ -86,7 +85,7 @@ def marginal_score(
 
 def sparsify(
     matrix: numpy.ndarray,
-    threshold: Optional[float] = None,
+    threshold: float | None = None,
 ) -> scipy.sparse.spmatrix:
     """
     Sparsify a matrix.
@@ -109,7 +108,7 @@ def sparsify(
 
 def get_relation_similarity(
     triples_factory: CoreTriplesFactory,
-    threshold: Optional[float] = None,
+    threshold: float | None = None,
 ) -> tuple[scipy.sparse.csr_matrix, scipy.sparse.csr_matrix]:
     """
     Compute Jaccard similarity of relations' (and their inverse's) entity-pair sets.

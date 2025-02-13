@@ -38,7 +38,7 @@ class TestLeakage(unittest.TestCase):
                         [str(i), test_relation, str(j + 1 + n)],
                         [str(j + 1 + n), test_relation_inverse, str(i)],
                     ]
-                    for i, j in zip(range(n), range(n))
+                    for i, j in zip(range(n), range(n), strict=False)
                 )
             )
         )

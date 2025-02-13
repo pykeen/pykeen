@@ -135,7 +135,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
         learning_rate,
         evaluator,
         stopper,
-        output_directory: Optional[pathlib.Path],
+        output_directory: pathlib.Path | None,
         mlflow_tracking_uri,
         title,
         dataset,
@@ -157,8 +157,8 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
         )
         from ...pipeline import pipeline
 
-        result_tracker: Optional[str]
-        result_tracker_kwargs: Optional[Mapping[str, Any]]
+        result_tracker: str | None
+        result_tracker_kwargs: Mapping[str, Any] | None
         if mlflow_tracking_uri:
             result_tracker = "mlflow"
             result_tracker_kwargs = {
@@ -168,7 +168,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
             result_tracker = None
             result_tracker_kwargs = None
 
-        def _triples_factory(path: Optional[str]) -> Optional[TriplesFactory]:
+        def _triples_factory(path: str | None) -> TriplesFactory | None:
             if path is None:
                 return None
             return TriplesFactory.from_path(path=path)

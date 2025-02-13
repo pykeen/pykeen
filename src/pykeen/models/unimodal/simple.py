@@ -1,7 +1,7 @@
 """Implementation of SimplE."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional, Union
+from typing import Any, ClassVar
 
 from class_resolver import OptionalKwargs
 
@@ -71,7 +71,7 @@ class SimplE(ERModel):
         self,
         *,
         embedding_dim: int = 200,
-        clamp_score: Optional[Union[float, tuple[float, float]]] = None,
+        clamp_score: float | tuple[float, float] | None = None,
         entity_initializer: Hint[Initializer] = None,
         relation_initializer: Hint[Initializer] = None,
         regularizer: Hint[Regularizer] = None,

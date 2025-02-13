@@ -285,7 +285,7 @@ def ermlp_interaction(
             hidden.bias.view(*make_ones_like(prefix), -1),
             *(
                 einsum("...i, ji -> ...j", xx, weight)
-                for xx, weight in zip([h, r, t], hidden.weight.split(split_size=dim, dim=-1))
+                for xx, weight in zip([h, r, t], hidden.weight.split(split_size=dim, dim=-1), strict=False)
             ),
         )
     return final(activation(x)).squeeze(dim=-1)

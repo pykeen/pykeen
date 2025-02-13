@@ -176,9 +176,9 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
     # docstr-coverage: inherited
     def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:  # noqa: D102
         df_ent = pandas.read_csv(mapping_root.joinpath("nodeidx2entityid.csv.gz"))
-        entity_to_id = dict(zip(df_ent["entity id"].tolist(), df_ent["node idx"].tolist()))
+        entity_to_id = dict(zip(df_ent["entity id"].tolist(), df_ent["node idx"].tolist(), strict=False))
         df_rel = pandas.read_csv(mapping_root.joinpath("reltype2relid.csv.gz"))
-        relation_to_id = dict(zip(df_rel["rel id"].tolist(), df_rel["reltype"].tolist()))
+        relation_to_id = dict(zip(df_rel["rel id"].tolist(), df_rel["reltype"].tolist(), strict=False))
         return entity_to_id, relation_to_id
 
     # docstr-coverage: inherited
@@ -260,7 +260,7 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
     def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:  # noqa: D102
         df_rel = pandas.read_csv(mapping_root.joinpath("relidx2relname.csv.gz"))
         LOGGER.info(f"Loaded relation mapping for {len(df_rel)} relations.")
-        relation_to_id = dict(zip(df_rel["rel name"].tolist(), df_rel["rel idx"].tolist()))
+        relation_to_id = dict(zip(df_rel["rel name"].tolist(), df_rel["rel idx"].tolist(), strict=False))
 
         # entity mappings are separate for each node type -> combine
         entity_mapping_df = pandas.concat(
@@ -276,7 +276,7 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
         # we need the entity dataframe for fast re-mapping later on
         self.df_ent = entity_mapping_df[["index", "local_entity_id", "entity_type"]]
 
-        entity_to_id = dict(zip(entity_mapping_df["name"].tolist(), entity_mapping_df["index"].tolist()))
+        entity_to_id = dict(zip(entity_mapping_df["name"].tolist(), entity_mapping_df["index"].tolist(), strict=False))
 
         return entity_to_id, relation_to_id
 

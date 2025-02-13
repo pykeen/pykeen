@@ -1,7 +1,7 @@
 """Implementation of NTN."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from class_resolver import Hint, HintOrType
 from torch import nn
@@ -67,7 +67,7 @@ class NTN(ERModel):
         embedding_dim: int = 100,
         num_slices: int = 4,
         non_linearity: HintOrType[nn.Module] = None,
-        non_linearity_kwargs: Optional[Mapping[str, Any]] = None,
+        non_linearity_kwargs: Mapping[str, Any] | None = None,
         entity_initializer: Hint[Initializer] = None,
         **kwargs,
     ) -> None:

@@ -1,7 +1,7 @@
 """Tests for prediction tools."""
 
 from collections.abc import Collection, Iterable, MutableMapping, Sequence
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy
 import pandas
@@ -65,7 +65,7 @@ class TriplePredictionsTest(cases.PredictionTestCase):
         data = {
             f"{label}_id": torch.randint(max_id, size=(5,), generator=generator).numpy()
             for label, max_id in zip(
-                COLUMN_LABELS, [self.dataset.num_entities, self.dataset.num_relations, self.dataset.num_entities]
+                COLUMN_LABELS, [self.dataset.num_entities, self.dataset.num_relations, self.dataset.num_entities], strict=False
             )
         }
         data["score"] = torch.rand(size=(5,), generator=generator).numpy()
@@ -125,7 +125,7 @@ def test_consume_scores(num_entities: int, num_relations: int):
     assert consumer.score_count == num_relations * num_entities**2
 
 
-def _iter_predict_all_inputs() -> Iterable[tuple[pykeen.models.Model, Optional[int], pykeen.typing.Target, int]]:
+def _iter_predict_all_inputs() -> Iterable[tuple[pykeen.models.Model, int | None, pykeen.typing.Target, int]]:
     """Iterate over test inputs for predict_all."""
     # use a small model, since operation is expensive
     num_entities, num_relations = 3, 2
@@ -167,7 +167,7 @@ def _check_score_pack(pack: pykeen.predict.ScorePack, model: pykeen.models.Model
 
 
 @pytest.mark.parametrize(["model", "k", "target", "batch_size"], _iter_predict_all_inputs())
-def test_predict_all(model: pykeen.models.Model, k: Optional[int], target: pykeen.typing.Target, batch_size: int):
+def test_predict_all(model: pykeen.models.Model, k: int | None, target: pykeen.typing.Target, batch_size: int):
     """Test the predict method."""
     pack = pykeen.predict.predict_all(model=model, k=k, target=target, batch_size=batch_size)
     _check_score_pack(
@@ -192,7 +192,7 @@ def test_predict_top_k_consistency():
 
 
 def _iter_predict_triples_inputs() -> Iterable[
-    tuple[pykeen.models.Model, AnyTriples, Optional[CoreTriplesFactory], Optional[int]]
+    tuple[pykeen.models.Model, AnyTriples, CoreTriplesFactory | None, int | None]
 ]:
     """Iterate over test inputs for predict_triples."""
     dataset = Nations()
@@ -222,8 +222,8 @@ def _iter_predict_triples_inputs() -> Iterable[
 def test_predict_triples(
     model: pykeen.models.Model,
     triples: AnyTriples,
-    triples_factory: Optional[CoreTriplesFactory],
-    batch_size: Optional[int],
+    triples_factory: CoreTriplesFactory | None,
+    batch_size: int | None,
 ):
     """Test triple scoring."""
     pack = pykeen.predict.predict_triples(
@@ -238,10 +238,10 @@ def test_predict_triples(
 
 def _iter_get_input_batch_inputs() -> Iterable[
     tuple[
-        Optional[CoreTriplesFactory],
-        Union[None, int, str],
-        Union[None, int, str],
-        Union[None, int, str],
+        CoreTriplesFactory | None,
+        None | int | str,
+        None | int | str,
+        None | int | str,
         pykeen.typing.Target,
     ]
 ]:
@@ -263,10 +263,10 @@ def _iter_get_input_batch_inputs() -> Iterable[
 
 @pytest.mark.parametrize(["factory", "head", "relation", "tail", "exp_target"], _iter_get_input_batch_inputs())
 def test_get_input_batch(
-    factory: Optional[CoreTriplesFactory],
-    head: Union[None, int, str],
-    relation: Union[None, int, str],
-    tail: Union[None, int, str],
+    factory: CoreTriplesFactory | None,
+    head: None | int | str,
+    relation: None | int | str,
+    tail: None | int | str,
     exp_target: pykeen.typing.Target,
 ):
     """Test input batch construction for target prediction."""
@@ -282,7 +282,7 @@ def test_get_input_batch(
 
 
 def _iter_get_targets_inputs() -> Iterable[
-    tuple[Union[None, torch.Tensor, Collection[Union[str, int]]], Optional[CoreTriplesFactory], bool]
+    tuple[None | torch.Tensor | Collection[str | int], CoreTriplesFactory | None, bool]
 ]:
     """Iterate over test inputs for _get_targets."""
     factory = Nations().training
@@ -307,12 +307,12 @@ def _iter_get_targets_inputs() -> Iterable[
     ["ids", "factory", "entity", "exp_labels", "exp_ids", "exp_tensor"], _iter_get_targets_inputs()
 )
 def test_get_targets(
-    ids: Union[None, torch.Tensor, Collection[Union[str, int]]],
-    factory: Optional[CoreTriplesFactory],
+    ids: None | torch.Tensor | Collection[str | int],
+    factory: CoreTriplesFactory | None,
     entity: bool,
-    exp_labels: Optional[Sequence[str]],
-    exp_ids: Optional[Sequence[int]],
-    exp_tensor: Optional[torch.Tensor],
+    exp_labels: Sequence[str] | None,
+    exp_ids: Sequence[int] | None,
+    exp_tensor: torch.Tensor | None,
 ):
     """Test target normalization for target prediction."""
     device = resolve_device(device=None)
@@ -334,7 +334,7 @@ def test_get_targets(
 
 
 def _iter_predict_target_inputs() -> Iterable[
-    tuple[pykeen.models.Model, int, int, int, Optional[CoreTriplesFactory], Optional[Sequence[int]]]
+    tuple[pykeen.models.Model, int, int, int, CoreTriplesFactory | None, Sequence[int] | None]
 ]:
     # comment: we only use id-based input, since the normalization has already been tested
     # create model
@@ -352,11 +352,11 @@ def _iter_predict_target_inputs() -> Iterable[
 @pytest.mark.parametrize(["model", "head", "relation", "tail", "factory", "targets"], _iter_predict_target_inputs())
 def test_predict_target(
     model: pykeen.models.Model,
-    head: Union[None, int, str],
-    relation: Union[None, int, str],
-    tail: Union[None, int, str],
-    factory: Optional[CoreTriplesFactory],
-    targets: Union[None, torch.LongTensor, Sequence[Union[int, str]]],
+    head: None | int | str,
+    relation: None | int | str,
+    tail: None | int | str,
+    factory: CoreTriplesFactory | None,
+    targets: None | torch.LongTensor | Sequence[int | str],
 ):
     """Test target scoring."""
     pred = pykeen.predict.predict_target(

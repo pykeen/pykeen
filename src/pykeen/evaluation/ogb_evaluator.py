@@ -242,7 +242,7 @@ def _evaluate_ogb(
     # iterate over batches
     offset = 0
     for hrt_batch, negatives_batch in zip(
-        mapped_triples.split(split_size=batch_size), negatives.split(split_size=batch_size)
+        mapped_triples.split(split_size=batch_size), negatives.split(split_size=batch_size), strict=False
     ):
         # combine ids, shape: (batch_size, num_negatives + 1)
         ids = torch.cat([hrt_batch[:, 2, None], negatives_batch], dim=1)

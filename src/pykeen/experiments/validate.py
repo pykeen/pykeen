@@ -2,8 +2,8 @@
 
 import inspect
 import pathlib
-from collections.abc import Iterable
-from typing import Callable, Optional, Union
+from collections.abc import Callable, Iterable
+from typing import Optional, Union
 
 import torch
 from class_resolver import Hint
@@ -76,7 +76,7 @@ def _should_skip_because_type(x):
     return False
 
 
-def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
+def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
     configuration = load_configuration(path)
 
@@ -93,10 +93,10 @@ def get_configuration_errors(path: Union[str, pathlib.Path]):  # noqa: C901
         *,
         required: bool = True,
         normalize: bool = False,
-        suffix: Optional[str] = None,
+        suffix: str | None = None,
         check_kwargs: bool = False,
-        required_kwargs: Optional[set[str]] = None,
-        allowed_missing_kwargs: Optional[set[str]] = None,
+        required_kwargs: set[str] | None = None,
+        allowed_missing_kwargs: set[str] | None = None,
     ):
         value = test_dict.get(key)
         if value is None:

@@ -1,7 +1,7 @@
 """Implementation of the Comp-GCN model."""
 
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any
 
 import torch
 from class_resolver import Hint
@@ -40,9 +40,9 @@ class CompGCN(ERModel[torch.FloatTensor, RelationRepresentation, torch.FloatTens
         *,
         triples_factory: CoreTriplesFactory,
         embedding_dim: int = 64,
-        encoder_kwargs: Optional[Mapping[str, Any]] = None,
+        encoder_kwargs: Mapping[str, Any] | None = None,
         interaction: Hint[Interaction[torch.FloatTensor, RelationRepresentation, torch.FloatTensor]] = None,
-        interaction_kwargs: Optional[Mapping[str, Any]] = None,
+        interaction_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ):
         """Initialize the model.

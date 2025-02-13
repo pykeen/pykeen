@@ -4,7 +4,7 @@ import logging
 import math
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Any, Optional
+from typing import Any
 
 import torch
 from class_resolver import ClassResolver, Hint, HintOrType, OptionalKwargs
@@ -58,7 +58,7 @@ class Decomposition(nn.Module, ExtraReprMixin, ABC):
         self,
         num_relations: int,
         input_dim: int = 32,
-        output_dim: Optional[int] = None,
+        output_dim: int | None = None,
     ):
         """Initialize the layer.
 
@@ -90,8 +90,8 @@ class Decomposition(nn.Module, ExtraReprMixin, ABC):
         source: torch.LongTensor,
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
-        accumulator: Optional[torch.FloatTensor] = None,
+        edge_weights: torch.FloatTensor | None = None,
+        accumulator: torch.FloatTensor | None = None,
     ) -> torch.FloatTensor:
         """Relation-specific message passing from source to target.
 
@@ -182,7 +182,7 @@ class BasesDecomposition(Decomposition):
         https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
     """
 
-    def __init__(self, num_bases: Optional[int] = None, **kwargs):
+    def __init__(self, num_bases: int | None = None, **kwargs):
         """
         Initialize the bases decomposition.
 
@@ -290,7 +290,7 @@ class BlockDecomposition(Decomposition):
         https://github.com/thiviyanT/torch-rgcn/blob/267faffd09a441d902c483a8c130410c72910e90/torch_rgcn/layers.py#L450-L565
     """
 
-    def __init__(self, num_blocks: Optional[int] = None, **kwargs):
+    def __init__(self, num_blocks: int | None = None, **kwargs):
         """
         Initialize the layer.
 
@@ -402,13 +402,13 @@ class RGCNLayer(nn.Module):
         self,
         num_relations: int,
         input_dim: int = 32,
-        output_dim: Optional[int] = None,
+        output_dim: int | None = None,
         use_bias: bool = True,
         activation: Hint[nn.Module] = None,
-        activation_kwargs: Optional[Mapping[str, Any]] = None,
+        activation_kwargs: Mapping[str, Any] | None = None,
         self_loop_dropout: float = 0.2,
         decomposition: Hint[Decomposition] = None,
-        decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+        decomposition_kwargs: Mapping[str, Any] | None = None,
     ):
         """
         Initialize the layer.
@@ -460,7 +460,7 @@ class RGCNLayer(nn.Module):
         source: torch.LongTensor,
         target: torch.LongTensor,
         edge_type: torch.LongTensor,
-        edge_weights: Optional[torch.FloatTensor] = None,
+        edge_weights: torch.FloatTensor | None = None,
     ) -> torch.FloatTensor:
         """
         Calculate enriched entity representations.
@@ -534,19 +534,19 @@ class RGCNRepresentation(Representation):
     def __init__(
         self,
         triples_factory: CoreTriplesFactory,
-        max_id: Optional[int] = None,
-        shape: Optional[Sequence[int]] = None,
+        max_id: int | None = None,
+        shape: Sequence[int] | None = None,
         entity_representations: HintOrType[Representation] = None,
         entity_representations_kwargs: OptionalKwargs = None,
         num_layers: int = 2,
         use_bias: bool = True,
         activation: Hint[nn.Module] = None,
-        activation_kwargs: Optional[Mapping[str, Any]] = None,
+        activation_kwargs: Mapping[str, Any] | None = None,
         edge_dropout: float = 0.4,
         self_loop_dropout: float = 0.2,
         edge_weighting: Hint[EdgeWeighting] = None,
         decomposition: Hint[Decomposition] = None,
-        decomposition_kwargs: Optional[Mapping[str, Any]] = None,
+        decomposition_kwargs: Mapping[str, Any] | None = None,
         cache: bool = True,
         **kwargs,
     ):
@@ -713,7 +713,7 @@ class RGCNRepresentation(Representation):
 
     def _plain_forward(
         self,
-        indices: Optional[torch.LongTensor] = None,
+        indices: torch.LongTensor | None = None,
     ) -> torch.FloatTensor:
         """Enrich the entity embeddings of the decoder using R-GCN message propagation."""
         x = self._real_forward_all()

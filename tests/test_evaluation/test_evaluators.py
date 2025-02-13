@@ -553,7 +553,7 @@ def test_sample_negatives():
             ).tolist(),
         )
     )
-    for i, negatives in zip((0, 2), (head_negatives, tail_negatives)):
+    for i, negatives in zip((0, 2), (head_negatives, tail_negatives), strict=False):
         assert torch.is_tensor(negatives)
         assert negatives.dtype == torch.long
         assert negatives.shape == (num_triples, num_negatives)

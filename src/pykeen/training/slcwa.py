@@ -1,7 +1,6 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-from typing import Optional
 
 import torch.utils.data
 from class_resolver import HintOrType, OptionalKwargs
@@ -48,7 +47,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
 
     # docstr-coverage: inherited
     def _create_training_data_loader(
-        self, triples_factory: CoreTriplesFactory, sampler: Optional[str], batch_size: int, drop_last: bool, **kwargs
+        self, triples_factory: CoreTriplesFactory, sampler: str | None, batch_size: int, drop_last: bool, **kwargs
     ) -> DataLoader[SLCWABatch]:  # noqa: D102
         assert "batch_sampler" not in kwargs
         return DataLoader(
@@ -75,12 +74,12 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
     def _process_batch_static(
         model: Model,
         loss: Loss,
-        mode: Optional[InductiveMode],
+        mode: InductiveMode | None,
         batch: SLCWABatch,
-        start: Optional[int],
-        stop: Optional[int],
+        start: int | None,
+        stop: int | None,
         label_smoothing: float = 0.0,
-        slice_size: Optional[int] = None,
+        slice_size: int | None = None,
     ) -> torch.FloatTensor:
         # Slicing is not possible in sLCWA training loops
         if slice_size is not None:
@@ -126,7 +125,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
-        slice_size: Optional[int] = None,
+        slice_size: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         return self._process_batch_static(
             model=self.model,

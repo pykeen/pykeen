@@ -58,7 +58,7 @@ relation representations and a DistMult interaction function.
 
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Sequence
-from typing import Literal, Optional
+from typing import Literal
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
@@ -110,7 +110,7 @@ FLOW_DIRECTIONS: Collection[FlowDirection] = {"source_to_target", "target_to_sou
 
 def _extract_flow(layers: Sequence[MessagePassing]) -> FlowDirection:
     """Extract the flow direction from the message passing layers."""
-    flow: Optional[FlowDirection] = None
+    flow: FlowDirection | None = None
     for layer in layers:
         if flow is None:
             if layer.flow not in FLOW_DIRECTIONS:
@@ -152,8 +152,8 @@ class MessagePassingRepresentation(Representation, ABC):
         layers_kwargs: OneOrManyOptionalKwargs = None,
         base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
-        max_id: Optional[int] = None,
-        shape: Optional[OneOrSequence[int]] = None,
+        max_id: int | None = None,
+        shape: OneOrSequence[int] | None = None,
         activations: OneOrManyHintOrType[nn.Module] = None,
         activations_kwargs: OneOrManyOptionalKwargs = None,
         restrict_k_hop: bool = False,
@@ -248,7 +248,7 @@ class MessagePassingRepresentation(Representation, ABC):
         #   * keep layers & activations
 
     # docstr-coverage: inherited
-    def _plain_forward(self, indices: Optional[torch.LongTensor] = None) -> torch.FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: torch.LongTensor | None = None) -> torch.FloatTensor:  # noqa: D102
         if self.restrict_k_hop and indices is not None:
             # we can restrict the message passing to the k-hop neighborhood of the desired indices;
             # this does only make sense if we do not request *all* indices
@@ -282,7 +282,7 @@ class MessagePassingRepresentation(Representation, ABC):
 
     @abstractmethod
     def pass_messages(
-        self, x: torch.FloatTensor, edge_index: torch.LongTensor, edge_mask: Optional[torch.BoolTensor] = None
+        self, x: torch.FloatTensor, edge_index: torch.LongTensor, edge_mask: torch.BoolTensor | None = None
     ) -> torch.FloatTensor:
         """
         Perform the message passing steps.
@@ -331,9 +331,9 @@ class SimpleMessagePassingRepresentation(MessagePassingRepresentation):
 
     # docstr-coverage: inherited
     def pass_messages(
-        self, x: torch.FloatTensor, edge_index: torch.LongTensor, edge_mask: Optional[torch.BoolTensor] = None
+        self, x: torch.FloatTensor, edge_index: torch.LongTensor, edge_mask: torch.BoolTensor | None = None
     ) -> torch.FloatTensor:  # noqa: D102
-        for layer, activation in zip(self.layers, self.activations):
+        for layer, activation in zip(self.layers, self.activations, strict=False):
             x = activation(layer(x, edge_index=edge_index))
         return x
 
@@ -387,7 +387,7 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
         # register an additional buffer for the categorical edge type
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
-    def _get_edge_type(self, edge_mask: Optional[torch.BoolTensor] = None) -> torch.LongTensor:
+    def _get_edge_type(self, edge_mask: torch.BoolTensor | None = None) -> torch.LongTensor:
         """
         Return the (selected part of the) edge type.
 
@@ -403,10 +403,10 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
 
     # docstr-coverage: inherited
     def pass_messages(
-        self, x: torch.FloatTensor, edge_index: torch.LongTensor, edge_mask: Optional[torch.BoolTensor] = None
+        self, x: torch.FloatTensor, edge_index: torch.LongTensor, edge_mask: torch.BoolTensor | None = None
     ) -> torch.FloatTensor:  # noqa: D102
         edge_type = self._get_edge_type(edge_mask=edge_mask)
-        for layer, activation in zip(self.layers, self.activations):
+        for layer, activation in zip(self.layers, self.activations, strict=False):
             x = activation(layer(x, edge_index=edge_index, edge_type=edge_type))
         return x
 
@@ -456,7 +456,7 @@ class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
         triples_factory: CoreTriplesFactory,
         relation_representation: HintOrType[Representation] = None,
         relation_representation_kwargs: OptionalKwargs = None,
-        relation_transformation: Optional[nn.Module] = None,
+        relation_transformation: nn.Module | None = None,
         **kwargs,
     ):
         """
@@ -490,13 +490,13 @@ class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
 
     # docstr-coverage: inherited
     def pass_messages(
-        self, x: torch.FloatTensor, edge_index: torch.LongTensor, edge_mask: Optional[torch.BoolTensor] = None
+        self, x: torch.FloatTensor, edge_index: torch.LongTensor, edge_mask: torch.BoolTensor | None = None
     ) -> torch.FloatTensor:  # noqa: D102
         edge_type = self._get_edge_type(edge_mask=edge_mask)
         # get initial relation representations
         x_rel = self.relation_representation(indices=None)
         n_layer = len(self.layers)
-        for i, (layer, activation) in enumerate(zip(self.layers, self.activations)):
+        for i, (layer, activation) in enumerate(zip(self.layers, self.activations, strict=False)):
             # select edge attributes from relation representations according to relation type
             edge_attr = x_rel[edge_type]
             # perform message passing

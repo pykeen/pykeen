@@ -164,7 +164,7 @@ import math
 from abc import abstractmethod
 from collections.abc import Mapping
 from textwrap import dedent
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import torch
 from class_resolver import ClassResolver, Hint
@@ -210,8 +210,8 @@ DEFAULT_MARGIN_HPO_STRATEGY = dict(type=float, low=0, high=3)
 
 def apply_label_smoothing(
     labels: torch.FloatTensor,
-    epsilon: Optional[float] = None,
-    num_classes: Optional[int] = None,
+    epsilon: float | None = None,
+    num_classes: int | None = None,
 ) -> torch.FloatTensor:
     """Apply label smoothing to a target tensor.
 
@@ -265,7 +265,7 @@ class Loss(_Loss):
     """A loss function."""
 
     #: synonyms of this loss
-    synonyms: ClassVar[Optional[set[str]]] = None
+    synonyms: ClassVar[set[str] | None] = None
 
     #: The default strategy for optimizing the loss's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
@@ -284,9 +284,9 @@ class Loss(_Loss):
         self,
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        batch_filter: Optional[torch.BoolTensor] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        batch_filter: torch.BoolTensor | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:
         """
         Process scores from sLCWA training loop.
@@ -326,8 +326,8 @@ class Loss(_Loss):
         self,
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:
         """
         Process scores from LCWA training loop.
@@ -489,9 +489,9 @@ class MarginPairwiseLoss(PairwiseLoss):
         self,
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        batch_filter: Optional[torch.BoolTensor] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        batch_filter: torch.BoolTensor | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
@@ -510,8 +510,8 @@ class MarginPairwiseLoss(PairwiseLoss):
         self,
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
@@ -704,9 +704,9 @@ class DoubleMarginLoss(PointwiseLoss):
 
     @staticmethod
     def resolve_margin(
-        positive_margin: Optional[float],
-        negative_margin: Optional[float],
-        offset: Optional[float],
+        positive_margin: float | None,
+        negative_margin: float | None,
+        offset: float | None,
     ) -> tuple[float, float]:
         """Resolve margins from multiple methods how to specify them.
 
@@ -782,9 +782,9 @@ class DoubleMarginLoss(PointwiseLoss):
     def __init__(
         self,
         *,
-        positive_margin: Optional[float] = None,
-        negative_margin: Optional[float] = None,
-        offset: Optional[float] = None,
+        positive_margin: float | None = None,
+        negative_margin: float | None = None,
+        offset: float | None = None,
         positive_negative_balance: float = 0.5,
         margin_activation: Hint[nn.Module] = "relu",
         reduction: str = "mean",
@@ -831,9 +831,9 @@ class DoubleMarginLoss(PointwiseLoss):
         self,
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        batch_filter: Optional[torch.BoolTensor] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        batch_filter: torch.BoolTensor | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
@@ -866,8 +866,8 @@ class DoubleMarginLoss(PointwiseLoss):
         self,
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
@@ -926,7 +926,7 @@ class DeltaPointwiseLoss(PointwiseLoss):
 
     def __init__(
         self,
-        margin: Optional[float] = 0.0,
+        margin: float | None = 0.0,
         margin_activation: Hint[nn.Module] = "softplus",
         reduction: str = "mean",
     ) -> None:
@@ -1073,7 +1073,7 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
 
 
 def prepare_negative_scores_for_softmax(
-    batch_filter: Optional[torch.LongTensor],
+    batch_filter: torch.LongTensor | None,
     negative_scores: torch.FloatTensor,
     no_inf_rows: bool,
 ) -> torch.FloatTensor:
@@ -1129,9 +1129,9 @@ class CrossEntropyLoss(SetwiseLoss):
         self,
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        batch_filter: Optional[torch.BoolTensor] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        batch_filter: torch.BoolTensor | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # we need dense negative scores => unfilter if necessary
         negative_scores = prepare_negative_scores_for_softmax(
@@ -1163,8 +1163,8 @@ class CrossEntropyLoss(SetwiseLoss):
         self,
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # make sure labels form a proper probability distribution
         labels = functional.normalize(labels, p=1, dim=-1)
@@ -1247,8 +1247,8 @@ class InfoNCELoss(CrossEntropyLoss):
         self,
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # determine positive; do not check with == since the labels are floats
         pos_mask = labels > 0.5
@@ -1268,9 +1268,9 @@ class InfoNCELoss(CrossEntropyLoss):
         self,
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        batch_filter: Optional[torch.BoolTensor] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        batch_filter: torch.BoolTensor | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # subtract margin from positive scores
         positive_scores = positive_scores - self.margin
@@ -1309,8 +1309,8 @@ class AdversarialLoss(SetwiseLoss):
         self,
         predictions: torch.FloatTensor,
         labels: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # determine positive; do not check with == since the labels are floats
         pos_mask = labels > 0.5
@@ -1339,9 +1339,9 @@ class AdversarialLoss(SetwiseLoss):
         self,
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        batch_filter: Optional[torch.BoolTensor] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        batch_filter: torch.BoolTensor | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
@@ -1373,8 +1373,8 @@ class AdversarialLoss(SetwiseLoss):
     def positive_loss_term(
         self,
         pos_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:
         """
         Calculate the loss for the positive scores.
@@ -1395,8 +1395,8 @@ class AdversarialLoss(SetwiseLoss):
     def negative_loss_term_unreduced(
         self,
         neg_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:
         """
         Calculate the loss for the negative scores *without* reduction.
@@ -1418,8 +1418,8 @@ class AdversarialLoss(SetwiseLoss):
         pos_scores: torch.FloatTensor,
         neg_scores: torch.FloatTensor,
         neg_weights: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:
         """Calculate the loss for the given scores.
 
@@ -1491,8 +1491,8 @@ class NSSALoss(AdversarialLoss):
     def positive_loss_term(
         self,
         pos_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
@@ -1503,8 +1503,8 @@ class NSSALoss(AdversarialLoss):
     def negative_loss_term_unreduced(
         self,
         neg_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
@@ -1532,8 +1532,8 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
     def positive_loss_term(
         self,
         pos_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         return functional.binary_cross_entropy_with_logits(
             pos_scores,
@@ -1546,8 +1546,8 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
     def negative_loss_term_unreduced(
         self,
         neg_scores: torch.FloatTensor,
-        label_smoothing: Optional[float] = None,
-        num_entities: Optional[int] = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
     ) -> torch.FloatTensor:  # noqa: D102
         return functional.binary_cross_entropy_with_logits(
             neg_scores,
@@ -1584,7 +1584,7 @@ class FocalLoss(PointwiseLoss):
         self,
         *,
         gamma: float = 2.0,
-        alpha: Optional[float] = None,
+        alpha: float | None = None,
         **kwargs,
     ):
         """

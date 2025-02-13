@@ -27,7 +27,7 @@ class TestUtils(unittest.TestCase):
         pairs = list(
             zip(
                 np.random.randint(low=0, high=200, size=n, dtype=int),
-                np.random.uniform(0, 6, size=n),
+                np.random.uniform(0, 6, size=n), strict=False,
             )
         )
         self.assertEqual(set(_old_skyline(pairs)), set(triple_analysis._get_skyline(pairs)))

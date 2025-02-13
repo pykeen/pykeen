@@ -2,7 +2,7 @@
 
 from abc import abstractmethod
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 import torch
 from class_resolver import HintOrType, normalize_string
@@ -25,7 +25,7 @@ class NegativeSampler(nn.Module):
     )
 
     #: A filterer for negative batches
-    filterer: Optional[Filterer]
+    filterer: Filterer | None
 
     num_entities: int
     num_relations: int
@@ -35,12 +35,12 @@ class NegativeSampler(nn.Module):
         self,
         *,
         mapped_triples: MappedTriples,
-        num_entities: Optional[int] = None,
-        num_relations: Optional[int] = None,
-        num_negs_per_pos: Optional[int] = None,
+        num_entities: int | None = None,
+        num_relations: int | None = None,
+        num_negs_per_pos: int | None = None,
         filtered: bool = False,
         filterer: HintOrType[Filterer] = None,
-        filterer_kwargs: Optional[Mapping[str, Any]] = None,
+        filterer_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize the negative sampler with the given entities.
 
@@ -79,7 +79,7 @@ class NegativeSampler(nn.Module):
         """Get the normalized name of the negative sampler."""
         return normalize_string(cls.__name__, suffix=NegativeSampler.__name__)
 
-    def sample(self, positive_batch: torch.LongTensor) -> tuple[torch.LongTensor, Optional[torch.BoolTensor]]:
+    def sample(self, positive_batch: torch.LongTensor) -> tuple[torch.LongTensor, torch.BoolTensor | None]:
         """
         Generate negative samples from the positive batch.
 

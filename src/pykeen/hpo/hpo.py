@@ -7,9 +7,9 @@ import json
 import logging
 import os
 import pathlib
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Union, cast
+from typing import Any, cast
 
 import torch
 from class_resolver.contrib.optuna import pruner_resolver, sampler_resolver
@@ -69,58 +69,58 @@ class ExtraKeysError(ValueError):
 class Objective:
     """A dataclass containing all of the information to make an objective function."""
 
-    dataset: Union[None, str, Dataset, type[Dataset]]  # 1.
+    dataset: None | str | Dataset | type[Dataset]  # 1.
     model: type[Model]  # 2.
     loss: type[Loss]  # 3.
     optimizer: type[Optimizer]  # 5.
     training_loop: type[TrainingLoop]  # 6.
     stopper: type[Stopper]  # 7.
     evaluator: type[Evaluator]  # 8.
-    result_tracker: Union[ResultTracker, type[ResultTracker]]  # 9.
+    result_tracker: ResultTracker | type[ResultTracker]  # 9.
     metric: str
 
     # 1. Dataset
-    dataset_kwargs: Optional[Mapping[str, Any]] = None
+    dataset_kwargs: Mapping[str, Any] | None = None
     training: Hint[CoreTriplesFactory] = None
     testing: Hint[CoreTriplesFactory] = None
     validation: Hint[CoreTriplesFactory] = None
-    evaluation_entity_whitelist: Optional[Collection[str]] = None
-    evaluation_relation_whitelist: Optional[Collection[str]] = None
+    evaluation_entity_whitelist: Collection[str] | None = None
+    evaluation_relation_whitelist: Collection[str] | None = None
     # 2. Model
-    model_kwargs: Optional[Mapping[str, Any]] = None
-    model_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    model_kwargs: Mapping[str, Any] | None = None
+    model_kwargs_ranges: Mapping[str, Any] | None = None
     # 3. Loss
-    loss_kwargs: Optional[Mapping[str, Any]] = None
-    loss_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    loss_kwargs: Mapping[str, Any] | None = None
+    loss_kwargs_ranges: Mapping[str, Any] | None = None
     # 4. Regularizer
-    regularizer: Optional[type[Regularizer]] = None
-    regularizer_kwargs: Optional[Mapping[str, Any]] = None
-    regularizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    regularizer: type[Regularizer] | None = None
+    regularizer_kwargs: Mapping[str, Any] | None = None
+    regularizer_kwargs_ranges: Mapping[str, Any] | None = None
     # 5. Optimizer
-    optimizer_kwargs: Optional[Mapping[str, Any]] = None
-    optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    optimizer_kwargs: Mapping[str, Any] | None = None
+    optimizer_kwargs_ranges: Mapping[str, Any] | None = None
     # 5.1 Learning Rate Scheduler
-    lr_scheduler: Optional[type[LRScheduler]] = None
-    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None
-    lr_scheduler_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    lr_scheduler: type[LRScheduler] | None = None
+    lr_scheduler_kwargs: Mapping[str, Any] | None = None
+    lr_scheduler_kwargs_ranges: Mapping[str, Any] | None = None
     # 6. Training Loop
-    training_loop_kwargs: Optional[Mapping[str, Any]] = None
-    negative_sampler: Optional[type[NegativeSampler]] = None
-    negative_sampler_kwargs: Optional[Mapping[str, Any]] = None
-    negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None
+    training_loop_kwargs: Mapping[str, Any] | None = None
+    negative_sampler: type[NegativeSampler] | None = None
+    negative_sampler_kwargs: Mapping[str, Any] | None = None
+    negative_sampler_kwargs_ranges: Mapping[str, Any] | None = None
     # 7. Training
-    training_kwargs: Optional[Mapping[str, Any]] = None
-    training_kwargs_ranges: Optional[Mapping[str, Any]] = None
-    stopper_kwargs: Optional[Mapping[str, Any]] = None
+    training_kwargs: Mapping[str, Any] | None = None
+    training_kwargs_ranges: Mapping[str, Any] | None = None
+    stopper_kwargs: Mapping[str, Any] | None = None
     # 8. Evaluation
-    evaluator_kwargs: Optional[Mapping[str, Any]] = None
-    evaluation_kwargs: Optional[Mapping[str, Any]] = None
+    evaluator_kwargs: Mapping[str, Any] | None = None
+    evaluation_kwargs: Mapping[str, Any] | None = None
     filter_validation_when_testing: bool = True
     # 9. Trackers
-    result_tracker_kwargs: Optional[Mapping[str, Any]] = None
+    result_tracker_kwargs: Mapping[str, Any] | None = None
     # Misc.
-    device: Union[None, str, torch.device] = None
-    save_model_directory: Optional[str] = None
+    device: None | str | torch.device = None
+    save_model_directory: str | None = None
 
     @staticmethod
     def _update_stopper_callbacks(
@@ -131,7 +131,7 @@ class Objective:
     ) -> None:
         """Make a subclass of the EarlyStopper that reports to the trial."""
 
-        def _result_callback(_early_stopper: EarlyStopper, result: Union[float, int], epoch: int) -> None:
+        def _result_callback(_early_stopper: EarlyStopper, result: float | int, epoch: int) -> None:
             trial.report(result, step=epoch)
             if trial.should_prune():
                 # log pruning
@@ -142,13 +142,13 @@ class Objective:
                 logger.info(f"Pruned trial: {trial} at epoch {epoch} due to {metric}={result}")
                 raise TrialPruned()
 
-        def _stopped_callback(_early_stopper: EarlyStopper, _result: Union[float, int], epoch: int) -> None:
+        def _stopped_callback(_early_stopper: EarlyStopper, _result: float | int, epoch: int) -> None:
             trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
 
-        for key, callback in zip(("result_callbacks", "stopped_callbacks"), (_result_callback, _stopped_callback)):
+        for key, callback in zip(("result_callbacks", "stopped_callbacks"), (_result_callback, _stopped_callback), strict=False):
             stopper_kwargs.setdefault(key, []).append(callback)
 
-    def __call__(self, trial: Trial) -> Optional[float]:
+    def __call__(self, trial: Trial) -> float | None:
         """Suggest parameters then train the model."""
         if self.model_kwargs is not None:
             problems = [
@@ -183,7 +183,7 @@ class Objective:
             kwargs_ranges=self.loss_kwargs_ranges,
         )
         # 4. Regularizer
-        _regularizer_kwargs: Optional[Mapping[str, Any]]
+        _regularizer_kwargs: Mapping[str, Any] | None
         if self.regularizer is None:
             _regularizer_kwargs = {}
         else:
@@ -203,7 +203,7 @@ class Objective:
             kwargs_ranges=self.optimizer_kwargs_ranges,
         )
         # 5.1 Learning Rate Scheduler
-        _lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None
+        _lr_scheduler_kwargs: Mapping[str, Any] | None = None
         if self.lr_scheduler is not None:
             _lr_scheduler_kwargs = _get_kwargs(
                 trial=trial,
@@ -393,7 +393,7 @@ class HpoPipelineResult(Result):
             pipeline_config["training_kwargs"]["num_epochs"] = int(stopped_epoch)
         return dict(metadata=metadata, pipeline=pipeline_config)
 
-    def save_to_directory(self, directory: Union[str, pathlib.Path], **kwargs) -> None:
+    def save_to_directory(self, directory: str | pathlib.Path, **kwargs) -> None:
         """Dump the results of a study to the given directory."""
         directory = normalize_path(directory, mkdir=True)
 
@@ -455,7 +455,7 @@ class HpoPipelineResult(Result):
     def replicate_best_pipeline(
         self,
         *,
-        directory: Union[str, pathlib.Path],
+        directory: str | pathlib.Path,
         replicates: int,
         move_to_cpu: bool = False,
         save_replicates: bool = True,
@@ -488,7 +488,7 @@ class HpoPipelineResult(Result):
         )
 
 
-def hpo_pipeline_from_path(path: Union[str, pathlib.Path], **kwargs) -> HpoPipelineResult:
+def hpo_pipeline_from_path(path: str | pathlib.Path, **kwargs) -> HpoPipelineResult:
     """Run a HPO study from the configuration at the given path."""
     with open(path) as file:
         config = json.load(file)
@@ -507,71 +507,71 @@ def hpo_pipeline_from_config(config: Mapping[str, Any], **kwargs) -> HpoPipeline
 def hpo_pipeline(
     *,
     # 1. Dataset
-    dataset: Union[None, str, Dataset, type[Dataset]] = None,
-    dataset_kwargs: Optional[Mapping[str, Any]] = None,
+    dataset: None | str | Dataset | type[Dataset] = None,
+    dataset_kwargs: Mapping[str, Any] | None = None,
     training: Hint[CoreTriplesFactory] = None,
     testing: Hint[CoreTriplesFactory] = None,
     validation: Hint[CoreTriplesFactory] = None,
-    evaluation_entity_whitelist: Optional[Collection[str]] = None,
-    evaluation_relation_whitelist: Optional[Collection[str]] = None,
+    evaluation_entity_whitelist: Collection[str] | None = None,
+    evaluation_relation_whitelist: Collection[str] | None = None,
     # 2. Model
-    model: Union[str, type[Model]],
-    model_kwargs: Optional[Mapping[str, Any]] = None,
-    model_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    model: str | type[Model],
+    model_kwargs: Mapping[str, Any] | None = None,
+    model_kwargs_ranges: Mapping[str, Any] | None = None,
     # 3. Loss
     loss: HintType[Loss] = None,
-    loss_kwargs: Optional[Mapping[str, Any]] = None,
-    loss_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    loss_kwargs: Mapping[str, Any] | None = None,
+    loss_kwargs_ranges: Mapping[str, Any] | None = None,
     # 4. Regularizer
     regularizer: HintType[Regularizer] = None,
-    regularizer_kwargs: Optional[Mapping[str, Any]] = None,
-    regularizer_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    regularizer_kwargs: Mapping[str, Any] | None = None,
+    regularizer_kwargs_ranges: Mapping[str, Any] | None = None,
     # 5. Optimizer
     optimizer: HintType[Optimizer] = None,
-    optimizer_kwargs: Optional[Mapping[str, Any]] = None,
-    optimizer_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    optimizer_kwargs: Mapping[str, Any] | None = None,
+    optimizer_kwargs_ranges: Mapping[str, Any] | None = None,
     # 5.1 Learning Rate Scheduler
     lr_scheduler: HintType[LRScheduler] = None,
-    lr_scheduler_kwargs: Optional[Mapping[str, Any]] = None,
-    lr_scheduler_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    lr_scheduler_kwargs: Mapping[str, Any] | None = None,
+    lr_scheduler_kwargs_ranges: Mapping[str, Any] | None = None,
     # 6. Training Loop
     training_loop: HintType[TrainingLoop] = None,
-    training_loop_kwargs: Optional[Mapping[str, Any]] = None,
+    training_loop_kwargs: Mapping[str, Any] | None = None,
     negative_sampler: HintType[NegativeSampler] = None,
-    negative_sampler_kwargs: Optional[Mapping[str, Any]] = None,
-    negative_sampler_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    negative_sampler_kwargs: Mapping[str, Any] | None = None,
+    negative_sampler_kwargs_ranges: Mapping[str, Any] | None = None,
     # 7. Training
-    epochs: Optional[int] = None,
-    training_kwargs: Optional[Mapping[str, Any]] = None,
-    training_kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    epochs: int | None = None,
+    training_kwargs: Mapping[str, Any] | None = None,
+    training_kwargs_ranges: Mapping[str, Any] | None = None,
     stopper: HintType[Stopper] = None,
-    stopper_kwargs: Optional[Mapping[str, Any]] = None,
+    stopper_kwargs: Mapping[str, Any] | None = None,
     # 8. Evaluation
     evaluator: HintType[Evaluator] = None,
-    evaluator_kwargs: Optional[Mapping[str, Any]] = None,
-    evaluation_kwargs: Optional[Mapping[str, Any]] = None,
-    metric: Optional[str] = None,
+    evaluator_kwargs: Mapping[str, Any] | None = None,
+    evaluation_kwargs: Mapping[str, Any] | None = None,
+    metric: str | None = None,
     filter_validation_when_testing: bool = True,
     # 9. Tracking
     result_tracker: HintType[ResultTracker] = None,
-    result_tracker_kwargs: Optional[Mapping[str, Any]] = None,
+    result_tracker_kwargs: Mapping[str, Any] | None = None,
     # 6. Misc
     device: Hint[torch.device] = None,
     #  Optuna Study Settings
     storage: Hint[BaseStorage] = None,
     sampler: HintType[BaseSampler] = None,
-    sampler_kwargs: Optional[Mapping[str, Any]] = None,
+    sampler_kwargs: Mapping[str, Any] | None = None,
     pruner: HintType[BasePruner] = None,
-    pruner_kwargs: Optional[Mapping[str, Any]] = None,
-    study_name: Optional[str] = None,
-    direction: Optional[str] = None,
+    pruner_kwargs: Mapping[str, Any] | None = None,
+    study_name: str | None = None,
+    direction: str | None = None,
     load_if_exists: bool = False,
     # Optuna Optimization Settings
-    n_trials: Optional[int] = None,
-    timeout: Optional[int] = None,
-    gc_after_trial: Optional[bool] = None,
-    n_jobs: Optional[int] = None,
-    save_model_directory: Optional[str] = None,
+    n_trials: int | None = None,
+    timeout: int | None = None,
+    gc_after_trial: bool | None = None,
+    n_jobs: int | None = None,
+    save_model_directory: str | None = None,
 ) -> HpoPipelineResult:
     """Train a model on the given dataset.
 
@@ -761,7 +761,7 @@ def hpo_pipeline(
     study.set_user_attr("loss", loss_resolver.normalize_cls(loss_cls))
     logger.info(f"Using loss: {loss_cls}")
     # 4. Regularizer
-    regularizer_cls: Optional[type[Regularizer]]
+    regularizer_cls: type[Regularizer] | None
     if regularizer is not None:
         regularizer_cls = regularizer_resolver.lookup(regularizer)
     elif getattr(model_cls, "regularizer_default", None):
@@ -776,7 +776,7 @@ def hpo_pipeline(
     study.set_user_attr("optimizer", optimizer_resolver.normalize_cls(optimizer_cls))
     logger.info(f"Using optimizer: {optimizer_cls}")
     # 5.1 Learning Rate Scheduler
-    lr_scheduler_cls: Optional[type[LRScheduler]] = None
+    lr_scheduler_cls: type[LRScheduler] | None = None
     if lr_scheduler is not None:
         lr_scheduler_cls = lr_scheduler_resolver.lookup(lr_scheduler)
         study.set_user_attr("lr_scheduler", lr_scheduler_resolver.normalize_cls(lr_scheduler_cls))
@@ -785,7 +785,7 @@ def hpo_pipeline(
     training_loop_cls: type[TrainingLoop] = training_loop_resolver.lookup(training_loop)
     study.set_user_attr("training_loop", training_loop_cls.get_normalized_name())
     logger.info(f"Using training loop: {training_loop_cls}")
-    negative_sampler_cls: Optional[type[NegativeSampler]]
+    negative_sampler_cls: type[NegativeSampler] | None
     if training_loop_cls is SLCWATrainingLoop:
         negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
         assert negative_sampler_cls is not None
@@ -891,8 +891,8 @@ def _get_kwargs(
     prefix: str,
     *,
     default_kwargs_ranges: Mapping[str, Any],
-    kwargs: Optional[Mapping[str, Any]] = None,
-    kwargs_ranges: Optional[Mapping[str, Any]] = None,
+    kwargs: Mapping[str, Any] | None = None,
+    kwargs_ranges: Mapping[str, Any] | None = None,
 ) -> Mapping[str, Any]:
     _kwargs_ranges = dict(default_kwargs_ranges)
     if kwargs_ranges is not None:
@@ -909,7 +909,7 @@ def suggest_kwargs(
     trial: Trial,
     prefix: str,
     kwargs_ranges: Mapping[str, Any],
-    kwargs: Optional[Mapping[str, Any]] = None,
+    kwargs: Mapping[str, Any] | None = None,
 ) -> Mapping[str, Any]:
     """
     Suggest parameters from given dictionaries.
@@ -994,10 +994,10 @@ def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, bas
 def _set_study_dataset(
     study: Study,
     *,
-    dataset: Union[None, str, Dataset, type[Dataset]] = None,
-    training: Union[None, str, CoreTriplesFactory] = None,
-    testing: Union[None, str, CoreTriplesFactory] = None,
-    validation: Union[None, str, CoreTriplesFactory] = None,
+    dataset: None | str | Dataset | type[Dataset] = None,
+    training: None | str | CoreTriplesFactory = None,
+    testing: None | str | CoreTriplesFactory = None,
+    validation: None | str | CoreTriplesFactory = None,
 ):
     if dataset is not None:
         if training is not None or testing is not None or validation is not None:

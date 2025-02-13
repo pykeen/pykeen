@@ -4,7 +4,6 @@ import logging
 import typing
 from abc import abstractmethod
 from collections.abc import Collection, Sequence
-from typing import Optional, Union
 
 import numpy
 import pandas
@@ -126,7 +125,7 @@ class TripleCoverageError(RuntimeError):
 
 
 def normalize_ratios(
-    ratios: Union[float, Sequence[float]],
+    ratios: float | Sequence[float],
     epsilon: float = 1.0e-06,
 ) -> tuple[float, ...]:
     """Normalize relative sizes.
@@ -225,7 +224,7 @@ class Cleaner:
 def _prepare_cleanup(
     training: MappedTriples,
     testing: MappedTriples,
-    max_ids: Optional[tuple[int, int]] = None,
+    max_ids: tuple[int, int] | None = None,
 ) -> torch.BoolTensor:
     """
     Calculate a mask for the test triples with triples containing test-only entities or relations.
@@ -253,7 +252,7 @@ def _prepare_cleanup(
             tuple[int, int],
             tuple(max(training[:, col].max().item(), testing[:, col].max().item()) + 1 for col in columns),
         )
-    for col, max_id in zip(columns, max_ids):
+    for col, max_id in zip(columns, max_ids, strict=False):
         # IDs not in training
         not_in_training_mask = torch.ones(max_id, dtype=torch.bool)
         not_in_training_mask[training[:, col].view(-1)] = False
@@ -351,7 +350,7 @@ class Splitter:
         self,
         *,
         mapped_triples: MappedTriples,
-        ratios: Union[float, Sequence[float]] = 0.8,
+        ratios: float | Sequence[float] = 0.8,
         random_state: TorchRandomHint = None,
     ) -> Sequence[MappedTriples]:
         """Split triples into clean groups.
@@ -381,7 +380,7 @@ class Splitter:
             sizes=sizes,
             random_state=random_state,
         )
-        for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios)):
+        for i, (triples, exp_size, exp_ratio) in enumerate(zip(triples_groups, sizes, ratios, strict=False)):
             actual_size = triples.shape[0]
             actual_ratio = actual_size / exp_size * exp_ratio
             if actual_size != exp_size:
@@ -459,10 +458,10 @@ splitter_resolver: ClassResolver[Splitter] = ClassResolver.from_subclasses(base=
 
 def split(
     mapped_triples: MappedTriples,
-    ratios: Union[float, Sequence[float]] = 0.8,
+    ratios: float | Sequence[float] = 0.8,
     random_state: TorchRandomHint = None,
     randomize_cleanup: bool = False,
-    method: Optional[str] = None,
+    method: str | None = None,
 ) -> Sequence[MappedTriples]:
     """Split triples into clean groups.
 

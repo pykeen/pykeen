@@ -388,7 +388,7 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
     def test_coherence(self):
         """Test coherence with base representations."""
         xs = self.instance(indices=None)
-        for x, (repr_id, local_index) in zip(xs, self.instance.assignment):
+        for x, (repr_id, local_index) in zip(xs, self.instance.assignment, strict=False):
             x_base = self.instance.bases[repr_id](indices=local_index)
             assert (x_base == x).all()
 
@@ -400,7 +400,7 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
 
         # inconsistent base shapes
         shapes = range(2, len(self.max_ids) + 2)
-        bases_kwargs = [dict(max_id=max_id, shape=(dim,)) for max_id, dim in zip(self.max_ids, shapes)]
+        bases_kwargs = [dict(max_id=max_id, shape=(dim,)) for max_id, dim in zip(self.max_ids, shapes, strict=False)]
         with self.assertRaises(ValueError):
             self.cls(**ChainMap(dict(bases_kwargs=bases_kwargs), self.instance_kwargs))
 

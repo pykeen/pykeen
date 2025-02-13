@@ -4,7 +4,7 @@ import importlib
 import os
 import unittest
 from collections.abc import Iterable, MutableMapping
-from typing import Any, Union
+from typing import Any
 
 import torch
 import unittest_templates
@@ -716,7 +716,7 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
                 )
 
 
-def _remove_non_models(elements: Iterable[Union[str, type[Model]]]) -> set[type[Model]]:
+def _remove_non_models(elements: Iterable[str | type[Model]]) -> set[type[Model]]:
     rv = set()
     for element in elements:
         try:

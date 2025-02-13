@@ -9,9 +9,8 @@ import math
 import random
 import re
 from collections import defaultdict
-from collections.abc import Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from typing import (
-    Callable,
     NamedTuple,
     TypeVar,
     cast,

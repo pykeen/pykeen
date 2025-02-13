@@ -44,14 +44,14 @@ def main(
         seed = random_non_negative_int()
     sub_triples_factories = cast(Sequence[TriplesFactory], triples_factory.split(ratios, random_state=seed))
 
-    for subset_name, subset_tf in zip(LABELS, sub_triples_factories):
+    for subset_name, subset_tf in zip(LABELS, sub_triples_factories, strict=False):
         output_path = directory.joinpath(subset_name).with_suffix(".txt")
         click.echo(f"Outputing {subset_name} to {output_path.as_uri()}")
         np.savetxt(output_path, subset_tf.triples, delimiter="\t", fmt="%s")
 
     metadata = dict(
         source=str(path),
-        ratios=dict(zip(LABELS, ratios)),
+        ratios=dict(zip(LABELS, ratios, strict=False)),
         seed=seed,
     )
     with directory.joinpath("metadata.json").open("w") as file:

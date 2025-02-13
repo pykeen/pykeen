@@ -7,11 +7,10 @@ import logging
 import math
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
 from operator import itemgetter
 from typing import (
     Any,
-    Callable,
     ClassVar,
     Generic,
     cast,
@@ -130,9 +129,9 @@ def parallel_slice_batches(
     n_parts = max(map(len, parts))
     parts = [r_parts if len(r_parts) == n_parts else r_parts * n_parts for r_parts in parts]
     # yield batches
-    for batch in zip(*parts):
+    for batch in zip(*parts, strict=False):
         # complex typing
-        yield unpack_singletons(*(batch[start:stop] for start, stop in zip(splits, splits[1:])))  # type: ignore
+        yield unpack_singletons(*(batch[start:stop] for start, stop in zip(splits, splits[1:], strict=False)))  # type: ignore
 
 
 def parallel_unsqueeze(x: Representation, dim: int) -> Representation:
@@ -192,9 +191,9 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
     def full_entity_shapes(self) -> Sequence[str]:
         """Return all entity shapes (head & tail)."""
         shapes: list[str | None] = [None] * (max(itt.chain(self.head_indices(), self.tail_indices())) + 1)
-        for hi, hs in zip(self.head_indices(), self.entity_shape):
+        for hi, hs in zip(self.head_indices(), self.entity_shape, strict=False):
             shapes[hi] = hs
-        for ti, ts in zip(self.tail_indices(), self.tail_entity_shape):
+        for ti, ts in zip(self.tail_indices(), self.tail_entity_shape, strict=False):
             if shapes[ti] is not None and ts != shapes[ti]:
                 raise ValueError("Shape conflict.")
             shapes[ti] = ts
@@ -2671,7 +2670,7 @@ class AutoSFInteraction(FunctionalInteraction[HeadRepresentation, RelationRepres
         r: RelationRepresentation,
         t: TailRepresentation,
     ) -> MutableMapping[str, torch.FloatTensor]:  # noqa: D102
-        return dict(zip("hrt", ensure_tuple(h, r, t)))
+        return dict(zip("hrt", ensure_tuple(h, r, t), strict=False))
 
     def extend(self, *new_coefficients: tuple[int, int, int, Sign]) -> AutoSFInteraction:
         """Extend AutoSF function, as described in the greedy search algorithm in the paper."""

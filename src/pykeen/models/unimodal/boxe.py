@@ -1,7 +1,7 @@
 """Implementation of the BoxE model."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from torch.nn.init import uniform_
 
@@ -55,11 +55,11 @@ class BoxE(ERModel):
         p: int = 2,
         power_norm: bool = False,
         entity_initializer: Hint[Initializer] = uniform_norm_,
-        entity_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        entity_initializer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = uniform_norm_,  # Has to be scaled as well
-        relation_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_initializer_kwargs: Mapping[str, Any] | None = None,
         relation_size_initializer: Hint[Initializer] = uniform_,  # Has to be scaled as well
-        relation_size_initializer_kwargs: Optional[Mapping[str, Any]] = None,
+        relation_size_initializer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         r"""Initialize BoxE.

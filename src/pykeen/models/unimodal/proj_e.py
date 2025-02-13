@@ -1,7 +1,7 @@
 """Implementation of ProjE."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from torch import nn
 
@@ -61,7 +61,7 @@ class ProjE(ERModel):
         self,
         *,
         embedding_dim: int = 50,
-        inner_non_linearity: Optional[nn.Module] = None,
+        inner_non_linearity: nn.Module | None = None,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         relation_initializer: Hint[Initializer] = xavier_uniform_,
         **kwargs,

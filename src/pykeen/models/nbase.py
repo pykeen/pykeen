@@ -214,7 +214,7 @@ def _prepare_representation_module_list(
     check_shapes(
         *zip(
             (r.shape for r in rs),
-            shapes,
+            shapes, strict=False,
         ),
         raise_on_errors=True,
     )

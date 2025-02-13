@@ -7,7 +7,7 @@ import unittest
 from collections.abc import Collection, Iterable, Mapping
 from contextlib import nullcontext as does_not_raise
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pytest
@@ -104,9 +104,9 @@ class TestTriplesFactory(unittest.TestCase):
     def _test_restriction(
         self,
         original_triples_factory: TriplesFactory,
-        entity_restriction: Optional[Collection[str]],
+        entity_restriction: Collection[str] | None,
         invert_entity_selection: bool,
-        relation_restriction: Optional[Collection[str]],
+        relation_restriction: Collection[str] | None,
         invert_relation_selection: bool,
     ):
         """Run the actual test for new_with_restriction."""
@@ -191,7 +191,7 @@ class TestTriplesFactory(unittest.TestCase):
         # check compressed triples
         # reconstruct triples from compressed form
         reconstructed_triples = set()
-        for hr, row_id in zip(instances.pairs, range(instances.compressed.shape[0])):
+        for hr, row_id in zip(instances.pairs, range(instances.compressed.shape[0]), strict=False):
             h, r = hr.tolist()
             _, tails = instances.compressed[row_id].nonzero()
             reconstructed_triples.update((h, r, t) for t in tails.tolist())
@@ -306,7 +306,7 @@ class TestSplit(unittest.TestCase):
         )
 
     def _compare_factories(self, factories_1, factories_2, msg=None) -> None:
-        for factory_1, factory_2 in zip(factories_1, factories_2):
+        for factory_1, factory_2 in zip(factories_1, factories_2, strict=False):
             triples_1 = factory_1.mapped_triples.detach().cpu().numpy()
             triples_2 = factory_2.mapped_triples.detach().cpu().numpy()
             self.assertTrue((triples_1 == triples_2).all(), msg=msg)
