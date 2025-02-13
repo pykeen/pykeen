@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import typing
 from collections.abc import Callable, Collection, Mapping, Sequence
 from typing import Literal, NamedTuple, TypeAlias, TypeVar, cast
-import typing
 
 import numpy as np
 import torch
