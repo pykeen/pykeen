@@ -35,7 +35,6 @@ def deteriorate(
 
     :returns: A concatenated list of the processed reference and other triples factories
 
-    :raises NotImplementedError: if the reference triples factory has inverse triples
     :raises ValueError: If a float is given for n that isn't between 0 and 1
     """
     if isinstance(n, float):

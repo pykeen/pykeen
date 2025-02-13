@@ -109,6 +109,8 @@ class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
             a hint for regularizing relation embeddings
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
+
+        :raises ValueError: If create_inverse_triples is set to false
         """
         # always create representations for normal and inverse relations and padding
         relation_representations = representation_resolver.make(
