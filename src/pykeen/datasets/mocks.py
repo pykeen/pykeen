@@ -26,8 +26,7 @@ def create_inductive_dataset(
     :param num_entities_inductive: the number of entities in the inductive part. defaults to `num_entities_transductive`
     :param num_triples_inference: the number of (inductive) inference triples. defaults to `num_triples_training`
     :param num_triples_testing: the number of (inductive) testing triples. defaults to `num_triples_training`
-    :param random_state:
-        the random state to use.
+    :param random_state: the random state to use.
 
     :returns: an inductive dataset with random triples
     """
