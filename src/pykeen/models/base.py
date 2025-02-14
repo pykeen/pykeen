@@ -320,6 +320,7 @@ class Model(nn.Module, ABC):
         if invert_relation and not self.use_inverse_triples:
             raise ValueError("Can only invert relations if use_inverse_relations is set to True")
 
+        # TODO: can we move this below the handling of None?
         # TODO: with the current default inversion, we have to materialize the relation IDs
         if self.use_inverse_triples and batch is None:
             batch = torch.arange(self.num_relations, device=self.device)
@@ -329,6 +330,9 @@ class Model(nn.Module, ABC):
 
         # send to device
         batch = batch.to(self.device)
+
+        if not self.use_inverse_triples:
+            return batch
 
         # map relation
         return self.relation_inverter.map(batch=batch, index=index_relation, invert=invert_relation)
