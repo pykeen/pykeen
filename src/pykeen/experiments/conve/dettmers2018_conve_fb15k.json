@@ -5,9 +5,11 @@
   },
   "pipeline": {
     "dataset": "fb15k",
+    "dataset_kwargs": {
+      "create_inverse_triples": true
+    },
     "model": "ConvE",
     "model_kwargs": {
-      "create_inverse_triples": true,
       "embedding_dim": 200,
       "input_channels": 1,
       "output_channels": 32,

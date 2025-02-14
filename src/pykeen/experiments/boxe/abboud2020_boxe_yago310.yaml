@@ -4,6 +4,9 @@ metadata:
   title: Learn YAGO3-10 Dataset with BoxE as described by Abboud et al., 2020
 pipeline:
   dataset: yago310
+  # introduce inverse relations and reciprocal facts
+  dataset_kwargs:
+    create_inverse_triples: True
   evaluator_kwargs:
     filtered: true
   # optimization is using negative sampling self-adversarial loss.
@@ -14,8 +17,6 @@ pipeline:
     adversarial_temperature: 2.0
   model: BoxE
   model_kwargs:
-    # introduce inverse relations and reciprocal facts
-    create_inverse_triples: True
     # This has to be a uniform distribution between -0.5/sqrt(emb_dim) and 0.5/sqrt(emb_dim)
     entity_initializer: uniform_norm
     # This is also between -0.5/sqrt(emb_dim) and 0.5/sqrt(emb_dim)
