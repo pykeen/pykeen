@@ -10,7 +10,7 @@ pipeline:
     reduction: mean
   model: ermlp
   model_kwargs:
-    create_inverse_triples: True
+    create_inverse_relations: True
     embedding_dim: 64
     hidden_dim: 64
     activation: relu

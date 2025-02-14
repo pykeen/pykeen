@@ -15,7 +15,7 @@ pipeline:
   model: BoxE
   model_kwargs:
     # introduce inverse relations and reciprocal facts
-    create_inverse_triples: True
+    create_inverse_relations: True
     # This has to be a uniform distribution between -0.5/sqrt(emb_dim) and 0.5/sqrt(emb_dim)
     entity_initializer: uniform_norm
     # This is also between -0.5/sqrt(emb_dim) and 0.5/sqrt(emb_dim)
