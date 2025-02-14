@@ -384,7 +384,7 @@ class ERModel(
             # TODO maybe require this is explicit always
             max_id = triples_factory.num_entities if label == "entity" else triples_factory.num_relations
         if shapes is None:
-            shapes = self.interaction.full_entity_shapes() if label == "entity" else self.interaction.relation_shape
+            shapes = self.interaction.entity_shape if label == "entity" else self.interaction.relation_shape
         return _prepare_representation_module_list(
             representations=representations,
             representations_kwargs=representations_kwargs,
