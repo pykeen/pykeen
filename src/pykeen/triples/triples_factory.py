@@ -864,6 +864,8 @@ class CoreTriplesFactory(KGInfo):
         data = dict(torch.load(path.joinpath(cls.base_file_name), weights_only=False))
         if data.pop("create_inverse_triples", False):
             logger.warning("Found deprecated `create_inverse_triples=True`, which will be ignored.")
+            data["num_relations"], rem = divmod(data["num_relations"], 2)
+            assert rem == 0
         # load numeric triples
         data["mapped_triples"] = torch.as_tensor(
             pd.read_csv(path.joinpath(cls.triples_file_name), sep="\t", dtype=int).values,
