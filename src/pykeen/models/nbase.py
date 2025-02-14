@@ -388,8 +388,8 @@ class ERModel(
         return _prepare_representation_module_list(
             representations=representations,
             representations_kwargs=representations_kwargs,
-            max_id=triples_factory.num_entities if label == "entity" else triples_factory.num_relations,
-            shapes=self.interaction.entity_shape if label == "entity" else self.interaction.relation_shape,
+            max_id=max_id,
+            shapes=shapes,
             label=label,
             **kwargs,
         )
