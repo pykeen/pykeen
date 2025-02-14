@@ -3,8 +3,6 @@ metadata:
 pipeline:
   random_seed: 42
   dataset: codexlarge
-  dataset_kwargs:
-    create_inverse_triples: True
   evaluator_kwargs:
     filtered: true
   loss: BCEWithLogitsLoss
@@ -12,6 +10,7 @@ pipeline:
     reduction: 'mean'
   model: NodePiece
   model_kwargs:
+    create_inverse_triples: True
     entity_initializer: xavier_uniform_
     relation_initializer: init_phases
     relation_constrainer: complex_normalize

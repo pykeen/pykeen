@@ -3,8 +3,6 @@ metadata:
   title: RESCAL on FB15k237 from https://arxiv.org/abs/2006.13365
 pipeline:
   dataset: fb15k237
-  dataset_kwargs:
-    create_inverse_triples: True
   evaluator_kwargs:
     filtered: true
   loss: crossentropy
@@ -12,6 +10,7 @@ pipeline:
     reduction: mean
   model: rescal
   model_kwargs:
+    create_inverse_triples: True
     embedding_dim: 256
   optimizer: adam
   optimizer_kwargs:
