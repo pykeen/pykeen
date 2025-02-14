@@ -862,6 +862,8 @@ class CoreTriplesFactory(KGInfo):
         # load base
         # TODO: consider restricting metadata to JSON
         data = dict(torch.load(path.joinpath(cls.base_file_name), weights_only=False))
+        if data.pop("create_inverse_triples", False):
+            logger.warning("Found deprecated `create_inverse_triples=True`, which will be ignored.")
         # load numeric triples
         data["mapped_triples"] = torch.as_tensor(
             pd.read_csv(path.joinpath(cls.triples_file_name), sep="\t", dtype=int).values,
