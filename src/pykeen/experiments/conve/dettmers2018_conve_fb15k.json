@@ -7,7 +7,7 @@
     "dataset": "fb15k",
     "model": "ConvE",
     "model_kwargs": {
-      "create_inverse_relations": true,
+      "create_inverse_triples": true,
       "embedding_dim": 200,
       "input_channels": 1,
       "output_channels": 32,
