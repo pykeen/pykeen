@@ -383,7 +383,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
             )
 
 
-
 def _optimal_batch_size_group_id(kwargs: Mapping[str, Any]) -> int:
     """Share optimal batch size whenever this hash matches."""
     ignored_keys = {
