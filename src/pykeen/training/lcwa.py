@@ -72,23 +72,18 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         if self.target == 0:
             if self.model.use_inverse_triples:
                 self.score_method = self.model.score_h_inverse  # type: ignore
-                self.can_slice = self.model.can_slice_t
             else:
                 self.score_method = self.model.score_h  # type: ignore
-                self.can_slice = self.model.can_slice_h
         elif self.target == 1:
             if self.model.use_inverse_triples:
                 raise NotImplementedError
             else:
                 self.score_method = self.model.score_r  # type: ignore
-                self.can_slice = self.model.can_slice_r
         elif self.target == 2:
             if self.model.use_inverse_triples:
                 self.score_method = self.model.score_t_inverse  # type: ignore
-                self.can_slice = self.model.can_slice_h
             else:
                 self.score_method = self.model.score_t  # type: ignore
-                self.can_slice = self.model.can_slice_t
         else:
             raise ValueError(f"Invalid target column: {self.target}. Must be from {{0, 1, 2}}.")
 

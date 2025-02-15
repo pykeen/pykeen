@@ -382,35 +382,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
                 **kwargs,
             )
 
-    @staticmethod
-    def _check_slicing_availability(model: Model, batch_size: int, entities: bool, relations: bool) -> None:
-        """Raise an error if the necessary slicing operations are not supported.
-
-        :param model: the model
-        :param batch_size: the batch-size; only used for creating the error message
-        :param entities: whether entities need to be scored
-        :param relations: whether relations need to be scored
-
-        :raises MemoryError: if the necessary slicing operations are not supported by the model
-        """
-        reasons = []
-        if entities:
-            # if inverse triples are used, we only do score_t (TODO: by default; can this be changed?)
-            if not model.can_slice_t:
-                reasons.append("score_t")
-            # otherwise, i.e., without inverse triples, we also need score_h
-            if not model.use_inverse_triples and not model.can_slice_t:
-                reasons.append("score_h")
-        # if relations are to be predicted, we need to slice score_r
-        if relations and not model.can_slice_r:
-            reasons.append("score_r")
-        # raise an error, if any of the required methods cannot slice
-        if reasons:
-            raise MemoryError(
-                f"The current model can't be evaluated on this hardware with these parameters, as "
-                f"evaluation batch_size={batch_size} is too big and slicing is not implemented for this "
-                f"model yet (missing support for: {reasons})"
-            )
 
 
 def _optimal_batch_size_group_id(kwargs: Mapping[str, Any]) -> int:
