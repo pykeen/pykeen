@@ -616,6 +616,7 @@ class Model(nn.Module, ABC):
 
     """Inverse scoring"""
 
+    # TODO unused?
     def _prepare_inverse_batch(self, batch: LongTensor, index_relation: int) -> LongTensor:
         if not self.use_inverse_triples:
             raise ValueError(
