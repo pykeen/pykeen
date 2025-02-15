@@ -1084,6 +1084,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         self._test_score(
             score=self.instance.score_r,
             columns=[0, 2],
+            # switch to effective_num_relations?
             shape=(self.batch_size, self.instance.num_relations),
         )
 
