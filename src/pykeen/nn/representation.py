@@ -801,6 +801,7 @@ class CompGCNLayer(nn.Module):
         :return: shape: ``(num_entities, output_dim)`` / ``(2 * num_relations, output_dim)``
             The updated entity and relation representations.
         """
+        # FIXME remove this?
         # prepare for inverse relations
         edge_type = 2 * edge_type
         # update entity representations: mean over self-loops / forward edges / backward edges
@@ -916,6 +917,7 @@ class CombinedCompGCNRepresentations(nn.Module):
         # always create inverse relations
         self.relation_representations = build_representation(
             max_id=2 * triples_factory.num_relations,
+            # FIXME remove this?
             representation=relation_representations,
             representation_kwargs=relation_representations_kwargs,
         )
