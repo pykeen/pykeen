@@ -40,8 +40,6 @@ class InductiveDataset:
     inductive_testing: CoreTriplesFactory
     #: A factory wrapping the validation triples, that share indices with the INDUCTIVE INFERENCE triples
     inductive_validation: CoreTriplesFactory | None = None
-    #: All datasets should take care of inverse triple creation
-    create_inverse_triples: bool = True
 
     def _summary_rows(self):
         return [
@@ -64,7 +62,7 @@ class InductiveDataset:
         n_triples = sum(count for *_, count in rows)
         rows.append(("Total", "-", "-", n_triples))
         t = tabulate(rows, headers=["Name", "Entities", "Relations", "Triples"])
-        rv = f"{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}"
+        rv = f"{title or self.__class__.__name__} ()\n{t}"
         if show_examples:
             if not isinstance(self.transductive_training, TriplesFactory):
                 raise AttributeError(f"{self.transductive_training.__class__} does not have labeling information.")
@@ -94,7 +92,6 @@ class EagerInductiveDataset(InductiveDataset):
     inductive_inference: CoreTriplesFactory
     inductive_testing: CoreTriplesFactory
     inductive_validation: CoreTriplesFactory | None = None
-    create_inverse_triples: bool = True
 
 
 class LazyInductiveDataset(InductiveDataset):
@@ -203,7 +200,6 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
         inductive_testing_path: str | pathlib.Path,
         inductive_validation_path: str | str | pathlib.Path,
         eager: bool = False,
-        create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize the dataset.
@@ -213,7 +209,6 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
         :param inductive_testing_path: Path to the testing triples file or testing triples file.
         :param inductive_validation_path: Path to the validation triples file or validation triples file.
         :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path` and ultimately through
             to :func:`pykeen.triples.utils.load_triples`.
         """
@@ -222,7 +217,6 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
         self.inductive_testing_path = pathlib.Path(inductive_testing_path)
         self.inductive_validation_path = pathlib.Path(inductive_validation_path)
 
-        self.create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
 
         if eager:
@@ -231,14 +225,12 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
     def _load(self) -> None:
         self._transductive_training = TriplesFactory.from_path(
             path=self.transductive_training_path,
-            create_inverse_triples=self.create_inverse_triples,
             load_triples_kwargs=self.load_triples_kwargs,
         )
 
         # important: inductive_inference shares the same RELATIONS with the transductive training graph
         self._inductive_inference = TriplesFactory.from_path(
             path=self.inductive_inference_path,
-            create_inverse_triples=self.create_inverse_triples,
             relation_to_id=self._transductive_training.relation_to_id,
             load_triples_kwargs=self.load_triples_kwargs,
         )
@@ -248,8 +240,6 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
             path=self.inductive_validation_path,
             entity_to_id=self._inductive_inference.entity_to_id,  # shares entity index with inductive inference
             relation_to_id=self._inductive_inference.relation_to_id,  # shares relation index with inductive inference
-            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-            create_inverse_triples=False,
             load_triples_kwargs=self.load_triples_kwargs,
         )
 
@@ -258,8 +248,6 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
             path=self.inductive_testing_path,
             entity_to_id=self._inductive_inference.entity_to_id,  # share entity index with inductive inference
             relation_to_id=self._inductive_inference.relation_to_id,  # share relation index with inductive inference
-            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-            create_inverse_triples=False,
             load_triples_kwargs=self.load_triples_kwargs,
         )
 
@@ -284,7 +272,6 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
         cache_root: str | None = None,
         force: bool = False,
         eager: bool = False,
-        create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
         download_kwargs: Mapping[str, Any] | None = None,
         version: str | None = None,
@@ -300,7 +287,6 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
             ``~/.data/pykeen``.
         :param force: If true, redownload any cached files
         :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path` and ultimately through
             to :func:`pykeen.triples.utils.load_triples`.
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
@@ -336,6 +322,5 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
             inductive_testing_path=inductive_testing_path,
             inductive_validation_path=inductive_validation_path,
             eager=eager,
-            create_inverse_triples=create_inverse_triples,
             load_triples_kwargs=load_triples_kwargs,
         )

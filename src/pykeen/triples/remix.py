@@ -28,13 +28,7 @@ def remix(*triples_factories: CoreTriplesFactory, **kwargs) -> list[CoreTriplesF
     :param kwargs: Keyword arguments to be passed to :func:`split`
 
     :returns: A sequence of triples factories of the same sizes but randomly re-assigned triples
-
-    :raises NotImplementedError: if any of the triples factories have ``create_inverse_triples``
     """
-    for tf in triples_factories:
-        if tf.create_inverse_triples:
-            raise NotImplementedError("The remix algorithm is not implemented for datasets with inverse triples")
-
     all_triples = cat_triples(*triples_factories)
     ratios = _get_ratios(*triples_factories)
 

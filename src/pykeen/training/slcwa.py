@@ -172,7 +172,7 @@ def create_slcwa_instances(
         else:
             raise AssertionError("If shuffle is provided, it must be True.")
     return cls(
-        mapped_triples=triples_factory._add_inverse_triples_if_necessary(mapped_triples=triples_factory.mapped_triples),
+        mapped_triples=triples_factory.mapped_triples,
         num_entities=triples_factory.num_entities,
         num_relations=triples_factory.num_relations,
         **kwargs,
