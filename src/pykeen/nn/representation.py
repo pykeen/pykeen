@@ -923,7 +923,6 @@ class CombinedCompGCNRepresentations(nn.Module):
         # always create inverse relations
         self.relation_representations = build_representation(
             max_id=2 * triples_factory.num_relations,
-            # FIXME remove this?
             representation=relation_representations,
             representation_kwargs=relation_representations_kwargs,
         )
