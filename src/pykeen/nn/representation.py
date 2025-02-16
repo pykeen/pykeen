@@ -9,7 +9,7 @@ import string
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Any, ClassVar, Literal, cast
+from typing import Any, ClassVar, Literal, Self, cast
 
 import more_itertools
 import numpy
@@ -32,7 +32,7 @@ from torch.nn import functional
 
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
-from .init import initializer_resolver, uniform_norm_p1_
+from .init import PretrainedInitializer, initializer_resolver, uniform_norm_p1_
 from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
 from .text.encoder import TextEncoder, text_encoder_resolver
 from .utils import ShapeError
@@ -437,6 +437,13 @@ class Embedding(Representation):
         self.constrainer = constrainer_resolver.make_safe(constrainer, constrainer_kwargs)
         self._embeddings = torch.nn.Embedding(num_embeddings=max_id, embedding_dim=_embedding_dim, dtype=dtype)
         self._embeddings.requires_grad_(trainable)
+
+    @classmethod
+    def from_pretrained(cls, tensor: FloatTensor, *, trainable: bool = False, **kwargs: Any) -> Self:
+        """Construct an embedding from a pre-trained tensor."""
+        initializer = PretrainedInitializer(tensor)
+        max_id, *shape = tensor.shape
+        return cls(max_id=max_id, shape=shape, initializer=initializer, trainable=trainable, **kwargs)
 
     # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
