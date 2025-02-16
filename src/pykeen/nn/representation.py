@@ -1618,7 +1618,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         if bases_kwargs is None:
             bases_kwargs = [None] * len(bases)
 
-        bases_: list[Representation] = []
+        base_instances: list[Representation] = []
         # format: (base_index, local_index)
         assignment = torch.zeros(size=(max_id, 2), dtype=torch.long)
         back_fill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
@@ -1643,7 +1643,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
             if base.max_id != len(ids):
                 raise ValueError(f"Mismatch between {len(ids)=} and {base.max_id=}")
             # append bases
-            bases_.append(base)
+            base_instances.append(base)
         # create backfill representation
         backfill_max_id = max_id - len(all_ids)
         backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id)
@@ -1651,7 +1651,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
             raise ValueError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
         # set backfill assignment
         assignment[back_fill_mask] = torch.arange(backfill.max_id)
-        super().__init__(assignment=assignment, bases=[backfill, *bases_], **kwargs)
+        super().__init__(assignment=assignment, bases=[backfill, *base_instances], **kwargs)
 
 
 @parse_docdata
