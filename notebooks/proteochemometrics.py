@@ -39,6 +39,7 @@ from tqdm import tqdm
 from pykeen.models import ERModel
 from pykeen.nn import Embedding
 from pykeen.nn.representation import BackfillSpec, MultiBackfillRepresentation, TransformedRepresentation
+from pykeen.predict import predict_target
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 
@@ -116,7 +117,7 @@ def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> Embedding
         positions in the embedding. The embeddings are 2048 dimensional bit vectors from Morgan fingerprints with a
         radius of 2
     """
-    path = pystow.ensure("chembl", "35", url=CHEMBL_EMBEDDINGS)
+    path = pystow.ensure("chembl", CHEMBL_VERSION, url=CHEMBL_EMBEDDINGS)
     if chembl_ids is not None:
         chembl_ids = set(chembl_ids)
     with gzip.open(path, mode="rt") as file:
@@ -208,10 +209,15 @@ def main() -> None:
     """Demonstrate using chemical representations for a subset of entities."""
     target_dim = 32
 
+    example_chembl_id = "CHEMBL1097808"
+
     click.echo("Getting chemical-protein triples from ExCAPE-DB")
     excape_df = get_chemical_protein_triples()
     chembl_ids = excape_df["chembl"].unique()
     uniprot_ids = excape_df["uniprot"].unique()
+
+    if example_chembl_id not in chembl_ids:
+        raise ValueError("need to pick a chembl ID for prediction that's in ExCAPE-DB")
 
     click.echo("Getting protein representations from UniProt")
     # example uniprots ["Q13506", "Q13507", "Q13508", "Q13509"]
@@ -275,7 +281,19 @@ def main() -> None:
     )
 
     click.echo("Training")
-    training_loop.train(tf, num_epochs=5)
+    training_loop.train(tf, num_epochs=1, batch_size=512)
+
+    click.echo("Make some predictions")
+    predictions_pack = predict_target(
+        model=model,
+        head=example_chembl_id,
+        relation="modulates",
+        triples_factory=tf,
+    ).add_membership_columns(training=tf)
+    predictions_df = predictions_pack.df
+    # TODO use proper CURIEs throughout so filtering is more direct on str.startswith("uniprot:")
+    predictions_df = predictions_df[~predictions_df["tail_label"].str.startswith("GO:")]
+    click.echo(predictions_df.head(30).to_markdown(index=False))
 
 
 if __name__ == "__main__":
