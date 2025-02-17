@@ -1,26 +1,21 @@
-"""Goal, turn ChEBI, ChEMBL, and PubChem IDs into SMILES."""
-
 import gzip
 import itertools as itt
 from collections.abc import Sequence
-from functools import lru_cache
 from typing import NamedTuple
 
 import h5py
 import numpy as np
 import pandas as pd
-import pyobo
 import pystow
 import torch
 from protmapper import uniprot_client
-from rdkit import Chem, DataStructs
-from rdkit.Chem import MACCSkeys
+from rdkit import DataStructs
 from rdkit.DataStructs import ConvertToNumpyArray
 from tqdm import tqdm
-from tqdm.contrib.logging import logging_redirect_tqdm
 
 from pykeen.models import ERModel
-from pykeen.nn import BackfillRepresentation, Embedding, init
+from pykeen.nn import Embedding
+from pykeen.nn.representation import MultiBackfillRepresentation
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 
@@ -38,10 +33,11 @@ class EmbeddingBackmap(NamedTuple):
 def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> EmbeddingBackmap:
     """Get an embedding object for human proteins.
 
-    :param uniprot_ids: A sequence of UniProt protein identifiers (like `Q13506`) to get the embeddings for.
-        If none are given, will retrieve all human proteins.
-    :return: A pair of an embedding object and a mapping from UniProt protein identifier strings to their
-        respective positions in the embedding. The embeddings are 1024 dimensional.
+    :param uniprot_ids: A sequence of UniProt protein identifiers (like `Q13506`) to get the embeddings for. If none are
+        given, will retrieve all human proteins.
+
+    :returns: A pair of an embedding object and a mapping from UniProt protein identifier strings to their respective
+        positions in the embedding. The embeddings are 1024 dimensional.
     """
     path = pystow.ensure("bio", "uniprot", url=HUMAN_T5_PROTEIN_EMBEDDINGS)
     with h5py.File(path, "r") as file:
@@ -54,6 +50,15 @@ def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> Emb
 
 
 def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> EmbeddingBackmap:
+    """Get an embedding object for chemicals.
+
+    :param chembl_ids: A sequence of ChEMBL chemical identifiers (like `CHEMBL465070`) to get the embeddings for. If
+        none are given, will retrieve all ChEMBL chemicals (around 2.5 million)
+
+    :returns: A pair of an embedding object and a mapping from ChEMBL chemical identifier strings to their respective
+        positions in the embedding. The embeddings are 2048 dimensional bit vectors from Morgan fingerprints with a
+        radius of 2
+    """
     path = pystow.ensure("chembl", "35", url=CHEMBL_EMBEDDINGS)
 
     if chembl_ids:
@@ -94,8 +99,8 @@ def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> Embedding
     return EmbeddingBackmap(embedding, chembl_id_to_idx)
 
 
-def get_go_annotations():
-    """Get relationships between proteins and Gene Ontology terms."""
+def get_protein_go_triples():
+    """Get triples with proteins as the subject and Gene Ontology terms as the objects."""
     path = pystow.ensure("bio", "go", url=GO_URL)
     df = pd.read_csv(path, sep="\t")
     df = df[~df["relation"].str.startswith("NOT")]
@@ -103,11 +108,11 @@ def get_go_annotations():
     df = df[["DB Object ID", "Relation", "GO ID"]].rename(
         columns={"DB Object ID": "subject", "Relation": "predicate", "GO ID": "object"}
     )
-    print(df["predicate"].unique())
     return df
 
 
-def process_excape():
+def get_chemical_protein_triples():
+    """Get triples from ExCAPE-DB with chemicals as subjects and proteins as objects."""
     path = pystow.ensure("bio", "excape", url=EXCAPE_URL)
     ff_path = pystow.join("bio", "excape", name="excape_human_chembl_subset.tsv")
     if ff_path.is_file():
@@ -141,15 +146,13 @@ def process_excape():
 
 def main() -> None:
     """Demonstrate using chemical representations for a subset of entities."""
-    excape_df = process_excape()
+    excape_df = get_chemical_protein_triples()
     chembl_ids = excape_df["chembl"].unique()
     uniprot_ids = excape_df["uniprot"].unique()
 
     excape_df["predicate"] = "modulates"
     excape_df = excape_df[["chembl", "predicate", "uniprot"]].rename(columns={"chembl": "subject", "uniprot": "object"})
-
-    go_df = get_go_annotations()
-
+    go_df = get_protein_go_triples()
     triples_df = pd.concat([excape_df, go_df])
 
     # example chembls ["CHEMBL465070", "CHEMBL517481", "CHEMBL465069"]
@@ -160,35 +163,27 @@ def main() -> None:
 
     tf = TriplesFactory.from_labeled_triples(triples_df.values)
 
-    id_to_vec: dict[int, torch.BoolTensor] = {}
-    with logging_redirect_tqdm():
-        for curie, entity_id in tqdm(
-            tf.entity_labeling.label_to_id.items(), unit_scale=True, desc="encoding molecules"
-        ):
-            smiles = curie_to_smiles.get(curie)
-            if smiles is None:
-                continue
-            vec = encode_smiles(smiles)
-            if vec is None:
-                continue
-            id_to_vec[entity_id] = vec
+    chemical_assignment = []
+    protein_assignment = []
+    for label, idx in tf.entity_labeling.label_to_id.items():
+        if chemical_local_index := chembl_id_to_idx.get(label):
+            chemical_assignment.append((idx, chemical_local_index))
+        elif protein_local_index := uniprot_id_to_idx.get(label):
+            protein_assignment.append((idx, protein_local_index))
 
-    entity_ids = sorted(id_to_vec)
-
-    tensor = torch.stack([id_to_vec[entity_id] for entity_id in entity_ids])
-
-    #: dimensionality of learned embedding
-    dim = 167
-
-    initializer = init.PretrainedInitializer(tensor)
-    base_repr = Embedding(max_id=len(id_to_vec), shape=(dim,), initializer=initializer, trainable=False)
-
-    entity_repr = BackfillRepresentation(
-        base_ids=entity_ids,
+    entity_repr = MultiBackfillRepresentation(
         max_id=tf.num_entities,
-        base=base_repr,
+        base_ids=[
+            chemical_assignment,
+            protein_assignment,
+        ],
+        bases=[
+            chemical_base_repr,
+            protein_base_repr,
+        ],
     )
 
+    dim = ...
     relation_repr = Embedding(max_id=tf.num_relations, shape=(dim,))
 
     model = ERModel(
