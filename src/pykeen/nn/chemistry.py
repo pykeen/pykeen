@@ -1,16 +1,21 @@
 """Goal, turn ChEBI, ChEMBL, and PubChem IDs into SMILES."""
 
+import gzip
+import itertools as itt
 from collections.abc import Sequence
 from functools import lru_cache
+from typing import NamedTuple
 
 import h5py
+import numpy as np
 import pandas as pd
 import pyobo
 import pystow
 import torch
 from protmapper import uniprot_client
-from rdkit import Chem
+from rdkit import Chem, DataStructs
 from rdkit.Chem import MACCSkeys
+from rdkit.DataStructs import ConvertToNumpyArray
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 
@@ -20,17 +25,23 @@ from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 
 HUMAN_T5_PROTEIN_EMBEDDINGS = "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/embeddings/UP000005640_9606/per-protein.h5"
-CHEBI_STRUCTURES = "https://ftp.ebi.ac.uk/pub/databases/chebi/Flat_file_tab_delimited/chebiId_inchi.tsv"
+CHEMBL_EMBEDDINGS = "https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/latest/chembl_35.fps.gz"
 EXCAPE_URL = "https://zenodo.org/record/2543724/files/pubchem.chembl.dataset4publication_inchi_smiles_v2.tsv.xz"
+GO_URL = "https://current.geneontology.org/annotations/goa_human.gaf.gz"
 
 
-def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> tuple[Embedding, dict[str, int]]:
+class EmbeddingBackmap(NamedTuple):
+    embedding: Embedding
+    backmap: dict[str, int]
+
+
+def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> EmbeddingBackmap:
     """Get an embedding object for human proteins.
 
     :param uniprot_ids: A sequence of UniProt protein identifiers (like `Q13506`) to get the embeddings for.
         If none are given, will retrieve all human proteins.
     :return: A pair of an embedding object and a mapping from UniProt protein identifier strings to their
-        respective positions in the embedding.
+        respective positions in the embedding. The embeddings are 1024 dimensional.
     """
     path = pystow.ensure("bio", "uniprot", url=HUMAN_T5_PROTEIN_EMBEDDINGS)
     with h5py.File(path, "r") as file:
@@ -39,57 +50,115 @@ def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> tup
         tensor = torch.stack([torch.tensor(file[uniprot_id]) for uniprot_id in tqdm(uniprot_ids)])
         uniprot_to_id = {uniprot_id: i for i, uniprot_id in enumerate(uniprot_ids)}
         embedding = Embedding.from_pretrained(tensor)
-    return embedding, uniprot_to_id
+    return EmbeddingBackmap(embedding, uniprot_to_id)
 
 
-HEADER = [
-    "Ambit_InchiKey",  # hashkey
-    "Original_Entry_ID",  # source database id
-    "pXC50",  # measurement value (float)
-    "DB",  # source database + version
-    "InChI",  # Structual information
-    "SMILES",  # Same thing
-    "Entrez_ID",  # Identifer from the entrez database for the target
-    "Tax_ID",  # Species
-    "Gene_Symbol",  # pretty name for gene
-    "Ortholog_Group",  # Gene group classifier
-    "Activity_Flag",  # active / not active
-    "Original_Assay_ID",  # Identifier of original assay
-]
+def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> EmbeddingBackmap:
+    path = pystow.ensure("chembl", "35", url=CHEMBL_EMBEDDINGS)
+
+    if chembl_ids:
+        chembl_ids = set(chembl_ids)
+
+    with gzip.open(path, mode="rt") as file:
+        for _ in range(6):  # throw away headers
+            next(file)
+
+        count = itt.count()
+        chembl_id_to_idx = {}
+        tensors = []
+        for line in tqdm(file, unit_scale=True):
+            hex_fp, chembl_id = line.strip().split("\t")
+
+            if chembl_ids and chembl_id not in chembl_ids:
+                continue
+
+            if chembl_id in chembl_id_to_idx:
+                tqdm.write(f"duplicate of {chembl_id}")
+                continue
+
+            # Convert hex to binary
+            binary_fp = bytes.fromhex(hex_fp)
+
+            # Convert binary to RDKit ExplicitBitVect
+            bitvect = DataStructs.cDataStructs.CreateFromBinaryText(binary_fp)
+
+            # Convert to NumPy array
+            arr = np.zeros((bitvect.GetNumBits(),), dtype=np.uint8)
+            ConvertToNumpyArray(bitvect, arr)
+
+            chembl_id_to_idx[chembl_id] = next(count)
+            tensors.append(torch.tensor(arr))
+
+    tensor = torch.stack(tensors)
+    embedding = Embedding.from_pretrained(tensor)
+    return EmbeddingBackmap(embedding, chembl_id_to_idx)
 
 
-def get_excape_edges():
+def get_go_annotations():
+    """Get relationships between proteins and Gene Ontology terms."""
+    path = pystow.ensure("bio", "go", url=GO_URL)
+    df = pd.read_csv(path, sep="\t")
+    df = df[~df["relation"].str.startswith("NOT")]
+    df = df[df["DB"] == "UniProtKB"]
+    df = df[["DB Object ID", "Relation", "GO ID"]].rename(
+        columns={"DB Object ID": "subject", "Relation": "predicate", "GO ID": "object"}
+    )
+    print(df["predicate"].unique())
+    return df
+
+
+def process_excape():
     path = pystow.ensure("bio", "excape", url=EXCAPE_URL)
+    ff_path = pystow.join("bio", "excape", name="excape_human_chembl_subset.tsv")
+    if ff_path.is_file():
+        df = pd.read_csv(ff_path, sep="\t")
+        return df
 
     df = pd.read_csv(
         path,
         sep="\t",
         compression="xz",
-        columns=["DB", "Original_Entry_ID", "SMILES", "Entrez_ID", "Activity_Flag"],
+        usecols=["DB", "Original_Entry_ID", "Entrez_ID", "Activity_Flag", "Tax_ID"],
         dtype=str,
     )
+
     # keep only active relationships
     df = df[df["Activity_Flag"] == "A"]
     # slice down to human targets
     df = df[df["Tax_ID"] == "9606"]
+    # keep only relationships qualified by ChEMBL, even though this way out of date in 2025
+    df = df[df["DB"] == "chembl20"]
 
     df["uniprot"] = df["Entrez_ID"].map(uniprot_client.get_id_from_entrez)
+
+    # throw away anything that can't be mapped to human uniprot
+    df = df[df["uniprot"].notna()]
+
+    df = df[["uniprot", "Original_Entry_ID"]].drop_duplicates().rename(columns={"Original_Entry_ID": "chembl"})
+    df.to_csv(ff_path, sep="\t", index=False)
+    return df
 
 
 def main() -> None:
     """Demonstrate using chemical representations for a subset of entities."""
-    get_human_protein_embedding(["Q13506", "Q13507", "Q13508", "Q13509"])
-    return
+    excape_df = process_excape()
+    chembl_ids = excape_df["chembl"].unique()
+    uniprot_ids = excape_df["uniprot"].unique()
 
-    edges_df = pyobo.get_edges_df("chebi")
+    excape_df["predicate"] = "modulates"
+    excape_df = excape_df[["chembl", "predicate", "uniprot"]].rename(columns={"chembl": "subject", "uniprot": "object"})
 
-    tf = TriplesFactory.from_labeled_triples(edges_df.values)
+    go_df = get_go_annotations()
 
-    curie_to_smiles = _get_chebi_smiles()
-    # curie_to_smiles.update(_get_slm_smiles())
+    triples_df = pd.concat([excape_df, go_df])
 
-    example_curie = "chebi:1000"
-    tf.entity_labeling.label_to_id[example_curie]
+    # example chembls ["CHEMBL465070", "CHEMBL517481", "CHEMBL465069"]
+    chemical_base_repr, chembl_id_to_idx = get_chemical_embedding(chembl_ids)
+
+    # example uniprots ["Q13506", "Q13507", "Q13508", "Q13509"]
+    protein_base_repr, uniprot_id_to_idx = get_human_protein_embedding(uniprot_ids)
+
+    tf = TriplesFactory.from_labeled_triples(triples_df.values)
 
     id_to_vec: dict[int, torch.BoolTensor] = {}
     with logging_redirect_tqdm():
@@ -134,29 +203,6 @@ def main() -> None:
         triples_factory=tf,
     )
     training_loop.train(tf, num_epochs=5)
-
-
-@lru_cache(1)
-def _get_chebi_smiles() -> dict[str, str]:
-    df = pyobo.get_properties_df("chebi")
-    df = df[df["property"] == "smiles"]
-    return {f"chebi:{k}": v for k, v in df[["chebi_id", "value"]].values}
-
-
-@lru_cache(1)
-def _get_slm_smiles() -> dict[str, str]:
-    df = pyobo.get_properties_df("slm")
-    df = df[df["property"] == "ChEMROF:smiles_string"]
-    return {f"slm:{k}": v for k, v in df[["slm_id", "value"]].values}
-
-
-def encode_smiles(smiles: str) -> torch.BoolTensor | None:
-    """Encode a SMILES string representing a molecule as a boolean tensor."""
-    molecule = Chem.MolFromSmiles(smiles)
-    if molecule is None:
-        return None
-    vector = MACCSkeys.GenMACCSKeys(molecule)
-    return torch.tensor(list(vector), dtype=torch.bool)
 
 
 if __name__ == "__main__":
