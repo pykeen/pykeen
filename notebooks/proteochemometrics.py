@@ -1,3 +1,25 @@
+"""This script gives a demo of training a proteochemometrics model with PyKEEN, enriched with GO annotations.
+
+Run with ``uv run --script proteochemometrics.py``.
+"""
+
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "h5py",
+#     "numpy",
+#     "pandas",
+#     "protmapper",
+#     "pykeen",
+#     "pystow",
+#     "rdkit",
+#     "tqdm",
+# ]
+#
+# [tool.uv.sources]
+# pykeen = { path = "..", editable = true }
+# ///
+
 import gzip
 import itertools as itt
 from collections.abc import Sequence
