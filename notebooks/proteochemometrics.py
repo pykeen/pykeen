@@ -52,6 +52,7 @@ class EmbeddingBackmap(NamedTuple):
     """A pair of an embedding and a reverse local lookup."""
 
     embedding: Embedding
+    labels: list[str]
     label_to_id: dict[str, int]
 
 
@@ -72,7 +73,12 @@ class MLPTransformedEmbedding(TransformedRepresentation):
             torch.nn.ReLU(),
             torch.nn.Linear(hidden_dim, output_dim),
         )
-        super().__init__(base=base, transformation=transformation)
+        super().__init__(
+            base=base,
+            max_id=base.max_id,
+            shape=(output_dim,),
+            transformation=transformation,
+        )
 
 
 def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> EmbeddingBackmap:
@@ -89,9 +95,9 @@ def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> Emb
         if uniprot_ids is None:
             uniprot_ids = sorted(file)
         tensor = torch.stack([torch.tensor(file[uniprot_id]) for uniprot_id in tqdm(uniprot_ids)])
-        uniprot_to_id = {uniprot_id: i for i, uniprot_id in enumerate(uniprot_ids)}
+        uniprot_id_to_idx = {uniprot_id: idx for idx, uniprot_id in enumerate(uniprot_ids)}
         embedding = Embedding.from_pretrained(tensor)
-    return EmbeddingBackmap(embedding, uniprot_to_id)
+    return EmbeddingBackmap(embedding, uniprot_ids, uniprot_id_to_idx)
 
 
 def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> EmbeddingBackmap:
@@ -113,6 +119,7 @@ def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> Embedding
 
         count = itt.count()
         chembl_id_to_idx = {}
+        chembl_ids = []
         tensors = []
         for line in tqdm(file, unit_scale=True):
             hex_fp, chembl_id = line.strip().split("\t")
@@ -136,10 +143,12 @@ def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> Embedding
 
             chembl_id_to_idx[chembl_id] = next(count)
             tensors.append(torch.tensor(arr))
+            chembl_ids.append(chembl_id)
 
     tensor = torch.stack(tensors)
     embedding = Embedding.from_pretrained(tensor)
-    return EmbeddingBackmap(embedding, chembl_id_to_idx)
+
+    return EmbeddingBackmap(embedding, chembl_ids, chembl_id_to_idx)
 
 
 def get_protein_go_triples():
@@ -191,51 +200,51 @@ def get_chemical_protein_triples():
 
 def main() -> None:
     """Demonstrate using chemical representations for a subset of entities."""
-    click.echo("Getting protein-GO triples from the Gene Ontology")
-    go_df = get_protein_go_triples()
+    target_dim = 32
 
     click.echo("Getting chemical-protein triples from ExCAPE-DB")
     excape_df = get_chemical_protein_triples()
     chembl_ids = excape_df["chembl"].unique()
     uniprot_ids = excape_df["uniprot"].unique()
 
+    click.echo("Getting protein representations from UniProt")
+    # example uniprots ["Q13506", "Q13507", "Q13508", "Q13509"]
+    protein_base_repr, _, uniprot_ids = get_human_protein_embedding(uniprot_ids)
+    protein_trans_repr = MLPTransformedEmbedding(protein_base_repr, target_dim)
+
+    click.echo("Getting chemical representations from ChEMBL")
+    # example chembls ["CHEMBL465070", "CHEMBL517481", "CHEMBL465069"]
+    chemical_base_repr, _, chembl_ids = get_chemical_embedding(chembl_ids)
+    chemical_trans_repr = MLPTransformedEmbedding(chemical_base_repr, target_dim)
+
+    click.echo("Getting protein-GO triples from the Gene Ontology")
+    go_df = get_protein_go_triples()
+
+    click.echo("Constructing a triples factory")
+    # do some cleanup on the excape df
     excape_df["predicate"] = "modulates"
     excape_df = excape_df[["chembl", "predicate", "uniprot"]].rename(columns={"chembl": "subject", "uniprot": "object"})
 
     triples_df = pd.concat([excape_df, go_df])
-
-    click.echo("Getting chemical representations from ChEMBL")
-    # example chembls ["CHEMBL465070", "CHEMBL517481", "CHEMBL465069"]
-    chemical_base_repr, chembl_id_to_idx = get_chemical_embedding(chembl_ids)
-
-    click.echo("Getting protein representations from UniProt")
-    # example uniprots ["Q13506", "Q13507", "Q13508", "Q13509"]
-    protein_base_repr, uniprot_id_to_idx = get_human_protein_embedding(uniprot_ids)
-
-    click.echo("Constructing a triples factory")
     tf = TriplesFactory.from_labeled_triples(triples_df.values)
 
-    chemical_assignment = []
-    protein_assignment = []
-    for label, idx in tf.entity_labeling.label_to_id.items():
-        if chemical_local_index := chembl_id_to_idx.get(label):
-            chemical_assignment.append((idx, chemical_local_index))
-        elif protein_local_index := uniprot_id_to_idx.get(label):
-            protein_assignment.append((idx, protein_local_index))
-
-    target_dim = 32
+    # note that the order you add to this set is very important
+    chemical_ids = [
+        tf.entity_labeling.label_to_id[chembl_id]
+        for chembl_id in chembl_ids
+        if chembl_id in tf.entity_labeling.label_to_id
+    ]
+    protein_ids = [
+        tf.entity_labeling.label_to_id[uniprot_id]
+        for uniprot_id in uniprot_ids
+        if uniprot_id in tf.entity_labeling.label_to_id
+    ]
 
     click.echo("Constructing entity representation")
     entity_repr = MultiBackfillRepresentation(
         max_id=tf.num_entities,
-        base_ids=[
-            chemical_assignment,
-            protein_assignment,
-        ],
-        bases=[
-            MLPTransformedEmbedding(chemical_base_repr, target_dim),
-            MLPTransformedEmbedding(protein_base_repr, target_dim),
-        ],
+        base_ids=[chemical_ids, protein_ids],
+        bases=[chemical_trans_repr, protein_trans_repr],
     )
 
     relation_repr = Embedding(max_id=tf.num_relations, shape=(target_dim,))

@@ -1716,9 +1716,10 @@ class TransformedRepresentation(Representation):
             ).shape[1:],
             reference=shape,
         )
-        # infer max_id
-        max_id = max_id or base.max_id
-        if max_id != base.max_id:
+        if max_id is None:
+            # infer max_id
+            max_id = base.max_id
+        elif max_id != base.max_id:
             raise ValueError(f"Incompatible max_id={max_id} vs. base.max_id={base.max_id}")
 
         super().__init__(max_id=max_id, shape=shape, **kwargs)
