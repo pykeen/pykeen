@@ -29,10 +29,11 @@ from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
+from typing_extensions import Self
 
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
-from .init import initializer_resolver, uniform_norm_p1_
+from .init import PretrainedInitializer, initializer_resolver, uniform_norm_p1_
 from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
 from .text.encoder import TextEncoder, text_encoder_resolver
 from .utils import ShapeError
@@ -75,6 +76,7 @@ __all__ = [
     "SubsetRepresentation",
     "CombinedRepresentation",
     "TensorTrainRepresentation",
+    "MultiBackfillRepresentation",
     "TransformedRepresentation",
     "TextRepresentation",
     "CachedTextRepresentation",
@@ -437,6 +439,13 @@ class Embedding(Representation):
         self.constrainer = constrainer_resolver.make_safe(constrainer, constrainer_kwargs)
         self._embeddings = torch.nn.Embedding(num_embeddings=max_id, embedding_dim=_embedding_dim, dtype=dtype)
         self._embeddings.requires_grad_(trainable)
+
+    @classmethod
+    def from_pretrained(cls, tensor: FloatTensor, *, trainable: bool = False, **kwargs: Any) -> Self:
+        """Construct an embedding from a pre-trained tensor."""
+        initializer = PretrainedInitializer(tensor)
+        max_id, *shape = tensor.shape
+        return cls(max_id=max_id, shape=shape, initializer=initializer, trainable=trainable, **kwargs)
 
     # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
@@ -1605,11 +1614,12 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         max_id: int,
         base_ids: Iterable[Iterable[int]],
         bases: Iterable[HintOrType[Representation]],
-        bases_kwargs: Iterable[OptionalKwargs] | None,
+        bases_kwargs: Iterable[OptionalKwargs] | None = None,
         backfill: HintOrType[Representation] = None,
         backfill_kwargs: OptionalKwargs = None,
         **kwargs,
-    ):
+    ) -> None:
+        """Initialize the backfill representation."""
         # import here to avoid cyclic import
         from . import representation_resolver
 
@@ -1709,9 +1719,10 @@ class TransformedRepresentation(Representation):
             ).shape[1:],
             reference=shape,
         )
-        # infer max_id
-        max_id = max_id or base.max_id
-        if max_id != base.max_id:
+        if max_id is None:
+            # infer max_id
+            max_id = base.max_id
+        elif max_id != base.max_id:
             raise ValueError(f"Incompatible max_id={max_id} vs. base.max_id={base.max_id}")
 
         super().__init__(max_id=max_id, shape=shape, **kwargs)
