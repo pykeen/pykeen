@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import itertools
 import logging
 import math
@@ -1604,17 +1605,55 @@ class BackfillRepresentation(PartitionRepresentation):
         super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
 
 
+@dataclasses.dataclass
+class BackfillSpec:
+    """A specification for a backfill representation."""
+
+    #: The global identifiers for the entities, appearing in the order that
+    #: corresponds to their local identifier within the base representation
+    ids: Sequence[int]
+
+    #: the base representation, or a hint to generate it
+    base: HintOrType[Representation]
+
+    #: the optional keyword arguments used to instantiate the base representation
+    kwargs: OptionalKwargs | None = None
+
+    def __post_init__(self) -> None:
+        """Implement data integrity checks."""
+        if len(set(self.ids)) != len(self.ids):
+            raise ValueError(f"Duplicate in {self.ids=}")
+        if any(i < 0 for i in self.ids):
+            raise ValueError(f"Negative ids in {self.ids=}")
+
+    def get_base(self) -> Representation:
+        """Instantiate the base representation."""
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        max_id = len(self.ids)
+
+        base = representation_resolver.make(self.base, self.kwargs, max_id=max_id)
+        if base.max_id != max_id:
+            raise ValueError(
+                f"When constructing the backfill specification, got a mismatch between the number of IDs "
+                f"given ({max_id:,}) and the max_id assigned to the base representation ({base.max_id:,})"
+            )
+
+        return base
+
+
 class MultiBackfillRepresentation(PartitionRepresentation):
     """Fill missing ids by backfill representation."""
 
     # TODO: can, and should, we merge this with BackfillRepresentation?
+    #  @cthoyt says: I think that we should make the BackfillRepresentation a special case of this one
 
     def __init__(
         self,
+        *,
         max_id: int,
-        base_ids: Iterable[Iterable[int]],
-        bases: Iterable[HintOrType[Representation]],
-        bases_kwargs: Iterable[OptionalKwargs] | None = None,
+        specs: Sequence[BackfillSpec],
         backfill: HintOrType[Representation] = None,
         backfill_kwargs: OptionalKwargs = None,
         **kwargs,
@@ -1623,39 +1662,33 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         # import here to avoid cyclic import
         from . import representation_resolver
 
-        # normalize input
-        bases = list(bases)
-        if bases_kwargs is None:
-            bases_kwargs = [None] * len(bases)
-
         base_instances: list[Representation] = []
         # format: (base_index, local_index)
         assignment = torch.zeros(size=(max_id, 2), dtype=torch.long)
         back_fill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
         all_ids: set[int] = set()
-        for base_index, (ids, base, base_kwargs) in enumerate(zip(base_ids, bases, bases_kwargs, strict=True)):
-            ids = list(ids)
-            if len(set(ids)) != len(ids):
-                raise ValueError(f"Duplicate in {ids=}")
-            if any(i < 0 for i in ids):
-                raise ValueError(f"Negative ids in {ids=}")
+        for base_index, spec in enumerate(specs):
+            ids = list(spec.ids)
+            n_ids = len(ids)
+
             # check for overlap with others
             if colliding_ids := all_ids.intersection(ids):
                 raise ValueError(f"{colliding_ids=} for bases[{base_index}] with {ids=}")
             all_ids.update(ids)
+
             # set assignment
             ids_t = torch.as_tensor(ids, dtype=torch.long)
             assignment[ids_t, 0] = base_index
-            assignment[ids_t, 1] = torch.arange(len(ids))
+            assignment[ids_t, 1] = torch.arange(n_ids)
             back_fill_mask[ids_t] = False
-            # instantiate (if necessary)
-            base = representation_resolver.make(base, base_kwargs, max_id=len(ids))
-            if base.max_id != len(ids):
-                raise ValueError(f"Mismatch between {len(ids)=} and {base.max_id=}")
+
+            base = spec.get_base()
             # append bases
             base_instances.append(base)
+
         # create backfill representation
         backfill_max_id = max_id - len(all_ids)
+        # FIXME better message when missing shape for backfill, or can we have a policy on automatically inferring this?
         backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id)
         if backfill_max_id != backfill.max_id:
             raise ValueError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")

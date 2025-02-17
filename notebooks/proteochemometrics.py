@@ -38,7 +38,7 @@ from tqdm import tqdm
 
 from pykeen.models import ERModel
 from pykeen.nn import Embedding
-from pykeen.nn.representation import MultiBackfillRepresentation, TransformedRepresentation
+from pykeen.nn.representation import BackfillSpec, MultiBackfillRepresentation, TransformedRepresentation
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 
@@ -94,7 +94,12 @@ def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> Emb
     with h5py.File(path, "r") as file:
         if uniprot_ids is None:
             uniprot_ids = sorted(file)
-        tensor = torch.stack([torch.tensor(file[uniprot_id]) for uniprot_id in tqdm(uniprot_ids)])
+        tensor = torch.stack(
+            [
+                torch.tensor(file[uniprot_id])
+                for uniprot_id in tqdm(uniprot_ids, unit_scale=True, unit="protein", desc="Getting protein features")
+            ]
+        )
         uniprot_id_to_idx = {uniprot_id: idx for idx, uniprot_id in enumerate(uniprot_ids)}
         embedding = Embedding.from_pretrained(tensor)
     return EmbeddingBackmap(embedding, uniprot_ids, uniprot_id_to_idx)
@@ -119,9 +124,9 @@ def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> Embedding
 
         count = itt.count()
         chembl_id_to_idx = {}
-        chembl_ids = []
+        rrr = []
         tensors = []
-        for line in tqdm(file, unit_scale=True):
+        for line in tqdm(file, unit_scale=True, total=2_470_000, desc="Getting chemical features", unit="chemical"):
             hex_fp, chembl_id = line.strip().split("\t")
 
             if chembl_ids and chembl_id not in chembl_ids:
@@ -143,12 +148,12 @@ def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> Embedding
 
             chembl_id_to_idx[chembl_id] = next(count)
             tensors.append(torch.tensor(arr))
-            chembl_ids.append(chembl_id)
+            rrr.append(chembl_id)
 
     tensor = torch.stack(tensors)
     embedding = Embedding.from_pretrained(tensor)
 
-    return EmbeddingBackmap(embedding, chembl_ids, chembl_id_to_idx)
+    return EmbeddingBackmap(embedding, rrr, chembl_id_to_idx)
 
 
 def get_protein_go_triples():
@@ -234,17 +239,23 @@ def main() -> None:
         for chembl_id in chembl_ids
         if chembl_id in tf.entity_labeling.label_to_id
     ]
+    click.echo(f"Mapped {len(chemical_ids):,} ChEMBL IDs from edges to Morgan features")
+
     protein_ids = [
         tf.entity_labeling.label_to_id[uniprot_id]
         for uniprot_id in uniprot_ids
         if uniprot_id in tf.entity_labeling.label_to_id
     ]
+    click.echo(f"Mapped {len(protein_ids):,} UniProt IDs from edges to T5 protein features")
 
     click.echo("Constructing entity representation")
     entity_repr = MultiBackfillRepresentation(
         max_id=tf.num_entities,
-        base_ids=[chemical_ids, protein_ids],
-        bases=[chemical_trans_repr, protein_trans_repr],
+        specs=[
+            BackfillSpec(chemical_ids, chemical_trans_repr),
+            BackfillSpec(protein_ids, protein_trans_repr),
+        ],
+        backfill_kwargs={"shape": (target_dim,)},
     )
 
     relation_repr = Embedding(max_id=tf.num_relations, shape=(target_dim,))
