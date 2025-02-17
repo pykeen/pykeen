@@ -1612,7 +1612,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         max_id: int,
         base_ids: Iterable[Iterable[int]],
         bases: Iterable[HintOrType[Representation]],
-        bases_kwargs: Iterable[OptionalKwargs] | None,
+        bases_kwargs: Iterable[OptionalKwargs] | None = None,
         backfill: HintOrType[Representation] = None,
         backfill_kwargs: OptionalKwargs = None,
         **kwargs,

@@ -37,7 +37,7 @@ from tqdm import tqdm
 
 from pykeen.models import ERModel
 from pykeen.nn import Embedding
-from pykeen.nn.representation import MultiBackfillRepresentation
+from pykeen.nn.representation import MultiBackfillRepresentation, TransformedRepresentation, Representation
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 
@@ -48,8 +48,29 @@ GO_URL = "https://current.geneontology.org/annotations/goa_human.gaf.gz"
 
 
 class EmbeddingBackmap(NamedTuple):
+    """A pair of an embedding and a reverse local lookup."""
+
     embedding: Embedding
-    backmap: dict[str, int]
+    label_to_id: dict[str, int]
+
+
+class MLPTransformedEmbedding(TransformedRepresentation):
+    """A representation that transforms an embedding with a simple MLP."""
+
+    def __init__(
+        self,
+        base: Embedding,
+        output_dim: int,
+        *,
+        ratio: int | float = 2,
+    ) -> None:
+        hidden_dim = int(ratio * output_dim)
+        transformation = torch.nn.Sequential(
+            torch.nn.Linear(base.shape[1], hidden_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_dim, output_dim),
+        )
+        super().__init__(base=base, transformation=transformation)
 
 
 def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> EmbeddingBackmap:
@@ -193,6 +214,8 @@ def main() -> None:
         elif protein_local_index := uniprot_id_to_idx.get(label):
             protein_assignment.append((idx, protein_local_index))
 
+    target_dim = 32
+
     entity_repr = MultiBackfillRepresentation(
         max_id=tf.num_entities,
         base_ids=[
@@ -200,13 +223,12 @@ def main() -> None:
             protein_assignment,
         ],
         bases=[
-            chemical_base_repr,
-            protein_base_repr,
+            MLPTransformedEmbedding(chemical_base_repr, target_dim),
+            MLPTransformedEmbedding(protein_base_repr, target_dim),
         ],
     )
 
-    dim = ...
-    relation_repr = Embedding(max_id=tf.num_relations, shape=(dim,))
+    relation_repr = Embedding(max_id=tf.num_relations, shape=(target_dim,))
 
     model = ERModel(
         triples_factory=tf,
