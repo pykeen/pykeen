@@ -68,7 +68,7 @@ class MLPTransformedEmbedding(TransformedRepresentation):
         """Initialize the representation."""
         hidden_dim = int(ratio * output_dim)
         transformation = torch.nn.Sequential(
-            torch.nn.Linear(base.shape[1], hidden_dim),
+            torch.nn.Linear(base.shape[0], hidden_dim),
             torch.nn.ReLU(),
             torch.nn.Linear(hidden_dim, output_dim),
         )
