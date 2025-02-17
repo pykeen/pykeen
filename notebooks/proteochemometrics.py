@@ -25,6 +25,7 @@ import itertools as itt
 from collections.abc import Sequence
 from typing import NamedTuple
 
+import click
 import h5py
 import numpy as np
 import pandas as pd
@@ -37,7 +38,7 @@ from tqdm import tqdm
 
 from pykeen.models import ERModel
 from pykeen.nn import Embedding
-from pykeen.nn.representation import MultiBackfillRepresentation, TransformedRepresentation, Representation
+from pykeen.nn.representation import MultiBackfillRepresentation, TransformedRepresentation
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 
@@ -64,6 +65,7 @@ class MLPTransformedEmbedding(TransformedRepresentation):
         *,
         ratio: int | float = 2,
     ) -> None:
+        """Initialize the representation."""
         hidden_dim = int(ratio * output_dim)
         transformation = torch.nn.Sequential(
             torch.nn.Linear(base.shape[1], hidden_dim),
@@ -103,10 +105,8 @@ def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> Embedding
         radius of 2
     """
     path = pystow.ensure("chembl", "35", url=CHEMBL_EMBEDDINGS)
-
-    if chembl_ids:
+    if chembl_ids is not None:
         chembl_ids = set(chembl_ids)
-
     with gzip.open(path, mode="rt") as file:
         for _ in range(6):  # throw away headers
             next(file)
@@ -145,8 +145,10 @@ def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> Embedding
 def get_protein_go_triples():
     """Get triples with proteins as the subject and Gene Ontology terms as the objects."""
     path = pystow.ensure("bio", "go", url=GO_URL)
-    df = pd.read_csv(path, sep="\t")
-    df = df[~df["relation"].str.startswith("NOT")]
+    df = pd.read_csv(
+        path, sep="\t", comment="!", usecols=[0, 1, 3, 4], names=["DB", "DB Object ID", "Relation", "GO ID"]
+    )
+    df = df[~df["Relation"].str.startswith("NOT")]
     df = df[df["DB"] == "UniProtKB"]
     df = df[["DB Object ID", "Relation", "GO ID"]].rename(
         columns={"DB Object ID": "subject", "Relation": "predicate", "GO ID": "object"}
@@ -189,21 +191,28 @@ def get_chemical_protein_triples():
 
 def main() -> None:
     """Demonstrate using chemical representations for a subset of entities."""
+    click.echo("Getting protein-GO triples from the Gene Ontology")
+    go_df = get_protein_go_triples()
+
+    click.echo("Getting chemical-protein triples from ExCAPE-DB")
     excape_df = get_chemical_protein_triples()
     chembl_ids = excape_df["chembl"].unique()
     uniprot_ids = excape_df["uniprot"].unique()
 
     excape_df["predicate"] = "modulates"
     excape_df = excape_df[["chembl", "predicate", "uniprot"]].rename(columns={"chembl": "subject", "uniprot": "object"})
-    go_df = get_protein_go_triples()
+
     triples_df = pd.concat([excape_df, go_df])
 
+    click.echo("Getting chemical representations from ChEMBL")
     # example chembls ["CHEMBL465070", "CHEMBL517481", "CHEMBL465069"]
     chemical_base_repr, chembl_id_to_idx = get_chemical_embedding(chembl_ids)
 
+    click.echo("Getting protein representations from UniProt")
     # example uniprots ["Q13506", "Q13507", "Q13508", "Q13509"]
     protein_base_repr, uniprot_id_to_idx = get_human_protein_embedding(uniprot_ids)
 
+    click.echo("Constructing a triples factory")
     tf = TriplesFactory.from_labeled_triples(triples_df.values)
 
     chemical_assignment = []
@@ -216,6 +225,7 @@ def main() -> None:
 
     target_dim = 32
 
+    click.echo("Constructing entity representation")
     entity_repr = MultiBackfillRepresentation(
         max_id=tf.num_entities,
         base_ids=[
@@ -237,10 +247,13 @@ def main() -> None:
         relation_representations=relation_repr,
     )
 
+    click.echo("Constructing training loop")
     training_loop = SLCWATrainingLoop(
         model=model,
         triples_factory=tf,
     )
+
+    click.echo("Training")
     training_loop.train(tf, num_epochs=5)
 
 
