@@ -43,7 +43,8 @@ from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 
 HUMAN_T5_PROTEIN_EMBEDDINGS = "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/embeddings/UP000005640_9606/per-protein.h5"
-CHEMBL_EMBEDDINGS = "https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/latest/chembl_35.fps.gz"
+CHEMBL_VERSION = "35"
+CHEMBL_EMBEDDINGS = f"https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_{CHEMBL_VERSION}/chembl_{CHEMBL_VERSION}.fps.gz"
 EXCAPE_URL = "https://zenodo.org/record/2543724/files/pubchem.chembl.dataset4publication_inchi_smiles_v2.tsv.xz"
 GO_URL = "https://current.geneontology.org/annotations/goa_human.gaf.gz"
 
