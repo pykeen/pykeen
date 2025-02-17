@@ -1667,7 +1667,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         assignment = torch.zeros(size=(max_id, 2), dtype=torch.long)
         back_fill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
         all_ids: set[int] = set()
-        for base_index, spec in enumerate(specs):
+        for base_index, spec in enumerate(specs, start=1):
             ids = list(spec.ids)
             n_ids = len(ids)
 
@@ -1693,7 +1693,8 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         if backfill_max_id != backfill.max_id:
             raise ValueError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
         # set backfill assignment
-        assignment[back_fill_mask] = torch.arange(backfill.max_id)
+        assignment[back_fill_mask, 0] = 0  # since the backfill comes first in the list of bases
+        assignment[back_fill_mask, 1] = torch.arange(backfill.max_id)
         super().__init__(assignment=assignment, bases=[backfill, *base_instances], **kwargs)
 
 
