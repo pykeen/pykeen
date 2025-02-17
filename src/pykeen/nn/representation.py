@@ -1580,6 +1580,7 @@ class BackfillRepresentation(PartitionRepresentation):
         # import here to avoid cyclic import
         from . import representation_resolver
 
+        # TODO: maybe we should keep the order unchanged?
         base_ids = sorted(set(base_ids))
         base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
         # comment: not all representations support passing a shape parameter
@@ -1599,6 +1600,65 @@ class BackfillRepresentation(PartitionRepresentation):
         assignment[mask, 1] = torch.arange(backfill.max_id)
 
         super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
+
+
+class MultiBackfillRepresentation(PartitionRepresentation):
+    """Fill missing ids by backfill representation."""
+
+    # TODO: can, and should, we merge this with BackfillRepresentation?
+
+    def __init__(
+        self,
+        max_id: int,
+        base_ids: Iterable[Iterable[int]],
+        bases: Iterable[HintOrType[Representation]],
+        bases_kwargs: Iterable[OptionalKwargs] | None,
+        backfill: HintOrType[Representation] = None,
+        backfill_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ):
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        # normalize input
+        bases = list(bases)
+        if bases_kwargs is None:
+            bases_kwargs = [None] * len(bases)
+
+        base_instances: list[Representation] = []
+        # format: (base_index, local_index)
+        assignment = torch.zeros(size=(max_id, 2), dtype=torch.long)
+        back_fill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
+        all_ids: set[int] = set()
+        for base_index, (ids, base, base_kwargs) in enumerate(zip(base_ids, bases, bases_kwargs, strict=True)):
+            ids = list(ids)
+            if len(set(ids)) != len(ids):
+                raise ValueError(f"Duplicate in {ids=}")
+            if any(i < 0 for i in ids):
+                raise ValueError(f"Negative ids in {ids=}")
+            # check for overlap with others
+            if colliding_ids := all_ids.intersection(ids):
+                raise ValueError(f"{colliding_ids=} for bases[{base_index}] with {ids=}")
+            all_ids.update(ids)
+            # set assignment
+            ids_t = torch.as_tensor(ids, dtype=torch.long)
+            assignment[ids_t, 0] = base_index
+            assignment[ids_t, 1] = torch.arange(len(ids))
+            back_fill_mask[ids_t] = False
+            # instantiate (if necessary)
+            base = representation_resolver.make(base, base_kwargs, max_id=len(ids))
+            if base.max_id != len(ids):
+                raise ValueError(f"Mismatch between {len(ids)=} and {base.max_id=}")
+            # append bases
+            base_instances.append(base)
+        # create backfill representation
+        backfill_max_id = max_id - len(all_ids)
+        backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id)
+        if backfill_max_id != backfill.max_id:
+            raise ValueError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
+        # set backfill assignment
+        assignment[back_fill_mask] = torch.arange(backfill.max_id)
+        super().__init__(assignment=assignment, bases=[backfill, *base_instances], **kwargs)
 
 
 @parse_docdata
