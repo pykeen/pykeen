@@ -1542,6 +1542,61 @@ class PartitionRepresentation(Representation):
         return x
 
 
+class MultiBackfillRepresentation(PartitionRepresentation):
+    """Fill missing ids by backfill representation."""
+
+    # TODO: can, and should, we merge this with BackfillRepresentation?
+    #  @cthoyt says: I think that we should make the BackfillRepresentation a special case of this one
+
+    def __init__(
+        self,
+        *,
+        max_id: int,
+        specs: Sequence[BackfillSpec],
+        backfill: HintOrType[Representation] = None,
+        backfill_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ) -> None:
+        """Initialize the backfill representation."""
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        base_instances: list[Representation] = []
+        # format: (base_index, local_index)
+        assignment = torch.zeros(size=(max_id, 2), dtype=torch.long)
+        back_fill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
+        all_ids: set[int] = set()
+        for base_index, spec in enumerate(specs, start=1):
+            ids = list(spec.ids)
+            n_ids = len(ids)
+
+            # check for overlap with others
+            if colliding_ids := all_ids.intersection(ids):
+                raise ValueError(f"{colliding_ids=} for bases[{base_index}] with {ids=}")
+            all_ids.update(ids)
+
+            # set assignment
+            ids_t = torch.as_tensor(ids, dtype=torch.long)
+            assignment[ids_t, 0] = base_index
+            assignment[ids_t, 1] = torch.arange(n_ids)
+            back_fill_mask[ids_t] = False
+
+            base = spec.get_base()
+            # append bases
+            base_instances.append(base)
+
+        # create backfill representation
+        backfill_max_id = max_id - len(all_ids)
+        # FIXME better message when missing shape for backfill, or can we have a policy on automatically inferring this?
+        backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id)
+        if backfill_max_id != backfill.max_id:
+            raise MaxIDMismatchError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
+        # set backfill assignment
+        assignment[back_fill_mask, 0] = 0  # since the backfill comes first in the list of bases
+        assignment[back_fill_mask, 1] = torch.arange(backfill.max_id)
+        super().__init__(assignment=assignment, bases=[backfill, *base_instances], **kwargs)
+
+
 @parse_docdata
 class BackfillRepresentation(PartitionRepresentation):
     """A variant of a partition representation that is easily applicable to a single base representation.
@@ -1653,61 +1708,6 @@ class BackfillSpec:
             )
 
         return base
-
-
-class MultiBackfillRepresentation(PartitionRepresentation):
-    """Fill missing ids by backfill representation."""
-
-    # TODO: can, and should, we merge this with BackfillRepresentation?
-    #  @cthoyt says: I think that we should make the BackfillRepresentation a special case of this one
-
-    def __init__(
-        self,
-        *,
-        max_id: int,
-        specs: Sequence[BackfillSpec],
-        backfill: HintOrType[Representation] = None,
-        backfill_kwargs: OptionalKwargs = None,
-        **kwargs,
-    ) -> None:
-        """Initialize the backfill representation."""
-        # import here to avoid cyclic import
-        from . import representation_resolver
-
-        base_instances: list[Representation] = []
-        # format: (base_index, local_index)
-        assignment = torch.zeros(size=(max_id, 2), dtype=torch.long)
-        back_fill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
-        all_ids: set[int] = set()
-        for base_index, spec in enumerate(specs, start=1):
-            ids = list(spec.ids)
-            n_ids = len(ids)
-
-            # check for overlap with others
-            if colliding_ids := all_ids.intersection(ids):
-                raise ValueError(f"{colliding_ids=} for bases[{base_index}] with {ids=}")
-            all_ids.update(ids)
-
-            # set assignment
-            ids_t = torch.as_tensor(ids, dtype=torch.long)
-            assignment[ids_t, 0] = base_index
-            assignment[ids_t, 1] = torch.arange(n_ids)
-            back_fill_mask[ids_t] = False
-
-            base = spec.get_base()
-            # append bases
-            base_instances.append(base)
-
-        # create backfill representation
-        backfill_max_id = max_id - len(all_ids)
-        # FIXME better message when missing shape for backfill, or can we have a policy on automatically inferring this?
-        backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id)
-        if backfill_max_id != backfill.max_id:
-            raise MaxIDMismatchError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
-        # set backfill assignment
-        assignment[back_fill_mask, 0] = 0  # since the backfill comes first in the list of bases
-        assignment[back_fill_mask, 1] = torch.arange(backfill.max_id)
-        super().__init__(assignment=assignment, bases=[backfill, *base_instances], **kwargs)
 
 
 @parse_docdata
