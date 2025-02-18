@@ -1553,6 +1553,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         *,
         max_id: int,
         specs: Sequence[BackfillSpec],
+        shape: OneOrSequence[int] | None = None,
         backfill: HintOrType[Representation] = None,
         backfill_kwargs: OptionalKwargs = None,
         **kwargs,
@@ -1585,16 +1586,23 @@ class MultiBackfillRepresentation(PartitionRepresentation):
             # append bases
             base_instances.append(base)
 
+        shapes = [base.shape for base in base_instances]
+        if len(set(shapes)) != 1:
+            raise ValueError(f"Base instances had multiple different shapes: {shapes}")
+        if shape is None:
+            shape = shapes[0]
+        elif shapes[0] != shape:
+            raise ValueError(f"The explicitly given {shape=} was different than the shape of the bases {shapes[0]}")
+
         # create backfill representation
         backfill_max_id = max_id - len(all_ids)
-        # FIXME better message when missing shape for backfill, or can we have a policy on automatically inferring this?
-        backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id)
+        backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=shape)
         if backfill_max_id != backfill.max_id:
             raise MaxIDMismatchError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
         # set backfill assignment
         assignment[backfill_mask, 0] = 0  # since the backfill comes first in the list of bases
         assignment[backfill_mask, 1] = torch.arange(backfill.max_id)
-        super().__init__(assignment=assignment, bases=[backfill, *base_instances], **kwargs)
+        super().__init__(assignment=assignment, bases=[backfill, *base_instances], shape=shape, **kwargs)
 
 
 @parse_docdata
