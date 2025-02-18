@@ -1133,13 +1133,15 @@ class TextRepresentation(Representation):
             Additional keyword-based parameters passed to :class:`pykeen.nn.representation.Representation`
 
         :raises MaxIDMismatchError:
-            If the ``max_id`` does not match.
+            if the ``max_id`` was given explicitly and does not match the length of the labels
         """
         encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
-        # check max_id
-        max_id = max_id or len(labels)
-        if max_id != len(labels):
+
+        if max_id is None:
+            max_id = len(labels)
+        elif max_id != len(labels):
             raise MaxIDMismatchError(f"max_id={max_id} does not match len(labels)={len(labels)}")
+
         labels = _clean_labels(labels, missing_action)
         # infer shape
         shape = ShapeError.verify(shape=encoder.encode_all(labels[0:1]).shape[1:], reference=shape)
@@ -1276,7 +1278,7 @@ class CombinedRepresentation(Representation):
         :raises ValueError:
             If the `max_id` of the base representations are not all the same
         :raises MaxIDMismatchError:
-            If the `max_id` of the base representations do not match the given one
+            if the ``max_id`` was given explicitly and does not match the bases' ``max_id``
         """
         # input normalization
         combination = combination_resolver.make(combination, combination_kwargs)
@@ -1645,7 +1647,7 @@ class TransformedRepresentation(Representation):
             additional keyword-based parameters passed to :meth:`Representation.__init__`.
 
         :raises MaxIDMismatchError:
-            if the max_id or shape does not match
+            if the ``max_id`` was given explicitly and does not match the base's ``max_id``
         """
         # import here to avoid cyclic import
         from . import representation_resolver
@@ -1660,7 +1662,6 @@ class TransformedRepresentation(Representation):
             reference=shape,
         )
         if max_id is None:
-            # infer max_id
             max_id = base.max_id
         elif max_id != base.max_id:
             raise MaxIDMismatchError(f"Incompatible max_id={max_id} vs. base.max_id={base.max_id}")
