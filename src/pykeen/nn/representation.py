@@ -1628,18 +1628,15 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         backfill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
         all_ids: set[int] = set()
         for base_index, partition in enumerate(partitions):
-            ids = list(partition.ids)
-            n_ids = len(ids)
-
             # check for overlap with others
-            if colliding_ids := all_ids.intersection(ids):
-                raise ValueError(f"{colliding_ids=} for bases[{base_index}] with {ids=}")
-            all_ids.update(ids)
+            if colliding_ids := all_ids.intersection(partition.ids):
+                raise ValueError(f"{colliding_ids=} for bases[{base_index}] with {partition.ids=}")
+            all_ids.update(partition.ids)
 
             # set assignment
-            ids_t = torch.as_tensor(ids, dtype=torch.long)
+            ids_t = torch.as_tensor(partition.ids, dtype=torch.long)
             assignment[ids_t, 0] = base_index
-            assignment[ids_t, 1] = torch.arange(n_ids)
+            assignment[ids_t, 1] = torch.arange(len(partition.ids))
             backfill_mask[ids_t] = False
 
             bases.append(partition.get_base())
