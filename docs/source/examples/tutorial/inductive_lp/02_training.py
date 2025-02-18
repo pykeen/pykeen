@@ -1,3 +1,5 @@
+"""Train the inductive model."""
+
 from pykeen.datasets.inductive.ilp_teru import InductiveFB15k237
 from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator
 from pykeen.training import SLCWATrainingLoop

@@ -1,3 +1,5 @@
+"""Setup an inductive node piece model with GNN encoder."""
+
 from pykeen.datasets.inductive.ilp_teru import InductiveFB15k237
 from pykeen.losses import NSSALoss
 from pykeen.models.inductive import InductiveNodePieceGNN
