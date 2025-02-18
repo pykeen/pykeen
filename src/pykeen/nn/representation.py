@@ -1592,8 +1592,13 @@ class Partition:
         return base
 
 
+@parse_docdata
 class MultiBackfillRepresentation(PartitionRepresentation):
-    """Fill missing ids by backfill representation."""
+    """Fill missing ids by backfill representation.
+
+    ---
+    name: Multi-Backfill
+    """
 
     def __init__(
         self,
@@ -2088,8 +2093,13 @@ class TensorTrainRepresentation(Representation):
         ).view(*assignment.shape[:-1], *self.shape)
 
 
+@parse_docdata
 class FeatureEnrichedEmbedding(CombinedRepresentation):
-    """A combination of a static feature and a learnable representation."""
+    """A combination of a static feature and a learnable representation.
+
+    ---
+    name: Feature-enriched Embedding
+    """
 
     def __init__(self, tensor: FloatTensor | PretrainedInitializer, **kwargs) -> None:
         """Initialize the feature-enriched embedding.
@@ -2118,8 +2128,13 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
         )
 
 
+@parse_docdata
 class MLPTransformedRepresentation(TransformedRepresentation):
-    """A representation that transforms a representation with a learnable two-layer MLP."""
+    """A representation that transforms a representation with a learnable two-layer MLP.
+
+    ---
+    name: MLP Transformed
+    """
 
     def __init__(
         self,
