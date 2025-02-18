@@ -1647,7 +1647,7 @@ class BackfillSpec:
 
         base = representation_resolver.make(self.base, self.kwargs, max_id=max_id)
         if base.max_id != max_id:
-            raise ValueError(
+            raise MaxIDMismatchError(
                 f"When constructing the backfill specification, got a mismatch between the number of IDs "
                 f"given ({max_id:,}) and the max_id assigned to the base representation ({base.max_id:,})"
             )
@@ -1703,7 +1703,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         # FIXME better message when missing shape for backfill, or can we have a policy on automatically inferring this?
         backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id)
         if backfill_max_id != backfill.max_id:
-            raise ValueError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
+            raise MaxIDMismatchError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
         # set backfill assignment
         assignment[back_fill_mask, 0] = 0  # since the backfill comes first in the list of bases
         assignment[back_fill_mask, 1] = torch.arange(backfill.max_id)
