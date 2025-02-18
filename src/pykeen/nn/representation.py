@@ -29,6 +29,7 @@ from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
+from typing_extensions import Self
 
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
@@ -557,7 +558,7 @@ class LowRankRepresentation(Representation):
         self.weight = weight
 
     @classmethod
-    def approximate(cls, other: Representation, num_bases: int = 3, **kwargs) -> LowRankRepresentation:
+    def approximate(cls, other: Representation, num_bases: int = 3, **kwargs) -> Self:
         """
         Construct a low-rank approximation of another representation.
 
