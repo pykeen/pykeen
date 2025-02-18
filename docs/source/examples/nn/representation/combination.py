@@ -3,7 +3,7 @@
 import torch
 
 from pykeen.models import ERModel
-from pykeen.nn import Embedding, CombinedRepresentation, ConcatProjectionCombination
+from pykeen.nn import CombinedRepresentation, ConcatProjectionCombination, Embedding
 from pykeen.triples.generation import generate_triples_factory
 from pykeen.typing import FloatTensor
 
