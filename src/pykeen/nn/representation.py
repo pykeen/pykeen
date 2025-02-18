@@ -1545,9 +1545,6 @@ class PartitionRepresentation(Representation):
 class MultiBackfillRepresentation(PartitionRepresentation):
     """Fill missing ids by backfill representation."""
 
-    # TODO: can, and should, we merge this with BackfillRepresentation?
-    #  @cthoyt says: I think that we should make the BackfillRepresentation a special case of this one
-
     def __init__(
         self,
         *,
