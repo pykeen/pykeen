@@ -2089,12 +2089,6 @@ class TensorTrainRepresentation(Representation):
 class FeatureEnrichedEmbedding(CombinedRepresentation):
     """A combination of a static feature and a learnable representation."""
 
-    # TODO would be interesting to have a further constrained version of this
-    #  that has the combination always produce tensors of the same size as the
-    #  input, so this can be more easily used as a building block for more
-    #  sophisticated components - this can be achieved by setting the combination
-    #  to ConcatProjectionCombination
-
     def __init__(self, tensor: FloatTensor, **kwargs) -> None:
         """Initialize the feature-enriched embedding.
 
@@ -2102,6 +2096,9 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
             the tensor of pretrained embeddings.
         :param kwargs:
             Keyword arguments passed to :meth:`pykeen.nn.CombinedRepresentation.__init__`.
+
+            For example, if you want to make sure that the dimensions of the output are
+            the same as the input, set ``combination="ConcatProjectionCombination"``.
 
         In the following example, we show how to construct a feature-enriched embedding.
 
