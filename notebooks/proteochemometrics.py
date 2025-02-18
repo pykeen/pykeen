@@ -309,7 +309,9 @@ def main() -> None:
     ).add_membership_columns(training=tf)
     predictions_df = predictions_pack.df
     # TODO use proper CURIEs throughout so filtering is more direct on str.startswith("uniprot:")
-    predictions_df = predictions_df[~predictions_df["tail_label"].str.startswith("GO:")]
+    predictions_df = predictions_df[
+        ~(predictions_df["tail_label"].str.startswith("GO:") | predictions_df["tail_label"].str.startswith("CHEMBL"))
+    ]
     click.echo(predictions_df.head(30).to_markdown(index=False))
 
 
