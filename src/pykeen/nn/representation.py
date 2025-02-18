@@ -1132,7 +1132,7 @@ class TextRepresentation(Representation):
         :param kwargs:
             Additional keyword-based parameters passed to :class:`pykeen.nn.representation.Representation`
 
-        :raises ValueError:
+        :raises MaxIDMismatchError:
             If the ``max_id`` does not match.
         """
         encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
@@ -1274,7 +1274,9 @@ class CombinedRepresentation(Representation):
             Additional keyword-based parameters passed to :class:`pykeen.nn.representation.Representation`.
 
         :raises ValueError:
-            If the `max_id` of the base representations does not match.
+            If the `max_id` of the base representations are not all the same
+        :raises MaxIDMismatchError:
+            If the `max_id` of the base representations do not match the given one
         """
         # input normalization
         combination = combination_resolver.make(combination, combination_kwargs)
@@ -1289,7 +1291,9 @@ class CombinedRepresentation(Representation):
         max_ids = sorted(set(b.max_id for b in base))
         if len(max_ids) != 1:
             # note: we could also relax the requirement, and set max_id = min(max_ids)
-            raise ValueError(f"Maximum number of IDs does not match! {max_ids}")
+            raise ValueError(
+                f"Maximum number of IDs are not the same in all base representations. Unique max_ids={max_ids}"
+            )
 
         if max_id is None:
             max_id = max_ids[0]
@@ -1640,7 +1644,7 @@ class TransformedRepresentation(Representation):
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`.
 
-        :raises ValueError:
+        :raises MaxIDMismatchError:
             if the max_id or shape does not match
         """
         # import here to avoid cyclic import
