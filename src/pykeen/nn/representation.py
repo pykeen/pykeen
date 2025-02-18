@@ -1602,7 +1602,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         assignment = torch.zeros(size=(max_id, 2), dtype=torch.long)
         backfill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
         all_ids: set[int] = set()
-        for base_index, spec in enumerate(specs, start=1):
+        for base_index, spec in enumerate(specs):
             ids = list(spec.ids)
             n_ids = len(ids)
 
@@ -1629,15 +1629,28 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         elif shapes[0] != shape:
             raise ValueError(f"The explicitly given {shape=} was different than the shape of the bases {shapes[0]}")
 
-        # create backfill representation
         backfill_max_id = max_id - len(all_ids)
-        backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=shape)
-        if backfill_max_id != backfill.max_id:
-            raise MaxIDMismatchError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
-        # set backfill assignment
-        assignment[backfill_mask, 0] = 0  # since the backfill comes first in the list of bases
-        assignment[backfill_mask, 1] = torch.arange(backfill.max_id)
-        super().__init__(assignment=assignment, bases=[backfill, *base_instances], shape=shape, **kwargs)
+        if backfill_max_id < 0:
+            raise ValueError(
+                f"The given {max_id=} was less than the number of unique IDs given in the backfill specification"
+            )
+        elif backfill_max_id == 0:
+            raise ValueError(
+                f"The given {max_id=} was equivalent to the number of unique IDs given in the backfill "
+                f"specification. This means that no backfill representation is necessary, and instead this "
+                f"will be a simple PartitionRepresentation."
+            )
+        else:
+            # create backfill representation
+            backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=shape)
+            if backfill_max_id != backfill.max_id:
+                raise MaxIDMismatchError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
+            # set backfill assignment
+            assignment[backfill_mask, 0] = len(base_instances)  # since the backfill comes last
+            assignment[backfill_mask, 1] = torch.arange(backfill.max_id)
+            base_instances.append(backfill)
+
+        super().__init__(assignment=assignment, bases=base_instances, shape=shape, **kwargs)
 
 
 @parse_docdata
