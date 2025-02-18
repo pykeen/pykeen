@@ -1606,7 +1606,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
 
 
 @parse_docdata
-class BackfillRepresentation(PartitionRepresentation):
+class BackfillRepresentation(MultiBackfillRepresentation):
     """A variant of a partition representation that is easily applicable to a single base representation.
 
     .. literalinclude:: ../examples/nn/representation/backfill.py
@@ -1655,29 +1655,13 @@ class BackfillRepresentation(PartitionRepresentation):
             If the backfill representation is initialized within this constructor,
             it will receive the base representation's shape.
         """
-        # import here to avoid cyclic import
-        from . import representation_resolver
-
-        # TODO: maybe we should keep the order unchanged?
-        base_ids = sorted(set(base_ids))
-        base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
-        # comment: not all representations support passing a shape parameter
-        backfill = representation_resolver.make(
-            backfill, backfill_kwargs, max_id=max_id - base.max_id, shape=base.shape
+        super().__init__(
+            max_id=max_id,
+            specs=[BackfillSpec(list(base_ids), base, base_kwargs)],
+            backfill=backfill,
+            backfill_kwargs=backfill_kwargs,
+            **kwargs,
         )
-
-        # create assignment
-        assignment = torch.full(size=(max_id, 2), fill_value=1, dtype=torch.long)
-        # base
-        assignment[base_ids, 0] = 0
-        assignment[base_ids, 1] = torch.arange(base.max_id)
-        # other
-        mask = torch.ones(assignment.shape[0], dtype=torch.bool)
-        mask[base_ids] = False
-        assignment[mask, 0] = 1
-        assignment[mask, 1] = torch.arange(backfill.max_id)
-
-        super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
 
 
 @dataclasses.dataclass
