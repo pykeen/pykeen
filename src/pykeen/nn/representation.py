@@ -2092,7 +2092,8 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
     # TODO would be interesting to have a further constrained version of this
     #  that has the combination always produce tensors of the same size as the
     #  input, so this can be more easily used as a building block for more
-    #  sophisticated components
+    #  sophisticated components - this can be achieved by setting the combination
+    #  to ConcatProjectionCombination
 
     def __init__(self, tensor: FloatTensor, **kwargs) -> None:
         """Initialize the feature-enriched embedding.
