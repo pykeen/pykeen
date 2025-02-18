@@ -38,10 +38,10 @@ from tqdm import tqdm
 
 from pykeen.models import ERModel
 from pykeen.nn import (
-    BackfillSpec,
     Embedding,
     FeatureEnrichedEmbedding,
     MultiBackfillRepresentation,
+    Partition,
     Representation,
     TransformedRepresentation,
 )
@@ -276,9 +276,9 @@ def main() -> None:
     click.echo("Constructing entity representation")
     entity_repr = MultiBackfillRepresentation(
         max_id=tf.num_entities,
-        specs=[
-            BackfillSpec(chemical_ids, chemical_trans_repr),
-            BackfillSpec(protein_ids, protein_trans_repr),
+        partitions=[
+            Partition(chemical_ids, chemical_trans_repr),
+            Partition(protein_ids, protein_trans_repr),
         ],
     )
 

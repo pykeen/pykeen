@@ -59,7 +59,6 @@ from .pyg import (
 )
 from .representation import (
     BackfillRepresentation,
-    BackfillSpec,
     BiomedicalCURIERepresentation,
     CachedTextRepresentation,
     CombinedRepresentation,
@@ -67,6 +66,7 @@ from .representation import (
     FeatureEnrichedEmbedding,
     LowRankRepresentation,
     MultiBackfillRepresentation,
+    Partition,
     PartitionRepresentation,
     Representation,
     SingleCompGCNRepresentation,
@@ -88,7 +88,7 @@ __all__ = [
     "LowRankRepresentation",
     "NodePieceRepresentation",
     "PartitionRepresentation",
-    "BackfillSpec",
+    "Partition",
     "MultiBackfillRepresentation",
     "BackfillRepresentation",
     "RGCNRepresentation",

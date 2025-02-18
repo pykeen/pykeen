@@ -1553,7 +1553,7 @@ class PartitionRepresentation(Representation):
 
 
 @dataclasses.dataclass
-class BackfillSpec:
+class Partition:
     """A specification for a backfill representation."""
 
     #: The global identifiers for the entities, appearing in the order that
@@ -1597,7 +1597,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         self,
         *,
         max_id: int,
-        specs: Sequence[BackfillSpec],
+        partitions: Sequence[Partition],
         shape: OneOrSequence[int] | None = None,
         backfill: HintOrType[Representation] = None,
         backfill_kwargs: OptionalKwargs = None,
@@ -1612,8 +1612,8 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         assignment = torch.zeros(size=(max_id, 2), dtype=torch.long)
         backfill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
         all_ids: set[int] = set()
-        for base_index, spec in enumerate(specs):
-            ids = list(spec.ids)
+        for base_index, partition in enumerate(partitions):
+            ids = list(partition.ids)
             n_ids = len(ids)
 
             # check for overlap with others
@@ -1627,7 +1627,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
             assignment[ids_t, 1] = torch.arange(n_ids)
             backfill_mask[ids_t] = False
 
-            bases.append(spec.get_base())
+            bases.append(partition.get_base())
 
         shapes = [base.shape for base in bases]
         if len(set(shapes)) != 1:
@@ -1713,7 +1713,7 @@ class BackfillRepresentation(MultiBackfillRepresentation):
         """
         super().__init__(
             max_id=max_id,
-            specs=[BackfillSpec(list(base_ids), base, base_kwargs)],
+            partitions=[Partition(list(base_ids), base, base_kwargs)],
             backfill=backfill,
             backfill_kwargs=backfill_kwargs,
             **kwargs,
