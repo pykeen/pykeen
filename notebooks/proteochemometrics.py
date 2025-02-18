@@ -84,7 +84,9 @@ class MLPTransformedEmbedding(TransformedRepresentation):
         )
 
 
-def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> RepresentationBackmap:
+def get_human_protein_embedding(
+    uniprot_ids: Sequence[str] | None = None, *, trainable: bool = False
+) -> RepresentationBackmap:
     """Get an embedding object for human proteins.
 
     :param uniprot_ids: A sequence of UniProt protein identifiers (like `Q13506`) to get the embeddings for. If none are
@@ -104,11 +106,16 @@ def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> Rep
             ]
         )
         uniprot_id_to_idx = {uniprot_id: idx for idx, uniprot_id in enumerate(uniprot_ids)}
-        representation = FeatureEnrichedEmbedding(tensor)
+        if trainable:
+            representation = FeatureEnrichedEmbedding(tensor)
+        else:
+            representation = Embedding.from_pretrained(tensor)
     return RepresentationBackmap(representation, uniprot_ids, uniprot_id_to_idx)
 
 
-def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> RepresentationBackmap:
+def get_chemical_embedding(
+    chembl_ids: Sequence[str] | None = None, *, trainable: bool = False
+) -> RepresentationBackmap:
     """Get an embedding object for chemicals.
 
     :param chembl_ids: A sequence of ChEMBL chemical identifiers (like `CHEMBL465070`) to get the embeddings for. If
@@ -155,8 +162,10 @@ def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> Represent
             actual_chembl_ids.append(chembl_id)
 
     tensor = torch.stack(tensors)
-    representation = FeatureEnrichedEmbedding(tensor)
-
+    if trainable:
+        representation = FeatureEnrichedEmbedding(tensor)
+    else:
+        representation = Embedding.from_pretrained(tensor)
     return RepresentationBackmap(representation, actual_chembl_ids, chembl_id_to_idx)
 
 
@@ -211,6 +220,11 @@ def main() -> None:
     """Demonstrate using chemical representations for a subset of entities."""
     target_dim = 32
 
+    # set this to true to enrich the chemical and protein features
+    # with additional learnable embeddings. Note that this makes
+    # training take a _lot_ longer
+    enrich_features_with_embedding = False
+
     example_chembl_id = "CHEMBL1097808"
 
     click.echo("Getting chemical-protein triples from ExCAPE-DB")
@@ -223,12 +237,14 @@ def main() -> None:
 
     click.echo("Getting protein representations from UniProt")
     # example uniprots ["Q13506", "Q13507", "Q13508", "Q13509"]
-    protein_base_repr, _, uniprot_ids = get_human_protein_embedding(uniprot_ids)
+    protein_base_repr, _, uniprot_ids = get_human_protein_embedding(
+        uniprot_ids, trainable=enrich_features_with_embedding
+    )
     protein_trans_repr = MLPTransformedEmbedding(protein_base_repr, target_dim)
 
     click.echo("Getting chemical representations from ChEMBL")
     # example chembls ["CHEMBL465070", "CHEMBL517481", "CHEMBL465069"]
-    chemical_base_repr, _, chembl_ids = get_chemical_embedding(chembl_ids)
+    chemical_base_repr, _, chembl_ids = get_chemical_embedding(chembl_ids, trainable=enrich_features_with_embedding)
     chemical_trans_repr = MLPTransformedEmbedding(chemical_base_repr, target_dim)
 
     click.echo("Getting protein-GO triples from the Gene Ontology")
