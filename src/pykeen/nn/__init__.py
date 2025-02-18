@@ -65,6 +65,7 @@ from .representation import (
     Embedding,
     FeatureEnrichedEmbedding,
     LowRankRepresentation,
+    MLPTransformedRepresentation,
     MultiBackfillRepresentation,
     Partition,
     PartitionRepresentation,
@@ -107,6 +108,7 @@ __all__ = [
     "BiomedicalCURIERepresentation",
     "VisualRepresentation",
     "WikidataVisualRepresentation",
+    "MLPTransformedRepresentation",
     "tokenizer_resolver",
     "representation_resolver",
     # INITIALIZER

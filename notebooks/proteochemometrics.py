@@ -40,12 +40,11 @@ from pykeen.models import ERModel
 from pykeen.nn import (
     Embedding,
     FeatureEnrichedEmbedding,
+    MLPTransformedRepresentation,
     MultiBackfillRepresentation,
     Partition,
     Representation,
-    TransformedRepresentation,
 )
-from pykeen.nn.perceptron import TwoLayerMLP
 from pykeen.predict import predict_target
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
@@ -63,25 +62,6 @@ class RepresentationBackmap(NamedTuple):
     embedding: Representation
     labels: list[str]
     label_to_id: dict[str, int]
-
-
-class MLPTransformedEmbedding(TransformedRepresentation):
-    """A representation that transforms an embedding with a simple MLP."""
-
-    def __init__(
-        self,
-        base: Representation,
-        output_dim: int,
-        *,
-        ratio: int | float = 2,
-    ) -> None:
-        """Initialize the representation."""
-        super().__init__(
-            base=base,
-            max_id=base.max_id,
-            shape=(output_dim,),
-            transformation=TwoLayerMLP(base.shape[0], output_dim, ratio=ratio),
-        )
 
 
 def get_human_protein_embedding(
@@ -240,12 +220,12 @@ def main() -> None:
     protein_base_repr, _, uniprot_ids = get_human_protein_embedding(
         uniprot_ids, trainable=enrich_features_with_embedding
     )
-    protein_trans_repr = MLPTransformedEmbedding(protein_base_repr, target_dim)
+    protein_trans_repr = MLPTransformedRepresentation(protein_base_repr, target_dim)
 
     click.echo("Getting chemical representations from ChEMBL")
     # example chembls ["CHEMBL465070", "CHEMBL517481", "CHEMBL465069"]
     chemical_base_repr, _, chembl_ids = get_chemical_embedding(chembl_ids, trainable=enrich_features_with_embedding)
-    chemical_trans_repr = MLPTransformedEmbedding(chemical_base_repr, target_dim)
+    chemical_trans_repr = MLPTransformedRepresentation(chemical_base_repr, target_dim)
 
     click.echo("Getting protein-GO triples from the Gene Ontology")
     go_df = get_protein_go_triples()

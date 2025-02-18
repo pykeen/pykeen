@@ -35,6 +35,7 @@ from typing_extensions import Self
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import PretrainedInitializer, initializer_resolver, uniform_norm_p1_
+from .perceptron import TwoLayerMLP
 from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
 from .text.encoder import TextEncoder, text_encoder_resolver
 from .utils import ShapeError
@@ -84,6 +85,7 @@ __all__ = [
     "CachedTextRepresentation",
     "WikidataTextRepresentation",
     "BiomedicalCURIERepresentation",
+    "MLPTransformedRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -2110,4 +2112,28 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
             max_id=static_embedding.max_id,
             base=[static_embedding, trainable_embedding],
             **kwargs,
+        )
+
+
+class MLPTransformedRepresentation(TransformedRepresentation):
+    """A representation that transforms a representation with a learnable two-layer MLP."""
+
+    def __init__(
+        self,
+        *,
+        base: HintOrType[Representation] = None,
+        base_kwargs: OptionalKwargs = None,
+        output_dim: int | None = None,
+        ratio: int | float = 2,
+    ) -> None:
+        """Initialize the representation."""
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        base = representation_resolver.make(base, base_kwargs)
+
+        super().__init__(
+            base=base,
+            max_id=base.max_id,
+            transformation=TwoLayerMLP(base.shape[0], output_dim=output_dim, ratio=ratio),
         )
