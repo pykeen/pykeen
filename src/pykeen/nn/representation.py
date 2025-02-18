@@ -497,8 +497,10 @@ class LowRankRepresentation(Representation):
     name: Low Rank Embedding
     """
 
-    # TODO: implement this
-    # @update_docstring_with_resolver_keys(ResolverKey("bases", resolver="pykeen.nn.representation_resolver"))
+    @update_docstring_with_resolver_keys(
+        ResolverKey("base", resolver="pykeen.nn.representation_resolver"),
+        ResolverKey("weight", resolver="pykeen.nn.representation_resolver"),
+    )
     def __init__(
         self,
         *,
