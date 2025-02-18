@@ -2091,11 +2091,12 @@ class TensorTrainRepresentation(Representation):
 class FeatureEnrichedEmbedding(CombinedRepresentation):
     """A combination of a static feature and a learnable representation."""
 
-    def __init__(self, tensor: FloatTensor, **kwargs) -> None:
+    def __init__(self, tensor: FloatTensor | PretrainedInitializer, **kwargs) -> None:
         """Initialize the feature-enriched embedding.
 
         :param tensor:
-            the tensor of pretrained embeddings.
+            the tensor of pretrained embeddings, or a pretrained initializer that wraps
+            a tensor of pretrained embeddings.
         :param kwargs:
             Keyword arguments passed to :meth:`pykeen.nn.CombinedRepresentation.__init__`.
 
@@ -2106,7 +2107,9 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
 
         .. literalinclude:: ../examples/nn/representation/feature_enriched_embedding.py
         """
-        static_embedding = Embedding.from_pretrained(tensor, trainable=False)
+        if not isinstance(tensor, PretrainedInitializer):
+            tensor = PretrainedInitializer(tensor)
+        static_embedding = tensor.as_embedding()
         trainable_embedding = Embedding(max_id=static_embedding.max_id, shape=static_embedding.shape)
         super().__init__(
             max_id=static_embedding.max_id,
