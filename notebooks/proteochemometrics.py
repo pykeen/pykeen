@@ -67,11 +67,11 @@ class RepresentationBackmap(NamedTuple):
 
 
 def get_human_protein_embedding(
-    uniprot_ids: Sequence[str] | None = None, *, trainable: bool = False
+    uniprot_curies: Sequence[str] | None = None, *, trainable: bool = False
 ) -> RepresentationBackmap:
     """Get an embedding object for human proteins.
 
-    :param uniprot_ids: A sequence of UniProt protein identifiers (like `Q13506`) to get the embeddings for. If none are
+    :param uniprot_curies: A sequence of UniProt protein identifiers (like `Q13506`) to get the embeddings for. If none are
         given, will retrieve all human proteins.
 
     :returns: A pair of an embedding object and a mapping from UniProt protein identifier strings to their respective
@@ -79,28 +79,28 @@ def get_human_protein_embedding(
     """
     path = pystow.ensure("bio", "uniprot", url=HUMAN_T5_PROTEIN_EMBEDDINGS)
     with h5py.File(path, "r") as file:
-        if uniprot_ids is None:
-            uniprot_ids = sorted(file)
+        if uniprot_curies is None:
+            uniprot_curies = sorted(file)
         tensor = torch.stack(
             [
-                torch.tensor(file[uniprot_id])
-                for uniprot_id in tqdm(uniprot_ids, unit_scale=True, unit="protein", desc="Getting protein features")
+                torch.tensor(file[uniprot_curie.removeprefix("uniprot:")])
+                for uniprot_curie in tqdm(uniprot_curies, unit_scale=True, unit="protein", desc="Getting protein features")
             ]
         )
-        uniprot_id_to_idx = {uniprot_id: idx for idx, uniprot_id in enumerate(uniprot_ids)}
+        uniprot_id_to_idx = {uniprot_id: idx for idx, uniprot_id in enumerate(uniprot_curies)}
         if trainable:
             representation = FeatureEnrichedEmbedding(tensor, shape=32)
         else:
             representation = Embedding.from_pretrained(tensor)
-    return RepresentationBackmap(representation, [f"uniprot:{i}" for i in uniprot_ids], uniprot_id_to_idx)
+    return RepresentationBackmap(representation, [f"uniprot:{i}" for i in uniprot_curies], uniprot_id_to_idx)
 
 
 def get_chemical_embedding(
-    chembl_ids: Sequence[str] | None = None, *, trainable: bool = False
+    chembl_curies: Sequence[str] | None = None, *, trainable: bool = False
 ) -> RepresentationBackmap:
     """Get an embedding object for chemicals.
 
-    :param chembl_ids: A sequence of ChEMBL chemical identifiers (like `CHEMBL465070`) to get the embeddings for. If
+    :param chembl_curies: A sequence of ChEMBL chemical identifiers (like `CHEMBL465070`) to get the embeddings for. If
         none are given, will retrieve all ChEMBL chemicals (around 2.5 million)
 
     :returns: A pair of an embedding object and a mapping from ChEMBL chemical identifier strings to their respective
@@ -108,25 +108,25 @@ def get_chemical_embedding(
         radius of 2
     """
     path = pystow.ensure("chembl", CHEMBL_VERSION, url=CHEMBL_EMBEDDINGS)
-    if chembl_ids is not None:
-        chembl_ids = set(chembl_ids)
+    if chembl_curies is not None:
+        chembl_curies = set(chembl_curies)
     with gzip.open(path, mode="rt") as file:
         for _ in range(6):  # throw away headers
             next(file)
 
         count = itt.count()
-        chembl_id_to_idx = {}
+        chembl_curie_to_idx = {}
         # keep track of this in case of duplicates, missings, or errors
-        actual_chembl_ids = []
+        actual_chembl_curies = []
         tensors = []
         for line in tqdm(file, unit_scale=True, total=2_470_000, desc="Getting chemical features", unit="chemical"):
             hex_fp, chembl_id = line.strip().split("\t")
-
-            if chembl_ids and chembl_id not in chembl_ids:
+            chembl_curie = f"chembl.compound:{chembl_id}"
+            if chembl_curies and chembl_curie not in chembl_curies:
                 continue
 
-            if chembl_id in chembl_id_to_idx:
-                tqdm.write(f"duplicate of {chembl_id}")
+            if chembl_curie in chembl_curie_to_idx:
+                tqdm.write(f"duplicate of {chembl_curie}")
                 continue
 
             # Convert hex to binary
@@ -139,16 +139,16 @@ def get_chemical_embedding(
             arr = np.zeros((bitvect.GetNumBits(),), dtype=np.uint8)
             ConvertToNumpyArray(bitvect, arr)
 
-            chembl_id_to_idx[chembl_id] = next(count)
+            chembl_curie_to_idx[chembl_curie] = next(count)
             tensors.append(torch.tensor(arr))
-            actual_chembl_ids.append(f"chembl.compound:{chembl_id}")
+            actual_chembl_curies.append(chembl_curie)
 
     tensor = torch.stack(tensors)
     if trainable:
         representation = FeatureEnrichedEmbedding(tensor, shape=32)
     else:
         representation = Embedding.from_pretrained(tensor)
-    return RepresentationBackmap(representation, actual_chembl_ids, chembl_id_to_idx)
+    return RepresentationBackmap(representation, actual_chembl_curies, chembl_curie_to_idx)
 
 
 def get_protein_go_triples():
@@ -187,14 +187,13 @@ def get_chemical_protein_triples():
     # keep only relationships qualified by ChEMBL, even though this way out of date in 2025
     df = df[df["DB"] == "chembl20"]
 
-    df["uniprot"] = df["Entrez_ID"].map(_uniprot_curie_from_entrez)
+    df["object"] = df["Entrez_ID"].map(_uniprot_curie_from_entrez)
 
     # throw away anything that can't be mapped to human uniprot
-    df = df[df["uniprot"].notna()]
+    df = df[df["object"].notna()]
 
     # turn into CURIEs
-    df["subject"] = df["uniprot"].map(lambda s: f"uniprot:{s}")
-    df["object"] = df["Original_Entry_ID"].map(lambda s: f"chembl.compound:{s}")
+    df["subject"] = df["Original_Entry_ID"].map(lambda s: f"chembl.compound:{s}")
 
     df = df[["subject", "object"]].drop_duplicates()
     df.to_csv(path, sep="\t", index=False)
@@ -204,7 +203,7 @@ def get_chemical_protein_triples():
 def _uniprot_curie_from_entrez(s) -> str | None:
     if pd.isna(s):
         return None
-    uniprot_id = uniprot_client.get_id_from_entrez
+    uniprot_id = uniprot_client.get_id_from_entrez(s)
     return uniprot_id and f"uniprot:{uniprot_id}"
 
 
@@ -219,15 +218,15 @@ def main() -> None:
     # training take a _lot_ longer
     enrich_features_with_embedding = True
 
-    example_chembl_id = "CHEMBL1097808"
+    example_chembl_id = "chembl.compound:CHEMBL1097808"
 
     click.echo("Getting chemical-protein triples from ExCAPE-DB")
     excape_df = get_chemical_protein_triples()
-    chemical_curies = excape_df["chembl"].unique()
-    protein_curies = excape_df["uniprot"].unique()
+    chemical_curies = excape_df["subject"].unique()
+    protein_curies = excape_df["object"].unique()
 
     if example_chembl_id not in chemical_curies:
-        raise ValueError("need to pick a chembl ID for prediction that's in ExCAPE-DB")
+        raise KeyError(f"{example_chembl_id} is not in ExCAPE-DB. Try {list(chemical_curies[0])}")
 
     click.echo("Getting protein representations from UniProt")
     # example uniprots ["Q13506", "Q13507", "Q13508", "Q13509"]
@@ -294,12 +293,12 @@ def main() -> None:
     )
 
     click.echo("Training")
-    losses = training_loop.train(tf, num_epochs=2, batch_size=200_000)
+    losses = training_loop.train(tf, num_epochs=300, batch_size=500_000)
     HERE.joinpath("losses.txt").write_text("\n".join(map(str, losses)))
 
     model.save_state(HERE.joinpath("model.pkl"))
 
-    click.echo("Make some predictions")
+    click.echo(f"Make some predictions for {example_chembl_id}")
     predictions_pack = predict_target(
         model=model,
         head=example_chembl_id,
@@ -308,8 +307,10 @@ def main() -> None:
         targets=protein_idx,
     ).add_membership_columns(training=tf)
     predictions_df = predictions_pack.df
-    # predictions_df = predictions_df[predictions_df["tail_label"].str.startswith("uniprot:")]
-    predictions_df["tail_name"] = predictions_df["tail_label"].map(uniprot_client.get_gene_name)
+    predictions_df = predictions_df[predictions_df["tail_label"].str.startswith("uniprot:")]
+    predictions_df["tail_name"] = predictions_df["tail_label"].map(
+        lambda s: uniprot_client.get_gene_name(s.removeprefix("uniprot:"))
+    )
     click.echo(predictions_df.head(30).to_markdown(index=False))
 
 
