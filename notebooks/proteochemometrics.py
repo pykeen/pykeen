@@ -45,6 +45,7 @@ from pykeen.nn import (
     Representation,
     TransformedRepresentation,
 )
+from pykeen.nn.perceptron import TwoLayerMLP
 from pykeen.predict import predict_target
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
@@ -69,23 +70,17 @@ class MLPTransformedEmbedding(TransformedRepresentation):
 
     def __init__(
         self,
-        base: Embedding,
+        base: Representation,
         output_dim: int,
         *,
         ratio: int | float = 2,
     ) -> None:
         """Initialize the representation."""
-        hidden_dim = int(ratio * output_dim)
-        transformation = torch.nn.Sequential(
-            torch.nn.Linear(base.shape[0], hidden_dim),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden_dim, output_dim),
-        )
         super().__init__(
             base=base,
             max_id=base.max_id,
             shape=(output_dim,),
-            transformation=transformation,
+            transformation=TwoLayerMLP(base.shape[0], output_dim, ratio=ratio),
         )
 
 
@@ -269,7 +264,6 @@ def main() -> None:
             BackfillSpec(chemical_ids, chemical_trans_repr),
             BackfillSpec(protein_ids, protein_trans_repr),
         ],
-        backfill_kwargs={"shape": (target_dim,)},
     )
 
     relation_repr = Embedding(max_id=tf.num_relations, shape=(target_dim,))
