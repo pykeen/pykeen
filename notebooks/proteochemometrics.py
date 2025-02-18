@@ -132,7 +132,8 @@ def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> Represent
 
         count = itt.count()
         chembl_id_to_idx = {}
-        rrr = []
+        # keep track of this in case of duplicates, missings, or errors
+        actual_chembl_ids = []
         tensors = []
         for line in tqdm(file, unit_scale=True, total=2_470_000, desc="Getting chemical features", unit="chemical"):
             hex_fp, chembl_id = line.strip().split("\t")
@@ -156,12 +157,12 @@ def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> Represent
 
             chembl_id_to_idx[chembl_id] = next(count)
             tensors.append(torch.tensor(arr))
-            rrr.append(chembl_id)
+            actual_chembl_ids.append(chembl_id)
 
     tensor = torch.stack(tensors)
     representation = FeatureEnrichedEmbedding(tensor)
 
-    return RepresentationBackmap(representation, rrr, chembl_id_to_idx)
+    return RepresentationBackmap(representation, actual_chembl_ids, chembl_id_to_idx)
 
 
 def get_protein_go_triples():
