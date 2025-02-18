@@ -2118,12 +2118,16 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
     name: Feature-enriched Embedding
     """
 
-    def __init__(self, tensor: FloatTensor | PretrainedInitializer, shape=None, **kwargs) -> None:
+    def __init__(
+        self, tensor: FloatTensor | PretrainedInitializer, shape: None | int | Sequence[int] = None, **kwargs
+    ) -> None:
         """Initialize the feature-enriched embedding.
 
         :param tensor:
             the tensor of pretrained embeddings, or a pretrained initializer that wraps
             a tensor of pretrained embeddings.
+        :param shape:
+            an explicit shape. If None, it is inferred from the provided tensor.
         :param kwargs:
             Keyword arguments passed to :meth:`pykeen.nn.CombinedRepresentation.__init__`.
 
