@@ -2101,7 +2101,7 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
     name: Feature-enriched Embedding
     """
 
-    def __init__(self, tensor: FloatTensor | PretrainedInitializer, **kwargs) -> None:
+    def __init__(self, tensor: FloatTensor | PretrainedInitializer, shape=None, **kwargs) -> None:
         """Initialize the feature-enriched embedding.
 
         :param tensor:
@@ -2120,7 +2120,9 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
         if not isinstance(tensor, PretrainedInitializer):
             tensor = PretrainedInitializer(tensor)
         static_embedding = tensor.as_embedding()
-        trainable_embedding = Embedding(max_id=static_embedding.max_id, shape=static_embedding.shape)
+        if shape is None:
+            shape = static_embedding.shape
+        trainable_embedding = Embedding(max_id=static_embedding.max_id, shape=shape)
         super().__init__(
             max_id=static_embedding.max_id,
             base=[static_embedding, trainable_embedding],

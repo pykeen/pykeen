@@ -89,7 +89,7 @@ def get_human_protein_embedding(
         )
         uniprot_id_to_idx = {uniprot_id: idx for idx, uniprot_id in enumerate(uniprot_ids)}
         if trainable:
-            representation = FeatureEnrichedEmbedding(tensor)
+            representation = FeatureEnrichedEmbedding(tensor, shape=32)
         else:
             representation = Embedding.from_pretrained(tensor)
     return RepresentationBackmap(representation, uniprot_ids, uniprot_id_to_idx)
@@ -141,11 +141,11 @@ def get_chemical_embedding(
 
             chembl_id_to_idx[chembl_id] = next(count)
             tensors.append(torch.tensor(arr))
-            actual_chembl_ids.append(chembl_id)
+            actual_chembl_ids.append(f"chembl.compound:{chembl_id}")
 
     tensor = torch.stack(tensors)
     if trainable:
-        representation = FeatureEnrichedEmbedding(tensor)
+        representation = FeatureEnrichedEmbedding(tensor, shape=32)
     else:
         representation = Embedding.from_pretrained(tensor)
     return RepresentationBackmap(representation, actual_chembl_ids, chembl_id_to_idx)
@@ -167,20 +167,20 @@ def get_protein_go_triples():
 
 def get_chemical_protein_triples():
     """Get triples from ExCAPE-DB with chemicals as subjects and proteins as objects."""
-    path = pystow.ensure("bio", "excape", url=EXCAPE_URL)
-    ff_path = pystow.join("bio", "excape", name="excape_human_chembl_subset.tsv")
-    if ff_path.is_file():
-        df = pd.read_csv(ff_path, sep="\t")
+    excape_module = pystow.module("bio", "excape")
+    if (path := excape_module.join(name="excape_human_chembl_subset.tsv")).is_file():
+        df = pd.read_csv(path, sep="\t")
         return df
 
-    df = pd.read_csv(
-        path,
-        sep="\t",
-        compression="xz",
-        usecols=["DB", "Original_Entry_ID", "Entrez_ID", "Activity_Flag", "Tax_ID"],
-        dtype=str,
+    df = excape_module.ensure_csv(
+        url=EXCAPE_URL,
+        read_csv_kwargs=dict(
+            sep="\t",
+            compression="xz",
+            usecols=["DB", "Original_Entry_ID", "Entrez_ID", "Activity_Flag", "Tax_ID"],
+            dtype=str,
+        ),
     )
-
     # keep only active relationships
     df = df[df["Activity_Flag"] == "A"]
     # slice down to human targets
@@ -188,24 +188,33 @@ def get_chemical_protein_triples():
     # keep only relationships qualified by ChEMBL, even though this way out of date in 2025
     df = df[df["DB"] == "chembl20"]
 
-    df["uniprot"] = df["Entrez_ID"].map(uniprot_client.get_id_from_entrez)
+    df["uniprot"] = df["Entrez_ID"].map(_uniprot_curie_from_entrez)
 
     # throw away anything that can't be mapped to human uniprot
     df = df[df["uniprot"].notna()]
 
     df = df[["uniprot", "Original_Entry_ID"]].drop_duplicates().rename(columns={"Original_Entry_ID": "chembl"})
-    df.to_csv(ff_path, sep="\t", index=False)
+    df.to_csv(path, sep="\t", index=False)
     return df
+
+
+def _uniprot_curie_from_entrez(s) -> str | None:
+    if pd.isna(s):
+        return None
+    uniprot_id = uniprot_client.get_id_from_entrez
+    return uniprot_id and f"uniprot:{uniprot_id}"
 
 
 def main() -> None:
     """Demonstrate using chemical representations for a subset of entities."""
     target_dim = 32
 
+    device = torch.device("cpu")
+
     # set this to true to enrich the chemical and protein features
     # with additional learnable embeddings. Note that this makes
     # training take a _lot_ longer
-    enrich_features_with_embedding = False
+    enrich_features_with_embedding = True
 
     example_chembl_id = "CHEMBL1097808"
 
@@ -262,16 +271,16 @@ def main() -> None:
             Partition(chemical_ids, chemical_trans_repr),
             Partition(protein_ids, protein_trans_repr),
         ],
-    )
+    ).to(device)
 
-    relation_repr = Embedding(max_id=tf.num_relations, shape=(target_dim,))
+    relation_repr = Embedding(max_id=tf.num_relations, shape=target_dim).to(device)
 
     model = ERModel(
         triples_factory=tf,
         interaction="DistMult",
         entity_representations=entity_repr,
         relation_representations=relation_repr,
-    )
+    ).to(device)
 
     click.echo("Constructing training loop")
     training_loop = SLCWATrainingLoop(
@@ -280,7 +289,7 @@ def main() -> None:
     )
 
     click.echo("Training")
-    losses = training_loop.train(tf, num_epochs=50, batch_size=512)
+    losses = training_loop.train(tf, num_epochs=250, batch_size=512 * 256)
     HERE.joinpath("losses.txt").write_text("\n".join(map(str, losses)))
 
     model.save_state(HERE.joinpath("model.pkl"))
@@ -293,10 +302,7 @@ def main() -> None:
         triples_factory=tf,
     ).add_membership_columns(training=tf)
     predictions_df = predictions_pack.df
-    # TODO use proper CURIEs throughout so filtering is more direct on str.startswith("uniprot:")
-    predictions_df = predictions_df[
-        ~(predictions_df["tail_label"].str.startswith("GO:") | predictions_df["tail_label"].str.startswith("CHEMBL"))
-    ]
+    predictions_df = predictions_df[predictions_df["tail_label"].str.startswith("uniprot:")]
     click.echo(predictions_df.head(30).to_markdown(index=False))
 
 
