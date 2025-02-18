@@ -1662,20 +1662,19 @@ class MultiBackfillRepresentation(PartitionRepresentation):
                 f"{len(all_ids)=:_}"
             )
         elif backfill_max_id == 0:
-            raise ValueError(
-                f"The given {max_id=} was equivalent to the number of unique IDs given in the backfill "
+            logger.warning(
+                f"The given {max_id=:_} was equivalent to the number of unique IDs given in the backfill "
                 f"specification. This means that no backfill representation is necessary, and instead this "
                 f"will be a simple PartitionRepresentation."
             )
-        else:
-            # create backfill representation
-            backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=shape)
-            if backfill_max_id != backfill.max_id:
-                raise MaxIDMismatchError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
-            # set backfill assignment
-            assignment[backfill_mask, 0] = len(bases)  # since the backfill comes last
-            assignment[backfill_mask, 1] = torch.arange(backfill.max_id)
-            bases.append(backfill)
+        # create backfill representation
+        backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=shape)
+        if backfill_max_id != backfill.max_id:
+            raise MaxIDMismatchError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
+        # set backfill assignment
+        assignment[backfill_mask, 0] = len(bases)  # since the backfill comes last
+        assignment[backfill_mask, 1] = torch.arange(backfill.max_id)
+        bases.append(backfill)
 
         super().__init__(assignment=assignment, bases=bases, shape=shape, **kwargs)
 
