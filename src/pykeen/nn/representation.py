@@ -1240,6 +1240,10 @@ class CombinedRepresentation(Representation):
     It has a sequence of base representations, each providing a representation for each index.
     A combination is used to combine the multiple representations for the same index into a single one.
 
+    Example usage:
+
+    .. literalinclude:: ../examples/nn/representation/text_wikidata.py
+
     ---
     name: Combined
     """
@@ -2097,6 +2101,9 @@ class TensorTrainRepresentation(Representation):
 class FeatureEnrichedEmbedding(CombinedRepresentation):
     """A combination of a static feature and a learnable representation.
 
+    In the following example, we show how to construct a feature-enriched embedding.
+
+    .. literalinclude:: ../examples/nn/representation/feature_enriched_embedding.py
     ---
     name: Feature-enriched Embedding
     """
@@ -2112,10 +2119,6 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
 
             For example, if you want to make sure that the dimensions of the output are
             the same as the input, set ``combination="ConcatProjectionCombination"``.
-
-        In the following example, we show how to construct a feature-enriched embedding.
-
-        .. literalinclude:: ../examples/nn/representation/feature_enriched_embedding.py
         """
         if not isinstance(tensor, PretrainedInitializer):
             tensor = PretrainedInitializer(tensor)
