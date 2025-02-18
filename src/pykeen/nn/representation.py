@@ -80,6 +80,7 @@ __all__ = [
     "MultiBackfillRepresentation",
     "TransformedRepresentation",
     "TextRepresentation",
+    "FeatureEnrichedEmbedding",
     "CachedTextRepresentation",
     "WikidataTextRepresentation",
     "BiomedicalCURIERepresentation",
@@ -447,7 +448,16 @@ class Embedding(Representation):
 
     @classmethod
     def from_pretrained(cls, tensor: FloatTensor, *, trainable: bool = False, **kwargs: Any) -> Self:
-        """Construct an embedding from a pre-trained tensor."""
+        """Construct an embedding from a pre-trained tensor.
+
+        :param tensor:
+            the tensor of pretrained embeddings.
+        :param trainable:
+            should the embedding be trainable? defaults to false, since this
+            constructor is typically used for making a static embedding.
+        :param kwargs: Remaining keyword arguments to pass to the :class:`pykeen.nn.Embedding` constructor
+        :returns: An embedding representation
+        """
         initializer = PretrainedInitializer(tensor)
         max_id, *shape = tensor.shape
         return cls(max_id=max_id, shape=shape, initializer=initializer, trainable=trainable, **kwargs)
@@ -2074,3 +2084,32 @@ class TensorTrainRepresentation(Representation):
         return einsum(
             self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases, strict=False))
         ).view(*assignment.shape[:-1], *self.shape)
+
+
+class FeatureEnrichedEmbedding(CombinedRepresentation):
+    """A combination of a static feature and a learnable representation."""
+
+    # TODO would be interesting to have a further constrained version of this
+    #  that has the combination always produce tensors of the same size as the
+    #  input, so this can be more easily used as a building block for more
+    #  sophisticated components
+
+    def __init__(self, tensor: FloatTensor, **kwargs) -> None:
+        """Initialize the feature-enriched embedding.
+
+        :param tensor:
+            the tensor of pretrained embeddings.
+        :param kwargs:
+            Keyword arguments passed to :meth:`pykeen.nn.CombinedRepresentation.__init__`.
+
+        In the following example, we show how to construct a feature-enriched embedding.
+
+        .. literalinclude:: ../examples/nn/representation/feature_enriched_embedding.py
+        """
+        static_embedding = Embedding.from_pretrained(tensor, trainable=False)
+        trainable_embedding = Embedding(max_id=static_embedding.max_id, shape=static_embedding.shape)
+        super().__init__(
+            max_id=static_embedding.max_id,
+            base=[static_embedding, trainable_embedding],
+            **kwargs,
+        )

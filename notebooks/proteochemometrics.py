@@ -37,8 +37,14 @@ from rdkit.DataStructs import ConvertToNumpyArray
 from tqdm import tqdm
 
 from pykeen.models import ERModel
-from pykeen.nn import Embedding
-from pykeen.nn.representation import BackfillSpec, MultiBackfillRepresentation, TransformedRepresentation
+from pykeen.nn import (
+    BackfillSpec,
+    Embedding,
+    FeatureEnrichedEmbedding,
+    MultiBackfillRepresentation,
+    Representation,
+    TransformedRepresentation,
+)
 from pykeen.predict import predict_target
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
@@ -50,10 +56,10 @@ EXCAPE_URL = "https://zenodo.org/record/2543724/files/pubchem.chembl.dataset4pub
 GO_URL = "https://current.geneontology.org/annotations/goa_human.gaf.gz"
 
 
-class EmbeddingBackmap(NamedTuple):
-    """A pair of an embedding and a reverse local lookup."""
+class RepresentationBackmap(NamedTuple):
+    """A representation and a reverse local lookup."""
 
-    embedding: Embedding
+    embedding: Representation
     labels: list[str]
     label_to_id: dict[str, int]
 
@@ -83,7 +89,7 @@ class MLPTransformedEmbedding(TransformedRepresentation):
         )
 
 
-def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> EmbeddingBackmap:
+def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> RepresentationBackmap:
     """Get an embedding object for human proteins.
 
     :param uniprot_ids: A sequence of UniProt protein identifiers (like `Q13506`) to get the embeddings for. If none are
@@ -103,11 +109,11 @@ def get_human_protein_embedding(uniprot_ids: Sequence[str] | None = None) -> Emb
             ]
         )
         uniprot_id_to_idx = {uniprot_id: idx for idx, uniprot_id in enumerate(uniprot_ids)}
-        embedding = Embedding.from_pretrained(tensor)
-    return EmbeddingBackmap(embedding, uniprot_ids, uniprot_id_to_idx)
+        representation = FeatureEnrichedEmbedding(tensor)
+    return RepresentationBackmap(representation, uniprot_ids, uniprot_id_to_idx)
 
 
-def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> EmbeddingBackmap:
+def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> RepresentationBackmap:
     """Get an embedding object for chemicals.
 
     :param chembl_ids: A sequence of ChEMBL chemical identifiers (like `CHEMBL465070`) to get the embeddings for. If
@@ -153,9 +159,9 @@ def get_chemical_embedding(chembl_ids: Sequence[str] | None = None) -> Embedding
             rrr.append(chembl_id)
 
     tensor = torch.stack(tensors)
-    embedding = Embedding.from_pretrained(tensor)
+    representation = FeatureEnrichedEmbedding(tensor)
 
-    return EmbeddingBackmap(embedding, rrr, chembl_id_to_idx)
+    return RepresentationBackmap(representation, rrr, chembl_id_to_idx)
 
 
 def get_protein_go_triples():
