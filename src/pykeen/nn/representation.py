@@ -502,10 +502,12 @@ class LowRankRepresentation(Representation):
     def __init__(
         self,
         *,
-        max_id: int,  # TODO: allow None
+        # TODO: allow None
+        max_id: int,
         # TODO: remove
         shape: OneOrSequence[int],
-        num_bases: int = 3,  # TODO: allow None
+        # TODO: allow None
+        num_bases: int = 3,
         # base representation
         # base representation
         base: HintOrType[Representation] = None,
