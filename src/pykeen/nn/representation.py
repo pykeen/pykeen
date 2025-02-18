@@ -103,8 +103,9 @@ constrainer_resolver = FunctionResolver(
 #: A resolver for normalizers.
 #:
 #: - :func:`torch.nn.functional.normalize`
+#: - :func:`torch.nn.functional.softmax`
 normalizer_resolver = FunctionResolver(
-    [functional.normalize],
+    [functional.normalize, functional.softmax],
     location="pykeen.nn.representation.normalizer_resolver",
 )
 
