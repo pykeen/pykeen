@@ -23,6 +23,7 @@ Run with ``uv run --script proteochemometrics.py``.
 import gzip
 import itertools as itt
 from collections.abc import Sequence
+from pathlib import Path
 from typing import NamedTuple
 
 import click
@@ -54,6 +55,7 @@ CHEMBL_VERSION = "35"
 CHEMBL_EMBEDDINGS = f"https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_{CHEMBL_VERSION}/chembl_{CHEMBL_VERSION}.fps.gz"
 EXCAPE_URL = "https://zenodo.org/record/2543724/files/pubchem.chembl.dataset4publication_inchi_smiles_v2.tsv.xz"
 GO_URL = "https://current.geneontology.org/annotations/goa_human.gaf.gz"
+HERE = Path(__file__).parent.resolve()
 
 
 class RepresentationBackmap(NamedTuple):
@@ -220,12 +222,12 @@ def main() -> None:
     protein_base_repr, _, uniprot_ids = get_human_protein_embedding(
         uniprot_ids, trainable=enrich_features_with_embedding
     )
-    protein_trans_repr = MLPTransformedRepresentation(protein_base_repr, target_dim)
+    protein_trans_repr = MLPTransformedRepresentation(base=protein_base_repr, output_dim=target_dim)
 
     click.echo("Getting chemical representations from ChEMBL")
     # example chembls ["CHEMBL465070", "CHEMBL517481", "CHEMBL465069"]
     chemical_base_repr, _, chembl_ids = get_chemical_embedding(chembl_ids, trainable=enrich_features_with_embedding)
-    chemical_trans_repr = MLPTransformedRepresentation(chemical_base_repr, target_dim)
+    chemical_trans_repr = MLPTransformedRepresentation(base=chemical_base_repr, output_dim=target_dim)
 
     click.echo("Getting protein-GO triples from the Gene Ontology")
     go_df = get_protein_go_triples()
@@ -278,7 +280,10 @@ def main() -> None:
     )
 
     click.echo("Training")
-    training_loop.train(tf, num_epochs=1, batch_size=512)
+    losses = training_loop.train(tf, num_epochs=50, batch_size=512)
+    HERE.joinpath("losses.txt").write_text("\n".join(map(str, losses)))
+
+    model.save_state(HERE.joinpath("model.pkl"))
 
     click.echo("Make some predictions")
     predictions_pack = predict_target(
