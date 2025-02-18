@@ -1564,7 +1564,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         base_instances: list[Representation] = []
         # format: (base_index, local_index)
         assignment = torch.zeros(size=(max_id, 2), dtype=torch.long)
-        back_fill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
+        backfill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
         all_ids: set[int] = set()
         for base_index, spec in enumerate(specs, start=1):
             ids = list(spec.ids)
@@ -1579,7 +1579,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
             ids_t = torch.as_tensor(ids, dtype=torch.long)
             assignment[ids_t, 0] = base_index
             assignment[ids_t, 1] = torch.arange(n_ids)
-            back_fill_mask[ids_t] = False
+            backfill_mask[ids_t] = False
 
             base = spec.get_base()
             # append bases
@@ -1592,8 +1592,8 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         if backfill_max_id != backfill.max_id:
             raise MaxIDMismatchError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
         # set backfill assignment
-        assignment[back_fill_mask, 0] = 0  # since the backfill comes first in the list of bases
-        assignment[back_fill_mask, 1] = torch.arange(backfill.max_id)
+        assignment[backfill_mask, 0] = 0  # since the backfill comes first in the list of bases
+        assignment[backfill_mask, 1] = torch.arange(backfill.max_id)
         super().__init__(assignment=assignment, bases=[backfill, *base_instances], **kwargs)
 
 
