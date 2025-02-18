@@ -92,7 +92,7 @@ def get_human_protein_embedding(
             representation = FeatureEnrichedEmbedding(tensor, shape=32)
         else:
             representation = Embedding.from_pretrained(tensor)
-    return RepresentationBackmap(representation, uniprot_ids, uniprot_id_to_idx)
+    return RepresentationBackmap(representation, [f"uniprot:{i}" for i in uniprot_ids], uniprot_id_to_idx)
 
 
 def get_chemical_embedding(
@@ -159,9 +159,8 @@ def get_protein_go_triples():
     )
     df = df[~df["Relation"].str.startswith("NOT")]
     df = df[df["DB"] == "UniProtKB"]
-    df = df[["DB Object ID", "Relation", "GO ID"]].rename(
-        columns={"DB Object ID": "subject", "Relation": "predicate", "GO ID": "object"}
-    )
+    df["subject"] = df["DB Object ID"].map(lambda s: f"uniprot:{s}")
+    df = df[["subject", "Relation", "GO ID"]].rename(columns={"Relation": "predicate", "GO ID": "object"})
     return df
 
 
@@ -193,7 +192,11 @@ def get_chemical_protein_triples():
     # throw away anything that can't be mapped to human uniprot
     df = df[df["uniprot"].notna()]
 
-    df = df[["uniprot", "Original_Entry_ID"]].drop_duplicates().rename(columns={"Original_Entry_ID": "chembl"})
+    # turn into CURIEs
+    df["subject"] = df["uniprot"].map(lambda s: f"uniprot:{s}")
+    df["object"] = df["Original_Entry_ID"].map(lambda s: f"chembl.compound:{s}")
+
+    df = df[["subject", "object"]].drop_duplicates()
     df.to_csv(path, sep="\t", index=False)
     return df
 
@@ -220,22 +223,24 @@ def main() -> None:
 
     click.echo("Getting chemical-protein triples from ExCAPE-DB")
     excape_df = get_chemical_protein_triples()
-    chembl_ids = excape_df["chembl"].unique()
-    uniprot_ids = excape_df["uniprot"].unique()
+    chemical_curies = excape_df["chembl"].unique()
+    protein_curies = excape_df["uniprot"].unique()
 
-    if example_chembl_id not in chembl_ids:
+    if example_chembl_id not in chemical_curies:
         raise ValueError("need to pick a chembl ID for prediction that's in ExCAPE-DB")
 
     click.echo("Getting protein representations from UniProt")
     # example uniprots ["Q13506", "Q13507", "Q13508", "Q13509"]
-    protein_base_repr, _, uniprot_ids = get_human_protein_embedding(
-        uniprot_ids, trainable=enrich_features_with_embedding
+    protein_base_repr, _, protein_curies = get_human_protein_embedding(
+        protein_curies, trainable=enrich_features_with_embedding
     )
     protein_trans_repr = MLPTransformedRepresentation(base=protein_base_repr, output_dim=target_dim)
 
     click.echo("Getting chemical representations from ChEMBL")
     # example chembls ["CHEMBL465070", "CHEMBL517481", "CHEMBL465069"]
-    chemical_base_repr, _, chembl_ids = get_chemical_embedding(chembl_ids, trainable=enrich_features_with_embedding)
+    chemical_base_repr, _, chemical_curies = get_chemical_embedding(
+        chemical_curies, trainable=enrich_features_with_embedding
+    )
     chemical_trans_repr = MLPTransformedRepresentation(base=chemical_base_repr, output_dim=target_dim)
 
     click.echo("Getting protein-GO triples from the Gene Ontology")
@@ -244,32 +249,32 @@ def main() -> None:
     click.echo("Constructing a triples factory")
     # do some cleanup on the excape df
     excape_df["predicate"] = "modulates"
-    excape_df = excape_df[["chembl", "predicate", "uniprot"]].rename(columns={"chembl": "subject", "uniprot": "object"})
+    excape_df = excape_df[["subject", "predicate", "object"]]
 
     triples_df = pd.concat([excape_df, go_df])
     tf = TriplesFactory.from_labeled_triples(triples_df.values)
 
     # note that the order you add to this set is very important
-    chemical_ids = [
-        tf.entity_labeling.label_to_id[chembl_id]
-        for chembl_id in chembl_ids
-        if chembl_id in tf.entity_labeling.label_to_id
+    chemical_idx = [
+        tf.entity_labeling.label_to_id[chembl_curie]
+        for chembl_curie in chemical_curies
+        if chembl_curie in tf.entity_labeling.label_to_id
     ]
-    click.echo(f"Mapped {len(chemical_ids):,} ChEMBL IDs from edges to Morgan features")
+    click.echo(f"Mapped {len(chemical_idx):,} ChEMBL IDs from edges to Morgan features")
 
-    protein_ids = [
-        tf.entity_labeling.label_to_id[uniprot_id]
-        for uniprot_id in uniprot_ids
-        if uniprot_id in tf.entity_labeling.label_to_id
+    protein_idx = [
+        tf.entity_labeling.label_to_id[uniprot_curie]
+        for uniprot_curie in protein_curies
+        if uniprot_curie in tf.entity_labeling.label_to_id
     ]
-    click.echo(f"Mapped {len(protein_ids):,} UniProt IDs from edges to T5 protein features")
+    click.echo(f"Mapped {len(protein_idx):,} UniProt IDs from edges to T5 protein features")
 
     click.echo("Constructing entity representation")
     entity_repr = MultiBackfillRepresentation(
         max_id=tf.num_entities,
         partitions=[
-            Partition(chemical_ids, chemical_trans_repr),
-            Partition(protein_ids, protein_trans_repr),
+            Partition(chemical_idx, chemical_trans_repr),
+            Partition(protein_idx, protein_trans_repr),
         ],
     ).to(device)
 
@@ -289,7 +294,7 @@ def main() -> None:
     )
 
     click.echo("Training")
-    losses = training_loop.train(tf, num_epochs=250, batch_size=512 * 256)
+    losses = training_loop.train(tf, num_epochs=2, batch_size=200_000)
     HERE.joinpath("losses.txt").write_text("\n".join(map(str, losses)))
 
     model.save_state(HERE.joinpath("model.pkl"))
@@ -300,9 +305,11 @@ def main() -> None:
         head=example_chembl_id,
         relation="modulates",
         triples_factory=tf,
+        targets=protein_idx,
     ).add_membership_columns(training=tf)
     predictions_df = predictions_pack.df
-    predictions_df = predictions_df[predictions_df["tail_label"].str.startswith("uniprot:")]
+    # predictions_df = predictions_df[predictions_df["tail_label"].str.startswith("uniprot:")]
+    predictions_df["tail_name"] = predictions_df["tail_label"].map(uniprot_client.get_gene_name)
     click.echo(predictions_df.head(30).to_markdown(index=False))
 
 
