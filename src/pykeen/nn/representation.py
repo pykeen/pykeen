@@ -1655,22 +1655,27 @@ class MultiBackfillRepresentation(PartitionRepresentation):
                 f"The explicitly given {shape=} was different than the shape of the bases {shapes[0]}"
             )
 
-        backfill_max_id = max_id - len(all_ids)
-        if backfill_max_id < 0:
+        # check number of backfill representations
+        num_total_base_ids = len(all_ids)
+        if max_id < num_total_base_ids:
             raise MaxIDMismatchError(
                 f"The given {max_id=:_} was less than the number of unique IDs given in the backfill specification, "
-                f"{len(all_ids)=:_}"
+                f"{num_total_base_ids=:_}"
             )
-        elif backfill_max_id == 0:
+        elif max_id == num_total_base_ids:
             logger.warning(
                 f"The given {max_id=:_} was equivalent to the number of unique IDs given in the backfill "
-                f"specification. This means that no backfill representation is necessary, and instead this "
-                f"will be a simple PartitionRepresentation."
+                f"specification, {num_total_base_ids=:_}. This means that no backfill representation is necessary, "
+                f"and instead this will be a simple PartitionRepresentation."
             )
+
         # create backfill representation
+        backfill_max_id = max_id - len(all_ids)
         backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=shape)
         if backfill_max_id != backfill.max_id:
-            raise MaxIDMismatchError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
+            raise MaxIDMismatchError(
+                f"Mismatch between {backfill_max_id=} and {backfill.max_id=} of explicitly provided backfill instance."
+            )
         # set backfill assignment
         assignment[backfill_mask, 0] = len(bases)  # since the backfill comes last
         assignment[backfill_mask, 1] = torch.arange(backfill.max_id)
