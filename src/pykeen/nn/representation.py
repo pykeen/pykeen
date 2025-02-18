@@ -118,6 +118,10 @@ class MaxIDMismatchError(ValueError):
     """Raised when the maximum ID of a representation is inconsistent."""
 
 
+class ShapeMismatchError(ValueError):
+    """Raised when there are inconsistent shapes."""
+
+
 class Representation(nn.Module, ExtraReprMixin, ABC):
     """
     A base class for obtaining representations for entities/relations.
@@ -1640,13 +1644,16 @@ class MultiBackfillRepresentation(PartitionRepresentation):
 
             bases.append(partition.get_base())
 
+        # shape verification
         shapes = [base.shape for base in bases]
         if len(set(shapes)) != 1:
-            raise ValueError(f"Base instances had multiple different shapes: {shapes}")
+            raise ShapeMismatchError(f"Base instances had multiple different shapes: {shapes}")
         if shape is None:
             shape = shapes[0]
         elif shapes[0] != shape:
-            raise ValueError(f"The explicitly given {shape=} was different than the shape of the bases {shapes[0]}")
+            raise ShapeMismatchError(
+                f"The explicitly given {shape=} was different than the shape of the bases {shapes[0]}"
+            )
 
         backfill_max_id = max_id - len(all_ids)
         if backfill_max_id < 0:
