@@ -578,7 +578,7 @@ class LowRankRepresentation(Representation):
         # get base representations, shape: (n, *ds)
         x = other(indices=None)
         # calculate SVD, U.shape: (n, k), s.shape: (k,), u.shape: (k, prod(ds))
-        u, s, vh = torch.svd_lowrank(x.view(x.shape[0], -1), q=r.num_bases)
+        u, s, vh = torch.svd_lowrank(x.view(x.shape[0], -1), q=num_bases)
         # setup weight & base representation
         weight = Embedding(
             max_id=num_bases,
