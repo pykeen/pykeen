@@ -1597,7 +1597,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         # import here to avoid cyclic import
         from . import representation_resolver
 
-        base_instances: list[Representation] = []
+        bases: list[Representation] = []
         # format: (base_index, local_index)
         assignment = torch.zeros(size=(max_id, 2), dtype=torch.long)
         backfill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
@@ -1617,11 +1617,9 @@ class MultiBackfillRepresentation(PartitionRepresentation):
             assignment[ids_t, 1] = torch.arange(n_ids)
             backfill_mask[ids_t] = False
 
-            base = spec.get_base()
-            # append bases
-            base_instances.append(base)
+            bases.append(spec.get_base())
 
-        shapes = [base.shape for base in base_instances]
+        shapes = [base.shape for base in bases]
         if len(set(shapes)) != 1:
             raise ValueError(f"Base instances had multiple different shapes: {shapes}")
         if shape is None:
@@ -1646,11 +1644,11 @@ class MultiBackfillRepresentation(PartitionRepresentation):
             if backfill_max_id != backfill.max_id:
                 raise MaxIDMismatchError(f"Mismatch between {backfill_max_id=} and {backfill.max_id=}")
             # set backfill assignment
-            assignment[backfill_mask, 0] = len(base_instances)  # since the backfill comes last
+            assignment[backfill_mask, 0] = len(bases)  # since the backfill comes last
             assignment[backfill_mask, 1] = torch.arange(backfill.max_id)
-            base_instances.append(backfill)
+            bases.append(backfill)
 
-        super().__init__(assignment=assignment, bases=base_instances, shape=shape, **kwargs)
+        super().__init__(assignment=assignment, bases=bases, shape=shape, **kwargs)
 
 
 @parse_docdata
