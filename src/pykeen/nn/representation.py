@@ -1677,7 +1677,8 @@ class MultiBackfillRepresentation(PartitionRepresentation):
                 f"Mismatch between {backfill_max_id=} and {backfill.max_id=} of explicitly provided backfill instance."
             )
         # set backfill assignment
-        assignment[backfill_mask, 0] = len(bases)  # since the backfill comes last
+        # since the backfill comes last, and it has not been added to the bases list yet:
+        assignment[backfill_mask, 0] = len(bases)
         assignment[backfill_mask, 1] = torch.arange(backfill.max_id)
         bases.append(backfill)
 
