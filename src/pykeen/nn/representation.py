@@ -1658,7 +1658,8 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         backfill_max_id = max_id - len(all_ids)
         if backfill_max_id < 0:
             raise ValueError(
-                f"The given {max_id=} was less than the number of unique IDs given in the backfill specification"
+                f"The given {max_id=:_} was less than the number of unique IDs given in the backfill specification, "
+                f"{len(all_ids)=:_}"
             )
         elif backfill_max_id == 0:
             raise ValueError(
