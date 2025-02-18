@@ -1542,6 +1542,44 @@ class PartitionRepresentation(Representation):
         return x
 
 
+@dataclasses.dataclass
+class BackfillSpec:
+    """A specification for a backfill representation."""
+
+    #: The global identifiers for the entities, appearing in the order that
+    #: corresponds to their local identifier within the base representation
+    ids: Sequence[int]
+
+    #: the base representation, or a hint to generate it
+    base: HintOrType[Representation]
+
+    #: the optional keyword arguments used to instantiate the base representation
+    kwargs: OptionalKwargs | None = None
+
+    def __post_init__(self) -> None:
+        """Implement data integrity checks."""
+        if len(set(self.ids)) != len(self.ids):
+            raise ValueError(f"Duplicate in {self.ids=}")
+        if any(i < 0 for i in self.ids):
+            raise ValueError(f"Negative ids in {self.ids=}")
+
+    def get_base(self) -> Representation:
+        """Instantiate the base representation."""
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        max_id = len(self.ids)
+
+        base = representation_resolver.make(self.base, self.kwargs, max_id=max_id)
+        if base.max_id != max_id:
+            raise MaxIDMismatchError(
+                f"When constructing the backfill specification, got a mismatch between the number of IDs "
+                f"given ({max_id:,}) and the max_id assigned to the base representation ({base.max_id:,})"
+            )
+
+        return base
+
+
 class MultiBackfillRepresentation(PartitionRepresentation):
     """Fill missing ids by backfill representation."""
 
@@ -1659,44 +1697,6 @@ class BackfillRepresentation(MultiBackfillRepresentation):
             backfill_kwargs=backfill_kwargs,
             **kwargs,
         )
-
-
-@dataclasses.dataclass
-class BackfillSpec:
-    """A specification for a backfill representation."""
-
-    #: The global identifiers for the entities, appearing in the order that
-    #: corresponds to their local identifier within the base representation
-    ids: Sequence[int]
-
-    #: the base representation, or a hint to generate it
-    base: HintOrType[Representation]
-
-    #: the optional keyword arguments used to instantiate the base representation
-    kwargs: OptionalKwargs | None = None
-
-    def __post_init__(self) -> None:
-        """Implement data integrity checks."""
-        if len(set(self.ids)) != len(self.ids):
-            raise ValueError(f"Duplicate in {self.ids=}")
-        if any(i < 0 for i in self.ids):
-            raise ValueError(f"Negative ids in {self.ids=}")
-
-    def get_base(self) -> Representation:
-        """Instantiate the base representation."""
-        # import here to avoid cyclic import
-        from . import representation_resolver
-
-        max_id = len(self.ids)
-
-        base = representation_resolver.make(self.base, self.kwargs, max_id=max_id)
-        if base.max_id != max_id:
-            raise MaxIDMismatchError(
-                f"When constructing the backfill specification, got a mismatch between the number of IDs "
-                f"given ({max_id:,}) and the max_id assigned to the base representation ({base.max_id:,})"
-            )
-
-        return base
 
 
 @parse_docdata
