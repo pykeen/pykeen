@@ -33,7 +33,7 @@ from typing_extensions import Self
 
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
-from .init import PretrainedInitializer, initializer_resolver, uniform_norm_p1_
+from .init import PretrainedInitializer, initializer_resolver
 from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
 from .text.encoder import TextEncoder, text_encoder_resolver
 from .utils import ShapeError
@@ -103,8 +103,9 @@ constrainer_resolver = FunctionResolver(
 #: A resolver for normalizers.
 #:
 #: - :func:`torch.nn.functional.normalize`
+#: - :func:`torch.nn.functional.softmax`
 normalizer_resolver = FunctionResolver(
-    [functional.normalize],
+    [functional.normalize, functional.softmax],
     location="pykeen.nn.representation.normalizer_resolver",
 )
 
@@ -511,19 +512,33 @@ class LowRankRepresentation(Representation):
     .. math ::
         E[i] = \sum_k B[i, k] \cdot W[k]
 
+    This representation implements the generalized form, where both, $B$ and $W$ are arbitrary representations
+    themselves.
+
+    Example usage:
+
+    .. literalinclude:: ../examples/nn/representation/low_rank_mixture.py
+
     ---
     name: Low Rank Embedding
     """
 
-    # TODO: implement this
-    # @update_docstring_with_resolver_keys(ResolverKey("bases", resolver="pykeen.nn.representation_resolver"))
+    @update_docstring_with_resolver_keys(
+        ResolverKey("base", resolver="pykeen.nn.representation_resolver"),
+        ResolverKey("weight", resolver="pykeen.nn.representation_resolver"),
+    )
     def __init__(
         self,
         *,
-        max_id: int,
-        shape: OneOrSequence[int],
-        num_bases: int = 3,
-        weight_initializer: Initializer = uniform_norm_p1_,
+        max_id: int | None = None,
+        shape: Sequence[int] | int | None = None,
+        num_bases: int | None = 3,
+        # base representation
+        base: HintOrType[Representation] = None,
+        base_kwargs: OptionalKwargs = None,
+        # weight representation
+        weight: HintOrType[Representation] = None,
+        weight_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
         """
@@ -531,27 +546,54 @@ class LowRankRepresentation(Representation):
 
         :param max_id:
             The maximum ID (exclusively). Valid Ids reach from ``0`` to ``max_id-1``.
+            If None, a pre-instantiated weight representation needs to be provided.
         :param shape:
-            The shape of an individual base representation.
-
+            The shape of an individual representation.
+            If None, a pre-instantiated base representation has to be provided.
         :param num_bases:
             The number of bases. More bases increase expressivity, but also increase the number of trainable parameters.
-        :param weight_initializer:
-            The initializer for basis weights.
+            If None, a pre-instantiated base representation has to be provided.
+
+        :param weight:
+            The weight representation, or a hint thereof.
+        :param weight_kwargs:
+            Additional keyword based arguments used to instantiate the weight representation.
+
+        :param base:
+            The base representation, or a hint thereof.
+        :param base_kwargs:
+            Additional keyword based arguments used to instantiate the weight representation.
 
         :param kwargs:
-            Additional keyword based arguments passed to :class:`~pykeen.nn.representation.Embedding`, which is used
-            for the base representations.
+            Additional keyword based arguments passed to :class:`~pykeen.nn.representation.Representation`.
+
+        :raises MaxIDMismatchError:
+            if the ``max_id`` was given explicitly and does not match the ``max_id`` of the weight
+            representation
         """
-        super().__init__(max_id=max_id, shape=shape)
-        self.bases = Embedding(max_id=num_bases, shape=shape, **kwargs)
-        # TODO: allow putting normalization upon weights, e.g., by making it a representation
-        self.weight_initializer = weight_initializer
-        self.weight = nn.Parameter(torch.empty(max_id, num_bases))
-        self.reset_parameters()
+        # has to be imported here to avoid cyclic import
+        from . import representation_resolver
+
+        base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=num_bases, shape=shape)
+        weight = representation_resolver.make(weight, pos_kwargs=weight_kwargs, max_id=max_id, shape=num_bases)
+
+        # Verification
+        if max_id is None:
+            max_id = weight.max_id
+        elif max_id != weight.max_id:
+            raise MaxIDMismatchError(f"Explicitly provided {max_id=:_} does not match {weight.max_id=:_}")
+        if num_bases is not None and base.max_id != num_bases:
+            logger.warning(
+                f"The explicitly provided {num_bases=:_} does not match {base.max_id=:_} and has been ignored."
+            )
+        super().__init__(max_id=max_id, shape=ShapeError.verify(base.shape, shape), **kwargs)
+
+        # assign *after* super init
+        self.base = base
+        self.weight = weight
 
     @classmethod
-    def approximate(cls, other: Representation, **kwargs) -> LowRankRepresentation:
+    def approximate(cls, other: Representation, num_bases: int = 3, **kwargs) -> Self:
         """
         Construct a low-rank approximation of another representation.
 
@@ -563,6 +605,8 @@ class LowRankRepresentation(Representation):
 
         :param other:
             The representation to approximate.
+        :param num_bases:
+            The number of bases. More bases increase expressivity, but also increase the number of trainable parameters.
         :param kwargs:
             Additional keyword-based parameters passed to :meth:`__init__`. Must not contain
             ``max_id`` nor ``shape``, which are determined by ``other``.
@@ -570,26 +614,24 @@ class LowRankRepresentation(Representation):
         :return:
             A low-rank approximation obtained via (truncated) SVD, cf. :func:`torch.svd_lowrank`.
         """
-        # create low-rank approximation object
-        r = cls(max_id=other.max_id, shape=other.shape, **kwargs)
         # get base representations, shape: (n, *ds)
         x = other(indices=None)
         # calculate SVD, U.shape: (n, k), s.shape: (k,), u.shape: (k, prod(ds))
-        u, s, vh = torch.svd_lowrank(x.view(x.shape[0], -1), q=r.num_bases)
-        # overwrite bases and weights
-        r.bases._embeddings.weight.data = vh
-        r.weight.data = torch.einsum("nk, k -> nk", u, s)
-        return r
-
-    # docstr-coverage: inherited
-    def reset_parameters(self) -> None:  # noqa: D102
-        self.bases.reset_parameters()
-        self.weight.data = self.weight_initializer(self.weight)
+        u, s, vh = torch.svd_lowrank(x.view(x.shape[0], -1), q=num_bases)
+        # setup weight & base representation
+        weight = Embedding(
+            max_id=num_bases,
+            shape=num_bases,
+            initializer=PretrainedInitializer(tensor=torch.einsum("nk, k -> nk", u, s)),
+        )
+        base = Embedding(max_id=num_bases, shape=other.shape, initializer=PretrainedInitializer(tensor=vh))
+        # create low-rank approximation object
+        return cls(base=base, weight=weight, **kwargs)
 
     @property
     def num_bases(self) -> int:
         """Return the number of bases."""
-        return self.bases.max_id
+        return self.base.max_id
 
     # docstr-coverage: inherited
     def _plain_forward(
@@ -597,11 +639,9 @@ class LowRankRepresentation(Representation):
         indices: LongTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # get all base representations, shape: (num_bases, *shape)
-        bases = self.bases(indices=None)
+        bases = self.base(indices=None)
         # get base weights, shape: (*batch_dims, num_bases)
-        weight = self.weight
-        if indices is not None:
-            weight = weight[indices.to(self.device)]
+        weight = self.weight(indices=indices)
         # weighted linear combination of bases, shape: (*batch_dims, *shape)
         return torch.tensordot(weight, bases, dims=([-1], [0]))
 
