@@ -227,12 +227,12 @@ class BasesDecomposition(Decomposition):
     @property
     def bases(self) -> torch.Tensor:
         """Return the base representations."""
-        return self.relation_representations.bases(indices=None)
+        return self.relation_representations.base(indices=None)
 
     @property
     def base_weights(self) -> torch.Tensor:
         """Return the base weights."""
-        return self.relation_representations.weight
+        return self.relation_representations.weight(indices=None)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
