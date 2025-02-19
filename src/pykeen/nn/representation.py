@@ -496,6 +496,10 @@ class LowRankRepresentation(Representation):
     This representation implements the generalized form, where both, $B$ and $W$ are arbitrary representations
     themselves.
 
+    Example usage:
+
+    .. literalinclude:: ../examples/nn/representation/low_rank_mixture.py
+
     ---
     name: Low Rank Embedding
     """
