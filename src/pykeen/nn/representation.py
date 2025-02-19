@@ -33,7 +33,7 @@ from typing_extensions import Self
 
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
-from .init import initializer_resolver
+from .init import PretrainedInitializer, initializer_resolver
 from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
 from .text.encoder import TextEncoder, text_encoder_resolver
 from .utils import ShapeError
@@ -582,9 +582,6 @@ class LowRankRepresentation(Representation):
         :return:
             A low-rank approximation obtained via (truncated) SVD, cf. :func:`torch.svd_lowrank`.
         """
-        # TODO: is this a safe non-local import?
-        from .init import PretrainedInitializer
-
         # get base representations, shape: (n, *ds)
         x = other(indices=None)
         # calculate SVD, U.shape: (n, k), s.shape: (k,), u.shape: (k, prod(ds))
