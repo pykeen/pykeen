@@ -1600,6 +1600,10 @@ class Partition:
         return base
 
 
+class InvalidBaseIdsError(ValueError):
+    """Raised when the provided base ids are invalid."""
+
+
 @parse_docdata
 class MultiBackfillRepresentation(PartitionRepresentation):
     """Fill missing ids by backfill representation.
@@ -1706,7 +1710,8 @@ class BackfillRepresentation(MultiBackfillRepresentation):
         :param max_id:
             The total number of entities that need to be represented.
         :param base_ids:
-            The indices which are provided through the base representation.
+            The indices (in the new, increased indexing scheme)
+            which are provided through the base representation.
 
         :param base:
             The base representation, or a hint thereof.
@@ -1726,6 +1731,10 @@ class BackfillRepresentation(MultiBackfillRepresentation):
             The base and backfill representations have to have coherent shapes.
             If the backfill representation is initialized within this constructor,
             it will receive the base representation's shape.
+
+        :raises InvalidBaseIdsError:
+            If some of the base IDs are non-negative, exceed the given max id, or
+            if the base representation's IDs don't match its max_id
         """
         super().__init__(
             max_id=max_id,
