@@ -1579,9 +1579,9 @@ class Partition:
     def __post_init__(self) -> None:
         """Implement data integrity checks."""
         if len(set(self.ids)) != len(self.ids):
-            raise ValueError(f"Duplicate in {self.ids=}")
+            raise InvalidBaseIdsError(f"Duplicate in {self.ids=}")
         if any(i < 0 for i in self.ids):
-            raise ValueError(f"Negative ids in {self.ids=}")
+            raise InvalidBaseIdsError(f"Some of the {self.ids=} are not non-negative.")
 
     def get_base(self) -> Representation:
         """Instantiate the base representation."""
@@ -1632,6 +1632,9 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         backfill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
         all_ids: set[int] = set()
         for base_index, partition in enumerate(partitions):
+            if max(partition.ids) >= max_id:
+                raise InvalidBaseIdsError(f"Some of the {partition.ids=} exceed {max_id=:_}")
+
             # check for overlap with others
             if colliding_ids := all_ids.intersection(partition.ids):
                 raise ValueError(f"{colliding_ids=} for bases[{base_index}] with {partition.ids=}")
