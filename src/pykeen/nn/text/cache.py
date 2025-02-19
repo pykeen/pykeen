@@ -40,6 +40,10 @@ class TextCache(ABC):
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str | None]:
         """Get text for the given identifiers for the cache."""
 
+    def get_texts_dict(self, identifiers: Sequence[str]) -> dict[str, str | None]:
+        """Get a dictionary from identifiers to their associated text."""
+        return dict(zip(identifiers, self.get_texts(identifiers), strict=False))
+
 
 class IdentityCache(TextCache):
     """A cache without functionality.
@@ -137,7 +141,7 @@ class WikidataTextCache(TextCache):
 
         :raises ValueError: if any invalid ID is encountered
         """
-        pattern = re.compile(r"Q(\d+)")
+        pattern = re.compile(r"[QP](\d+)")
         invalid_ids = [one_id for one_id in ids if not pattern.match(one_id)]
         if invalid_ids:
             raise ValueError(f"Invalid IDs encountered: {invalid_ids}")
@@ -202,11 +206,11 @@ class WikidataTextCache(TextCache):
         res_json = cls.query(
             sparql=functools.partial(
                 dedent(
-                    """
-                        SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
-                            VALUES ?item {{ {ids} }}
-                            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
-                        }}}}
+                    """\
+                    SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
+                        VALUES ?item {{ {ids} }}
+                        SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language},[AUTO_LANGUAGE],mul". }}
+                    }}}}
                     """
                 ).format,
                 language=language,
@@ -293,6 +297,10 @@ class WikidataTextCache(TextCache):
         :returns: the label for each Wikidata entity
         """
         return self._get(ids=wikidata_identifiers, component="label")
+
+    def get_labels_dict(self, wikidata_identifiers: Sequence[str]) -> dict[str, str | None]:
+        """Get a dictionary from identifiers to their associated labels."""
+        return dict(zip(wikidata_identifiers, self.get_labels(wikidata_identifiers), strict=False))
 
     def get_descriptions(self, wikidata_identifiers: Sequence[str]) -> Sequence[str]:
         """Get entity descriptions for the given IDs.
