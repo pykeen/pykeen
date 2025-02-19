@@ -137,7 +137,7 @@ class WikidataTextCache(TextCache):
 
         :raises ValueError: if any invalid ID is encountered
         """
-        pattern = re.compile(r"Q(\d+)")
+        pattern = re.compile(r"[QP](\d+)")
         invalid_ids = [one_id for one_id in ids if not pattern.match(one_id)]
         if invalid_ids:
             raise ValueError(f"Invalid IDs encountered: {invalid_ids}")
@@ -160,7 +160,6 @@ class WikidataTextCache(TextCache):
         :returns: an iterable over JSON results, where the keys correspond to query variables, and the values to the
             corresponding binding
         """
-        # TODO: support relations
         if not wikidata_ids:
             return {}
 
@@ -203,11 +202,11 @@ class WikidataTextCache(TextCache):
         res_json = cls.query(
             sparql=functools.partial(
                 dedent(
-                    """
-                        SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
-                            VALUES ?item {{ {ids} }}
-                            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
-                        }}}}
+                    """\
+                    SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
+                        VALUES ?item {{ {ids} }}
+                        SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language},[AUTO_LANGUAGE],mul". }}
+                    }}}}
                     """
                 ).format,
                 language=language,
