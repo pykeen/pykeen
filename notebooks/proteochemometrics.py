@@ -4,7 +4,7 @@ Run with ``uv run --script proteochemometrics.py``.
 """
 
 # /// script
-# requires-python = ">=3.13"
+# requires-python = ">=3.10"
 # dependencies = [
 #     "h5py",
 #     "numpy",
