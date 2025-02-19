@@ -1711,7 +1711,8 @@ class MultiBackfillRepresentation(PartitionRepresentation):
             backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=shape)
             if backfill_max_id != backfill.max_id:
                 raise MaxIDMismatchError(
-                    f"Mismatch between {backfill_max_id=} and {backfill.max_id=} of explicitly provided backfill instance."
+                    f"Mismatch between {backfill_max_id=} and {backfill.max_id=} of "
+                    f"explicitly provided backfill instance."
                 )
             # set backfill assignment
             # since the backfill comes last, and it has not been added to the bases list yet:
