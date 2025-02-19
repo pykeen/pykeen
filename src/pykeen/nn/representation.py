@@ -444,6 +444,25 @@ class Embedding(Representation):
         self._embeddings = torch.nn.Embedding(num_embeddings=max_id, embedding_dim=_embedding_dim, dtype=dtype)
         self._embeddings.requires_grad_(trainable)
 
+    @classmethod
+    def from_pretrained(
+        cls, tensor: FloatTensor | PretrainedInitializer, *, trainable: bool = False, **kwargs: Any
+    ) -> Self:
+        """Construct an embedding from a pre-trained tensor.
+
+        :param tensor:
+            the tensor of pretrained embeddings, or pretrained initializer that wraps a tensor
+        :param trainable:
+            should the embedding be trainable? defaults to false, since this
+            constructor is typically used for making a static embedding.
+        :param kwargs: Remaining keyword arguments to pass to the :class:`pykeen.nn.Embedding` constructor
+        :returns: An embedding representation
+        """
+        if not isinstance(tensor, PretrainedInitializer):
+            tensor = PretrainedInitializer(tensor)
+        max_id, *shape = tensor.tensor.shape
+        return cls(max_id=max_id, shape=shape, initializer=tensor, trainable=trainable, **kwargs)
+
     # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
@@ -1562,6 +1581,10 @@ class PartitionRepresentation(Representation):
         return x
 
 
+class InvalidBaseIdsError(ValueError):
+    """Raised when the provided base ids are invalid."""
+
+
 @parse_docdata
 class BackfillRepresentation(PartitionRepresentation):
     """A variant of a partition representation that is easily applicable to a single base representation.
@@ -1591,7 +1614,8 @@ class BackfillRepresentation(PartitionRepresentation):
         :param max_id:
             The total number of entities that need to be represented.
         :param base_ids:
-            The indices which are provided through the base representation.
+            The indices (in the new, increased indexing scheme)
+            which are provided through the base representation.
 
         :param base:
             The base representation, or a hint thereof.
@@ -1611,16 +1635,43 @@ class BackfillRepresentation(PartitionRepresentation):
             The base and backfill representations have to have coherent shapes.
             If the backfill representation is initialized within this constructor,
             it will receive the base representation's shape.
+
+        :raises InvalidBaseIdsError:
+            If some of the base IDs are non-negative, exceed the given max id, or
+            if the base representation's IDs don't match its max_id
         """
         # import here to avoid cyclic import
         from . import representation_resolver
 
+        # normalize and validate base ids
         base_ids = sorted(set(base_ids))
+        if min(base_ids) < 0:
+            raise InvalidBaseIdsError(f"Some of the {base_ids=} are not non-negative.")
+        if max(base_ids) >= max_id:
+            raise InvalidBaseIdsError(f"Some of the {base_ids=} exceed {max_id=:_}")
+
         base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
+        # if a pre-instantiated `base` was passed, the following does not necessarily need to hold
+        if len(base_ids) != base.max_id:
+            raise InvalidBaseIdsError(
+                f"{len(base_ids)=} != {base.max_id=:_}. If you only want to re-use some of the indices, "
+                f"take a look at SubsetRepresentation.",
+            )
+
+        # Note: we know that len(base_ids) == base.max_id, and base_ids is a (sorted) set of non-negative integers
+        # => max_id >= base.max_id
+        assert max_id >= base.max_id
+        backfill_max_id = max_id - base.max_id
+        if backfill_max_id == 0:
+            logger.warning(
+                "Because the given max_id (%d) is the same as the length of the base_ids, "
+                "the backfill representation will be effectively equivalent to the "
+                "base representation",
+                max_id,
+            )
+
         # comment: not all representations support passing a shape parameter
-        backfill = representation_resolver.make(
-            backfill, backfill_kwargs, max_id=max_id - base.max_id, shape=base.shape
-        )
+        backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=base.shape)
 
         # create assignment
         assignment = torch.full(size=(max_id, 2), fill_value=1, dtype=torch.long)

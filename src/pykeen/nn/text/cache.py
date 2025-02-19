@@ -298,6 +298,10 @@ class WikidataTextCache(TextCache):
         """
         return self._get(ids=wikidata_identifiers, component="label")
 
+    def get_labels_dict(self, wikidata_identifiers: Sequence[str]) -> dict[str, str | None]:
+        """Get a dictionary from identifiers to their associated labels."""
+        return dict(zip(wikidata_identifiers, self.get_labels(wikidata_identifiers), strict=False))
+
     def get_descriptions(self, wikidata_identifiers: Sequence[str]) -> Sequence[str]:
         """Get entity descriptions for the given IDs.
 
