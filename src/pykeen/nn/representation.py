@@ -566,6 +566,10 @@ class LowRankRepresentation(Representation):
 
         :param kwargs:
             Additional keyword based arguments passed to :class:`~pykeen.nn.representation.Representation`.
+
+        :raises MaxIDMismatchError:
+            if the ``max_id`` was given explicitly and does not match the ``max_id`` of the weight
+            representation
         """
         # has to be imported here to avoid cyclic import
         from . import representation_resolver
