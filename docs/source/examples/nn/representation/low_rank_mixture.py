@@ -1,6 +1,9 @@
 """Use the (generalized) low-rank approximation to create a mixture model representation."""
 
 # %%
+
+from tabulate import tabulate
+
 from pykeen.datasets import get_dataset
 from pykeen.models import ERModel
 from pykeen.nn import LowRankRepresentation
@@ -34,13 +37,13 @@ result = pipeline(dataset=dataset, model=model, training_kwargs=dict(num_epochs=
 
 # keys are Wikidata IDs, which are the "labels" in CoDEx, and values
 # are the concatenation of the Wikidata label + description
-relation_to_text: dict[str, str | None] = WikidataTextCache().get_texts_dict(dataset.relation_to_id)
+relation_to_text: dict[str, str | None] = WikidataTextCache().get_labels_dict(dataset.relation_to_id)
 
 # %%
 # use the mixture weights
 weights = r.weight()
 component_index = weights.argmax(dim=1).tolist()
-components: list[list[str]] = [[] for _ in range(num_components)]
+components: list[list[str]] = [[f"Component {i}"] for i in range(num_components)]
 for label, relation_index in dataset.relation_to_id.items():
-    components[component_index[relation_index]].append(label)
-print(components)
+    components[component_index[relation_index]].append(f"{label} {relation_to_text[label]}")
+print(tabulate(components))
