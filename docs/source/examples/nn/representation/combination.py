@@ -7,8 +7,6 @@ from pykeen.nn import CombinedRepresentation, ConcatProjectionCombination, Embed
 from pykeen.triples.generation import generate_triples_factory
 from pykeen.typing import FloatTensor
 
-random_state = torch.manual_seed(0)
-
 n_entities = 15
 n_relations = 3
 n_triples = 100
@@ -17,10 +15,10 @@ pre_combination_embedding_dim = 32
 post_combination_embedding_dim = 16
 
 # mock some triples
-triples_factory = generate_triples_factory(n_entities, n_relations, n_triples, random_state=random_state)
+triples_factory = generate_triples_factory(n_entities, n_relations, n_triples)
 
 # mock some feature tensor
-features = torch.rand(n_entities, feature_dim, generator=random_state)
+features = torch.rand(n_entities, feature_dim)
 
 # note that the embedding doesn't need the same dimension as the
 embedding = Embedding(max_id=n_entities, shape=pre_combination_embedding_dim)
