@@ -429,6 +429,7 @@ class BackfillRepresentationTests(cases.RepresentationTestCase):
     def test_max_id_verification_raises_value_error(self):
         """Test that an invalid max_id raises a ValueError."""
         for base_ids, message_part in (
+            ([0, 1, 1], "Duplicate"),
             ([0, 1, 2, 5], "exceed max_id"),
             ([-1, 1, 2, 5], "not non-negative"),
         ):
