@@ -1586,6 +1586,10 @@ class BackfillRepresentation(PartitionRepresentation):
             The base and backfill representations have to have coherent shapes.
             If the backfill representation is initialized within this constructor,
             it will receive the base representation's shape.
+
+        :raises InvalidBaseIdsError:
+            If some of the base IDs are non-negative, exceed the given max id, or
+            if the base representation's IDs don't match its max_id
         """
         # import here to avoid cyclic import
         from . import representation_resolver
