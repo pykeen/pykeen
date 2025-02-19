@@ -73,6 +73,7 @@ def get_human_protein_embedding(
 
     :param uniprot_curies: A sequence of UniProt protein identifiers (like `Q13506`) to get the embeddings for.
         If none are given, will retrieve all human proteins.
+    :param trainable: Should trainable embeddings be combined with the features?
 
     :returns: A pair of an embedding object and a mapping from UniProt protein identifier strings to their respective
         positions in the embedding. The embeddings are 1024 dimensional.
@@ -104,6 +105,7 @@ def get_chemical_embedding(
 
     :param chembl_curies: A sequence of ChEMBL chemical identifiers (like `CHEMBL465070`) to get the embeddings for. If
         none are given, will retrieve all ChEMBL chemicals (around 2.5 million)
+    :param trainable: Should trainable embeddings be combined with the features?
 
     :returns: A pair of an embedding object and a mapping from ChEMBL chemical identifier strings to their respective
         positions in the embedding. The embeddings are 2048 dimensional bit vectors from Morgan fingerprints with a
