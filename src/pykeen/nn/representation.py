@@ -33,7 +33,7 @@ from typing_extensions import Self
 
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
-from .init import initializer_resolver, uniform_norm_p1_
+from .init import initializer_resolver
 from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
 from .text.encoder import TextEncoder, text_encoder_resolver
 from .utils import ShapeError

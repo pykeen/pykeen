@@ -5,6 +5,7 @@ from pykeen.datasets import get_dataset
 from pykeen.models import ERModel
 from pykeen.nn import LowRankRepresentation
 from pykeen.pipeline import pipeline
+from pykeen.typing import FloatTensor
 
 dataset = get_dataset(dataset="CoDExSmall")
 
@@ -18,7 +19,7 @@ r = LowRankRepresentation(
     weight_kwargs=dict(normalizer="softmax"),
 )
 # use DistMult interaction, and a simple embedding matrix for relations
-model = ERModel(
+model = ERModel[FloatTensor, FloatTensor, FloatTensor](
     triples_factory=dataset.training,
     interaction="distmult",
     entity_representations_kwargs=dict(shape=embedding_dim),
@@ -35,7 +36,7 @@ result = pipeline(dataset=dataset, model=model, training_kwargs=dict(num_epochs=
 # use the mixture weights
 weights = r.weight()
 component_index = weights.argmax(dim=1).tolist()
-components = [[] for _ in range(num_components)]
+components: list[list[str]] = [[] for _ in range(num_components)]
 for label, relation_index in dataset.relation_to_id.items():
     components[component_index[relation_index]].append(label)
 print(components)
