@@ -1642,12 +1642,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         shapes = [base.shape for base in bases]
         if len(set(shapes)) != 1:
             raise ShapeMismatchError(f"Base instances had multiple different shapes: {shapes}")
-        if shape is None:
-            shape = shapes[0]
-        elif shapes[0] != shape:
-            raise ShapeMismatchError(
-                f"The explicitly given {shape=} was different than the shape of the bases {shapes[0]}"
-            )
+        shape = ShapeError.verify(shapes[0], shape)
 
         # check number of backfill representations
         num_total_base_ids = len(all_ids)
