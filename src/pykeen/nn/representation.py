@@ -1703,19 +1703,21 @@ class MultiBackfillRepresentation(PartitionRepresentation):
                 f"specification, {num_total_base_ids=:_}. This means that no backfill representation is necessary, "
                 f"and instead this will be a simple PartitionRepresentation."
             )
-
-        # create backfill representation
-        backfill_max_id = max_id - num_total_base_ids
-        backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=shape)
-        if backfill_max_id != backfill.max_id:
-            raise MaxIDMismatchError(
-                f"Mismatch between {backfill_max_id=} and {backfill.max_id=} of explicitly provided backfill instance."
-            )
-        # set backfill assignment
-        # since the backfill comes last, and it has not been added to the bases list yet:
-        assignment[backfill_mask, 0] = len(bases)
-        assignment[backfill_mask, 1] = torch.arange(backfill.max_id)
-        bases.append(backfill)
+        else:
+            # this block is part of the "else" to make sure that we only create a backfill
+            # if there are some remaining IDs. This is necessary to make sure we don't
+            # create a representation with an empty dimension.
+            backfill_max_id = max_id - num_total_base_ids
+            backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=shape)
+            if backfill_max_id != backfill.max_id:
+                raise MaxIDMismatchError(
+                    f"Mismatch between {backfill_max_id=} and {backfill.max_id=} of explicitly provided backfill instance."
+                )
+            # set backfill assignment
+            # since the backfill comes last, and it has not been added to the bases list yet:
+            assignment[backfill_mask, 0] = len(bases)
+            assignment[backfill_mask, 1] = torch.arange(backfill.max_id)
+            bases.append(backfill)
 
         super().__init__(assignment=assignment, bases=bases, shape=shape, **kwargs)
 

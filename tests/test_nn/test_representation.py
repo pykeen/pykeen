@@ -431,6 +431,17 @@ class MultiBackfillRepresentationTests(cases.RepresentationTestCase):
         ],
     )
 
+    def test_perfect_assignment(self) -> None:
+        """Test that perfect assignment results in no backfill."""
+        x = pykeen.nn.representation.MultiBackfillRepresentation(
+            max_id=4,
+            partitions=[
+                pykeen.nn.Partition(ids=[0, 1], base=None, kwargs=dict(shape=(2,))),
+                pykeen.nn.Partition(ids=[2, 3], base=None, kwargs=dict(shape=(2,))),
+            ],
+        )
+        self.assertEqual(2, len(x.bases))
+
 
 class BackfillRepresentationTests(cases.RepresentationTestCase):
     """Tests for backfill representation, based on the partition representation."""
