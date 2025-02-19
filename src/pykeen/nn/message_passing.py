@@ -241,7 +241,6 @@ class BasesDecomposition(Decomposition):
 
     # docstr-coverage: inherited
     def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
-        # FIXME upstream this into low ranked representation?
         x = einsum("ni, rb, bio -> rno", x, self.base_weights, self.base)
         # TODO: can we change the dimension order to make this contiguous?
         return torch.spmm(adj, x.reshape(-1, self.output_dim))
