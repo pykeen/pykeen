@@ -215,7 +215,8 @@ class BasesDecomposition(Decomposition):
             max_id=self.num_relations,
             shape=(self.input_dim, self.output_dim),
             num_bases=num_bases,
-            weight_initializer=uniform_norm_p1_,
+            # FIXME check this
+            # weight_initializer=uniform_norm_p1_,
             initializer=nn.init.xavier_normal_,
         )
 
