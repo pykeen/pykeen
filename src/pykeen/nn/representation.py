@@ -575,6 +575,8 @@ class LowRankRepresentation(Representation):
 
         :param other:
             The representation to approximate.
+        :param num_bases:
+            The number of bases. More bases increase expressivity, but also increase the number of trainable parameters.
         :param kwargs:
             Additional keyword-based parameters passed to :meth:`__init__`. Must not contain
             ``max_id`` nor ``shape``, which are determined by ``other``.
