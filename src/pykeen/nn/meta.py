@@ -11,6 +11,11 @@ from .perceptron import TwoLayerMLP
 from .representation import CombinedRepresentation, Embedding, Representation, TransformedRepresentation
 from ..typing import FloatTensor
 
+__all__ = [
+    "MLPTransformedRepresentation",
+    "FeatureEnrichedEmbedding",
+]
+
 
 class MLPTransformedRepresentation(TransformedRepresentation):
     """A representation that transforms a representation with a learnable two-layer MLP."""
@@ -60,9 +65,7 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
             For example, if you want to make sure that the dimensions of the output are
             the same as the input, set ``combination="ConcatProjectionCombination"``.
         """
-        if not isinstance(tensor, PretrainedInitializer):
-            tensor = PretrainedInitializer(tensor)
-        static_embedding = tensor.as_embedding()
+        static_embedding = Embedding.from_pretrained(tensor, trainable=False)
         if shape is None:
             shape = static_embedding.shape
         trainable_embedding = Embedding(max_id=static_embedding.max_id, shape=shape)
