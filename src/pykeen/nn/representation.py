@@ -37,7 +37,7 @@ from .compositions import CompositionModule, composition_resolver
 from .init import PretrainedInitializer, initializer_resolver
 from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
 from .text.encoder import TextEncoder, text_encoder_resolver
-from .utils import ShapeError
+from .utils import BaseShapeError, ShapeError
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
@@ -114,10 +114,6 @@ normalizer_resolver = FunctionResolver(
 
 class MaxIDMismatchError(ValueError):
     """Raised when the maximum ID of a representation is inconsistent."""
-
-
-class ShapeMismatchError(ValueError):
-    """Raised when there are inconsistent shapes."""
 
 
 class Representation(nn.Module, ExtraReprMixin, ABC):
@@ -1691,7 +1687,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
         # shape verification
         shapes = [base.shape for base in bases]
         if len(set(shapes)) != 1:
-            raise ShapeMismatchError(f"Base instances had multiple different shapes: {shapes}")
+            raise BaseShapeError(f"Base instances had multiple different shapes: {shapes}")
         shape = ShapeError.verify(shapes[0], shape)
 
         # check number of backfill representations

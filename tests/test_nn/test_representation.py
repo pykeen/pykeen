@@ -417,6 +417,21 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
             self.cls(**ChainMap(dict(assignment=assignment), self.instance_kwargs))
 
 
+class MultiBackfillRepresentationTests(cases.RepresentationTestCase):
+    """Tests for multi-backfill representation, based on the partition representation."""
+
+    cls = pykeen.nn.representation.MultiBackfillRepresentation
+    kwargs = dict(
+        partitions=[
+            pykeen.nn.Partition(
+                ids=[i for i in range(cases.RepresentationTestCase.max_id) if i % 2],
+                base=None,
+                kwargs=dict(shape=(3,)),
+            )
+        ],
+    )
+
+
 class BackfillRepresentationTests(cases.RepresentationTestCase):
     """Tests for backfill representation, based on the partition representation."""
 
