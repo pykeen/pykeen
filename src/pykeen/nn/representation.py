@@ -1705,7 +1705,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
             )
 
         # create backfill representation
-        backfill_max_id = max_id - len(all_ids)
+        backfill_max_id = max_id - num_total_base_ids
         backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=shape)
         if backfill_max_id != backfill.max_id:
             raise MaxIDMismatchError(
