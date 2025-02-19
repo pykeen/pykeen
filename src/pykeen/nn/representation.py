@@ -450,20 +450,23 @@ class Embedding(Representation):
         self._embeddings.requires_grad_(trainable)
 
     @classmethod
-    def from_pretrained(cls, tensor: FloatTensor, *, trainable: bool = False, **kwargs: Any) -> Self:
+    def from_pretrained(
+        cls, tensor: FloatTensor | PretrainedInitializer, *, trainable: bool = False, **kwargs: Any
+    ) -> Self:
         """Construct an embedding from a pre-trained tensor.
 
         :param tensor:
-            the tensor of pretrained embeddings.
+            the tensor of pretrained embeddings, or pretrained initializer that wraps a tensor
         :param trainable:
             should the embedding be trainable? defaults to false, since this
             constructor is typically used for making a static embedding.
         :param kwargs: Remaining keyword arguments to pass to the :class:`pykeen.nn.Embedding` constructor
         :returns: An embedding representation
         """
-        initializer = PretrainedInitializer(tensor)
-        max_id, *shape = tensor.shape
-        return cls(max_id=max_id, shape=shape, initializer=initializer, trainable=trainable, **kwargs)
+        if not isinstance(tensor, PretrainedInitializer):
+            tensor = PretrainedInitializer(tensor)
+        max_id, *shape = tensor.tensor.shape
+        return cls(max_id=max_id, shape=shape, initializer=tensor, trainable=trainable, **kwargs)
 
     # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
