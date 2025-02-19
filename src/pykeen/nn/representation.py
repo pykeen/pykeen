@@ -584,8 +584,10 @@ class LowRankRepresentation(Representation):
             )
         if shape is None:
             shape = base.shape
-        elif tuple(upgrade_to_sequence(shape)) != base.shape:
-            raise ShapeError(shape=base.shape, reference=shape)
+        else:
+            shape = tuple(upgrade_to_sequence(shape))
+            if shape != base.shape:
+                raise ShapeError(shape=base.shape, reference=shape)
 
         super().__init__(max_id=max_id, shape=shape, **kwargs)
 
