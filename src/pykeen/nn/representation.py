@@ -493,7 +493,8 @@ class LowRankRepresentation(Representation):
     .. math ::
         E[i] = \sum_k B[i, k] \cdot W[k]
 
-    This representation implements the generalized form, where both, $B$ and $W$ are arbitrary representations themselves.
+    This representation implements the generalized form, where both, $B$ and $W$ are arbitrary representations
+    themselves.
 
     ---
     name: Low Rank Embedding
@@ -543,7 +544,6 @@ class LowRankRepresentation(Representation):
         :param kwargs:
             Additional keyword based arguments passed to :class:`~pykeen.nn.representation.Representation`.
         """
-
         # has to be imported here to avoid cyclic import
         from . import representation_resolver
 
