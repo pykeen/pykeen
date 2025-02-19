@@ -71,8 +71,8 @@ def get_human_protein_embedding(
 ) -> RepresentationBackmap:
     """Get an embedding object for human proteins.
 
-    :param uniprot_curies: A sequence of UniProt protein identifiers (like `Q13506`) to get the embeddings for. If none are
-        given, will retrieve all human proteins.
+    :param uniprot_curies: A sequence of UniProt protein identifiers (like `Q13506`) to get the embeddings for.
+        If none are given, will retrieve all human proteins.
 
     :returns: A pair of an embedding object and a mapping from UniProt protein identifier strings to their respective
         positions in the embedding. The embeddings are 1024 dimensional.
@@ -84,7 +84,9 @@ def get_human_protein_embedding(
         tensor = torch.stack(
             [
                 torch.tensor(file[uniprot_curie.removeprefix("uniprot:")])
-                for uniprot_curie in tqdm(uniprot_curies, unit_scale=True, unit="protein", desc="Getting protein features")
+                for uniprot_curie in tqdm(
+                    uniprot_curies, unit_scale=True, unit="protein", desc="Getting protein features"
+                )
             ]
         )
         uniprot_id_to_idx = {uniprot_id: idx for idx, uniprot_id in enumerate(uniprot_curies)}
