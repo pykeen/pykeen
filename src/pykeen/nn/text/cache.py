@@ -160,6 +160,7 @@ class WikidataTextCache(TextCache):
         :returns: an iterable over JSON results, where the keys correspond to query variables, and the values to the
             corresponding binding
         """
+        # TODO: support relations
         if not wikidata_ids:
             return {}
 
