@@ -6,10 +6,10 @@ from collections.abc import Sequence
 
 from class_resolver import HintOrType, OptionalKwargs
 
-from pykeen.nn import CombinedRepresentation, Embedding, Representation, TransformedRepresentation
-from pykeen.nn.init import PretrainedInitializer
-from pykeen.nn.perceptron import TwoLayerMLP
-from pykeen.typing import FloatTensor
+from .init import PretrainedInitializer
+from .perceptron import TwoLayerMLP
+from .representation import CombinedRepresentation, Embedding, Representation, TransformedRepresentation
+from ..typing import FloatTensor
 
 
 class MLPTransformedRepresentation(TransformedRepresentation):
