@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import typing
 from collections.abc import Callable, Collection, Mapping, Sequence
 from typing import Literal, NamedTuple, TypeAlias, TypeVar, cast
 
@@ -140,8 +141,7 @@ RankType = Literal["optimistic", "realistic", "pessimistic"]
 RANK_OPTIMISTIC: RankType = "optimistic"
 RANK_REALISTIC: RankType = "realistic"
 RANK_PESSIMISTIC: RankType = "pessimistic"
-# RANK_TYPES: Tuple[RankType, ...] = typing.get_args(RankType) # Python >= 3.8
-RANK_TYPES: tuple[RankType, ...] = (RANK_OPTIMISTIC, RANK_REALISTIC, RANK_PESSIMISTIC)
+RANK_TYPES: tuple[RankType, ...] = typing.get_args(RankType)
 RANK_TYPE_SYNONYMS: Mapping[str, RankType] = {
     "best": RANK_OPTIMISTIC,
     "worst": RANK_PESSIMISTIC,
