@@ -12,6 +12,7 @@ from .combination import (
     GatedCombination,
 )
 from .message_passing import RGCNRepresentation
+from .meta import FeatureEnrichedEmbedding, MLPTransformedRepresentation
 from .modules import (
     AutoSFInteraction,
     BoxEInteraction,
@@ -63,9 +64,7 @@ from .representation import (
     CachedTextRepresentation,
     CombinedRepresentation,
     Embedding,
-    FeatureEnrichedEmbedding,
     LowRankRepresentation,
-    MLPTransformedRepresentation,
     MultiBackfillRepresentation,
     Partition,
     PartitionRepresentation,

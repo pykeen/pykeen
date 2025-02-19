@@ -35,7 +35,6 @@ from typing_extensions import Self
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver
 from .init import PretrainedInitializer, initializer_resolver, uniform_norm_p1_
-from .perceptron import TwoLayerMLP
 from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
 from .text.encoder import TextEncoder, text_encoder_resolver
 from .utils import ShapeError
@@ -81,11 +80,9 @@ __all__ = [
     "MultiBackfillRepresentation",
     "TransformedRepresentation",
     "TextRepresentation",
-    "FeatureEnrichedEmbedding",
     "CachedTextRepresentation",
     "WikidataTextRepresentation",
     "BiomedicalCURIERepresentation",
-    "MLPTransformedRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -2105,72 +2102,3 @@ class TensorTrainRepresentation(Representation):
         return einsum(
             self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases, strict=False))
         ).view(*assignment.shape[:-1], *self.shape)
-
-
-@parse_docdata
-class FeatureEnrichedEmbedding(CombinedRepresentation):
-    """A combination of a static feature and a learnable representation.
-
-    In the following example, we show how to construct a feature-enriched embedding.
-
-    .. literalinclude:: ../examples/nn/representation/feature_enriched_embedding.py
-    ---
-    name: Feature-enriched Embedding
-    """
-
-    def __init__(
-        self, tensor: FloatTensor | PretrainedInitializer, shape: None | int | Sequence[int] = None, **kwargs
-    ) -> None:
-        """Initialize the feature-enriched embedding.
-
-        :param tensor:
-            the tensor of pretrained embeddings, or a pretrained initializer that wraps
-            a tensor of pretrained embeddings.
-        :param shape:
-            an explicit shape. If None, it is inferred from the provided tensor.
-        :param kwargs:
-            Keyword arguments passed to :meth:`pykeen.nn.CombinedRepresentation.__init__`.
-
-            For example, if you want to make sure that the dimensions of the output are
-            the same as the input, set ``combination="ConcatProjectionCombination"``.
-        """
-        if not isinstance(tensor, PretrainedInitializer):
-            tensor = PretrainedInitializer(tensor)
-        static_embedding = tensor.as_embedding()
-        if shape is None:
-            shape = static_embedding.shape
-        trainable_embedding = Embedding(max_id=static_embedding.max_id, shape=shape)
-        super().__init__(
-            max_id=static_embedding.max_id,
-            base=[static_embedding, trainable_embedding],
-            **kwargs,
-        )
-
-
-@parse_docdata
-class MLPTransformedRepresentation(TransformedRepresentation):
-    """A representation that transforms a representation with a learnable two-layer MLP.
-
-    ---
-    name: MLP Transformed
-    """
-
-    def __init__(
-        self,
-        *,
-        base: HintOrType[Representation] = None,
-        base_kwargs: OptionalKwargs = None,
-        output_dim: int | None = None,
-        ratio: int | float = 2,
-    ) -> None:
-        """Initialize the representation."""
-        # import here to avoid cyclic import
-        from . import representation_resolver
-
-        base = representation_resolver.make(base, base_kwargs)
-
-        super().__init__(
-            base=base,
-            max_id=base.max_id,
-            transformation=TwoLayerMLP(base.shape[0], output_dim=output_dim, ratio=ratio),
-        )
