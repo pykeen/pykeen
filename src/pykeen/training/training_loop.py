@@ -556,7 +556,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     batch_size_sufficient = True
                     logger.info(
                         "Currently automatic memory optimization only supports GPUs, but you're using a CPU. "
-                        "Therefore, the batch_size will be set to the default value '{batch_size}'",
+                        f"Therefore, the batch_size will be set to the default value '{batch_size}'",
                     )
                 else:
                     batch_size, batch_size_sufficient = self.batch_size_search(triples_factory=triples_factory)
@@ -685,6 +685,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         desc=f"Training batches on {self.device}",
                         leave=False,
                         unit="batch",
+                        unit_scale=True,
                     )
                 else:
                     batches = train_data_loader
