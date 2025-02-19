@@ -4,6 +4,7 @@
 from pykeen.datasets import get_dataset
 from pykeen.models import ERModel
 from pykeen.nn import LowRankRepresentation
+from pykeen.nn.text.cache import WikidataTextCache
 from pykeen.pipeline import pipeline
 from pykeen.typing import FloatTensor
 
@@ -28,9 +29,12 @@ model = ERModel[FloatTensor, FloatTensor, FloatTensor](
 result = pipeline(dataset=dataset, model=model, training_kwargs=dict(num_epochs=20))
 
 # %%
-# TODO: get labels for relations
+# TODO: use this relation to label/description dict
 # e.g. https://www.wikidata.org/wiki/Property:P3373
-# WikidataTextCache
+
+# keys are Wikidata IDs, which are the "labels" in CoDEx, and values
+# are the concatenation of the Wikidata label + description
+relation_to_text: dict[str, str | None] = WikidataTextCache().get_texts_dict(dataset.relation_to_id)
 
 # %%
 # use the mixture weights

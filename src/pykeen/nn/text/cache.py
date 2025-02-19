@@ -40,6 +40,10 @@ class TextCache(ABC):
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str | None]:
         """Get text for the given identifiers for the cache."""
 
+    def get_texts_dict(self, identifiers: Sequence[str]) -> dict[str, str | None]:
+        """Get a dictionary from identifiers to their associated text."""
+        return dict(zip(identifiers, self.get_texts(identifiers), strict=False))
+
 
 class IdentityCache(TextCache):
     """A cache without functionality.
