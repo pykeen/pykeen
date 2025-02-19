@@ -193,7 +193,7 @@ def get_chemical_protein_triples():
     df = df[df["object"].notna()]
 
     # turn into CURIEs
-    df["subject"] = df["Original_Entry_ID"].map(lambda s: f"chembl.compound:{s}")
+    df["subject"] = df["Original_Entry_ID"].map("chembl.compound:{0}".format)
 
     df = df[["subject", "object"]].drop_duplicates()
     df.to_csv(path, sep="\t", index=False)
