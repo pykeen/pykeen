@@ -582,14 +582,7 @@ class LowRankRepresentation(Representation):
             logger.warning(
                 f"The explicitly provided {num_bases=:_} does not match {base.max_id=:_} and has been ignored."
             )
-        if shape is None:
-            shape = base.shape
-        else:
-            shape = tuple(upgrade_to_sequence(shape))
-            if shape != base.shape:
-                raise ShapeError(shape=base.shape, reference=shape)
-
-        super().__init__(max_id=max_id, shape=shape, **kwargs)
+        super().__init__(max_id=max_id, shape=ShapeError.verify(base.shape, shape), **kwargs)
 
         # assign *after* super init
         self.base = base
