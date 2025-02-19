@@ -530,12 +530,9 @@ class LowRankRepresentation(Representation):
     def __init__(
         self,
         *,
-        # TODO: allow None
-        max_id: int,
-        # TODO: allow None
-        shape: OneOrSequence[int],
-        # TODO: allow None
-        num_bases: int = 3,
+        max_id: int | None = None,
+        shape: Sequence[int] | int | None = None,
+        num_bases: int | None = 3,
         # base representation
         base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
@@ -549,10 +546,13 @@ class LowRankRepresentation(Representation):
 
         :param max_id:
             The maximum ID (exclusively). Valid Ids reach from ``0`` to ``max_id-1``.
+            If None, a pre-instantiated weight representation needs to be provided.
         :param shape:
             The shape of an individual representation.
+            If None, a pre-instantiated base representation has to be provided.
         :param num_bases:
             The number of bases. More bases increase expressivity, but also increase the number of trainable parameters.
+            If None, a pre-instantiated base representation has to be provided.
 
         :param weight:
             The weight representation, or a hint thereof.
@@ -573,7 +573,19 @@ class LowRankRepresentation(Representation):
         base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=num_bases, shape=shape)
         weight = representation_resolver.make(weight, pos_kwargs=weight_kwargs, max_id=max_id, shape=num_bases)
 
-        # TODO: verification
+        # Verification
+        if max_id is None:
+            max_id = weight.max_id
+        elif max_id != weight.max_id:
+            raise MaxIDMismatchError(f"Explicitly provided {max_id=:_} does not match {weight.max_id=:_}")
+        if num_bases is not None and base.max_id != num_bases:
+            logger.warning(
+                f"The explicitly provided {num_bases=:_} does not match {base.max_id=:_} and has been ignored."
+            )
+        if shape is None:
+            shape = base.shape
+        elif tuple(upgrade_to_sequence(shape)) != base.shape:
+            raise ShapeError(shape=base.shape, reference=shape)
 
         super().__init__(max_id=max_id, shape=shape, **kwargs)
 
