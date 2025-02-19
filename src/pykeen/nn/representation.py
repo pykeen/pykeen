@@ -530,13 +530,16 @@ class LowRankRepresentation(Representation):
 
         :param max_id:
             The maximum ID (exclusively). Valid Ids reach from ``0`` to ``max_id-1``.
+        :param shape:
+            The shape of an individual representation.
+        :param num_bases:
+            The number of bases. More bases increase expressivity, but also increase the number of trainable parameters.
+
         :param weight:
             The weight representation, or a hint thereof.
         :param weight_kwargs:
             Additional keyword based arguments used to instantiate the weight representation.
 
-        :param num_bases:
-            The number of bases. More bases increase expressivity, but also increase the number of trainable parameters.
         :param base:
             The base representation, or a hint thereof.
         :param base_kwargs:
@@ -553,7 +556,7 @@ class LowRankRepresentation(Representation):
 
         # TODO: verification
 
-        super().__init__(max_id=weight.max_id, shape=base.shape, **kwargs)
+        super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         # assign *after* super init
         self.base = base
