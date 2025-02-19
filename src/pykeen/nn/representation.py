@@ -509,19 +509,16 @@ class LowRankRepresentation(Representation):
         *,
         # TODO: allow None
         max_id: int,
-        # TODO: remove
+        # TODO: allow None
         shape: OneOrSequence[int],
         # TODO: allow None
         num_bases: int = 3,
-        # base representation
         # base representation
         base: HintOrType[Representation] = None,
         base_kwargs: OptionalKwargs = None,
         # weight representation
         weight: HintOrType[Representation] = None,
         weight_kwargs: OptionalKwargs = None,
-        # TODO: remove
-        weight_initializer: Initializer = uniform_norm_p1_,
         **kwargs,
     ):
         """
@@ -547,8 +544,8 @@ class LowRankRepresentation(Representation):
         # has to be imported here to avoid cyclic import
         from . import representation_resolver
 
-        base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=num_bases)
-        weight = representation_resolver.make(weight, pos_kwargs=weight_kwargs, max_id=max_id)
+        base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=num_bases, shape=shape)
+        weight = representation_resolver.make(weight, pos_kwargs=weight_kwargs, max_id=max_id, shape=num_bases)
 
         # TODO: verification
 
