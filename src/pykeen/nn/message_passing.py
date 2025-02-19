@@ -241,7 +241,7 @@ class BasesDecomposition(Decomposition):
 
     # docstr-coverage: inherited
     def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
-        x = einsum("ni, rb, bio -> rno", x, self.base_weights, self.base)
+        x = einsum("ni, rb, bio -> rno", x, self.base_weights, self.bases)
         # TODO: can we change the dimension order to make this contiguous?
         return torch.spmm(adj, x.reshape(-1, self.output_dim))
 
@@ -249,7 +249,7 @@ class BasesDecomposition(Decomposition):
     def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
         x = torch.spmm(adj, x)
         x = x.view(self.num_relations, -1, self.input_dim)
-        return einsum("rb, bio, rni -> no", self.base_weights, self.base, x)
+        return einsum("rb, bio, rni -> no", self.base_weights, self.bases, x)
 
 
 def _make_dim_divisible(dim: int, divisor: int, name: str) -> int:
