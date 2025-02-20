@@ -221,7 +221,11 @@ def main() -> None:
     excape_df = excape_df[["subject", "predicate", "object"]]
 
     triples_df = pd.concat([excape_df, go_df])
-    tf = TriplesFactory.from_labeled_triples(triples_df.values)
+    tf = TriplesFactory.from_labeled_triples(
+        triples_df.values,
+        # since we're using DistMult, this injects asymmetry
+        create_inverse_triples=True,
+    )
 
     # note that the order you add to this set is very important
     chemical_idx: list[int] = [tf.entity_labeling.label_to_id[chemical_curie] for chemical_curie in chemical_curies]
