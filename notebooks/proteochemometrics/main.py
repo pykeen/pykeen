@@ -6,7 +6,7 @@ Run with ``uv run --script main.py``.
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#     "chembl-downloader>=0.5.0",
+#     "chembl-downloader>=0.5.1",
 #     "h5py",
 #     "numpy",
 #     "pandas",
@@ -108,8 +108,8 @@ def get_chemical_embedding(chembl_curies: set[str], *, trainable: bool = False) 
     actual_chembl_curies, tensors = zip(
         *(
             (chembl_curie, torch.tensor(arr, dtype=torch.bool))
-            for chembl_id, arr in chembl_downloader.iterate_fps()
-            if (chembl_curie := CHEMBL_FMT(chembl_id)) in chembl_curies
+            for chembl_curie, arr in chembl_downloader.iterate_fps(identifier_format="curie")
+            if chembl_curie in chembl_curies
         ), strict=False
     )
     if trainable:
