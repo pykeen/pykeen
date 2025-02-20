@@ -1557,7 +1557,6 @@ class PartitionRepresentation(Representation):
         if unknown_base_ids:
             raise ValueError(f"Invalid representation Ids in assignment: {unknown_base_ids}")
 
-        # TODO test that the assignment has something in it! an empty assignment causes a runtime error on the .max()
         # check for invalid local indices
         for i, base in enumerate(bases):
             base_assignment = assignment[:, 0] == i
