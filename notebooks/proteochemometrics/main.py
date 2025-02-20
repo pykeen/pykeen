@@ -48,7 +48,13 @@ from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 
 HUMAN_T5_PROTEIN_EMBEDDINGS = "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/embeddings/UP000005640_9606/per-protein.h5"
+PROTEIN_EMBEDDINGS = (
+    "https://ftp.ebi.ac.uk/pub/databases/uniprot/current_release/knowledgebase/embeddings/uniprot_sprot/per-protein.h5"
+)
 EXCAPE_URL = "https://zenodo.org/record/2543724/files/pubchem.chembl.dataset4publication_inchi_smiles_v2.tsv.xz"
+ID_MAPPINGS = (
+    "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/idmapping/idmapping_selected.tab.gz"
+)
 GO_URL = "https://current.geneontology.org/annotations/goa_human.gaf.gz"
 HERE = Path(__file__).parent.resolve()
 
@@ -63,19 +69,23 @@ class RepresentationBackmap(NamedTuple):
     labels: list[str]
 
 
-def get_human_protein_embedding(
-    uniprot_curies: Sequence[str] | None = None, *, trainable: bool = False
+def get_protein_embedding(
+    uniprot_curies: Sequence[str] | None = None, *, trainable: bool = False, human_only: bool = False
 ) -> RepresentationBackmap:
     """Get an embedding object for human proteins.
 
     :param uniprot_curies: A sequence of UniProt protein identifiers (like `Q13506`) to get the embeddings for.
         If none are given, will retrieve all human proteins.
     :param trainable: Should trainable embeddings be combined with the features?
+    :param human_only: Should embeddings be limited to human proteins? Defaults to false.
 
     :returns: A pair of an embedding object and a mapping from UniProt protein identifier strings to their respective
         positions in the embedding. The embeddings are 1024 dimensional.
     """
-    path = pystow.ensure("bio", "uniprot", url=HUMAN_T5_PROTEIN_EMBEDDINGS)
+    if human_only:
+        path = pystow.ensure("bio", "uniprot", url=HUMAN_T5_PROTEIN_EMBEDDINGS)
+    else:
+        path = pystow.ensure("bio", "uniprot", url=PROTEIN_EMBEDDINGS, name="all_proteins.h5")
     with h5py.File(path, "r") as file:
         if uniprot_curies is None:
             uniprot_curies = sorted(file)
@@ -94,6 +104,30 @@ def get_human_protein_embedding(
     return RepresentationBackmap(representation, uniprot_curies)
 
 
+def get_entrez_to_uniprot() -> dict[str, str]:
+    """Get a mapping of NCBI Gene (Entrez) gene identifiers to UniProt."""
+    path = pystow.join("bio", "uniprot", name="entrez_to_uniprot.tsv.gz")
+    path_sample = pystow.join("bio", "uniprot", name="entrez_to_uniprot.example.tsv")
+    if path.exists():
+        df = pd.read_csv(path, sep="\t", dtype=str)
+        return dict(df.values)
+
+    df = pystow.ensure_csv(
+        "bio",
+        "uniprot",
+        url=ID_MAPPINGS,
+        read_csv_kwargs=dict(
+            usecols=[0, 2],
+            header=None,
+        ),
+    )
+    df = df[[2, 0]]
+    df.columns = ["ncbigene", "uniprot"]
+    df.to_csv(path, sep="\t", index=False)
+    df.head().to_csv(path_sample, sep="\t", index=False)
+    return dict(df.values)
+
+
 def get_chemical_embedding(chembl_curies: set[str], *, trainable: bool = False) -> RepresentationBackmap:
     """Get an embedding object for chemicals.
 
@@ -110,7 +144,8 @@ def get_chemical_embedding(chembl_curies: set[str], *, trainable: bool = False) 
             (chembl_curie, torch.tensor(arr, dtype=torch.bool))
             for chembl_curie, arr in chembl_downloader.iterate_fps(identifier_format="curie")
             if chembl_curie in chembl_curies
-        ), strict=False
+        ),
+        strict=False,
     )
     if trainable:
         representation = FeatureEnrichedEmbedding(torch.stack(tensors), shape=32)
@@ -132,12 +167,31 @@ def get_protein_go_triples():
     return df
 
 
-def get_chemical_protein_triples():
+def get_chemical_protein_triples(human_only: bool = False):
     """Get triples from ExCAPE-DB with chemicals as subjects and proteins as objects."""
     excape_module = pystow.module("bio", "excape")
-    if (path := excape_module.join(name="excape_human_chembl_subset.tsv")).is_file():
-        df = pd.read_csv(path, sep="\t")
-        return df
+
+    if human_only:
+        if (path := excape_module.join(name="excape_human_chembl_subset.tsv")).is_file():
+            df = pd.read_csv(path, sep="\t", dtype=str)
+            return df
+    else:
+        if (path := excape_module.join(name="excape_chembl_subset.tsv")).is_file():
+            df = pd.read_csv(path, sep="\t", dtype=str)
+            return df
+
+    if human_only:
+        entrez_to_uniprot = uniprot_client.um.entrez_uniprot
+    else:
+        entrez_to_uniprot = get_entrez_to_uniprot()
+
+    def _uniprot_curie_from_entrez(s: str | None) -> str | None:
+        if pd.isna(s):
+            return None
+        uniprot_id = entrez_to_uniprot.get(s)
+        if not uniprot_id:
+            return None
+        return UNIPROT_FMT(uniprot_id)
 
     df = excape_module.ensure_csv(
         url=EXCAPE_URL,
@@ -150,10 +204,13 @@ def get_chemical_protein_triples():
     )
     # keep only active relationships
     df = df[df["Activity_Flag"] == "A"]
-    # slice down to human targets
-    df = df[df["Tax_ID"] == "9606"]
+
     # keep only relationships qualified by ChEMBL, even though this way out of date in 2025
     df = df[df["DB"] == "chembl20"]
+
+    if human_only:
+        # slice down to human targets
+        df = df[df["Tax_ID"] == "9606"]
 
     df["object"] = df["Entrez_ID"].map(_uniprot_curie_from_entrez)
 
@@ -168,16 +225,7 @@ def get_chemical_protein_triples():
     return df
 
 
-def _uniprot_curie_from_entrez(s: str | None) -> str | None:
-    if pd.isna(s):
-        return None
-    uniprot_id = uniprot_client.get_id_from_entrez(s)
-    if not uniprot_id:
-        return None
-    return UNIPROT_FMT(uniprot_id)
-
-
-def main() -> None:
+def main(human_only: bool = False) -> None:
     """Demonstrate using chemical representations for a subset of entities."""
     target_dim = 128
 
@@ -191,7 +239,7 @@ def main() -> None:
     example_chembl_id = "chembl.compound:CHEMBL1097808"
 
     click.echo("Getting chemical-protein triples from ExCAPE-DB")
-    excape_df = get_chemical_protein_triples()
+    excape_df = get_chemical_protein_triples(human_only=human_only)
     chemical_curies = excape_df["subject"].unique()
     protein_curies = excape_df["object"].unique()
 
@@ -200,8 +248,8 @@ def main() -> None:
 
     click.echo("Getting protein representations from UniProt")
     # example uniprots ["uniprot:Q13506", "uniprot:Q13507", "uniprot:Q13508", "uniprot:Q13509"]
-    protein_base_repr, protein_curies = get_human_protein_embedding(
-        protein_curies, trainable=enrich_features_with_embedding
+    protein_base_repr, protein_curies = get_protein_embedding(
+        protein_curies, trainable=enrich_features_with_embedding, human_only=human_only
     )
     protein_trans_repr = MLPTransformedRepresentation(base=protein_base_repr, output_dim=target_dim)
 
