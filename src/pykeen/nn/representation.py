@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import itertools
 import logging
 import math
@@ -36,7 +37,7 @@ from .compositions import CompositionModule, composition_resolver
 from .init import PretrainedInitializer, initializer_resolver
 from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
 from .text.encoder import TextEncoder, text_encoder_resolver
-from .utils import ShapeError
+from .utils import BaseShapeError, ShapeError
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
@@ -76,6 +77,7 @@ __all__ = [
     "SubsetRepresentation",
     "CombinedRepresentation",
     "TensorTrainRepresentation",
+    "MultiBackfillRepresentation",
     "TransformedRepresentation",
     "TextRepresentation",
     "CachedTextRepresentation",
@@ -1278,6 +1280,10 @@ class CombinedRepresentation(Representation):
     It has a sequence of base representations, each providing a representation for each index.
     A combination is used to combine the multiple representations for the same index into a single one.
 
+    Example usage:
+
+    .. literalinclude:: ../examples/nn/representation/text_wikidata.py
+
     ---
     name: Combined
     """
@@ -1553,7 +1559,12 @@ class PartitionRepresentation(Representation):
 
         # check for invalid local indices
         for i, base in enumerate(bases):
-            max_index = assignment[assignment[:, 0] == i, 1].max().item()
+            base_assignment = assignment[:, 0] == i
+            if not base_assignment.any():
+                raise ValueError(
+                    f"base {base} (index:{i}) is assigned to nothing, meaning that it should be removed from the bases"
+                )
+            max_index = assignment[base_assignment, 1].max().item()
             if max_index >= base.max_id:
                 raise ValueError(f"base {base} (index:{i}) cannot provide indices up to {max_index}")
 
@@ -1592,12 +1603,133 @@ class PartitionRepresentation(Representation):
         return x
 
 
+@dataclasses.dataclass
+class Partition:
+    """A specification for a backfill representation."""
+
+    #: The global identifiers for the entities, appearing in the order that
+    #: corresponds to their local identifier within the base representation
+    ids: Sequence[int]
+
+    #: the base representation, or a hint to generate it
+    base: HintOrType[Representation]
+
+    #: the optional keyword arguments used to instantiate the base representation
+    kwargs: OptionalKwargs | None = None
+
+    def __post_init__(self) -> None:
+        """Implement data integrity checks."""
+        if len(set(self.ids)) != len(self.ids):
+            raise InvalidBaseIdsError(f"Duplicate in {self.ids=}")
+        if any(i < 0 for i in self.ids):
+            raise InvalidBaseIdsError(f"Some of the {self.ids=} are not non-negative.")
+
+    def get_base(self) -> Representation:
+        """Instantiate the base representation."""
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        max_id = len(self.ids)
+
+        base = representation_resolver.make(self.base, self.kwargs, max_id=max_id)
+        if base.max_id != max_id:
+            raise MaxIDMismatchError(
+                f"When constructing the backfill specification, got a mismatch between the number of IDs "
+                f"given ({max_id:,}) and the max_id assigned to the base representation ({base.max_id:,})"
+            )
+
+        return base
+
+
 class InvalidBaseIdsError(ValueError):
     """Raised when the provided base ids are invalid."""
 
 
 @parse_docdata
-class BackfillRepresentation(PartitionRepresentation):
+class MultiBackfillRepresentation(PartitionRepresentation):
+    """Fill missing ids by backfill representation.
+
+    ---
+    name: Multi-Backfill
+    """
+
+    def __init__(
+        self,
+        *,
+        max_id: int,
+        partitions: Sequence[Partition],
+        shape: OneOrSequence[int] | None = None,
+        backfill: HintOrType[Representation] = None,
+        backfill_kwargs: OptionalKwargs = None,
+        **kwargs,
+    ) -> None:
+        """Initialize the backfill representation."""
+        # import here to avoid cyclic import
+        from . import representation_resolver
+
+        bases: list[Representation] = []
+        # format: (base_index, local_index)
+        assignment = torch.zeros(size=(max_id, 2), dtype=torch.long)
+        backfill_mask = torch.ones(assignment.shape[0], dtype=torch.bool)
+        all_ids: set[int] = set()
+        for base_index, partition in enumerate(partitions):
+            if max(partition.ids) >= max_id:
+                raise InvalidBaseIdsError(f"Some of the {partition.ids=} exceed {max_id=:_}")
+
+            # check for overlap with others
+            if colliding_ids := all_ids.intersection(partition.ids):
+                raise ValueError(f"{colliding_ids=} for bases[{base_index}] with {partition.ids=}")
+            all_ids.update(partition.ids)
+
+            # set assignment
+            ids_t = torch.as_tensor(partition.ids, dtype=torch.long)
+            assignment[ids_t, 0] = base_index
+            assignment[ids_t, 1] = torch.arange(len(partition.ids))
+            backfill_mask[ids_t] = False
+
+            bases.append(partition.get_base())
+
+        # shape verification
+        shapes = [base.shape for base in bases]
+        if len(set(shapes)) != 1:
+            raise BaseShapeError(f"Base instances had multiple different shapes: {shapes}")
+        shape = ShapeError.verify(shapes[0], shape)
+
+        # check number of backfill representations
+        num_total_base_ids = len(all_ids)
+        if max_id < num_total_base_ids:
+            raise MaxIDMismatchError(
+                f"The given {max_id=:_} was less than the number of unique IDs given in the backfill specification, "
+                f"{num_total_base_ids=:_}"
+            )
+        elif max_id == num_total_base_ids:
+            logger.warning(
+                f"The given {max_id=:_} was equivalent to the number of unique IDs given in the backfill "
+                f"specification, {num_total_base_ids=:_}. This means that no backfill representation is necessary, "
+                f"and instead this will be a simple PartitionRepresentation."
+            )
+        else:
+            # this block is part of the "else" to make sure that we only create a backfill
+            # if there are some remaining IDs. This is necessary to make sure we don't
+            # create a representation with an empty dimension.
+            backfill_max_id = max_id - num_total_base_ids
+            backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=shape)
+            if backfill_max_id != backfill.max_id:
+                raise MaxIDMismatchError(
+                    f"Mismatch between {backfill_max_id=} and {backfill.max_id=} of "
+                    f"explicitly provided backfill instance."
+                )
+            # set backfill assignment
+            # since the backfill comes last, and it has not been added to the bases list yet:
+            assignment[backfill_mask, 0] = len(bases)
+            assignment[backfill_mask, 1] = torch.arange(backfill.max_id)
+            bases.append(backfill)
+
+        super().__init__(assignment=assignment, bases=bases, shape=shape, **kwargs)
+
+
+@parse_docdata
+class BackfillRepresentation(MultiBackfillRepresentation):
     """A variant of a partition representation that is easily applicable to a single base representation.
 
     .. literalinclude:: ../examples/nn/representation/backfill.py
@@ -1646,56 +1778,14 @@ class BackfillRepresentation(PartitionRepresentation):
             The base and backfill representations have to have coherent shapes.
             If the backfill representation is initialized within this constructor,
             it will receive the base representation's shape.
-
-        :raises InvalidBaseIdsError:
-            If some of the base IDs are non-negative, exceed the given max id, or
-            if the base representation's IDs don't match its max_id
         """
-        # import here to avoid cyclic import
-        from . import representation_resolver
-
-        # normalize and validate base ids
-        base_ids = sorted(set(base_ids))
-        if min(base_ids) < 0:
-            raise InvalidBaseIdsError(f"Some of the {base_ids=} are not non-negative.")
-        if max(base_ids) >= max_id:
-            raise InvalidBaseIdsError(f"Some of the {base_ids=} exceed {max_id=:_}")
-
-        base = representation_resolver.make(base, base_kwargs, max_id=len(base_ids))
-        # if a pre-instantiated `base` was passed, the following does not necessarily need to hold
-        if len(base_ids) != base.max_id:
-            raise InvalidBaseIdsError(
-                f"{len(base_ids)=} != {base.max_id=:_}. If you only want to re-use some of the indices, "
-                f"take a look at SubsetRepresentation.",
-            )
-
-        # Note: we know that len(base_ids) == base.max_id, and base_ids is a (sorted) set of non-negative integers
-        # => max_id >= base.max_id
-        assert max_id >= base.max_id
-        backfill_max_id = max_id - base.max_id
-        if backfill_max_id == 0:
-            logger.warning(
-                "Because the given max_id (%d) is the same as the length of the base_ids, "
-                "the backfill representation will be effectively equivalent to the "
-                "base representation",
-                max_id,
-            )
-
-        # comment: not all representations support passing a shape parameter
-        backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=base.shape)
-
-        # create assignment
-        assignment = torch.full(size=(max_id, 2), fill_value=1, dtype=torch.long)
-        # base
-        assignment[base_ids, 0] = 0
-        assignment[base_ids, 1] = torch.arange(base.max_id)
-        # other
-        mask = torch.ones(assignment.shape[0], dtype=torch.bool)
-        mask[base_ids] = False
-        assignment[mask, 0] = 1
-        assignment[mask, 1] = torch.arange(backfill.max_id)
-
-        super().__init__(assignment=assignment, bases=[base, backfill], **kwargs)
+        super().__init__(
+            max_id=max_id,
+            partitions=[Partition(list(base_ids), base, base_kwargs)],
+            backfill=backfill,
+            backfill_kwargs=backfill_kwargs,
+            **kwargs,
+        )
 
 
 @parse_docdata
