@@ -1560,7 +1560,12 @@ class PartitionRepresentation(Representation):
         # TODO test that the assignment has something in it! an empty assignment causes a runtime error on the .max()
         # check for invalid local indices
         for i, base in enumerate(bases):
-            max_index = assignment[assignment[:, 0] == i, 1].max().item()
+            base_assignment = assignment[:, 0] == i
+            if not base_assignment.any():
+                raise ValueError(
+                    f"base {base} (index:{i}) is assigned to nothing, meaning that it should be removed from the bases"
+                )
+            max_index = assignment[base_assignment, 1].max().item()
             if max_index >= base.max_id:
                 raise ValueError(f"base {base} (index:{i}) cannot provide indices up to {max_index}")
 
