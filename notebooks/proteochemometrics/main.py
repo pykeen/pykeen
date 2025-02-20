@@ -179,7 +179,7 @@ def _uniprot_curie_from_entrez(s: str | None) -> str | None:
 
 def main() -> None:
     """Demonstrate using chemical representations for a subset of entities."""
-    target_dim = 32
+    target_dim = 128
 
     device = torch.device("cpu")
 
