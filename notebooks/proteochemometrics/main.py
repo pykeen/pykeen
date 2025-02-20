@@ -28,13 +28,10 @@ from typing import NamedTuple
 import chembl_downloader
 import click
 import h5py
-import numpy as np
 import pandas as pd
 import pystow
 import torch
 from protmapper import uniprot_client
-from rdkit import DataStructs
-from rdkit.DataStructs import ConvertToNumpyArray
 from tqdm import tqdm
 
 from pykeen.models import ERModel
@@ -113,7 +110,7 @@ def get_chemical_embedding(chembl_curies: set[str], *, trainable: bool = False) 
             (chembl_curie, torch.tensor(arr, dtype=torch.bool))
             for chembl_id, arr in chembl_downloader.iterate_fps()
             if (chembl_curie := CHEMBL_FMT(chembl_id)) in chembl_curies
-        )
+        ), strict=False
     )
     if trainable:
         representation = FeatureEnrichedEmbedding(torch.stack(tensors), shape=32)
