@@ -97,10 +97,10 @@ def get_human_protein_embedding(
     return RepresentationBackmap(representation, uniprot_curies)
 
 
-def get_chemical_embedding(chembl_curies: Sequence[str], *, trainable: bool = False) -> RepresentationBackmap:
+def get_chemical_embedding(chembl_curies: set[str], *, trainable: bool = False) -> RepresentationBackmap:
     """Get an embedding object for chemicals.
 
-    :param chembl_curies: A sequence of ChEMBL chemical identifiers (like `CHEMBL465070`) to get the embeddings for. If
+    :param chembl_curies: A set of ChEMBL chemical identifiers (like `CHEMBL465070`) to get the embeddings for. If
         none are given, will retrieve all ChEMBL chemicals (around 2.5 million)
     :param trainable: Should trainable embeddings be combined with the features?
 
@@ -108,35 +108,18 @@ def get_chemical_embedding(chembl_curies: Sequence[str], *, trainable: bool = Fa
         positions in the embedding. The embeddings are 2048 dimensional bit vectors from Morgan fingerprints with a
         radius of 2
     """
-    chembl_curies = set(chembl_curies)
-    actual_chembl_curies = []
-    tensors = []
-    for chembl_id, arr in chembl_downloader.iterate_fps():
-        chembl_curie = CHEMBL_FMT(chembl_id)
-        if chembl_curie not in chembl_curies:
-            continue
-        actual_chembl_curies.append(chembl_curie)
-        tensors.append(torch.tensor(arr, dtype=torch.bool))
-
-    tensor = torch.stack(tensors)
+    actual_chembl_curies, tensors = zip(
+        *(
+            (chembl_curie, torch.tensor(arr, dtype=torch.bool))
+            for chembl_id, arr in chembl_downloader.iterate_fps()
+            if (chembl_curie := CHEMBL_FMT(chembl_id)) in chembl_curies
+        )
+    )
     if trainable:
-        representation = FeatureEnrichedEmbedding(tensor, shape=32)
+        representation = FeatureEnrichedEmbedding(torch.stack(tensors), shape=32)
     else:
-        representation = Embedding.from_pretrained(tensor)
+        representation = Embedding.from_pretrained(torch.stack(tensors))
     return RepresentationBackmap(representation, actual_chembl_curies)
-
-
-def _hex_to_arr(hex_fp: str) -> torch.BoolTensor:
-    # Convert hex to binary
-    binary_fp = bytes.fromhex(hex_fp)
-
-    # Convert binary to RDKit ExplicitBitVect
-    bitvect = DataStructs.cDataStructs.CreateFromBinaryText(binary_fp)
-
-    # Convert to NumPy array
-    arr = np.zeros((bitvect.GetNumBits(),), dtype=np.uint8)
-    ConvertToNumpyArray(bitvect, arr)
-    return torch.tensor(arr, dtype=torch.bool)
 
 
 def get_protein_go_triples():
@@ -228,7 +211,7 @@ def main() -> None:
     click.echo("Getting chemical representations from ChEMBL")
     # example chembls ["chembl.compound:CHEMBL465070", "chembl.compound:CHEMBL517481", "chembl.compound:CHEMBL465069"]
     chemical_base_repr, chemical_curies = get_chemical_embedding(
-        chemical_curies, trainable=enrich_features_with_embedding
+        set(chemical_curies), trainable=enrich_features_with_embedding
     )
     chemical_trans_repr = MLPTransformedRepresentation(base=chemical_base_repr, output_dim=target_dim)
 
