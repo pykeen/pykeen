@@ -86,22 +86,23 @@ def get_protein_embedding(
         path = pystow.ensure("bio", "uniprot", url=HUMAN_T5_PROTEIN_EMBEDDINGS)
     else:
         path = pystow.ensure("bio", "uniprot", url=PROTEIN_EMBEDDINGS, name="all_proteins.h5")
+
+    actual_curies = []
+    tensors = []
     with h5py.File(path, "r") as file:
         if uniprot_curies is None:
             uniprot_curies = sorted(file)
-        tensor = torch.stack(
-            [
-                torch.tensor(file[uniprot_curie.removeprefix("uniprot:")])
-                for uniprot_curie in tqdm(
-                    uniprot_curies, unit_scale=True, unit="protein", desc="Getting protein features"
-                )
-            ]
-        )
+        for uniprot_curie in tqdm(uniprot_curies, unit_scale=True, unit="protein", desc="Getting protein features"):
+            uniprot_id = uniprot_curie.removeprefix("uniprot:")
+            if uniprot_id in file:
+                tensors.append(torch.tensor(file[uniprot_id]))
+                actual_curies.append(uniprot_curie)
+        tensor = torch.stack(tensors)
         if trainable:
             representation = FeatureEnrichedEmbedding(tensor, shape=32)
         else:
             representation = Embedding.from_pretrained(tensor)
-    return RepresentationBackmap(representation, uniprot_curies)
+    return RepresentationBackmap(representation, actual_curies)
 
 
 def get_entrez_to_uniprot() -> dict[str, str]:
