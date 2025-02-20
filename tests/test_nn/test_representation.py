@@ -505,6 +505,32 @@ class TensorTrainRepresentationTest(cases.RepresentationTestCase):
     cls = pykeen.nn.representation.TensorTrainRepresentation
 
 
+class MLPTransformedRepresentationTest(cases.RepresentationTestCase):
+    """Tests for MLP transformed representations."""
+
+    cls = pykeen.nn.meta.MLPTransformedRepresentation
+    kwargs = dict(
+        base_kwargs=dict(shape=(5,)),
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs["base_kwargs"]["max_id"] = kwargs.pop("max_id")
+        return kwargs
+
+
+class FeatureEnrichedEmbeddingTest(cases.RepresentationTestCase):
+    """Tests for feature-enriched embeddings."""
+
+    cls = pykeen.nn.meta.FeatureEnrichedEmbedding
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs["tensor"] = torch.rand(self.max_id, 9)
+        kwargs.pop("max_id")
+        return kwargs
+
+
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
     """Test that there are tests for all representation modules."""
 
