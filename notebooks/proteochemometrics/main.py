@@ -1,6 +1,6 @@
 """This script gives a demo of training a proteochemometrics model with PyKEEN, enriched with GO annotations.
 
-Run with ``uv run --script proteochemometrics.py``.
+Run with ``uv run --script main.py``.
 """
 
 # /// script
@@ -17,7 +17,7 @@ Run with ``uv run --script proteochemometrics.py``.
 # ]
 #
 # [tool.uv.sources]
-# pykeen = { path = "..", editable = true }
+# pykeen = { path = "../..", editable = true }
 # ///
 
 import gzip
@@ -133,18 +133,8 @@ def get_chemical_embedding(
                 tqdm.write(f"duplicate of {chembl_curie}")
                 continue
 
-            # Convert hex to binary
-            binary_fp = bytes.fromhex(hex_fp)
-
-            # Convert binary to RDKit ExplicitBitVect
-            bitvect = DataStructs.cDataStructs.CreateFromBinaryText(binary_fp)
-
-            # Convert to NumPy array
-            arr = np.zeros((bitvect.GetNumBits(),), dtype=np.uint8)
-            ConvertToNumpyArray(bitvect, arr)
-
             chembl_curie_to_idx[chembl_curie] = next(count)
-            tensors.append(torch.tensor(arr))
+            tensors.append(_hex_to_arr(hex_fp))
             actual_chembl_curies.append(chembl_curie)
 
     tensor = torch.stack(tensors)
@@ -153,6 +143,19 @@ def get_chemical_embedding(
     else:
         representation = Embedding.from_pretrained(tensor)
     return RepresentationBackmap(representation, actual_chembl_curies, chembl_curie_to_idx)
+
+
+def _hex_to_arr(hex_fp: str) -> torch.BoolTensor:
+    # Convert hex to binary
+    binary_fp = bytes.fromhex(hex_fp)
+
+    # Convert binary to RDKit ExplicitBitVect
+    bitvect = DataStructs.cDataStructs.CreateFromBinaryText(binary_fp)
+
+    # Convert to NumPy array
+    arr = np.zeros((bitvect.GetNumBits(),), dtype=np.uint8)
+    ConvertToNumpyArray(bitvect, arr)
+    return torch.tensor(arr, dtype=torch.bool)
 
 
 def get_protein_go_triples():
@@ -204,7 +207,7 @@ def get_chemical_protein_triples():
     return df
 
 
-def _uniprot_curie_from_entrez(s) -> str | None:
+def _uniprot_curie_from_entrez(s: str | None) -> str | None:
     if pd.isna(s):
         return None
     uniprot_id = uniprot_client.get_id_from_entrez(s)
@@ -233,14 +236,14 @@ def main() -> None:
         raise KeyError(f"{example_chembl_id} is not in ExCAPE-DB. Try {list(chemical_curies[0])}")
 
     click.echo("Getting protein representations from UniProt")
-    # example uniprots ["Q13506", "Q13507", "Q13508", "Q13509"]
+    # example uniprots ["uniprot:Q13506", "uniprot:Q13507", "uniprot:Q13508", "uniprot:Q13509"]
     protein_base_repr, _, protein_curies = get_human_protein_embedding(
         protein_curies, trainable=enrich_features_with_embedding
     )
     protein_trans_repr = MLPTransformedRepresentation(base=protein_base_repr, output_dim=target_dim)
 
     click.echo("Getting chemical representations from ChEMBL")
-    # example chembls ["CHEMBL465070", "CHEMBL517481", "CHEMBL465069"]
+    # example chembls ["chembl.compound:CHEMBL465070", "chembl.compound:CHEMBL517481", "chembl.compound:CHEMBL465069"]
     chemical_base_repr, _, chemical_curies = get_chemical_embedding(
         chemical_curies, trainable=enrich_features_with_embedding
     )
