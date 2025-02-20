@@ -6,6 +6,7 @@ Run with ``uv run --script main.py``.
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
+#     "chembl-downloader>=0.5.0",
 #     "h5py",
 #     "numpy",
 #     "pandas",
@@ -20,12 +21,11 @@ Run with ``uv run --script main.py``.
 # pykeen = { path = "../..", editable = true }
 # ///
 
-import gzip
-import itertools as itt
 from collections.abc import Sequence
 from pathlib import Path
 from typing import NamedTuple
 
+import chembl_downloader
 import click
 import h5py
 import numpy as np
@@ -51,11 +51,12 @@ from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import TriplesFactory
 
 HUMAN_T5_PROTEIN_EMBEDDINGS = "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/embeddings/UP000005640_9606/per-protein.h5"
-CHEMBL_VERSION = "35"
-CHEMBL_EMBEDDINGS = f"https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/chembl_{CHEMBL_VERSION}/chembl_{CHEMBL_VERSION}.fps.gz"
 EXCAPE_URL = "https://zenodo.org/record/2543724/files/pubchem.chembl.dataset4publication_inchi_smiles_v2.tsv.xz"
 GO_URL = "https://current.geneontology.org/annotations/goa_human.gaf.gz"
 HERE = Path(__file__).parent.resolve()
+
+CHEMBL_FMT = "chembl.compound:{0}".format
+UNIPROT_FMT = "uniprot:{0}".format
 
 
 class RepresentationBackmap(NamedTuple):
@@ -63,7 +64,6 @@ class RepresentationBackmap(NamedTuple):
 
     embedding: Representation
     labels: list[str]
-    label_to_id: dict[str, int]
 
 
 def get_human_protein_embedding(
@@ -90,17 +90,14 @@ def get_human_protein_embedding(
                 )
             ]
         )
-        uniprot_id_to_idx = {uniprot_id: idx for idx, uniprot_id in enumerate(uniprot_curies)}
         if trainable:
             representation = FeatureEnrichedEmbedding(tensor, shape=32)
         else:
             representation = Embedding.from_pretrained(tensor)
-    return RepresentationBackmap(representation, [f"uniprot:{i}" for i in uniprot_curies], uniprot_id_to_idx)
+    return RepresentationBackmap(representation, uniprot_curies)
 
 
-def get_chemical_embedding(
-    chembl_curies: Sequence[str] | None = None, *, trainable: bool = False
-) -> RepresentationBackmap:
+def get_chemical_embedding(chembl_curies: Sequence[str], *, trainable: bool = False) -> RepresentationBackmap:
     """Get an embedding object for chemicals.
 
     :param chembl_curies: A sequence of ChEMBL chemical identifiers (like `CHEMBL465070`) to get the embeddings for. If
@@ -111,38 +108,22 @@ def get_chemical_embedding(
         positions in the embedding. The embeddings are 2048 dimensional bit vectors from Morgan fingerprints with a
         radius of 2
     """
-    path = pystow.ensure("chembl", CHEMBL_VERSION, url=CHEMBL_EMBEDDINGS)
-    if chembl_curies is not None:
-        chembl_curies = set(chembl_curies)
-    with gzip.open(path, mode="rt") as file:
-        for _ in range(6):  # throw away headers
-            next(file)
-
-        count = itt.count()
-        chembl_curie_to_idx = {}
-        # keep track of this in case of duplicates, missings, or errors
-        actual_chembl_curies = []
-        tensors = []
-        for line in tqdm(file, unit_scale=True, total=2_470_000, desc="Getting chemical features", unit="chemical"):
-            hex_fp, chembl_id = line.strip().split("\t")
-            chembl_curie = f"chembl.compound:{chembl_id}"
-            if chembl_curies and chembl_curie not in chembl_curies:
-                continue
-
-            if chembl_curie in chembl_curie_to_idx:
-                tqdm.write(f"duplicate of {chembl_curie}")
-                continue
-
-            chembl_curie_to_idx[chembl_curie] = next(count)
-            tensors.append(_hex_to_arr(hex_fp))
-            actual_chembl_curies.append(chembl_curie)
+    chembl_curies = set(chembl_curies)
+    actual_chembl_curies = []
+    tensors = []
+    for chembl_id, arr in chembl_downloader.iterate_fps():
+        chembl_curie = CHEMBL_FMT(chembl_id)
+        if chembl_curie not in chembl_curies:
+            continue
+        actual_chembl_curies.append(chembl_curie)
+        tensors.append(torch.tensor(arr, dtype=torch.bool))
 
     tensor = torch.stack(tensors)
     if trainable:
         representation = FeatureEnrichedEmbedding(tensor, shape=32)
     else:
         representation = Embedding.from_pretrained(tensor)
-    return RepresentationBackmap(representation, actual_chembl_curies, chembl_curie_to_idx)
+    return RepresentationBackmap(representation, actual_chembl_curies)
 
 
 def _hex_to_arr(hex_fp: str) -> torch.BoolTensor:
@@ -166,7 +147,7 @@ def get_protein_go_triples():
     )
     df = df[~df["Relation"].str.startswith("NOT")]
     df = df[df["DB"] == "UniProtKB"]
-    df["subject"] = df["DB Object ID"].map(lambda s: f"uniprot:{s}")
+    df["subject"] = df["DB Object ID"].map(UNIPROT_FMT)
     df = df[["subject", "Relation", "GO ID"]].rename(columns={"Relation": "predicate", "GO ID": "object"})
     return df
 
@@ -200,7 +181,7 @@ def get_chemical_protein_triples():
     df = df[df["object"].notna()]
 
     # turn into CURIEs
-    df["subject"] = df["Original_Entry_ID"].map("chembl.compound:{0}".format)
+    df["subject"] = df["Original_Entry_ID"].map(CHEMBL_FMT)
 
     df = df[["subject", "object"]].drop_duplicates()
     df.to_csv(path, sep="\t", index=False)
@@ -211,7 +192,9 @@ def _uniprot_curie_from_entrez(s: str | None) -> str | None:
     if pd.isna(s):
         return None
     uniprot_id = uniprot_client.get_id_from_entrez(s)
-    return uniprot_id and f"uniprot:{uniprot_id}"
+    if not uniprot_id:
+        return None
+    return UNIPROT_FMT(uniprot_id)
 
 
 def main() -> None:
@@ -237,14 +220,14 @@ def main() -> None:
 
     click.echo("Getting protein representations from UniProt")
     # example uniprots ["uniprot:Q13506", "uniprot:Q13507", "uniprot:Q13508", "uniprot:Q13509"]
-    protein_base_repr, _, protein_curies = get_human_protein_embedding(
+    protein_base_repr, protein_curies = get_human_protein_embedding(
         protein_curies, trainable=enrich_features_with_embedding
     )
     protein_trans_repr = MLPTransformedRepresentation(base=protein_base_repr, output_dim=target_dim)
 
     click.echo("Getting chemical representations from ChEMBL")
     # example chembls ["chembl.compound:CHEMBL465070", "chembl.compound:CHEMBL517481", "chembl.compound:CHEMBL465069"]
-    chemical_base_repr, _, chemical_curies = get_chemical_embedding(
+    chemical_base_repr, chemical_curies = get_chemical_embedding(
         chemical_curies, trainable=enrich_features_with_embedding
     )
     chemical_trans_repr = MLPTransformedRepresentation(base=chemical_base_repr, output_dim=target_dim)
@@ -261,18 +244,10 @@ def main() -> None:
     tf = TriplesFactory.from_labeled_triples(triples_df.values)
 
     # note that the order you add to this set is very important
-    chemical_idx = [
-        tf.entity_labeling.label_to_id[chembl_curie]
-        for chembl_curie in chemical_curies
-        if chembl_curie in tf.entity_labeling.label_to_id
-    ]
+    chemical_idx: list[int] = [tf.entity_labeling.label_to_id[chemical_curie] for chemical_curie in chemical_curies]
     click.echo(f"Mapped {len(chemical_idx):,} ChEMBL IDs from edges to Morgan features")
 
-    protein_idx = [
-        tf.entity_labeling.label_to_id[uniprot_curie]
-        for uniprot_curie in protein_curies
-        if uniprot_curie in tf.entity_labeling.label_to_id
-    ]
+    protein_idx: list[int] = [tf.entity_labeling.label_to_id[protein_curie] for protein_curie in protein_curies]
     click.echo(f"Mapped {len(protein_idx):,} UniProt IDs from edges to T5 protein features")
 
     click.echo("Constructing entity representation")
