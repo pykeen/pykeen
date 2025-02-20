@@ -5,39 +5,11 @@ from torch import nn
 from ..typing import FloatTensor
 
 __all__ = [
-    "TwoLayerMLP",
     "ConcatMLP",
 ]
 
 
-class TwoLayerMLP(nn.Sequential):
-    """A 2-layer MLP with ReLU activation and dropout."""
-
-    def __init__(
-        self,
-        input_dim: int,
-        output_dim: int | None = None,
-        dropout: float = 0.1,
-        ratio: int | float = 2,
-    ) -> None:
-        """Initialize the module.
-
-        :param input_dim: the input dimension
-        :param output_dim: the output dimension. defaults to input dim
-        :param dropout: the dropout value on the hidden layer
-        :param ratio: the ratio of the output dimension to the hidden layer size.
-        """
-        output_dim = output_dim or input_dim
-        hidden_dim = int(ratio * output_dim)
-        super().__init__(
-            nn.Linear(input_dim, hidden_dim),
-            nn.Dropout(dropout),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, output_dim),
-        )
-
-
-class ConcatMLP(TwoLayerMLP):
+class ConcatMLP(nn.Sequential):
     """A 2-layer MLP with ReLU activation and dropout applied to the flattened token representations.
 
     This is for conveniently choosing a configuration similar to the paper. For more complex aggregation mechanisms,
@@ -64,7 +36,14 @@ class ConcatMLP(TwoLayerMLP):
         :param ratio: the ratio of the output dimension to the hidden layer size.
         :param flatten_dims: the number of trailing dimensions to flatten
         """
-        super().__init__(input_dim=input_dim, output_dim=output_dim, dropout=dropout, ratio=ratio)
+        output_dim = output_dim or input_dim
+        hidden_dim = int(ratio * output_dim)
+        super().__init__(
+            nn.Linear(input_dim, hidden_dim),
+            nn.Dropout(dropout),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim),
+        )
         self.flatten_dims = flatten_dims
 
     def forward(self, xs: FloatTensor, dim: int) -> FloatTensor:
