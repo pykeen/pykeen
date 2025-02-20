@@ -173,7 +173,7 @@ The following 5 inductive datasets are built in to PyKEEN.
 
 ### Representations
 
-The following 20 representations are implemented by PyKEEN.
+The following 21 representations are implemented by PyKEEN.
 
 | Name                       | Reference                                                                                                                                                   |
 |----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -183,6 +183,7 @@ The following 20 representations are implemented by PyKEEN.
 | Embedding                  | [`pykeen.nn.Embedding`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.Embedding.html)                                                |
 | Featurized Message Passing | [`pykeen.nn.FeaturizedMessagePassingRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.pyg.FeaturizedMessagePassingRepresentation.html) |
 | Low Rank Embedding         | [`pykeen.nn.LowRankRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.LowRankRepresentation.html)                        |
+| Multi-Backfill             | [`pykeen.nn.MultiBackfillRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.MultiBackfillRepresentation.html)            |
 | NodePiece                  | [`pykeen.nn.NodePieceRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.node_piece.representation.NodePieceRepresentation.html)         |
 | Partition                  | [`pykeen.nn.PartitionRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.representation.PartitionRepresentation.html)                    |
 | R-GCN                      | [`pykeen.nn.RGCNRepresentation`](https://pykeen.readthedocs.io/en/latest/api/pykeen.nn.message_passing.RGCNRepresentation.html)                             |
