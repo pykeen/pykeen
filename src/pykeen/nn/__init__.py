@@ -12,6 +12,7 @@ from .combination import (
     GatedCombination,
 )
 from .message_passing import RGCNRepresentation
+from .meta import FeatureEnrichedEmbedding, MLPTransformedRepresentation
 from .modules import (
     AutoSFInteraction,
     BoxEInteraction,
@@ -97,6 +98,7 @@ __all__ = [
     "TokenizationRepresentation",
     "TypedMessagePassingRepresentation",
     "FeaturizedMessagePassingRepresentation",
+    "FeatureEnrichedEmbedding",
     "CombinedRepresentation",
     "TensorTrainRepresentation",
     "TextRepresentation",
@@ -105,6 +107,7 @@ __all__ = [
     "BiomedicalCURIERepresentation",
     "VisualRepresentation",
     "WikidataVisualRepresentation",
+    "MLPTransformedRepresentation",
     "tokenizer_resolver",
     "representation_resolver",
     # INITIALIZER

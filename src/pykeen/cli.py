@@ -135,6 +135,8 @@ def _get_resolver_lines2(
             continue
         # determine fully qualified name
         module, name = clsx.__module__, clsx.__qualname__
+        if "pykeen.nn.meta" in module:
+            continue
         full = f"{module}.{name}"
         # shorten to main module
         if top_k:
