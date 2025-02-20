@@ -87,42 +87,11 @@ Alternative interactions can be integrated with custom initialization of the rel
 
 Let's create a basic `InductiveNodePiece` using one of the `InductiveFB15k237` datasets:
 
-.. code-block:: python
-
-    from pykeen.datasets.inductive.ilp_teru import InductiveFB15k237
-    from pykeen.models.inductive import InductiveNodePiece
-    from pykeen.losses import NSSALoss
-
-    dataset = InductiveFB15k237(version="v1", create_inverse_triples=True)
-
-    model = InductiveNodePiece(
-        triples_factory=dataset.transductive_training,  # training factory, used to tokenize training nodes
-        inference_factory=dataset.inductive_inference,  # inference factory, used to tokenize inference nodes
-        num_tokens=12,  # length of a node hash - how many unique relations per node will be used
-        aggregation="mlp",  # aggregation function, defaults to an MLP, can be any PyTorch function
-        loss=NSSALoss(margin=15),  # dummy loss
-        random_seed=42,
-    )
+.. literalinclude:: ../examples/tutoria/inductive_lp/01_model.py
 
 Creating a message-passing version of NodePiece is pretty much the same:
 
-.. code-block:: python
-
-    from pykeen.datasets.inductive.ilp_teru import InductiveFB15k237
-    from pykeen.models.inductive import InductiveNodePieceGNN
-    from pykeen.losses import NSSALoss
-
-    dataset = InductiveFB15k237(version="v1", create_inverse_triples=True)
-
-    model = InductiveNodePieceGNN(
-        triples_factory=dataset.transductive_training,  # training factory, will be also used for a GNN
-        inference_factory=dataset.inductive_inference,  # inference factory, will be used for a GNN
-        num_tokens=12,  # length of a node hash - how many unique relations per node will be used
-        aggregation="mlp",  # aggregation function, defaults to an MLP, can be any PyTorch function
-        loss=NSSALoss(margin=15),  # dummy loss
-        random_seed=42,
-        gnn_encoder=None,  # defaults to a 2-layer CompGCN with DistMult composition function
-    )
+.. literalinclude:: ../examples/tutoria/inductive_lp/01_model_gnn.py
 
 Note this version has the ``gnn_encoder`` argument - keeping it ``None`` would invoke a default 2-layer CompGCN.
 You can pass here any relational GNN that returns updated matrices of entities and relations as
@@ -161,36 +130,7 @@ validation / test triple only against 50 random negatives. PyKEEN implements thi
 
 Let's create a training loop and validation / test evaluators:
 
-.. code-block:: python
-
-    from pykeen.datasets.inductive.ilp_teru import InductiveFB15k237
-    from pykeen.training import SLCWATrainingLoop
-    from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator
-    from pykeen.losses import NSSALoss
-
-    dataset = InductiveFB15k237(version="v1", create_inverse_triples=True)
-
-    model = ...  # model init here, one of InductiveNodePiece
-    optimizer = ...  # some optimizer
-
-    training_loop = SLCWATrainingLoop(
-        triples_factory=dataset.transductive_training,  # training triples
-        model=model,
-        optimizer=optimizer,
-        mode="training",   # necessary to specify for the inductive mode - training has its own set of nodes
-    )
-
-    valid_evaluator = SampledRankBasedEvaluator(
-        mode="validation",   # necessary to specify for the inductive mode - this will use inference nodes
-        evaluation_factory=dataset.inductive_validation,  # validation triples to predict
-        additional_filter_triples=dataset.inductive_inference.mapped_triples,   # filter out true inference triples
-    )
-
-    test_evaluator = SampledRankBasedEvaluator(
-        mode="testing",   # necessary to specify for the inductive mode - this will use inference nodes
-        evaluation_factory=dataset.inductive_testing,  # test triples to predict
-        additional_filter_triples=dataset.inductive_inference.mapped_triples,   # filter out true inference triples
-    )
+.. literalinclude:: ../examples/tutoria/inductive_lp/02_training.py
 
 
 Full Inductive LP Example
@@ -199,85 +139,4 @@ Full Inductive LP Example
 A minimally working example for training an `InductiveNodePieceGNN` on the `InductiveFB15k237` (v1)
 in the sLCWA mode with 32 negative samples per positive, with NSSALoss, and SampledEvaluator would look like this:
 
-.. code-block:: python
-
-    from pykeen.datasets.inductive.ilp_teru import InductiveFB15k237
-    from pykeen.models.inductive import InductiveNodePieceGNN
-    from pykeen.training import SLCWATrainingLoop
-    from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator
-    from pykeen.stoppers import EarlyStopper
-    from pykeen.losses import NSSALoss
-    from torch.optim import Adam
-
-    dataset = InductiveFB15k237(version="v1", create_inverse_triples=True)
-
-    model = InductiveNodePieceGNN(
-        triples_factory=dataset.transductive_training,  # training factory, will be also used for a GNN
-        inference_factory=dataset.inductive_inference,  # inference factory, will be used for a GNN
-        num_tokens=12,  # length of a node hash - how many unique relations per node will be used
-        aggregation="mlp",  # aggregation function, defaults to an MLP, can be any PyTorch function
-        loss=NSSALoss(margin=15),  # dummy loss
-        random_seed=42,
-        gnn_encoder=None,  # defaults to a 2-layer CompGCN with DistMult composition function
-    )
-
-    optimizer = Adam(params=model.parameters(), lr=0.0005)
-
-    training_loop = SLCWATrainingLoop(
-        triples_factory=dataset.transductive_training,  # training triples
-        model=model,
-        optimizer=optimizer,
-        negative_sampler_kwargs=dict(num_negs_per_pos=32),
-        mode="training",   # necessary to specify for the inductive mode - training has its own set of nodes
-    )
-
-    # Validation and Test evaluators use a restricted protocol ranking against 50 random negatives
-    valid_evaluator = SampledRankBasedEvaluator(
-        mode="validation",   # necessary to specify for the inductive mode - this will use inference nodes
-        evaluation_factory=dataset.inductive_validation,  # validation triples to predict
-        additional_filter_triples=dataset.inductive_inference.mapped_triples,   # filter out true inference triples
-    )
-
-    # According to the original code
-    # https://github.com/kkteru/grail/blob/2a3dffa719518e7e6250e355a2fb37cd932de91e/test_ranking.py#L526-L529
-    # test filtering uses only the inductive_inference split and does not include inductive_validation triples
-    # If you use the full RankBasedEvaluator, both inductive_inference and inductive_validation triples
-    # must be added to the additional_filter_triples
-    test_evaluator = SampledRankBasedEvaluator(
-        mode="testing",   # necessary to specify for the inductive mode - this will use inference nodes
-        evaluation_factory=dataset.inductive_testing,  # test triples to predict
-        additional_filter_triples=dataset.inductive_inference.mapped_triples,   # filter out true inference triples
-    )
-
-    early_stopper = EarlyStopper(
-        model=model,
-        training_triples_factory=dataset.inductive_inference,
-        evaluation_triples_factory=dataset.inductive_validation,
-        frequency=1,
-        patience=100000,  # for test reasons, turn it off
-        result_tracker=None,
-        evaluation_batch_size=256,
-        evaluator=valid_evaluator,
-    )
-
-    # Training starts here
-    training_loop.train(
-        triples_factory=dataset.transductive_training,
-        stopper=early_stopper,
-        num_epochs=100,
-    )
-
-    # Test evaluation
-    result = test_evaluator.evaluate(
-        model=model,
-        mapped_triples=dataset.inductive_testing.mapped_triples,
-        additional_filter_triples=dataset.inductive_inference.mapped_triples,
-        batch_size=256,
-    )
-
-    # print final results
-    print(result.to_flat_dict())
-
-
-
-
+.. literalinclude:: ../examples/tutoria/inductive_lp/03_full.py
