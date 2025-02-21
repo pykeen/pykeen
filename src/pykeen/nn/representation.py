@@ -2194,7 +2194,8 @@ class EmbeddingBagRepresentation(Representation):
             Additional keyword-based parameters passed to :class:`~pykeen.nn.Representation`.
         """
         a_max_id, num_components = assignment.max(dim=0).values.tolist()
-        super().__init__(max_id=max_id or a_max_id + 1, **kwargs)
+        # note: we use unique within _plain_forward anyway
+        super().__init__(max_id=max_id or a_max_id + 1, unique=False, **kwargs)
         # sort by index
         idx = assignment[:, 0].argsort()
         assignment = assignment[idx].clone()
@@ -2210,21 +2211,21 @@ class EmbeddingBagRepresentation(Representation):
     # docstr-coverage: inherited
     def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         if indices is None:
-            indices = torch.arange(self.max_id)
-        unique_indices, inverse = indices.unique(return_inverse=True)
+            indices = unique_indices = inverse = torch.arange(self.max_id)
+        else:
+            unique_indices, inverse = indices.unique(return_inverse=True)
         # filter assignment
         mask = torch.isin(self.assignment[:, 0], test_elements=unique_indices)
         selection = self.assignment[mask]
-        # set-up offsets & sub-indicest
+        # set-up offsets & sub-indices
+        sub_indices = selection[:, 1]
+        # determine CSR-style offsets
         bag_index, bag_size = selection[:, 0].unique(return_counts=True)
-        # uniq_comp, sizes = selection[:, 1].unique(return_counts=True)
         offsets = torch.zeros_like(unique_indices)
         mask = torch.isin(bag_index, test_elements=unique_indices, assume_unique=True)
         offsets[mask] = bag_size
         offsets = torch.cumsum(offsets, dim=0)[:-1]
         offsets = torch.cat([torch.zeros(1, dtype=offsets.dtype), offsets])
-        # TODO: this assumes sorting
-        sub_indices = selection[:, 1]
         return self.embedding_bag(sub_indices, offsets)[inverse].view(*indices.shape, *self.shape)
 
     @classmethod
