@@ -2156,20 +2156,56 @@ class TensorTrainRepresentation(Representation):
 
 
 class EmbeddingBagRepresentation(Representation):
-    # (index, comp_index)
+    """
+    An embedding bag representation.
+
+    :class:`~torch.nn.EmbeddingBag` is similar to a :class:`~pykeen.nn.TokenRepresentation`
+    followed by an aggregation along the `num_tokens` dimension.
+
+    It's main differences are:
+
+        - It fuses the token look-up and aggregation step in a single torch call.
+        - It only allows for a limited set of non-parametric aggregations:
+          :func:`~torch.sum`, :func:`~torch.mean`, or :func:`~torch.max`
+        - It can handle sparse/variable number of tokens per input more naturally.
+        - It always uses an :class:`~torch.nn.Embedding` layer instead of permitting an arbitrary
+          :class:`~pykeen.nn.Representation`
+    """
+
+    # shape: (nnz, 2), entries: (index, comp_index)
     assignment: LongTensor
 
-    def __init__(self, assignment: LongTensor, max_id: int | None = None, **kwargs):
+    def __init__(
+        self, assignment: LongTensor, max_id: int | None = None, mode: Literal["sum", "mean", "max"] = "mean", **kwargs
+    ):
+        """
+        Initialize the representation.
+
+        :param assignment: shape: (nnz, 2)
+            The assignment between indices and tokens, in edge-list format.
+            ``assignment[:, 0]`` denotes the indices for the representation,
+            ``assignment[:, 1]`` the index of the token.
+        :param max_id:
+            The maximum ID (exclusively). Valid Ids reach from ``0`` to ``max_id-1``.
+            Can be ``None`` to infer it from the assignment tensor.
+        :param mode:
+            The aggregation mode for :class:`~torch.nn.EmbeddingBag`.
+        :param kwargs:
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.Representation`.
+        """
         a_max_id, num_components = assignment.max(dim=0).values.tolist()
         super().__init__(max_id=max_id or a_max_id + 1, **kwargs)
         # sort by index
         idx = assignment[:, 0].argsort()
         assignment = assignment[idx].clone()
+        # register assignment buffer *after* super init
         self.register_buffer(name="assignment", tensor=assignment)
+        # flatten shape
         embedding_dim = 1
         for d in self.shape:
             embedding_dim *= d
-        self.embedding_bag = nn.EmbeddingBag(num_embeddings=num_components + 1, embedding_dim=embedding_dim)
+        # set-up embedding bag
+        self.embedding_bag = nn.EmbeddingBag(num_embeddings=num_components + 1, embedding_dim=embedding_dim, mode=mode)
 
     # docstr-coverage: inherited
     def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
@@ -2192,5 +2228,16 @@ class EmbeddingBagRepresentation(Representation):
         return self.embedding_bag(sub_indices, offsets)[inverse].view(*indices.shape, *self.shape)
 
     @classmethod
-    def from_iter(cls, xss: Iterable[Iterable[int]]) -> Self:
+    def from_iter(cls, xss: Iterable[Iterable[int]], **kwargs) -> Self:
+        """Instantiate from an iterable of indices.
+
+        :param xss:
+            An iterable over the indices,
+            where each element is an iterable over the token indices for the given index.
+        :param kwargs:
+            Additional keyword-based parameters passed to :meth:`__init__`
+
+        :return:
+            A corresponding representation.
+        """
         return cls(assignment=torch.as_tensor([(i, x) for i, xs in enumerate(xss) for x in xs]))
