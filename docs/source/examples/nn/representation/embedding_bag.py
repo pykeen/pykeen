@@ -1,7 +1,8 @@
 """Embedding bag, with 2048-dimensional Morgan boolean fingerprints for molecules."""
 
-import torch
 import chembl_downloader
+import torch
+
 from pykeen.nn.representation import EmbeddingBagRepresentation
 
 chembl_ids, tensors = zip(
@@ -10,5 +11,6 @@ chembl_ids, tensors = zip(
 )
 
 representation = EmbeddingBagRepresentation.from_iter(
-    list(fingerprint.nonzero()) for fingerprint in tensors  # might need to flatten here
+    list(fingerprint.nonzero())  # might need to flatten here
+    for fingerprint in tensors
 )
