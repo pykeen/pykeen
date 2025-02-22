@@ -2162,7 +2162,7 @@ class EmbeddingBagRepresentation(Representation):
     :class:`~torch.nn.EmbeddingBag` is similar to a :class:`~pykeen.nn.TokenRepresentation`
     followed by an aggregation along the `num_tokens` dimension.
 
-    It's main differences are:
+    Its main differences are:
 
         - It fuses the token look-up and aggregation step in a single torch call.
         - It only allows for a limited set of non-parametric aggregations:
@@ -2176,8 +2176,12 @@ class EmbeddingBagRepresentation(Representation):
     assignment: LongTensor
 
     def __init__(
-        self, assignment: LongTensor, max_id: int | None = None, mode: Literal["sum", "mean", "max"] = "mean", **kwargs
-    ):
+        self,
+        assignment: LongTensor,
+        max_id: int | None = None,
+        mode: Literal["sum", "mean", "max"] = "mean",
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize the representation.
 
@@ -2229,7 +2233,7 @@ class EmbeddingBagRepresentation(Representation):
         return self.embedding_bag(sub_indices, offsets)[inverse].view(*indices.shape, *self.shape)
 
     @classmethod
-    def from_iter(cls, xss: Iterable[Iterable[int]], **kwargs) -> Self:
+    def from_iter(cls, xss: Iterable[Iterable[int]], **kwargs: Any) -> Self:
         """Instantiate from an iterable of indices.
 
         :param xss:
@@ -2241,4 +2245,4 @@ class EmbeddingBagRepresentation(Representation):
         :return:
             A corresponding representation.
         """
-        return cls(assignment=torch.as_tensor([(i, x) for i, xs in enumerate(xss) for x in xs]))
+        return cls(assignment=torch.as_tensor([(i, x) for i, xs in enumerate(xss) for x in xs]), **kwargs)
