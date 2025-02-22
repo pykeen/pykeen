@@ -505,6 +505,21 @@ class TensorTrainRepresentationTest(cases.RepresentationTestCase):
     cls = pykeen.nn.representation.TensorTrainRepresentation
 
 
+class EmbeddingBagRepresentation(cases.RepresentationTestCase):
+    """Tests for embedding bag representations."""
+
+    cls = pykeen.nn.representation.EmbeddingBagRepresentation
+    kwargs = dict(shape=(5,))
+
+    # docstr-coverage: inherited
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        max_id = kwargs["max_id"]
+        mask = torch.rand(max_id, max_id) < 0.5
+        kwargs["assignment"] = mask.nonzero()
+        return kwargs
+
+
 class MLPTransformedRepresentationTest(cases.RepresentationTestCase):
     """Tests for MLP transformed representations."""
 
