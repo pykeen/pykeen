@@ -1214,12 +1214,6 @@ def _handle_evaluation(
         raise ValueError("no validation triples available")
     else:
         evaluation_factory = validation
-    if evaluation_factory.create_inverse_triples:
-        logger.warning(
-            f"Found {evaluation_factory.create_inverse_triples=} which is ignored for evaluation factories. "
-            f"The model itself determines whether inverse relations are used in head prediction. "
-            f"Here, the model was created with {training.create_inverse_triples=}",
-        )
     mapped_triples = evaluation_factory.mapped_triples
 
     # Build up a list of triples if we want to be in the filtered setting

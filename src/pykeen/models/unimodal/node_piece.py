@@ -110,19 +110,12 @@ class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
 
-        :raises ValueError:
-            if the triples factory does not create inverse triples
+        :raises ValueError: If create_inverse_triples is set to false
         """
-        if not triples_factory.create_inverse_triples:
-            raise ValueError(
-                "The provided triples factory does not create inverse triples. However, for the node piece "
-                "representations inverse relation representations are required.",
-            )
-
         # always create representations for normal and inverse relations and padding
         relation_representations = representation_resolver.make(
             query=None,
-            max_id=2 * triples_factory.real_num_relations + 1,
+            max_id=2 * triples_factory.num_relations + 1,
             shape=embedding_dim,
             initializer=relation_initializer,
             normalizer=relation_normalizer,
@@ -149,6 +142,11 @@ class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
             else:
                 token_representations.append(None)  # Embedding
                 token_representations_kwargs.append(anchor_kwargs)
+
+        # Inverse triples are required
+        if "create_inverse_triples" in kwargs and not kwargs["create_inverse_triples"]:
+            raise ValueError(f"{self.__class__.__name__} requires inverse triples to be True")
+        kwargs["create_inverse_triples"] = True
 
         super().__init__(
             triples_factory=triples_factory,

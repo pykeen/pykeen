@@ -46,7 +46,7 @@ MODEL_CONFIGURATIONS = {
     models.ProjE: dict(embedding_dim=EMBEDDING_DIM),
     models.QuatE: dict(embedding_dim=EMBEDDING_DIM),
     models.RESCAL: dict(embedding_dim=EMBEDDING_DIM),
-    models.RGCN: dict(embedding_dim=EMBEDDING_DIM),
+    models.RGCN: dict(embedding_dim=EMBEDDING_DIM, create_inverse_triples=True),
     models.RotatE: dict(embedding_dim=EMBEDDING_DIM),
     models.SE: dict(embedding_dim=EMBEDDING_DIM),
     models.SimplE: dict(embedding_dim=EMBEDDING_DIM),
@@ -70,9 +70,7 @@ TEST_CONFIGURATIONS = (
 @pytest.mark.parametrize(("model", "model_kwargs", "training_loop"), TEST_CONFIGURATIONS)
 def test_lit_training(model, model_kwargs, training_loop):
     """Test training models with PyTorch Lightning."""
-    # some models require inverse relations
-    create_inverse_triples = model is not models.RGCN
-    dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=create_inverse_triples))
+    dataset = get_dataset(dataset="nations")
 
     # some model require access to the training triples
     if "triples_factory" in model_kwargs:
