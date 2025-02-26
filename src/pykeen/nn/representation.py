@@ -2170,6 +2170,18 @@ class EmbeddingBagRepresentation(Representation):
         - It can handle sparse/variable number of tokens per input more naturally.
         - It always uses an :class:`~torch.nn.Embedding` layer instead of permitting an arbitrary
           :class:`~pykeen.nn.Representation`
+
+    If you have a boolean feature vector, for example, from a chemical fingerprint, you
+    can construct an embedding bag with the following
+
+    .. code-block:: python
+
+        features: torch.BoolTensor = ...
+
+        representation = EmbeddingBagRepresentation.from_iter(
+            list(feature.nonzero())
+            for feature in features
+        )
     """
 
     # shape: (nnz, 2), entries: (index, comp_index)
