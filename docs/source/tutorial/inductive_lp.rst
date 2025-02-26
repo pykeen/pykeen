@@ -87,11 +87,11 @@ Alternative interactions can be integrated with custom initialization of the rel
 
 Let's create a basic `InductiveNodePiece` using one of the `InductiveFB15k237` datasets:
 
-.. literalinclude:: ../examples/tutoria/inductive_lp/01_model.py
+.. literalinclude:: ../examples/tutorial/inductive_lp/01_model.py
 
 Creating a message-passing version of NodePiece is pretty much the same:
 
-.. literalinclude:: ../examples/tutoria/inductive_lp/01_model_gnn.py
+.. literalinclude:: ../examples/tutorial/inductive_lp/01_model_gnn.py
 
 Note this version has the ``gnn_encoder`` argument - keeping it ``None`` would invoke a default 2-layer CompGCN.
 You can pass here any relational GNN that returns updated matrices of entities and relations as
@@ -130,7 +130,7 @@ validation / test triple only against 50 random negatives. PyKEEN implements thi
 
 Let's create a training loop and validation / test evaluators:
 
-.. literalinclude:: ../examples/tutoria/inductive_lp/02_training.py
+.. literalinclude:: ../examples/tutorial/inductive_lp/02_training.py
 
 
 Full Inductive LP Example
@@ -139,4 +139,4 @@ Full Inductive LP Example
 A minimally working example for training an `InductiveNodePieceGNN` on the `InductiveFB15k237` (v1)
 in the sLCWA mode with 32 negative samples per positive, with NSSALoss, and SampledEvaluator would look like this:
 
-.. literalinclude:: ../examples/tutoria/inductive_lp/03_full.py
+.. literalinclude:: ../examples/tutorial/inductive_lp/03_full.py
