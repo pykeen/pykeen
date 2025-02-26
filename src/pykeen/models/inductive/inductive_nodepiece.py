@@ -64,13 +64,13 @@ class InductiveNodePiece(InductiveERModel):
         Initialize the model.
 
         :param triples_factory:
-            the triples factory of training triples. Must have create_inverse_triples set to True.
+            the triples factory of training triples.
         :param inference_factory:
-            the triples factory of inference triples. Must have create_inverse_triples set to True.
+            the triples factory of inference triples.
         :param validation_factory:
-            the triples factory of validation triples. Must have create_inverse_triples set to True.
+            the triples factory of validation triples.
         :param test_factory:
-            the triples factory of testing triples. Must have create_inverse_triples set to True.
+            the triples factory of testing triples.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
             :class:`pykeen.nn.NodePieceRepresentation`.
@@ -96,21 +96,12 @@ class InductiveNodePiece(InductiveERModel):
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
-
-        :raises ValueError:
-            if the triples factory does not create inverse triples
         """
-        if not triples_factory.create_inverse_triples:
-            raise ValueError(
-                "The provided triples factory does not create inverse triples. However, for the node piece "
-                "representations inverse relation representations are required.",
-            )
-
         # always create representations for normal and inverse relations and padding
         relation_representations = representation_resolver.make(
             query=None,
             pos_kwargs=relation_representations_kwargs,
-            max_id=2 * triples_factory.real_num_relations + 1,
+            max_id=2 * triples_factory.num_relations + 1,
             shape=embedding_dim,
         )
         if validation_factory is None:
@@ -162,8 +153,6 @@ class InductiveNodePiece(InductiveERModel):
         :raises ValueError:
             if the triples factory does not request inverse triples, or the number of relations differs.
         """
-        if not triples_factory.create_inverse_triples:
-            raise ValueError("Must create a triples factory with inverse triples")
         if triples_factory.num_relations != self.num_relations:
             raise ValueError(f"{self.num_relations=} != {triples_factory.num_relations=} !")
         # note: we cannot ensure the mapping also matches...
