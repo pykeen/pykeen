@@ -83,6 +83,7 @@ __all__ = [
     "CachedTextRepresentation",
     "WikidataTextRepresentation",
     "BiomedicalCURIERepresentation",
+    "EmbeddingBagRepresentation",
     # Utils
     "constrainer_resolver",
     "normalizer_resolver",
@@ -2152,3 +2153,108 @@ class TensorTrainRepresentation(Representation):
         return einsum(
             self.eq, *(base(indices) for indices, base in zip(assignment.unbind(dim=-1), self.bases, strict=False))
         ).view(*assignment.shape[:-1], *self.shape)
+
+
+class EmbeddingBagRepresentation(Representation):
+    """
+    An embedding bag representation.
+
+    :class:`~torch.nn.EmbeddingBag` is similar to a :class:`~pykeen.nn.TokenRepresentation`
+    followed by an aggregation along the `num_tokens` dimension.
+
+    Its main differences are:
+
+        - It fuses the token look-up and aggregation step in a single torch call.
+        - It only allows for a limited set of non-parametric aggregations:
+          :func:`~torch.sum`, :func:`~torch.mean`, or :func:`~torch.max`
+        - It can handle sparse/variable number of tokens per input more naturally.
+        - It always uses an :class:`~torch.nn.Embedding` layer instead of permitting an arbitrary
+          :class:`~pykeen.nn.Representation`
+
+    If you have a boolean feature vector, for example, from a chemical fingerprint, you
+    can construct an embedding bag with the following
+
+    .. code-block:: python
+
+        features: torch.BoolTensor = ...
+
+        representation = EmbeddingBagRepresentation.from_iter(
+            list(feature.nonzero())
+            for feature in features
+        )
+    """
+
+    # shape: (nnz, 2), entries: (index, comp_index)
+    assignment: LongTensor
+
+    def __init__(
+        self,
+        assignment: LongTensor,
+        max_id: int | None = None,
+        mode: Literal["sum", "mean", "max"] = "mean",
+        **kwargs: Any,
+    ) -> None:
+        """
+        Initialize the representation.
+
+        :param assignment: shape: (nnz, 2)
+            The assignment between indices and tokens, in edge-list format.
+            ``assignment[:, 0]`` denotes the indices for the representation,
+            ``assignment[:, 1]`` the index of the token.
+        :param max_id:
+            The maximum ID (exclusively). Valid Ids reach from ``0`` to ``max_id-1``.
+            Can be ``None`` to infer it from the assignment tensor.
+        :param mode:
+            The aggregation mode for :class:`~torch.nn.EmbeddingBag`.
+        :param kwargs:
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.Representation`.
+        """
+        a_max_id, num_components = assignment.max(dim=0).values.tolist()
+        # note: we use unique within _plain_forward anyway
+        super().__init__(max_id=max_id or a_max_id + 1, unique=False, **kwargs)
+        # sort by index
+        idx = assignment[:, 0].argsort()
+        assignment = assignment[idx].clone()
+        # register assignment buffer *after* super init
+        self.register_buffer(name="assignment", tensor=assignment)
+        # flatten shape
+        embedding_dim = 1
+        for d in self.shape:
+            embedding_dim *= d
+        # set-up embedding bag
+        self.embedding_bag = nn.EmbeddingBag(num_embeddings=num_components + 1, embedding_dim=embedding_dim, mode=mode)
+
+    # docstr-coverage: inherited
+    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
+        if indices is None:
+            indices = unique_indices = inverse = torch.arange(self.max_id)
+        else:
+            unique_indices, inverse = indices.unique(return_inverse=True)
+        # filter assignment
+        mask = torch.isin(self.assignment[:, 0], test_elements=unique_indices)
+        selection = self.assignment[mask]
+        # set-up offsets & sub-indices
+        sub_indices = selection[:, 1]
+        # determine CSR-style offsets
+        bag_index, bag_size = selection[:, 0].unique(return_counts=True)
+        offsets = torch.zeros_like(unique_indices)
+        mask = torch.isin(bag_index, test_elements=unique_indices, assume_unique=True)
+        offsets[mask] = bag_size
+        offsets = torch.cumsum(offsets, dim=0)[:-1]
+        offsets = torch.cat([torch.zeros(1, dtype=offsets.dtype), offsets])
+        return self.embedding_bag(sub_indices, offsets)[inverse].view(*indices.shape, *self.shape)
+
+    @classmethod
+    def from_iter(cls, xss: Iterable[Iterable[int]], **kwargs: Any) -> Self:
+        """Instantiate from an iterable of indices.
+
+        :param xss:
+            An iterable over the indices,
+            where each element is an iterable over the token indices for the given index.
+        :param kwargs:
+            Additional keyword-based parameters passed to :meth:`__init__`
+
+        :return:
+            A corresponding representation.
+        """
+        return cls(assignment=torch.as_tensor([(i, x) for i, xs in enumerate(xss) for x in xs]), **kwargs)
