@@ -354,27 +354,24 @@ class Loss(_Loss):
         )
         return self(predictions, labels)
 
-    def process_cwa_scores(
-        self,
-        predictions: FloatTensor,
-        hs: LongTensor,
-        rs: LongTensor,
-        ts: LongTensor,
-        label_smoothing: float | None = None,
+    def process_bcwa_scores(
+        self, predictions: FloatTensor, targets: LongTensor, label_smoothing: float | None = None
     ) -> FloatTensor:
         """
-        Process scores for CWA training loop.
+        Process scores for BCWA training loop.
 
         :param scores: shape: (num_heads, num_relations, num_tails)
             The scores.
-        :param hs: shape: (nnz,)
-            The (batch-local) head indices of positive triples.
-        :param rs: shape: (nnz,)
-            The (batch-local) head indices of positive triples.
-        :param ts: shape: (nnz,)
-            The (batch-local) head indices of positive triples.
+        :param targets: shape: (nnz,)
+            The positive triples in batch-local indices.
+        :param label_smoothing:
+            An optional label smoothing parameter.
+
+        :return:
+            A scalar loss value.
         """
         labels = torch.zeros_like(predictions)
+        hs, rs, ts = targets.unbind(dim=-1)
         labels[hs, rs, ts] = 1.0
         labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=2)
         return self(predictions, labels)

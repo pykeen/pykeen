@@ -12,45 +12,66 @@ from pykeen.typing import COLUMN_TAIL, FloatTensor, LongTensor
 
 
 class BatchCWABatch(NamedTuple):
-    # shape: (batch_size,)
+    """A batch for BCWA training."""
+
     hs: LongTensor
-    # shape: (batch_size,)
+    """The unique head entity indices, shape: (num_unique_heads,)."""
+
     rs: LongTensor
-    # shape: (batch_size,)
+    """The unique relation indices, shape: (num_unique_relations,)."""
+
     ts: LongTensor
-    # shape: (nnz,), in batch-local indices
-    # should contain all triples whose h, r, t indices occur within the batch
-    h_target: LongTensor
-    r_target: LongTensor
-    t_target: LongTensor
+    """The unique tail entity indices, shape: (num_unique_tails,)."""
+
+    targets: LongTensor | None
+    """The indices of positive targets, in batch-local indices, shape: (num_positive_triples, 3)
+
+    Only filled during collation.
+    """
 
 
 class BatchCWADataset(Dataset[BatchCWABatch]):
+    """A map-style dataset for BCWA training."""
+
     def __init__(self, mapped_triples: LongTensor):
+        """Initialize the dataset.
+
+        :param mapped_triples: shape: (num_triples, 3)
+            The ID-based training triples.
+        """
         super().__init__()
         self.mapped_triples = mapped_triples
 
     def __getitem__(self, item: int) -> BatchCWABatch:
         h, r, t = self.mapped_triples[item]
-        x = torch.zeros(1, dtype=torch.long)
-        return BatchCWABatch(hs=h, rs=r, ts=t, h_target=x, r_target=x, t_target=x)
+        return BatchCWABatch(hs=h, rs=r, ts=t, targets=None)
 
     def __len__(self) -> int:
         return self.mapped_triples.shape[0]
 
 
 class BatchCWACollator:
-    # note: the implement is relatively memory demanding
+    """A custom collator for BCWA training.
+
+    .. warning::
+        The current implementation is rather memory demanding.
+    """
+
     def __init__(self, mapped_triples: LongTensor):
+        """Initialize the collator.
+
+        :param mapped_triples: shape: (num_triples, 3)
+            The ID-based training triples.
+        """
         self.mapped_triples = mapped_triples
 
     def __call__(self, batch: list[BatchCWABatch]) -> BatchCWABatch:
-        # collect
+        # collect unique indices
         hs = torch.stack([b.hs for b in batch]).unique()
         rs = torch.stack([b.rs for b in batch]).unique()
         ts = torch.stack([b.ts for b in batch]).unique()
 
-        # collect all triples that solely contain the current batch entities/relations
+        # collect all triples that solely contain the current batch heads/relations/tails
         other_triples = self.mapped_triples
         for i, indices in enumerate([hs, rs, ts]):
             mask = torch.isin(elements=other_triples[:, i], test_elements=indices)
@@ -63,13 +84,17 @@ class BatchCWACollator:
             assert torch.equal(uniq, indices)
             targets.append(inv)
 
-        return BatchCWABatch(hs=hs, rs=rs, ts=ts, h_target=targets[0], r_target=targets[1], t_target=targets[2])
+        return BatchCWABatch(hs=hs, rs=rs, ts=ts, targets=torch.stack(targets, dim=-1))
 
 
-class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch, BatchCWABatch]):
+class BatchCWATrainingLoop(TrainingLoop[LongTensor, BatchCWABatch]):
+    """A training loop for BCWA training."""
+
     def _create_training_data_loader(
         self, triples_factory: CoreTriplesFactory, *, sampler: str | None, batch_size: int, drop_last: bool, **kwargs
     ) -> DataLoader[BatchCWABatch]:
+        if sampler:
+            raise NotImplementedError("No support for custom samplers yet.")
         mapped_triples = triples_factory.mapped_triples
         return DataLoader(
             dataset=BatchCWADataset(mapped_triples=mapped_triples),
@@ -109,9 +134,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch, BatchCWABatch]):
         # calculate loss
         return (
             # loss
-            self.loss.process_cwa_scores(
-                scores, hs=batch.h_target, rs=batch.r_target, ts=batch.t_target, label_smoothing=label_smoothing
-            )
+            self.loss.process_bcwa_scores(scores, targets=batch.targets, label_smoothing=label_smoothing)
             # regularization
             + self.model.collect_regularization_term()
         )
