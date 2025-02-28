@@ -113,6 +113,8 @@ class BatchCWATrainingLoop(TrainingLoop[LongTensor, BatchCWABatch]):
     ) -> FloatTensor:
         if stop - start < self._get_batch_size(batch):
             raise NotImplementedError("No support for default sub-batching.")
+        if batch.targets is None:
+            raise AssertionError(f"{self} requires a custom collator to fill batch.targets")
 
         # indices: shape: (num_heads, num_relations, num_tails)
         h_indices = batch.hs.view(-1, 1, 1)
