@@ -362,7 +362,7 @@ class Loss(_Loss):
 
         :param predictions: shape: (num_heads, num_relations, num_tails)
             The scores.
-        :param targets: shape: (nnz,)
+        :param targets: shape: (num_positive_triples, 3)
             The positive triples in batch-local indices.
         :param label_smoothing:
             An optional label smoothing parameter.
