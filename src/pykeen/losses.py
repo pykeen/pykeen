@@ -360,7 +360,7 @@ class Loss(_Loss):
         """
         Process scores for BCWA training loop.
 
-        :param scores: shape: (num_heads, num_relations, num_tails)
+        :param predictions: shape: (num_heads, num_relations, num_tails)
             The scores.
         :param targets: shape: (nnz,)
             The positive triples in batch-local indices.
