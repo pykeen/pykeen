@@ -335,7 +335,7 @@ class Condensator:
             raise ValueError(f"Invalid shape: {self.condensation.shape=}")
         if self.condensation.is_floating_point():
             raise ValueError(f"Invalid {self.condensation.dtype=}")
-        if self.condensation.min() < 0 or self.condensation.max() >= self.condensation.numel():
+        if self.condensation.min() < -1 or self.condensation.max() >= self.condensation.numel():
             raise ValueError(f"Encountered invalid values: {self.condensation.min()=} {self.condensation.max()=}")
 
     @classmethod
@@ -356,7 +356,10 @@ class Condensator:
         """Apply to ID tensor in old ID-scheme."""
         if self.condensation is None:
             return x
-        return self.condensation[x]
+        y = self.condensation[x]
+        if (y < 0).any():
+            raise ValueError("Encountered ids without map.")
+        return y
 
     def apply_to_map(self, id_to_label: Mapping[int, str]) -> Mapping[str, int]:
         """Apply to old ID to label map."""
@@ -408,6 +411,26 @@ class TripleCondensator:
         return bool(self.entities or self.relations)
 
 
+def valid_triple_id_range(mapped_triples: MappedTriples, num_entities: int, num_relations: int) -> bool:
+    """Check if the ID range is valid.
+
+    :param mapped_triples:
+        The ID-based triples.
+    :param num_entities:
+        The number of entities.
+    :param num_relations:
+        The number of relations.
+
+    :return:
+        Whether all entity/relation IDs are between 0 (incl) and num_entities/num_relations (excl.).
+    """
+    return (
+        (mapped_triples >= 0).all()
+        and (mapped_triples[:, ::2] < num_entities).all()
+        and (mapped_triples[:, 1] < num_relations).all()
+    )
+
+
 class CoreTriplesFactory(KGInfo):
     """Create instances from ID-based triples."""
 
@@ -456,14 +479,12 @@ class CoreTriplesFactory(KGInfo):
         # always store as torch.long, i.e., torch's default integer dtype
         self.mapped_triples = mapped_triples.to(dtype=torch.long)
         # verify ID ranges
-        if (
-            (mapped_triples < 0).any()
-            or (mapped_triples[:, ::2] >= self.num_entities).any()
-            or (mapped_triples[:, 1] >= self.num_relations).any()
+        if not valid_triple_id_range(
+            mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations
         ):
             raise ValueError(
-                f"Encountered invalid ids in mapped_triples: {mapped_triples.min()=} and {mapped_triples.max()=} "
-                f"while {self.num_entities=} and {self.num_relations=}"
+                f"Encountered invalid ids in mapped_triples: {mapped_triples.min(dim=0).values=} "
+                f"and {mapped_triples.max(dim=0).values=} while {self.num_entities=} and {self.num_relations=}"
             )
         if metadata is None:
             metadata = dict()
@@ -798,6 +819,7 @@ class CoreTriplesFactory(KGInfo):
             A (transductive) training triples factory, the inductive inference triples factory,
             as well as the evaluation triples factories.
         """
+        # split triples
         training, inference, *evaluation = split_fully_inductive(
             mapped_triples=self.mapped_triples,
             entity_split_train_ratio=entity_split_train_ratio,
@@ -811,7 +833,7 @@ class CoreTriplesFactory(KGInfo):
         inference_tf = self.clone_and_exchange_triples(mapped_triples=inference).apply_condensator(condensator)
         # do not explicitly create inverse triples for testing; this is handled by the evaluation code
         evaluation_tfs = [
-            inference_tf.clone_and_exchange_triples(
+            self.clone_and_exchange_triples(
                 mapped_triples=mapped_triples, create_inverse_triples=False
             ).apply_condensator(condensator)
             for mapped_triples in evaluation

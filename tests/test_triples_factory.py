@@ -20,7 +20,12 @@ from pykeen.training.lcwa import create_lcwa_instances
 from pykeen.training.slcwa import create_slcwa_instances
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory, generation
 from pykeen.triples.splitting import splitter_resolver
-from pykeen.triples.triples_factory import INVERSE_SUFFIX, _map_triples_elements_to_ids, get_mapped_triples
+from pykeen.triples.triples_factory import (
+    INVERSE_SUFFIX,
+    _map_triples_elements_to_ids,
+    get_mapped_triples,
+    valid_triple_id_range,
+)
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
 from tests.utils import needs_packages
@@ -292,8 +297,11 @@ class TestSplit(unittest.TestCase):
             # we only support inductive *entity* splits for now
             self.assertEqual(factory.num_relations, self.triples_factory.num_relations)
             # verify that triple have been compacted
-            self.assertLess(factory.mapped_triples[:, ::2].max(), factory.num_entities)
-            self.assertLess(factory.mapped_triples[:, 1].max(), factory.num_relations)
+            self.assertTrue(
+                valid_triple_id_range(
+                    factory.mapped_triples, num_entities=factory.num_entities, num_relations=factory.num_relations
+                )
+            )
         # verify that no triple got lost
         total_num_triples = sum(t.num_triples for t in factories)
         if lossy:
