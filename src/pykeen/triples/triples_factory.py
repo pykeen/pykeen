@@ -327,6 +327,8 @@ class Condensator:
     # TODO: deduplicate with compact_mapping?
 
     condensation: LongTensor | None
+    """The condensation mapping, a dense tensor of shape (max_old_id,) with entries between 0 (incl.)
+    and max_new_id (excl.) as well as -1 for dropped indices."""
 
     def __post_init__(self) -> None:
         if self.condensation is None:
@@ -339,18 +341,23 @@ class Condensator:
             raise ValueError(f"Encountered invalid values: {self.condensation.min()=} {self.condensation.max()=}")
 
     @classmethod
+    def empty(cls) -> Self:
+        """Build the empty condensation, a nop."""
+        return cls(condensation=None)
+
+    @classmethod
     def make(cls, x: LongTensor, enable: bool = True) -> Self:
         """Create from ID tensor."""
-        # TODO: we have this functionality somewhere already?!
         if not enable or not x.numel():
-            return cls(condensation=None)
+            return cls.empty()
         k = get_num_ids(x)
         unique_entities = x.unique()
         old_ids_t = torch.arange(k)
         if torch.equal(unique_entities, old_ids_t):
-            return cls(condensation=None)
+            return cls.empty()
         y = torch.full((k,), fill_value=-1)
-        return cls(condensation=y.scatter_(dim=0, index=unique_entities, src=old_ids_t))
+        y = y.scatter_(dim=0, index=unique_entities, src=old_ids_t)
+        return cls(condensation=y)
 
     def __call__(self, x: LongTensor) -> LongTensor:
         """Apply to ID tensor in old ID-scheme."""
