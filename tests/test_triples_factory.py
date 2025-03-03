@@ -291,15 +291,15 @@ class TestSplit(unittest.TestCase):
             self.assertEqual(type(factory), type(self.triples_factory))
             # we only support inductive *entity* splits for now
             self.assertEqual(factory.num_relations, self.triples_factory.num_relations)
+            # verify that triple have been compacted
+            self.assertLess(factory.mapped_triples[:, ::2].max(), factory.num_entities)
+            self.assertLess(factory.mapped_triples[:, 1].max(), factory.num_relations)
         # verify that no triple got lost
         total_num_triples = sum(t.num_triples for t in factories)
         if lossy:
             self.assertLessEqual(total_num_triples, self.triples_factory.num_triples)
         else:
             self.assertEqual(total_num_triples, self.triples_factory.num_triples)
-        # verify that triple have been compacted
-        self.assertLess(factory.mapped_triples[:, ::2].max(), factory.num_entities)
-        self.assertLess(factory.mapped_triples[:, 1].max(), factory.num_relations)
 
     def _test_invariants_transductive(
         self, training_triples_factory: TriplesFactory, *other_factories: TriplesFactory, lossy: bool = False
