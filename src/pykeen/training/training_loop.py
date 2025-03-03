@@ -206,6 +206,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         triples_factory: CoreTriplesFactory,
         num_epochs: int = 1,
         batch_size: int | None = None,
+        gradient_accumulation: int | None = None,
         slice_size: int | None = None,
         label_smoothing: float = 0.0,
         sampler: str | None = None,
@@ -241,6 +242,9 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         :param num_epochs: The number of epochs to train the model.
         :param batch_size: If set the batch size to use for mini-batch training. Otherwise find the largest possible
             batch_size automatically.
+        :param gradient_accumulation:
+            Whether to accumulate gradients over multiple batches before doing an optimizer step. This allows training
+            with larger effective batch sizes. Defaults to 1.
         :param slice_size: >0 The divisor for the scoring function when using slicing. This is only possible for LCWA
             training loops in general and only for models that have the slicing capability implemented.
         :param label_smoothing: (0 <= label_smoothing < 1) If larger than zero, use label smoothing.
@@ -369,6 +373,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 result = self._train(
                     num_epochs=num_epochs,
                     batch_size=batch_size,
+                    gradient_accumulation=gradient_accumulation,
                     slice_size=slice_size,
                     label_smoothing=label_smoothing,
                     sampler=sampler,
@@ -487,6 +492,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         triples_factory: CoreTriplesFactory,
         num_epochs: int = 1,
         batch_size: int | None = None,
+        gradient_accumulation: int | None = None,
         slice_size: int | None = None,
         label_smoothing: float = 0.0,
         sampler: str | None = None,
@@ -581,8 +587,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         elif get_batchnorm_modules(self.model):  # if there are any, this is truthy
             raise SubBatchingNotSupportedError(self.model)
 
+        if gradient_accumulation is None:
+            gradient_accumulation = 1
         model_contains_batch_norm = bool(get_batchnorm_modules(self.model))
-        if batch_size == 1 and model_contains_batch_norm:
+        if batch_size == 1 and gradient_accumulation == 1 and model_contains_batch_norm:
             raise ValueError("Cannot train a model with batch_size=1 containing BatchNorm layers.")
 
         if drop_last is None:
@@ -661,7 +669,11 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if gradient_clipping_max_abs_value is not None:
             pre_step_callbacks.append(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
         callback.register_callback(
-            OptimizerTrainingCallback(only_size_probing=only_size_probing, pre_step_callbacks=pre_step_callbacks)
+            OptimizerTrainingCallback(
+                only_size_probing=only_size_probing,
+                pre_step_callbacks=pre_step_callbacks,
+                gradient_accumulation=gradient_accumulation,
+            )
         )
         if self.lr_scheduler is not None:
             callback.register_callback(LearningRateSchedulerTrainingCallback())

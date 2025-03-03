@@ -394,7 +394,12 @@ class OptimizerTrainingCallback(TrainingCallback):
     """Use optimizer to update parameters."""
 
     # TODO: we may want to separate TrainingCallback from pre-step callbacks in the future
-    def __init__(self, only_size_probing: bool = False, pre_step_callbacks: Sequence[TrainingCallback] | None = None):
+    def __init__(
+        self,
+        only_size_probing: bool = False,
+        pre_step_callbacks: Sequence[TrainingCallback] | None = None,
+        gradient_accumulation: int = 1,
+    ):
         """Initialize the callback.
 
         :param only_size_probing:
@@ -405,9 +410,17 @@ class OptimizerTrainingCallback(TrainingCallback):
         super().__init__()
         self.only_size_probing = only_size_probing
         self.pre_step_callbacks = tuple(pre_step_callbacks or [])
+        self.gradient_accumulation = gradient_accumulation
+        self.num_gradients = 0
 
     # docstr-coverage: inherited
     def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
+        # update batch count
+        self.num_gradients += 1
+
+        if self.num_gradients % self.gradient_accumulation:
+            return
+
         # Recall that torch *accumulates* gradients. Before passing in a
         # new instance, you need to zero out the gradients from the old instance
 
@@ -416,6 +429,10 @@ class OptimizerTrainingCallback(TrainingCallback):
 
     # docstr-coverage: inherited
     def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
+        # only apply post-batch after accumulating gradient across enough batches
+        if self.num_gradients % self.gradient_accumulation:
+            return
+
         # pre-step callbacks
         for cb in self.pre_step_callbacks:
             cb.pre_step(epoch=epoch, **kwargs)
