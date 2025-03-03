@@ -329,11 +329,11 @@ class Condensator:
     condensation: LongTensor | None
 
     def __post_init__(self) -> None:
-        if not self:
+        if self.condensation is None:
             return
         if self.condensation.ndim > 1:
             raise ValueError(f"Invalid shape: {self.condensation.shape=}")
-        if self.condensation.dtype.is_floating_point() or self.condensation.dtype.is_complex():
+        if self.condensation.is_floating_point():
             raise ValueError(f"Invalid {self.condensation.dtype=}")
         if self.condensation.min() < 0 or self.condensation.max() >= self.condensation.numel():
             raise ValueError(f"Encountered invalid values: {self.condensation.min()=} {self.condensation.max()=}")
@@ -354,13 +354,13 @@ class Condensator:
 
     def __call__(self, x: LongTensor) -> LongTensor:
         """Apply to ID tensor in old ID-scheme."""
-        if self:
-            return self.condensation[x]
-        return x
+        if self.condensation is None:
+            return x
+        return self.condensation[x]
 
     def apply_to_map(self, id_to_label: Mapping[int, str]) -> Mapping[str, int]:
         """Apply to old ID to label map."""
-        if not self:
+        if self.condensation is None:
             return {label: idx for idx, label in id_to_label.items()}
         old_indices = (self.condensation >= 0).nonzero().view(-1).tolist()
         new_indices = range(get_num_ids(self.condensation))
@@ -368,7 +368,7 @@ class Condensator:
 
     def apply_to_num(self, max_id: int) -> int:
         """Apply to the max_id."""
-        if not self:
+        if self.condensation is None:
             return max_id
         return get_num_ids(self.condensation)
 
@@ -405,7 +405,7 @@ class TripleCondensator:
         return torch.stack([ht[:, 0], r, ht[:, 1]], dim=-1)
 
     def __bool__(self) -> bool:
-        return self.entities or self.relations
+        return bool(self.entities or self.relations)
 
 
 class CoreTriplesFactory(KGInfo):
