@@ -297,6 +297,9 @@ class TestSplit(unittest.TestCase):
             self.assertLessEqual(total_num_triples, self.triples_factory.num_triples)
         else:
             self.assertEqual(total_num_triples, self.triples_factory.num_triples)
+        # verify that triple have been compacted
+        self.assertLess(factory.mapped_triples[:, ::2].max(), factory.num_entities)
+        self.assertLess(factory.mapped_triples[:, 1].max(), factory.num_relations)
 
     def _test_invariants_transductive(
         self, training_triples_factory: TriplesFactory, *other_factories: TriplesFactory, lossy: bool = False
