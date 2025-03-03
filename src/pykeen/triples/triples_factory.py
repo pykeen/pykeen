@@ -664,11 +664,30 @@ class CoreTriplesFactory(KGInfo):
         )
 
     def make_condensator(self, entities: bool = True, relations: bool = False) -> TripleCondensator:
-        """Create a triple condensator."""
+        """Create a triple condensator from the factory's triples without applying it.
+
+        :param entities:
+            Whether to condense entity IDs.
+        :param relations:
+            Whether to condense relations IDs.
+
+        :return:
+            The triple condensator.
+        """
         return TripleCondensator.make(mapped_triples=self.mapped_triples, entities=entities, relations=relations)
 
     def apply_condensator(self, condensator: TripleCondensator) -> Self:
-        """Apply the triple condensator."""
+        """Apply the triple condensator.
+
+        :param condensator:
+            The condensator.
+
+        .. warning::
+            This creates a triples factory that may have a new entity or relation to id mapping.
+
+        :return:
+            A condensed version with potentially smaller num_entities or num_relations.
+        """
         # short-circuit if nothing needs to change
         if not condensator:
             return self
