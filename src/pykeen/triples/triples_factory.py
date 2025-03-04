@@ -321,7 +321,7 @@ def get_num_ids(x: LongTensor) -> int:
 
 
 @dataclasses.dataclass
-class Condensator:
+class Condenser:
     """Ensure that IDs are consecutive."""
 
     # TODO: deduplicate with compact_mapping?
@@ -387,18 +387,18 @@ class Condensator:
 
 
 @dataclasses.dataclass
-class TripleCondensator:
-    """Pair of condensators."""
+class TripleCondenser:
+    """Pair of condensers."""
 
-    entities: Condensator
-    relations: Condensator
+    entities: Condenser
+    relations: Condenser
 
     @classmethod
     def make(cls, mapped_triples: MappedTriples, entities: bool = True, relations: bool = True) -> Self:
         """Create from ID tensor."""
         return cls(
-            entities=Condensator.make(mapped_triples[:, ::2], enable=entities),
-            relations=Condensator.make(mapped_triples[:, 1], enable=relations),
+            entities=Condenser.make(mapped_triples[:, ::2], enable=entities),
+            relations=Condenser.make(mapped_triples[:, 1], enable=relations),
         )
 
     def __call__(self, mapped_triples: MappedTriples) -> MappedTriples:
@@ -663,8 +663,8 @@ class CoreTriplesFactory(KGInfo):
             },
         )
 
-    def make_condensator(self, entities: bool = True, relations: bool = False) -> TripleCondensator:
-        """Create a triple condensator from the factory's triples without applying it.
+    def make_condenser(self, entities: bool = True, relations: bool = False) -> TripleCondenser:
+        """Create a triple condenser from the factory's triples without applying it.
 
         :param entities:
             Whether to condense entity IDs.
@@ -672,30 +672,30 @@ class CoreTriplesFactory(KGInfo):
             Whether to condense relations IDs.
 
         :return:
-            The triple condensator.
+            The triple condenser.
         """
-        return TripleCondensator.make(mapped_triples=self.mapped_triples, entities=entities, relations=relations)
+        return TripleCondenser.make(mapped_triples=self.mapped_triples, entities=entities, relations=relations)
 
-    def apply_condensator(self, condensator: TripleCondensator) -> Self:
-        """Apply the triple condensator.
+    def apply_condenser(self, condenser: TripleCondenser) -> Self:
+        """Apply the triple condenser.
 
-        :param condensator:
-            The condensator.
+        :param condenser:
+            The condenser.
 
         .. warning::
-            This creates a triples factory that may have a new entity or relation to id mapping.
+            This creates a triples factory that may have a new entity- or relation to id mapping.
 
         :return:
             A condensed version with potentially smaller num_entities or num_relations.
         """
         # short-circuit if nothing needs to change
-        if not condensator:
+        if not condenser:
             return self
         # build new triples factory
         return self.__class__(
-            mapped_triples=condensator(self.mapped_triples),
-            num_entities=condensator.entities.apply_to_num(self.num_entities),
-            num_relations=condensator.relations.apply_to_num(self.num_relations),
+            mapped_triples=condenser(self.mapped_triples),
+            num_entities=condenser.entities.apply_to_num(self.num_entities),
+            num_relations=condenser.relations.apply_to_num(self.num_relations),
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
@@ -710,12 +710,12 @@ class CoreTriplesFactory(KGInfo):
             Whether to condense relation IDs.
 
         .. warning::
-            This creates a triples factory that may have a new entity or relation to id mapping.
+            This creates a triples factory that may have a new entity- or relation to id mapping.
 
         :return:
             A condensed version with potentially smaller num_entities or num_relations.
         """
-        return self.apply_condensator(self.make_condensator(entities=entities, relations=relations))
+        return self.apply_condenser(self.make_condenser(entities=entities, relations=relations))
 
     def split(
         self,
@@ -855,13 +855,13 @@ class CoreTriplesFactory(KGInfo):
         # separately condense the entity-to-id mappings for each of the graphs (training vs. inference)
         # we do *not* condense relations, because we only work in entity-inductive settings (for now).
         training_tf = self.clone_and_exchange_triples(mapped_triples=training).condense(entities=True, relations=False)
-        condensator = TripleCondensator.make(inference, entities=True, relations=False)
-        inference_tf = self.clone_and_exchange_triples(mapped_triples=inference).apply_condensator(condensator)
+        condenser = TripleCondenser.make(inference, entities=True, relations=False)
+        inference_tf = self.clone_and_exchange_triples(mapped_triples=inference).apply_condenser(condenser)
         # do not explicitly create inverse triples for testing; this is handled by the evaluation code
         evaluation_tfs = [
             self.clone_and_exchange_triples(
                 mapped_triples=mapped_triples, create_inverse_triples=False
-            ).apply_condensator(condensator)
+            ).apply_condenser(condenser)
             for mapped_triples in evaluation
         ]
         # Make new triples factories for each group
@@ -1294,16 +1294,16 @@ class TriplesFactory(CoreTriplesFactory):
         )
 
     # docstr-coverage: inherited
-    def apply_condensator(self, condensator: TripleCondensator) -> Self:  # noqa: D102
-        if not condensator:
+    def apply_condenser(self, condenser: TripleCondenser) -> Self:  # noqa: D102
+        if not condenser:
             return self
         # build new triples factory
         return self.__class__(
-            mapped_triples=condensator(self.mapped_triples),
-            entity_to_id=condensator.entities.apply_to_map(self.entity_id_to_label),
-            relation_to_id=condensator.relations.apply_to_map(self.relation_id_to_label),
-            num_entities=condensator.entities.apply_to_num(self.num_entities),
-            num_relations=condensator.relations.apply_to_num(self.num_relations),
+            mapped_triples=condenser(self.mapped_triples),
+            entity_to_id=condenser.entities.apply_to_map(self.entity_id_to_label),
+            relation_to_id=condenser.relations.apply_to_map(self.relation_id_to_label),
+            num_entities=condenser.entities.apply_to_num(self.num_entities),
+            num_relations=condenser.relations.apply_to_num(self.num_relations),
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
