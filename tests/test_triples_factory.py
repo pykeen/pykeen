@@ -628,6 +628,7 @@ def test_core_triples_factory_error_handling(dtype: torch.dtype, size: tuple[int
     """Test error handling in init method of CoreTriplesFactory."""
     with expectation:
         CoreTriplesFactory(
+            # FIXME ellipses break code! can we assign real numbers to these?
             mapped_triples=torch.randint(33, size=size).to(dtype=dtype), num_entities=..., num_relations=...
         )
 
