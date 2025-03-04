@@ -626,10 +626,12 @@ class TestUtils(unittest.TestCase):
 )
 def test_core_triples_factory_error_handling(dtype: torch.dtype, size: tuple[int, ...], expectation):
     """Test error handling in init method of CoreTriplesFactory."""
+    max_id_upper_bound = 33
     with expectation:
         CoreTriplesFactory(
-            # FIXME ellipses break code! can we assign real numbers to these?
-            mapped_triples=torch.randint(33, size=size).to(dtype=dtype), num_entities=..., num_relations=...
+            mapped_triples=torch.randint(max_id_upper_bound, size=size).to(dtype=dtype),
+            num_entities=max_id_upper_bound,
+            num_relations=max_id_upper_bound,
         )
 
 
