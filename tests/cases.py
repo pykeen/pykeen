@@ -2429,7 +2429,6 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
 
     def test_combination_id(self):
         """Test combination without labels."""
-        # FIXME this test is failing in tests/test_datasets/test_combination
         self._test_combination(labels=False)
 
     def test_manual(self):
