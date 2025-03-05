@@ -4,11 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
-from typing import (
-    Any,
-    ClassVar,
-    NamedTuple,
-)
+from typing import Any, ClassVar, Generic, NamedTuple, TypeVar
 
 import numpy
 import pandas
@@ -267,16 +263,19 @@ class ProcessedTuple(NamedTuple):
     translation_kwargs: Mapping[str, Any]
 
 
-class GraphPairCombinator(ABC):
+FactoryType = TypeVar("FactoryType", bound=CoreTriplesFactory)
+
+
+class GraphPairCombinator(Generic[FactoryType], ABC):
     """A base class for combination of a graph pair into a single graph."""
 
     def __call__(
         self,
-        left: TriplesFactory,
-        right: TriplesFactory,
+        left: FactoryType,
+        right: FactoryType,
         alignment: pandas.DataFrame,
         **kwargs,
-    ) -> tuple[TriplesFactory, LongTensor]:
+    ) -> tuple[FactoryType, LongTensor]:
         """
         Combine two graphs using the alignment information.
 
@@ -307,23 +306,16 @@ class GraphPairCombinator(ABC):
                 right=right,
                 **translation_kwargs,
             )
-            triples_factory = TriplesFactory(
+            factory = TriplesFactory(
                 mapped_triples=mapped_triples,
                 entity_to_id=entity_to_id,
                 relation_to_id=relation_to_id,
                 **kwargs,
             )
         else:
-            # TODO: unreachable code
-            max_ids = mapped_triples.max(axis=0).values
-            triples_factory = CoreTriplesFactory(
-                mapped_triples=mapped_triples,
-                num_entities=max_ids[0::2].max().item(),
-                num_relations=max_ids[1].item(),
-                **kwargs,
-            )
+            factory = CoreTriplesFactory.create(mapped_triples=mapped_triples, **kwargs)
 
-        return triples_factory, alignment
+        return factory, alignment
 
     @abstractmethod
     def process(
@@ -348,7 +340,7 @@ class GraphPairCombinator(ABC):
         raise NotImplementedError
 
 
-class DisjointGraphPairCombinator(GraphPairCombinator):
+class DisjointGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """This combinator keeps both graphs as disconnected components."""
 
     # docstr-coverage: inherited
@@ -365,7 +357,7 @@ class DisjointGraphPairCombinator(GraphPairCombinator):
         )
 
 
-class SwapGraphPairCombinator(GraphPairCombinator):
+class SwapGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """Add extra triples by swapping aligned entities."""
 
     # docstr-coverage: inherited
@@ -400,7 +392,7 @@ class SwapGraphPairCombinator(GraphPairCombinator):
         )
 
 
-class ExtraRelationGraphPairCombinator(GraphPairCombinator):
+class ExtraRelationGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """This combinator keeps all entities, but introduces a novel alignment relation."""
 
     #: the name of the additional alignment relation
@@ -463,7 +455,7 @@ def iter_entity_mappings(
         yield dict(zip(this_old.tolist(), this_new.tolist(), strict=False))
 
 
-class CollapseGraphPairCombinator(GraphPairCombinator):
+class CollapseGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """This combinator merges all matching entity pairs into a single ID."""
 
     # docstr-coverage: inherited
