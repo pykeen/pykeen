@@ -17,6 +17,8 @@ __all__ = [
     "get_entities",
     "get_relations",
     "tensor_to_df",
+    "max_value",
+    "get_num_ids",
 ]
 
 TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label")
@@ -176,3 +178,18 @@ def compute_compressed_adjacency_list(
     offset[1:] = torch.cumsum(degrees, dim=0)[:-1]
     compressed_adj_lists = torch.cat([torch.as_tensor(adj_list, dtype=torch.long) for adj_list in adj_lists], dim=0)
     return degrees, offset, compressed_adj_lists
+
+
+def max_value(x: LongTensor) -> int | None:
+    """Return the maximum value, or None if the tensor is empty."""
+    if x.numel():
+        return x.max().item()
+    return None
+
+
+def get_num_ids(x: LongTensor) -> int:
+    """Return the number of ids values."""
+    max_id = max_value(x)
+    if max_id is None:
+        return 0
+    return max_id + 1
