@@ -798,10 +798,6 @@ class CoreTriplesFactory(KGInfo):
         :param entities: A sequence of either integer identifiers for entities or
             string labels for entities (that will get auto-converted)
         :returns: Integer identifiers for entities, in the same order.
-
-        :raises ValueError: If the ``entities`` passed are string labels
-            and this triples factory does not have an entity label to identifier mapping
-            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
         """
         return [self._raise_on_string(e, label="entity") for e in entities]
 
@@ -811,9 +807,6 @@ class CoreTriplesFactory(KGInfo):
         :param relations: A sequence of either integer identifiers for relations or
             string labels for relations (that will get auto-converted)
         :returns: Integer identifiers for relations, in the same order.
-        :raises ValueError: If the ``relations`` passed are string labels
-            and this triples factory does not have a relation label to identifier mapping
-            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
         """
         return [self._raise_on_string(r, label="relation") for r in relations]
 
