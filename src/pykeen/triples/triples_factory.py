@@ -5,7 +5,7 @@ import logging
 import pathlib
 import re
 from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
-from typing import Any, ClassVar, TextIO, cast
+from typing import Any, ClassVar, TextIO
 
 import numpy as np
 import pandas as pd
