@@ -1474,9 +1474,9 @@ class TriplesFactory(CoreTriplesFactory):
         if entities is None and relations is None:
             return self
         if entities is not None:
-            entities = self.entities_to_ids(entities=list(entities))
+            entities = self.entities_to_ids(entities=entities)
         if relations is not None:
-            relations = self.relations_to_ids(relations=list(relations))
+            relations = self.relations_to_ids(relations=relations)
         tf = super().new_with_restriction(
             entities=entities,
             relations=relations,
