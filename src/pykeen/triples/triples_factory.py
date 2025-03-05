@@ -795,6 +795,9 @@ class CoreTriplesFactory(KGInfo):
     def entities_to_ids(self, entities: Iterable[int] | Iterable[str]) -> Sequence[int]:
         """Normalize entities to IDs.
 
+        It raises a :class:`TypeError` if the factory does not support the given data type,
+        e.g. you cannot use `str` with :class:`~pykeen.triples.CoreTriplesFactory`.
+
         :param entities: A sequence of either integer identifiers for entities or
             string labels for entities (that will get auto-converted)
         :returns: Integer identifiers for entities, in the same order.
@@ -803,6 +806,9 @@ class CoreTriplesFactory(KGInfo):
 
     def relations_to_ids(self, relations: Iterable[int] | Iterable[str]) -> Sequence[int]:
         """Normalize relations to IDs.
+
+        It raises a :class:`TypeError` if the factory does not support the given data type,
+        e.g. you cannot use `str` with :class:`~pykeen.triples.CoreTriplesFactory`.
 
         :param relations: A sequence of either integer identifiers for relations or
             string labels for relations (that will get auto-converted)
