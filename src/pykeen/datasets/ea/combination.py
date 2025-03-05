@@ -13,6 +13,7 @@ from class_resolver import ClassResolver
 from pandas.api.types import is_numeric_dtype, is_string_dtype
 
 from ...triples import CoreTriplesFactory, TriplesFactory
+from ...triples.utils import get_num_ids
 from ...typing import (
     COLUMN_HEAD,
     COLUMN_TAIL,
@@ -64,8 +65,8 @@ def cat_shift_triples(*triples: CoreTriplesFactory | MappedTriples) -> tuple[Map
             r_offset = x.num_relations
             x = x.mapped_triples
         else:
-            e_offset = x[:, [0, 2]].max().item() + 1
-            r_offset = x[:, 1].max().item() + 1
+            e_offset = get_num_ids(x[:, [0, 2]])
+            r_offset = get_num_ids(x[:, 1])
         # append shifted mapped triples
         res.append(x + offsets[None, i, [0, 1, 0]])
         # update offsets
@@ -371,7 +372,8 @@ class SwapGraphPairCombinator(GraphPairCombinator[FactoryType]):
         # add swap triples
         # e1 ~ e2 => (e1, r, t) ~> (e2, r, t), or (h, r, e1) ~> (h, r, e2)
         # create dense entity remapping for swap
-        dense_map = torch.full(size=(mapped_triples[:, 0::2].max().item() + 1,), fill_value=-1)
+
+        dense_map = torch.full(size=(get_num_ids(mapped_triples[:, 0::2]),), fill_value=-1)
         left_id, right_id = alignment
         dense_map[left_id] = right_id
         dense_map[right_id] = left_id
@@ -408,7 +410,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator[FactoryType]):
     ) -> ProcessedTuple:  # noqa: D102
         # add alignment triples with extra relation
         left_id, right_id = alignment
-        alignment_relation_id = mapped_triples[:, 1].max().item() + 1
+        alignment_relation_id = get_num_ids(mapped_triples[:, 1])
         mapped_triples = torch.cat(
             [
                 mapped_triples,
@@ -448,7 +450,7 @@ def iter_entity_mappings(
     :yields: explicit id remappings
     """
     old, new = (torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs, strict=False))
-    offsets = offsets.tolist() + [old.max().item() + 1]
+    offsets = offsets.tolist() + [get_num_ids(old)]
     for low, high in zip(offsets, offsets[1:], strict=False):
         mask = (low <= old) & (old < high)
         this_old = old[mask] - low
@@ -467,7 +469,7 @@ class CollapseGraphPairCombinator(GraphPairCombinator[FactoryType]):
         offsets: LongTensor,
     ) -> ProcessedTuple:  # noqa: D102
         # determine connected components regarding the same-as relation (i.e., applies transitivity)
-        entity_id_mapping = torch.arange(mapped_triples[:, 0::2].max().item() + 1)
+        entity_id_mapping = torch.arange(get_num_ids(mapped_triples[:, 0::2]))
         for cc in get_connected_components(pairs=alignment.t().tolist()):
             cc = list(cc)
             entity_id_mapping[cc] = min(cc)

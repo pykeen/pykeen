@@ -13,7 +13,7 @@ import torch
 from typing_extensions import Self
 
 from .splitting import split, split_fully_inductive, split_semi_inductive
-from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
+from .utils import TRIPLES_DF_COLUMNS, get_num_ids, load_triples, tensor_to_df
 from ..constants import COLUMN_LABELS
 from ..inverse import relation_inverter_resolver
 from ..typing import (
@@ -303,21 +303,6 @@ class KGInfo(ExtraReprMixin):
         yield f"num_entities={self.num_entities}"
         yield f"num_relations={self.num_relations}"
         yield f"create_inverse_triples={self.create_inverse_triples}"
-
-
-def max_value(x: LongTensor) -> int | None:
-    """Return the maximum value, or None if the tensor is empty."""
-    if x.numel():
-        return x.max().item()
-    return None
-
-
-def get_num_ids(x: LongTensor) -> int:
-    """Return the number of ids values."""
-    max_id = max_value(x)
-    if max_id is None:
-        return 0
-    return max_id + 1
 
 
 @dataclasses.dataclass
