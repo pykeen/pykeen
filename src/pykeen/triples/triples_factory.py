@@ -5,7 +5,7 @@ import logging
 import pathlib
 import re
 from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
-from typing import Any, ClassVar, TextIO, cast
+from typing import Any, ClassVar, TextIO
 
 import numpy as np
 import pandas as pd
@@ -155,9 +155,9 @@ def _get_triple_mask(
 
 
 def _ensure_ids(
-    labels_or_ids: Collection[int] | Collection[str],
+    labels_or_ids: Iterable[int] | Iterable[str],
     label_to_id: Mapping[str, int],
-) -> Collection[int]:
+) -> Sequence[int]:
     """Convert labels to IDs."""
     return [label_to_id[l_or_i] if isinstance(l_or_i, str) else l_or_i for l_or_i in labels_or_ids]
 
@@ -888,35 +888,34 @@ class CoreTriplesFactory(KGInfo):
             mapped_triples.append(other.mapped_triples)
         return self.clone_and_exchange_triples(torch.cat(mapped_triples, dim=0))
 
-    def entities_to_ids(self, entities: Collection[int] | Collection[str]) -> Collection[int]:
+    def _raise_on_string(self, x: int | str, label: str) -> int:
+        if not isinstance(x, int):
+            raise TypeError(f"{self.__class__.__name__} cannot convert {label} IDs from {type(x)} to int.")
+        return x
+
+    def entities_to_ids(self, entities: Iterable[int] | Iterable[str]) -> Sequence[int]:
         """Normalize entities to IDs.
 
-        :param entities: A collection of either integer identifiers for entities or
-            string labels for entities (that will get auto-converted)
-        :returns: Integer identifiers for entities
-        :raises ValueError: If the ``entities`` passed are string labels
-            and this triples factory does not have an entity label to identifier mapping
-            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
-        """
-        for e in entities:
-            if not isinstance(e, int):
-                raise ValueError(f"{self.__class__.__name__} cannot convert entity IDs from {type(e)} to int.")
-        return cast(Collection[int], entities)
+        It raises a :class:`TypeError` if the factory does not support the given data type,
+        e.g. you cannot use `str` with :class:`~pykeen.triples.CoreTriplesFactory`.
 
-    def relations_to_ids(self, relations: Collection[int] | Collection[str]) -> Collection[int]:
+        :param entities: A sequence of either integer identifiers for entities or
+            string labels for entities (that will get auto-converted)
+        :returns: Integer identifiers for entities, in the same order.
+        """
+        return [self._raise_on_string(e, label="entity") for e in entities]
+
+    def relations_to_ids(self, relations: Iterable[int] | Iterable[str]) -> Sequence[int]:
         """Normalize relations to IDs.
 
-        :param relations: A collection of either integer identifiers for relations or
+        It raises a :class:`TypeError` if the factory does not support the given data type,
+        e.g. you cannot use `str` with :class:`~pykeen.triples.CoreTriplesFactory`.
+
+        :param relations: A sequence of either integer identifiers for relations or
             string labels for relations (that will get auto-converted)
-        :returns: Integer identifiers for relations
-        :raises ValueError: If the ``relations`` passed are string labels
-            and this triples factory does not have a relation label to identifier mapping
-            (e.g., it's just a base :class:`CoreTriplesFactory` instance)
+        :returns: Integer identifiers for relations, in the same order.
         """
-        for e in relations:
-            if not isinstance(e, int):
-                raise ValueError(f"{self.__class__.__name__} cannot convert relation IDs from {type(e)} to int.")
-        return cast(Collection[int], relations)
+        return [self._raise_on_string(r, label="relation") for r in relations]
 
     def get_mask_for_relations(
         self,
@@ -1445,11 +1444,11 @@ class TriplesFactory(CoreTriplesFactory):
         )
 
     # docstr-coverage: inherited
-    def entities_to_ids(self, entities: Collection[int] | Collection[str]) -> Collection[int]:  # noqa: D102
+    def entities_to_ids(self, entities: Iterable[int] | Iterable[str]) -> Sequence[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=entities, label_to_id=self.entity_labeling.label_to_id)
 
     # docstr-coverage: inherited
-    def relations_to_ids(self, relations: Collection[int] | Collection[str]) -> Collection[int]:  # noqa: D102
+    def relations_to_ids(self, relations: Iterable[int] | Iterable[str]) -> Sequence[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=relations, label_to_id=self.relation_labeling.label_to_id)
 
     def get_mask_for_relations(
