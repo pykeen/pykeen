@@ -13,7 +13,7 @@ import torch
 from typing_extensions import Self
 
 from .splitting import split, split_fully_inductive, split_semi_inductive
-from .utils import TRIPLES_DF_COLUMNS, load_triples, tensor_to_df
+from .utils import TRIPLES_DF_COLUMNS, get_num_ids, load_triples, tensor_to_df
 from ..constants import COLUMN_LABELS
 from ..inverse import relation_inverter_resolver
 from ..typing import (
@@ -305,49 +305,122 @@ class KGInfo(ExtraReprMixin):
         yield f"create_inverse_triples={self.create_inverse_triples}"
 
 
-def max_value(x: LongTensor) -> int | None:
-    """Return the maximum value, or None if the tensor is empty."""
-    if x.numel():
-        return x.max().item()
-    return None
+@dataclasses.dataclass
+class Condenser:
+    """Ensure that IDs are consecutive."""
+
+    # TODO: deduplicate with compact_mapping?
+
+    condensation: LongTensor | None
+    """The condensation mapping, a dense tensor of shape (max_old_id,) with entries between 0 (incl.)
+    and max_new_id (excl.) as well as -1 for dropped indices."""
+
+    def __post_init__(self) -> None:
+        if self.condensation is None:
+            return
+        if self.condensation.ndim > 1:
+            raise ValueError(f"Invalid shape: {self.condensation.shape=}")
+        if self.condensation.is_floating_point():
+            raise ValueError(f"Invalid {self.condensation.dtype=}")
+        if self.condensation.min() < -1 or self.condensation.max() >= self.condensation.numel():
+            raise ValueError(f"Encountered invalid values: {self.condensation.min()=} {self.condensation.max()=}")
+
+    @classmethod
+    def empty(cls) -> Self:
+        """Build the empty condensation, a nop."""
+        return cls(condensation=None)
+
+    @classmethod
+    def make(cls, x: LongTensor, enable: bool = True) -> Self:
+        """Create from ID tensor."""
+        if not enable or not x.numel():
+            return cls.empty()
+        k = get_num_ids(x)
+        unique_entities = x.unique()
+        old_ids_t = torch.arange(k)
+        if torch.equal(unique_entities, old_ids_t):
+            return cls.empty()
+        y = torch.full((k,), fill_value=-1)
+        y = y.scatter_(dim=0, index=unique_entities, src=old_ids_t)
+        return cls(condensation=y)
+
+    def __call__(self, x: LongTensor) -> LongTensor:
+        """Apply to ID tensor in old ID-scheme."""
+        if self.condensation is None:
+            return x
+        y = self.condensation[x]
+        if (y < 0).any():
+            raise ValueError("Encountered ids without map.")
+        return y
+
+    def apply_to_map(self, id_to_label: Mapping[int, str]) -> Mapping[str, int]:
+        """Apply to old ID to label map."""
+        if self.condensation is None:
+            return {label: idx for idx, label in id_to_label.items()}
+        old_indices = (self.condensation >= 0).nonzero().view(-1).tolist()
+        new_indices = range(get_num_ids(self.condensation))
+        return {id_to_label[old]: new for old, new in zip(old_indices, new_indices, strict=True)}
+
+    def apply_to_num(self, max_id: int) -> int:
+        """Apply to the max_id."""
+        if self.condensation is None:
+            return max_id
+        return get_num_ids(self.condensation)
+
+    def __bool__(self) -> bool:
+        return self.condensation is not None
 
 
-def get_num_ids(x: LongTensor) -> int:
-    """Return the number of ids values."""
-    max_id = max_value(x)
-    if max_id is None:
-        return 0
-    return max_id + 1
+@dataclasses.dataclass
+class TripleCondenser:
+    """Pair of condensers."""
+
+    entities: Condenser
+    relations: Condenser
+
+    @classmethod
+    def make(cls, mapped_triples: MappedTriples, entities: bool = True, relations: bool = True) -> Self:
+        """Create from ID tensor."""
+        return cls(
+            entities=Condenser.make(mapped_triples[:, ::2], enable=entities),
+            relations=Condenser.make(mapped_triples[:, 1], enable=relations),
+        )
+
+    def __call__(self, mapped_triples: MappedTriples) -> MappedTriples:
+        """Apply to ID tensor in old ID-scheme."""
+        if not self:
+            return mapped_triples
+
+        ht = mapped_triples[:, ::2]
+        ht = self.entities(ht)
+
+        r = mapped_triples[:, 1]
+        r = self.relations(r)
+
+        return torch.stack([ht[:, 0], r, ht[:, 1]], dim=-1)
+
+    def __bool__(self) -> bool:
+        return bool(self.entities or self.relations)
 
 
-def _make_condensation_map(x: LongTensor) -> LongTensor | None:
-    """Create a dense vector suitable for condensing Ids to a consecutive ID range."""
-    # TODO: we have this functionality somewhere already?!
-    if not x.numel():
-        return None
-    k = get_num_ids(x)
-    unique_entities = x.unique()
-    old_ids_t = torch.arange(k)
-    if torch.equal(unique_entities, old_ids_t):
-        return None
-    y = torch.full((k,), fill_value=-1)
-    return y.scatter_(dim=0, index=unique_entities, src=old_ids_t)
+def valid_triple_id_range(mapped_triples: MappedTriples, num_entities: int, num_relations: int) -> bool:
+    """Check if the ID range is valid.
 
+    :param mapped_triples:
+        The ID-based triples.
+    :param num_entities:
+        The number of entities.
+    :param num_relations:
+        The number of relations.
 
-def _iter_index_remap_from_condensation_map(c: LongTensor) -> Iterable[tuple[int, int]]:
-    """Iterate over pairs of old-index -> new-index."""
-    old_indices = (c >= 0).nonzero().view(-1).tolist()
-    new_indices = range(get_num_ids(c))
-    return zip(old_indices, new_indices, strict=True)
-
-
-def _maybe_condense(x: LongTensor, condensation: LongTensor | None, num: int) -> tuple[int, LongTensor]:
-    """Apply condensation, if present."""
-    if condensation is None:
-        return num, x
-    x = condensation[x]
-    num = get_num_ids(x)
-    return num, x
+    :return:
+        Whether all entity/relation IDs are between 0 (incl) and num_entities/num_relations (excl.).
+    """
+    return (
+        (mapped_triples >= 0).all()
+        and (mapped_triples[:, ::2] < num_entities).all()
+        and (mapped_triples[:, 1] < num_relations).all()
+    )
 
 
 class CoreTriplesFactory(KGInfo):
@@ -397,6 +470,14 @@ class CoreTriplesFactory(KGInfo):
             raise TypeError(f"Invalid type: {mapped_triples.dtype}. Must be integer dtype.")
         # always store as torch.long, i.e., torch's default integer dtype
         self.mapped_triples = mapped_triples.to(dtype=torch.long)
+        # verify ID ranges
+        if not valid_triple_id_range(
+            mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations
+        ):
+            raise ValueError(
+                f"Encountered invalid ids in mapped_triples: {mapped_triples.min(dim=0).values=} "
+                f"and {mapped_triples.max(dim=0).values=} while {self.num_entities=} and {self.num_relations=}"
+            )
         if metadata is None:
             metadata = dict()
         self.metadata = metadata
@@ -567,6 +648,43 @@ class CoreTriplesFactory(KGInfo):
             },
         )
 
+    def make_condenser(self, entities: bool = True, relations: bool = False) -> TripleCondenser:
+        """Create a triple condenser from the factory's triples without applying it.
+
+        :param entities:
+            Whether to condense entity IDs.
+        :param relations:
+            Whether to condense relations IDs.
+
+        :return:
+            The triple condenser.
+        """
+        return TripleCondenser.make(mapped_triples=self.mapped_triples, entities=entities, relations=relations)
+
+    def apply_condenser(self, condenser: TripleCondenser) -> Self:
+        """Apply the triple condenser.
+
+        :param condenser:
+            The condenser.
+
+        .. warning::
+            This creates a triples factory that may have a new entity- or relation to id mapping.
+
+        :return:
+            A condensed version with potentially smaller num_entities or num_relations.
+        """
+        # short-circuit if nothing needs to change
+        if not condenser:
+            return self
+        # build new triples factory
+        return self.__class__(
+            mapped_triples=condenser(self.mapped_triples),
+            num_entities=condenser.entities.apply_to_num(self.num_entities),
+            num_relations=condenser.relations.apply_to_num(self.num_relations),
+            create_inverse_triples=self.create_inverse_triples,
+            metadata=self.metadata,
+        )
+
     def condense(self, entities: bool = True, relations: bool = False) -> Self:
         """
         Drop all IDs which are not present in the triples.
@@ -577,31 +695,12 @@ class CoreTriplesFactory(KGInfo):
             Whether to condense relation IDs.
 
         .. warning::
-            This creates a triples factory that may have a new entity or relation to id mapping.
+            This creates a triples factory that may have a new entity- or relation to id mapping.
 
         :return:
             A condensed version with potentially smaller num_entities or num_relations.
         """
-        ht = self.mapped_triples[:, 0::2]
-        r = self.mapped_triples[:, 1]
-        # determine condensation maps (dense vectors for vectorized remapping)
-        entity_condensation = _make_condensation_map(ht) if entities else None
-        relation_condensation = _make_condensation_map(r) if relations else None
-        # short-circuit if nothing needs to change
-        if entity_condensation is None and relation_condensation is None:
-            return self
-        # maybe condense entities
-        num_entities, ht = _maybe_condense(ht, condensation=entity_condensation, num=self.num_entities)
-        # maybe condense relations
-        num_relations, r = _maybe_condense(r, condensation=relation_condensation, num=self.num_relations)
-        # build new triples factory
-        return self.__class__(
-            mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
-            num_entities=num_entities,
-            num_relations=num_relations,
-            create_inverse_triples=self.create_inverse_triples,
-            metadata=self.metadata,
-        )
+        return self.apply_condenser(self.make_condenser(entities=entities, relations=relations))
 
     def split(
         self,
@@ -731,6 +830,7 @@ class CoreTriplesFactory(KGInfo):
             A (transductive) training triples factory, the inductive inference triples factory,
             as well as the evaluation triples factories.
         """
+        # split triples
         training, inference, *evaluation = split_fully_inductive(
             mapped_triples=self.mapped_triples,
             entity_split_train_ratio=entity_split_train_ratio,
@@ -740,12 +840,13 @@ class CoreTriplesFactory(KGInfo):
         # separately condense the entity-to-id mappings for each of the graphs (training vs. inference)
         # we do *not* condense relations, because we only work in entity-inductive settings (for now).
         training_tf = self.clone_and_exchange_triples(mapped_triples=training).condense(entities=True, relations=False)
-        inference_tf = self.clone_and_exchange_triples(mapped_triples=inference).condense(
-            entities=True, relations=False
-        )
+        condenser = TripleCondenser.make(inference, entities=True, relations=False)
+        inference_tf = self.clone_and_exchange_triples(mapped_triples=inference).apply_condenser(condenser)
         # do not explicitly create inverse triples for testing; this is handled by the evaluation code
         evaluation_tfs = [
-            inference_tf.clone_and_exchange_triples(mapped_triples=mapped_triples, create_inverse_triples=False)
+            self.clone_and_exchange_triples(
+                mapped_triples=mapped_triples, create_inverse_triples=False
+            ).apply_condenser(condenser)
             for mapped_triples in evaluation
         ]
         # Make new triples factories for each group
@@ -966,13 +1067,6 @@ class CoreTriplesFactory(KGInfo):
         )
 
 
-def _maybe_condense_map(id_to_label: Mapping[int, str], condensation: LongTensor | None) -> Mapping[str, int]:
-    """Condense label to Id mapping, if necessary."""
-    if condensation is None:
-        return {label: idx for idx, label in id_to_label.items()}
-    return {id_to_label[old]: new for old, new in _iter_index_remap_from_condensation_map(condensation)}
-
-
 class TriplesFactory(CoreTriplesFactory):
     """Create instances given the path to triples."""
 
@@ -1178,27 +1272,16 @@ class TriplesFactory(CoreTriplesFactory):
         )
 
     # docstr-coverage: inherited
-    def condense(self, entities: bool = True, relations: bool = False) -> Self:  # noqa: D102
-        ht = self.mapped_triples[:, 0::2]
-        r = self.mapped_triples[:, 1]
-        # determine condensation maps (dense vectors for vectorized remapping)
-        entity_condensation = _make_condensation_map(ht) if entities else None
-        relation_condensation = _make_condensation_map(r) if relations else None
-        # short-circuit if nothing needs to change
-        if entity_condensation is None and relation_condensation is None:
+    def apply_condenser(self, condenser: TripleCondenser) -> Self:  # noqa: D102
+        if not condenser:
             return self
-        # maybe condense entities
-        num_entities, ht = _maybe_condense(ht, condensation=entity_condensation, num=self.num_entities)
-        entity_to_id = _maybe_condense_map(self.entity_id_to_label, condensation=entity_condensation)
-        # maybe condense relations
-        num_relations, r = _maybe_condense(r, condensation=relation_condensation, num=self.num_relations)
-        relation_to_id = _maybe_condense_map(self.relation_id_to_label, condensation=relation_condensation)
+        # build new triples factory
         return self.__class__(
-            mapped_triples=torch.stack([ht[:, 0], r, ht[0:, 1]], dim=-1),
-            entity_to_id=entity_to_id,
-            relation_to_id=relation_to_id,
-            num_entities=num_entities,
-            num_relations=num_relations,
+            mapped_triples=condenser(self.mapped_triples),
+            entity_to_id=condenser.entities.apply_to_map(self.entity_id_to_label),
+            relation_to_id=condenser.relations.apply_to_map(self.relation_id_to_label),
+            num_entities=condenser.entities.apply_to_num(self.num_entities),
+            num_relations=condenser.relations.apply_to_num(self.num_relations),
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
