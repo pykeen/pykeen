@@ -2156,7 +2156,7 @@ class TensorTrainRepresentation(Representation):
 
 
 class EmbeddingBagRepresentation(Representation):
-    """
+    r"""
     An embedding bag representation.
 
     :class:`~torch.nn.EmbeddingBag` is similar to a :class:`~pykeen.nn.TokenRepresentation`
@@ -2182,6 +2182,17 @@ class EmbeddingBagRepresentation(Representation):
             list(feature.nonzero())
             for feature in features
         )
+
+    Let's denote $nnz(i)$ for the non-zero indices of the feature of molecule $i$,
+    then we build the following representation $\mathbf{x}_i$
+
+    .. math ::
+        \mathbf{x}_i := \sum \limits_{j \in nnz(i)} \mathbf{y}_j
+
+    where $\mathbf{y}_j$ is the embedding for the substructure represented by
+    dimension $j$ in the signature. In a sense, it is very similar to using the
+    0/1 vectors and multiplying that with a matrix; it's just implemented more
+    efficiently (exploiting the sparsity).
     """
 
     # shape: (nnz, 2), entries: (index, comp_index)

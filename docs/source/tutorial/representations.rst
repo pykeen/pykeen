@@ -94,21 +94,40 @@ Tensor Train Factorization
 :class:`~pykeen.nn.representation.TensorTrainRepresentation` uses a tensor factorization method, which can also be
 interpreted as a hierarchical decomposition. The tensor train decomposition is also known as matrix product states.
 
+Tokenization
+~~~~~~~~~~~~
+
+In :class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation`, each index is associated with a fixed
+number of tokens. The tokens have their own individual representations. They are concatenated to form the combined
+representation.
+
+The representation itself does not provide any means to obtain the token mapping, but it usually carries some domain
+information. An example is NodePiece, which provides tokenization via anchor nodes, i.e. representative entities within
+the graph neighborhood, or relation tokenization using the set of occurring relation types.
+
 NodePiece
 ~~~~~~~~~
 
-Another example is NodePiece, which takes inspiration from tokenization we encounter in, e.g.. NLP, and represents each
-entity as a set of tokens. The basic implementation can be found in
-:class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation`, where each index is represented by a sequence
-of tokens, and the tokens have their own representation.
-:class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation` builds upon them and uses one or more
-:class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation` with are then combined into a single
-representation.
+The :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation` contains one or more
+:class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation` and uses an additional aggregation. The
+aggregation can be simple non-parametric, e.g. the dimension-wise mean, but it can also have trainable parameters
+itself.
 
 .. seealso::
 
     - https://towardsdatascience.com/nodepiece-tokenizing-knowledge-graphs-6dd2b91847aa
     - :ref:`getting_started_with_node_piece`
+
+Embedding Bag
+~~~~~~~~~~~~~
+
+An :class:`~pykeen.nn.representation.EmbeddingBagRepresentation` represents each index by a bag of individual
+embeddings. Each index can have a variable number of associated embeddings. To obtain the representation, the individual
+embeddings are aggregated by a simple sum, mean, or max pooling operation.
+
+This representation is less flexible than the tokenization representation and/or NodePiece, which allow more powerful
+aggregations as well as arbitrary base representations. However, it has built-in support in PyTorch, cf.
+:class:`~torch.nn.EmbeddingBag`.
 
 Message Passing
 ---------------
