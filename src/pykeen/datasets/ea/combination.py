@@ -263,7 +263,7 @@ class ProcessedTuple(NamedTuple):
     translation_kwargs: Mapping[str, Any]
 
 
-FactoryType = TypeVar("FactoryType", bound=CoreTriplesFactory)
+FactoryType = TypeVar("FactoryType", CoreTriplesFactory, TriplesFactory)
 
 
 class GraphPairCombinator(Generic[FactoryType], ABC):
@@ -299,6 +299,7 @@ class GraphPairCombinator(Generic[FactoryType], ABC):
         # process
         # TODO: restrict to only using training alignments?
         mapped_triples, alignment, translation_kwargs = self.process(mapped_triples, alignment, offsets)
+        combined_factory: FactoryType
         if isinstance(left, TriplesFactory) and isinstance(right, TriplesFactory):
             # merge mappings
             entity_to_id, relation_to_id = merge_label_to_id_mappings(
@@ -306,16 +307,16 @@ class GraphPairCombinator(Generic[FactoryType], ABC):
                 right=right,
                 **translation_kwargs,
             )
-            factory = TriplesFactory(
+            combined_factory = TriplesFactory(
                 mapped_triples=mapped_triples,
                 entity_to_id=entity_to_id,
                 relation_to_id=relation_to_id,
                 **kwargs,
             )
         else:
-            factory = CoreTriplesFactory.create(mapped_triples=mapped_triples, **kwargs)
+            combined_factory = CoreTriplesFactory.create(mapped_triples=mapped_triples, **kwargs)
 
-        return factory, alignment
+        return combined_factory, alignment
 
     @abstractmethod
     def process(
