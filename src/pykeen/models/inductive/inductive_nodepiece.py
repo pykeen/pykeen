@@ -162,8 +162,6 @@ class InductiveNodePiece(InductiveERModel):
         :raises ValueError:
             if the triples factory does not request inverse triples, or the number of relations differs.
         """
-        if not triples_factory.create_inverse_triples:
-            raise ValueError("Must create a triples factory with inverse triples")
         if triples_factory.num_relations != self.num_relations:
             raise ValueError(f"{self.num_relations=} != {triples_factory.num_relations=} !")
         # note: we cannot ensure the mapping also matches...
