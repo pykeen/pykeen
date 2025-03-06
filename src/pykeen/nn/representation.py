@@ -881,7 +881,9 @@ class CompGCNLayer(nn.Module):
         x_e = (
             self.composition(x_e, self.self_loop) @ self.w_loop
             + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
-            + self.message(x_e=x_e, x_r=x_r, edge_index=inverse_edge_index, edge_type=inverse_edge_type, weight=self.w_bwd)
+            + self.message(
+                x_e=x_e, x_r=x_r, edge_index=inverse_edge_index, edge_type=inverse_edge_type, weight=self.w_bwd
+            )
         ) / 3
 
         if self.bias:
