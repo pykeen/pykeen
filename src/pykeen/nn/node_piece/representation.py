@@ -318,9 +318,6 @@ class NodePieceRepresentation(CombinedRepresentation):
 
         # normalize triples
         mapped_triples = triples_factory.mapped_triples
-        if triples_factory.create_inverse_triples:
-            # inverse triples are created afterwards implicitly
-            mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
         token_representations, token_representations_kwargs, num_tokens = broadcast_upgrade_to_sequences(
             token_representations, token_representations_kwargs, num_tokens
@@ -335,7 +332,7 @@ class NodePieceRepresentation(CombinedRepresentation):
                 token_representation_kwargs=token_representation_kwargs,
                 mapped_triples=mapped_triples,
                 num_entities=triples_factory.num_entities,
-                num_relations=triples_factory.real_num_relations,
+                num_relations=triples_factory.num_relations,
             )
             for tokenizer_inst, token_representation, token_representation_kwargs, num_tokens_ in zip(
                 tokenizer_resolver.make_many(queries=tokenizers, kwargs=tokenizers_kwargs),

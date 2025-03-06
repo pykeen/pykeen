@@ -22,6 +22,5 @@ inductive_dataset = EagerInductiveDataset(
     inductive_inference=tf_inference,
     inductive_testing=tf_testing,
     inductive_validation=tf_validation,
-    create_inverse_triples=False,
 )
 inductive_dataset.summarize()
