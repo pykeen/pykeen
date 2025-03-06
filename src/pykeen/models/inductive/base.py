@@ -102,7 +102,7 @@ class InductiveERModel(ERModel):
             representation = [representation]
         old = self._get_entity_representations_from_inductive_mode(mode=mode)
         key = self._key_for_mode(mode)
-        self._mode_to_representations[key] = nn.ModuleList(representation)
+        self._mode_to_representations[key] = nn.ModuleList(representation).to(self.device)
         return old
 
     # docstr-coverage: inherited
