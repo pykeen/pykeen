@@ -40,7 +40,7 @@ entity_embedding_tensor = entity_embeddings(indices=torch.as_tensor([1, 3]))
 
 # %%
 # get embeddings for some entity labels
-entity_ids = triples_factory.entities_to_ids(["china", "egypt"])
+entity_ids = result.training.entities_to_ids(["china", "egypt"])
 entity_embedding_tensor = entity_embeddings(indices=torch.as_tensor(entity_ids))
 
 # %%
