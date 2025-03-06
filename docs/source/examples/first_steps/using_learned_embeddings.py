@@ -39,5 +39,10 @@ import torch  # noqa: E402
 entity_embedding_tensor = entity_embeddings(indices=torch.as_tensor([1, 3]))
 
 # %%
+# get embeddings for some entity labels
+entity_ids = result.training.entities_to_ids(["china", "egypt"])
+entity_embedding_tensor = entity_embeddings(indices=torch.as_tensor(entity_ids))
+
+# %%
 # detach tensor, move to cpu, and convert to numpy
 entity_embedding_tensor = entity_embeddings.detach().cpu().numpy()

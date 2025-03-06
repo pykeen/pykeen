@@ -215,8 +215,8 @@ class BasesDecomposition(Decomposition):
             max_id=self.num_relations,
             shape=(self.input_dim, self.output_dim),
             num_bases=num_bases,
-            weight_initializer=uniform_norm_p1_,
-            initializer=nn.init.xavier_normal_,
+            weight_kwargs=dict(initializer=uniform_norm_p1_),
+            base_kwargs=dict(initializer=nn.init.xavier_normal_),
         )
 
     # docstr-coverage: inherited
@@ -227,12 +227,12 @@ class BasesDecomposition(Decomposition):
     @property
     def bases(self) -> torch.Tensor:
         """Return the base representations."""
-        return self.relation_representations.bases(indices=None)
+        return self.relation_representations.base(indices=None)
 
     @property
     def base_weights(self) -> torch.Tensor:
         """Return the base weights."""
-        return self.relation_representations.weight
+        return self.relation_representations.weight(indices=None)
 
     # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102

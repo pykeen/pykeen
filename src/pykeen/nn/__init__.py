@@ -12,6 +12,7 @@ from .combination import (
     GatedCombination,
 )
 from .message_passing import RGCNRepresentation
+from .meta import FeatureEnrichedEmbedding, MLPTransformedRepresentation
 from .modules import (
     AutoSFInteraction,
     BoxEInteraction,
@@ -63,7 +64,10 @@ from .representation import (
     CachedTextRepresentation,
     CombinedRepresentation,
     Embedding,
+    EmbeddingBagRepresentation,
     LowRankRepresentation,
+    MultiBackfillRepresentation,
+    Partition,
     PartitionRepresentation,
     Representation,
     SingleCompGCNRepresentation,
@@ -85,6 +89,9 @@ __all__ = [
     "LowRankRepresentation",
     "NodePieceRepresentation",
     "PartitionRepresentation",
+    "Partition",
+    "EmbeddingBagRepresentation",
+    "MultiBackfillRepresentation",
     "BackfillRepresentation",
     "RGCNRepresentation",
     "SimpleMessagePassingRepresentation",
@@ -93,6 +100,7 @@ __all__ = [
     "TokenizationRepresentation",
     "TypedMessagePassingRepresentation",
     "FeaturizedMessagePassingRepresentation",
+    "FeatureEnrichedEmbedding",
     "CombinedRepresentation",
     "TensorTrainRepresentation",
     "TextRepresentation",
@@ -101,6 +109,7 @@ __all__ = [
     "BiomedicalCURIERepresentation",
     "VisualRepresentation",
     "WikidataVisualRepresentation",
+    "MLPTransformedRepresentation",
     "tokenizer_resolver",
     "representation_resolver",
     # INITIALIZER
