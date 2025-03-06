@@ -90,10 +90,10 @@ If you'd like to only look up certain embeddings, you can use the ``indices`` pa
 .. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
     :lines: 37-39
 
-Note that the indices correspond the ids of each entity and / or relation generated in the factory, that is,
-the embeddings in the tensor returned by `entity_embeddings` or `relation_embeddings` are in id-order. 
-Thus a typical task such as retrieving the embeddings corresponding to a given set of entity labels 
-would look like the following example:
+Note that the indices correspond the IDs of each entity and/or relation generated in the factory, that is, the
+embeddings in the tensor returned by ``entity_embeddings`` or ``relation_embeddings`` are in ID-order. Thus, a typical
+task such as retrieving the embeddings corresponding to a given set of entity labels would look like the following
+example:
 
 .. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
     :lines: 43-44
