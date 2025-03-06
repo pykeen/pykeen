@@ -18,7 +18,11 @@ from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.training.lcwa import create_lcwa_instances
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory, generation
 from pykeen.triples.splitting import splitter_resolver
-from pykeen.triples.triples_factory import _map_triples_elements_to_ids, get_mapped_triples
+from pykeen.triples.triples_factory import (
+    _map_triples_elements_to_ids,
+    get_mapped_triples,
+    valid_triple_id_range,
+)
 from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
 from tests.constants import RESOURCES
 from tests.utils import needs_packages
@@ -240,6 +244,12 @@ class TestSplit(unittest.TestCase):
             self.assertEqual(type(factory), type(self.triples_factory))
             # we only support inductive *entity* splits for now
             self.assertEqual(factory.num_relations, self.triples_factory.num_relations)
+            # verify that triple have been compacted
+            self.assertTrue(
+                valid_triple_id_range(
+                    factory.mapped_triples, num_entities=factory.num_entities, num_relations=factory.num_relations
+                )
+            )
         # verify that no triple got lost
         total_num_triples = sum(t.num_triples for t in factories)
         if lossy:
@@ -533,9 +543,12 @@ class TestUtils(unittest.TestCase):
 )
 def test_core_triples_factory_error_handling(dtype: torch.dtype, size: tuple[int, ...], expectation):
     """Test error handling in init method of CoreTriplesFactory."""
+    max_id_upper_bound = 33
     with expectation:
         CoreTriplesFactory(
-            mapped_triples=torch.randint(33, size=size).to(dtype=dtype), num_entities=..., num_relations=...
+            mapped_triples=torch.randint(max_id_upper_bound, size=size).to(dtype=dtype),
+            num_entities=max_id_upper_bound,
+            num_relations=max_id_upper_bound,
         )
 
 

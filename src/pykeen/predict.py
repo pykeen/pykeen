@@ -270,9 +270,7 @@ import math
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
-from typing import (
-    TypeAlias,  # Python <=3.9
-)
+from typing import TypeAlias
 
 import numpy
 import pandas

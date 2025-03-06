@@ -417,6 +417,32 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
             self.cls(**ChainMap(dict(assignment=assignment), self.instance_kwargs))
 
 
+class MultiBackfillRepresentationTests(cases.RepresentationTestCase):
+    """Tests for multi-backfill representation, based on the partition representation."""
+
+    cls = pykeen.nn.representation.MultiBackfillRepresentation
+    kwargs = dict(
+        partitions=[
+            pykeen.nn.Partition(
+                ids=[i for i in range(cases.RepresentationTestCase.max_id) if i % 2],
+                base=None,
+                kwargs=dict(shape=(3,)),
+            )
+        ],
+    )
+
+    def test_perfect_assignment(self) -> None:
+        """Test that perfect assignment results in no backfill."""
+        x = pykeen.nn.representation.MultiBackfillRepresentation(
+            max_id=4,
+            partitions=[
+                pykeen.nn.Partition(ids=[0, 1], base=None, kwargs=dict(shape=(2,))),
+                pykeen.nn.Partition(ids=[2, 3], base=None, kwargs=dict(shape=(2,))),
+            ],
+        )
+        self.assertEqual(2, len(x.bases))
+
+
 class BackfillRepresentationTests(cases.RepresentationTestCase):
     """Tests for backfill representation, based on the partition representation."""
 
@@ -425,6 +451,36 @@ class BackfillRepresentationTests(cases.RepresentationTestCase):
         base_kwargs=dict(shape=(3,)),
         base_ids=[i for i in range(cases.RepresentationTestCase.max_id) if i % 2],
     )
+
+    def test_max_id_verification_raises_value_error(self):
+        """Test that an invalid max_id raises a ValueError."""
+        for base_ids, message_part in (
+            ([0, 1, 1], "Duplicate"),
+            ([0, 1, 2, 5], "exceed max_id"),
+            ([-1, 1, 2, 5], "not non-negative"),
+        ):
+            with self.subTest(message_part), self.assertRaises(pykeen.nn.representation.InvalidBaseIdsError) as info:
+                pykeen.nn.representation.BackfillRepresentation(
+                    base_ids=base_ids,
+                    max_id=2,
+                    base=pykeen.nn.representation.Embedding(max_id=4, shape=(4,)),
+                )
+            self.assertIn(message_part, str(info.exception))
+
+        with self.subTest(message_part), self.assertRaises(pykeen.nn.representation.MaxIDMismatchError):
+            pykeen.nn.representation.BackfillRepresentation(
+                base_ids=[0, 1],
+                max_id=2,
+                base=pykeen.nn.representation.Embedding(max_id=4, shape=(4,)),
+            )
+
+    def test_max_id_verification(self):
+        """Test that a valid max_id does not raise a ValueError."""
+        pykeen.nn.representation.BackfillRepresentation(
+            base_ids=[0, 1, 2],
+            max_id=12,
+            base=pykeen.nn.representation.Embedding(max_id=3, shape=(3,)),
+        )
 
 
 class TransformedRepresentationTest(cases.RepresentationTestCase):
@@ -447,6 +503,47 @@ class TensorTrainRepresentationTest(cases.RepresentationTestCase):
     """Tests for tensor train representations."""
 
     cls = pykeen.nn.representation.TensorTrainRepresentation
+
+
+class EmbeddingBagRepresentation(cases.RepresentationTestCase):
+    """Tests for embedding bag representations."""
+
+    cls = pykeen.nn.representation.EmbeddingBagRepresentation
+    kwargs = dict(shape=(5,))
+
+    # docstr-coverage: inherited
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        max_id = kwargs["max_id"]
+        mask = torch.rand(max_id, max_id) < 0.5
+        kwargs["assignment"] = mask.nonzero()
+        return kwargs
+
+
+class MLPTransformedRepresentationTest(cases.RepresentationTestCase):
+    """Tests for MLP transformed representations."""
+
+    cls = pykeen.nn.meta.MLPTransformedRepresentation
+    kwargs = dict(
+        base_kwargs=dict(shape=(5,)),
+    )
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs["base_kwargs"]["max_id"] = kwargs.pop("max_id")
+        return kwargs
+
+
+class FeatureEnrichedEmbeddingTest(cases.RepresentationTestCase):
+    """Tests for feature-enriched embeddings."""
+
+    cls = pykeen.nn.meta.FeatureEnrichedEmbedding
+
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+        kwargs = super()._pre_instantiation_hook(kwargs)
+        kwargs["tensor"] = torch.rand(self.max_id, 9)
+        kwargs.pop("max_id")
+        return kwargs
 
 
 class RepresentationModuleMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.representation.Representation]):
