@@ -37,14 +37,15 @@ class MLPTransformedRepresentation(TransformedRepresentation):
     ) -> None:
         """Initialize the representation.
 
-        :param base:
-            the base representation, or a hint thereof, cf. `representation_resolver`
-        :param base_kwargs:
-            keyword-based parameters used to instantiate the base representation
+        :param base: the base representation, or a hint thereof, cf. `representation_resolver`
+        :param base_kwargs: keyword-based parameters used to instantiate the base representation
         :param output_dim: the output dimension. defaults to input dim
         :param mlp_dropout: the dropout value on the hidden layer.
 
-            .. warning:: don't confuse with the optional keyword argument for the representation's dropout
+            .. warning::
+
+                don't confuse with the optional keyword argument for the representation's dropout
+
         :param ratio: the ratio of the output dimension to the hidden layer size.
         :param kwargs: keyword arguments forwarded to the parent's constructor
         """
@@ -74,17 +75,14 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
     ) -> None:
         """Initialize the feature-enriched embedding.
 
-        :param tensor:
-            the tensor of pretrained embeddings, or a pretrained initializer that wraps
-            a tensor of pretrained embeddings.
-        :param shape:
-            an explicit shape for the learned embedding. If None, it is inferred from the provided feature tensor.
-        :param kwargs:
-            Keyword arguments passed to :meth:`pykeen.nn.CombinedRepresentation.__init__`.
+        :param tensor: the tensor of pretrained embeddings, or a pretrained initializer that wraps a tensor of
+            pretrained embeddings.
+        :param shape: an explicit shape for the learned embedding. If None, it is inferred from the provided feature
+            tensor.
+        :param kwargs: Keyword arguments passed to :meth:`pykeen.nn.CombinedRepresentation.__init__`.
 
-            For example, if you want to make sure that the dimensions of the output are
-            the same as the input, set ``combination="ConcatProjection"``.
-            to use :class:`pykeen.nn.ConcatProjectionCombination`.
+            For example, if you want to make sure that the dimensions of the output are the same as the input, set
+            ``combination="ConcatProjection"``. to use :class:`pykeen.nn.ConcatProjectionCombination`.
         """
         static_embedding = Embedding.from_pretrained(tensor, trainable=False)
         if shape is None:
