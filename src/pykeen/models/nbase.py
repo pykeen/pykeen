@@ -430,6 +430,7 @@ class ERModel(
             regularizer.add_parameter(parameter=param)
         self.weight_regularizers.append(regularizer)
 
+    # docstr-coverage: inherited
     def forward(
         self,
         h_indices: LongTensor,
@@ -439,32 +440,7 @@ class ERModel(
         slice_dim: int = 0,
         *,
         mode: InductiveMode | None,
-    ) -> FloatTensor:
-        """Forward pass.
-
-        This method takes head, relation and tail indices and calculates the corresponding scores.
-        It supports broadcasting.
-
-        :param h_indices:
-            The head indices.
-        :param r_indices:
-            The relation indices.
-        :param t_indices:
-            The tail indices.
-        :param slice_size:
-            The slice size.
-        :param slice_dim:
-            The dimension along which to slice
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return:
-            The scores
-
-        :raises NotImplementedError:
-            if score repetition becomes necessary
-        """
+    ) -> FloatTensor:  # noqa: D102
         if not self.entity_representations or not self.relation_representations:
             raise NotImplementedError("repeat scores not implemented for general case.")
         h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode)

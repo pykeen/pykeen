@@ -177,6 +177,43 @@ class Model(nn.Module, ABC):
     """Abstract methods - Scoring"""
 
     @abstractmethod
+    def forward(
+        self,
+        h_indices: LongTensor,
+        r_indices: LongTensor,
+        t_indices: LongTensor,
+        slice_size: int | None = None,
+        slice_dim: int = 0,
+        *,
+        mode: InductiveMode | None,
+    ) -> FloatTensor:
+        """Forward pass.
+
+        This method takes head, relation and tail indices and calculates the corresponding scores.
+        It supports broadcasting.
+
+        :param h_indices: shape: (*batch_dims)
+            The head indices.
+        :param r_indices: shape: (*batch_dims)
+            The relation indices.
+        :param t_indices: shape: (*batch_dims)
+            The tail indices.
+
+        :param slice_size:
+            The slice size.
+        :param slice_dim:
+            The dimension along which to slice
+
+        :param mode:
+            The pass mode, which is None in the transductive setting and one of "training",
+            "validation", or "testing" in the inductive setting.
+
+        :return: shape: (*batch_dims)
+            The scores
+        """
+        # TODO: extend slice to separate slicing options per index dimension
+
+    @abstractmethod
     def score_hrt(self, hrt_batch: LongTensor, *, mode: InductiveMode | None = None) -> FloatTensor:
         """Forward pass.
 
