@@ -50,6 +50,25 @@ class BatchCWADataset(Dataset[BatchCWABatch]):
         return self.mapped_triples.shape[0]
 
 
+def _scan_triples(other_triples: LongTensor, hs: LongTensor, rs: LongTensor, ts: LongTensor) -> LongTensor:
+    """Collect all triples that solely contain the given head/relation/tail indices."""
+    for i, indices in enumerate([hs, rs, ts]):
+        mask = torch.isin(elements=other_triples[:, i], test_elements=indices)
+        other_triples = other_triples[mask]
+    return other_triples
+
+
+def _convert_to_batch_local(other_triples: LongTensor) -> LongTensor:
+    """Convert to batch local indices."""
+    if other_triples.ndimension() != 2:
+        raise ValueError(f"Invalid shape: {other_triples.shape=}")
+    targets = []
+    for dim in range(other_triples.shape[1]):
+        inv = other_triples[:, dim].unique(return_inverse=True)[1]
+        targets.append(inv)
+    return torch.stack(targets, dim=-1)
+
+
 class BatchCWACollator:
     """A custom collator for BCWA training.
 
@@ -71,20 +90,14 @@ class BatchCWACollator:
         rs = torch.stack([b.rs for b in batch]).unique()
         ts = torch.stack([b.ts for b in batch]).unique()
 
-        # collect all triples that solely contain the current batch heads/relations/tails
-        other_triples = self.mapped_triples
-        for i, indices in enumerate([hs, rs, ts]):
-            mask = torch.isin(elements=other_triples[:, i], test_elements=indices)
-            other_triples = other_triples[mask]
+        other_triples = _scan_triples(self.mapped_triples, hs=hs, rs=rs, ts=ts)
+        # batch contains training triples -> we need to find at least those
+        assert other_triples.shape[0] >= len(batch)
 
         # convert to batch local indices
-        targets = []
-        for dim, indices in enumerate([hs, rs, ts]):
-            uniq, inv = other_triples[:, dim].unique(return_inverse=True)
-            assert torch.equal(uniq, indices)
-            targets.append(inv)
+        targets = _convert_to_batch_local(other_triples=other_triples)
 
-        return BatchCWABatch(hs=hs, rs=rs, ts=ts, targets=torch.stack(targets, dim=-1))
+        return BatchCWABatch(hs=hs, rs=rs, ts=ts, targets=targets)
 
 
 class BatchCWATrainingLoop(TrainingLoop[LongTensor, BatchCWABatch]):
