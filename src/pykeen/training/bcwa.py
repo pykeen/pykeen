@@ -1,5 +1,6 @@
 """(Batch) Closed World Assumption."""
 
+from collections.abc import Sequence
 from typing import NamedTuple
 
 import torch
@@ -8,7 +9,7 @@ from torch.utils.data import DataLoader, Dataset
 from pykeen.models.nbase import ERModel
 from pykeen.training.training_loop import TrainingLoop
 from pykeen.triples import CoreTriplesFactory
-from pykeen.typing import COLUMN_TAIL, FloatTensor, LongTensor
+from pykeen.typing import COLUMN_TAIL, BoolTensor, FloatTensor, LongTensor
 
 
 class BatchCWABatch(NamedTuple):
@@ -50,23 +51,33 @@ class BatchCWADataset(Dataset[BatchCWABatch]):
         return self.mapped_triples.shape[0]
 
 
-def _scan_triples(other_triples: LongTensor, hs: LongTensor, rs: LongTensor, ts: LongTensor) -> LongTensor:
+def _scan_triples(other_triples: LongTensor, indices: Sequence[LongTensor]) -> LongTensor:
     """Collect all triples that solely contain the given head/relation/tail indices."""
-    for i, indices in enumerate([hs, rs, ts]):
-        mask = torch.isin(elements=other_triples[:, i], test_elements=indices)
-        other_triples = other_triples[mask]
-    return other_triples
+    mask: BoolTensor = torch.ones(len(other_triples), dtype=torch.bool)
+    for i, test_elements in enumerate(indices):
+        mask &= torch.isin(elements=other_triples[:, i], test_elements=test_elements)
+    return other_triples[mask]
 
 
-def _convert_to_batch_local(other_triples: LongTensor) -> LongTensor:
-    """Convert to batch local indices."""
-    if other_triples.ndimension() != 2:
-        raise ValueError(f"Invalid shape: {other_triples.shape=}")
+def _convert_to_batch_local(xs: LongTensor) -> tuple[Sequence[LongTensor], LongTensor]:
+    """Convert to batch local indices.
+
+    :param xs: shape: (n, d)
+        The input tensor.
+
+    :return:
+        A tuple (unique, inverse) containing the unique indices per column, and the local tensor.
+        The unique indices per column can have different lengths.
+    """
+    if xs.ndimension() != 2:
+        raise ValueError(f"Invalid shape: {xs.shape=}")
+    uniqs = []
     targets = []
-    for dim in range(other_triples.shape[1]):
-        inv = other_triples[:, dim].unique(return_inverse=True)[1]
+    for dim in range(xs.shape[1]):
+        uniq, inv = xs[:, dim].unique(return_inverse=True)
+        uniqs.append(uniq)
         targets.append(inv)
-    return torch.stack(targets, dim=-1)
+    return uniqs, torch.stack(targets, dim=-1)
 
 
 class BatchCWACollator:
@@ -85,19 +96,19 @@ class BatchCWACollator:
         self.mapped_triples = mapped_triples
 
     def __call__(self, batch: list[BatchCWABatch]) -> BatchCWABatch:
-        # collect unique indices
-        hs = torch.stack([b.hs for b in batch]).unique()
-        rs = torch.stack([b.rs for b in batch]).unique()
-        ts = torch.stack([b.ts for b in batch]).unique()
+        # collect indices
+        hs = torch.stack([b.hs for b in batch])
+        rs = torch.stack([b.rs for b in batch])
+        ts = torch.stack([b.ts for b in batch])
 
-        other_triples = _scan_triples(self.mapped_triples, hs=hs, rs=rs, ts=ts)
+        other_triples = _scan_triples(self.mapped_triples, indices=[hs, rs, ts])
         # batch contains training triples -> we need to find at least those
         assert other_triples.shape[0] >= len(batch)
 
         # convert to batch local indices
-        targets = _convert_to_batch_local(other_triples=other_triples)
+        (hs_uniq, rs_uniq, ts_uniq), targets = _convert_to_batch_local(xs=other_triples)
 
-        return BatchCWABatch(hs=hs, rs=rs, ts=ts, targets=targets)
+        return BatchCWABatch(hs=hs_uniq, rs=rs_uniq, ts=ts_uniq, targets=targets)
 
 
 class BatchCWATrainingLoop(TrainingLoop[LongTensor, BatchCWABatch]):
