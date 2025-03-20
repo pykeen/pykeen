@@ -208,6 +208,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 DEFAULT_MARGIN_HPO_STRATEGY = dict(type=float, low=0, high=3)
+DEFAULT_HPO_STRATEGY_REDUCTION = {"type": "categorical", "choices": ["mean", "sum"]}
+DEFAULT_HPO_STRATEGY_POS_WEIGHT = {"type": float, "low": 2**-2, "high": 2**10, "log": True}
 
 
 def apply_label_smoothing(
@@ -411,6 +413,11 @@ class BCEWithLogitsLoss(PointwiseLoss):
     """
 
     synonyms = {"Negative Log Likelihood Loss"}
+
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "reduction": DEFAULT_HPO_STRATEGY_REDUCTION,
+        "pos_weight": DEFAULT_HPO_STRATEGY_POS_WEIGHT,
+    }
 
     pos_weight: FloatTensor | None
 
