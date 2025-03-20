@@ -1385,24 +1385,28 @@ class AdversarialLoss(SetwiseLoss):
         # determine positive; do not check with == since the labels are floats
         pos_mask = labels > 0.5
 
+        # start with positive term, which can directly be reduced
+        pos_loss = self.positive_loss_term(
+            pos_scores=predictions[pos_mask], label_smoothing=label_smoothing, num_entities=num_entities
+        )
+
         # compute negative weights (without gradient tracking)
         # clone is necessary since we modify in-place
-        weights = predictions.detach().clone()
-        weights[pos_mask] = float("-inf")
-        weights = weights.mul(self.inverse_softmax_temperature).softmax(dim=1)
-
-        # Split positive and negative scores
-        positive_scores = predictions[pos_mask]
         # we pass *all* scores as negatives, but set the weight of positives to zero
         # this allows keeping a dense shape
-
-        return self(
-            pos_scores=positive_scores,
-            neg_scores=predictions,
-            neg_weights=weights,
-            label_smoothing=label_smoothing,
-            num_entities=num_entities,
+        # TODO: we could end up with all -inf rows?
+        neg_weights = predictions.detach().clone()
+        neg_weights[pos_mask] = float("-inf")
+        neg_weights = neg_weights.mul(self.inverse_softmax_temperature).softmax(dim=1)
+        neg_loss = self.negative_loss_term_unreduced(
+            neg_scores=predictions, label_smoothing=label_smoothing, num_entities=num_entities
         )
+        # note: this is a reduction along the softmax dim; since the weights are already normalized
+        #       to sum to one, we want a sum reduction here, instead of using the self._reduction
+        neg_loss = (neg_weights * neg_loss).sum(dim=-1)
+        neg_loss = self._reduction_method(neg_loss)
+
+        return self.factor * (pos_loss + neg_loss)
 
     # docstr-coverage: inherited
     def process_slcwa_scores(
@@ -1419,6 +1423,11 @@ class AdversarialLoss(SetwiseLoss):
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 
+        # start with positive term, which can directly be reduced
+        pos_loss = self.positive_loss_term(
+            pos_scores=positive_scores, label_smoothing=label_smoothing, num_entities=num_entities
+        )
+
         negative_scores = prepare_negative_scores_for_softmax(
             batch_filter=batch_filter,
             negative_scores=negative_scores,
@@ -1428,18 +1437,20 @@ class AdversarialLoss(SetwiseLoss):
 
         # compute weights (without gradient tracking)
         assert negative_scores.ndimension() == 2
-        weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
+        neg_weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
 
         # fill negative scores with some finite value, e.g., 0 (they will get masked out anyway)
         negative_scores = torch.masked_fill(negative_scores, mask=~torch.isfinite(negative_scores), value=0.0)
 
-        return self(
-            pos_scores=positive_scores,
-            neg_scores=negative_scores,
-            neg_weights=weights,
-            label_smoothing=label_smoothing,
-            num_entities=num_entities,
+        neg_loss = self.negative_loss_term_unreduced(
+            neg_scores=negative_scores, label_smoothing=label_smoothing, num_entities=num_entities
         )
+        # note: this is a reduction along the softmax dim; since the weights are already normalized
+        #       to sum to one, we want a sum reduction here, instead of using the self._reduction
+        neg_loss = (neg_weights * neg_loss).sum(dim=-1)
+        neg_loss = self._reduction_method(neg_loss)
+
+        return self.factor * (pos_loss + neg_loss)
 
     @abstractmethod
     def positive_loss_term(
@@ -1484,45 +1495,6 @@ class AdversarialLoss(SetwiseLoss):
             the unreduced loss term for negative scores
         """
         raise NotImplementedError
-
-    def forward(
-        self,
-        pos_scores: FloatTensor,
-        neg_scores: FloatTensor,
-        neg_weights: FloatTensor,
-        label_smoothing: float | None = None,
-        num_entities: int | None = None,
-    ) -> FloatTensor:
-        """Calculate the loss for the given scores.
-
-        :param pos_scores: shape: s_p
-            a tensor of positive scores
-        :param neg_scores: shape: s_n
-            a tensor of negative scores
-        :param neg_weights: shape: s_n
-            the adversarial weights of the negative scores
-        :param label_smoothing:
-            An optional label smoothing parameter.
-        :param num_entities:
-            The number of entities (required for label-smoothing).
-
-        :returns:
-            a scalar loss value
-        """
-        # TODO: check signature
-        neg_loss = self.negative_loss_term_unreduced(
-            neg_scores=neg_scores, label_smoothing=label_smoothing, num_entities=num_entities
-        )
-        # note: this is a reduction along the softmax dim; since the weights are already normalized
-        #       to sum to one, we want a sum reduction here, instead of using the self._reduction
-        neg_loss = (neg_weights * neg_loss).sum(dim=-1)
-        neg_loss = self._reduction_method(neg_loss)
-
-        pos_loss = self.positive_loss_term(
-            pos_scores=pos_scores, label_smoothing=label_smoothing, num_entities=num_entities
-        )
-
-        return self.factor * (pos_loss + neg_loss)
 
 
 @parse_docdata
