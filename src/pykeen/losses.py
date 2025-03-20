@@ -295,7 +295,7 @@ class Loss(_Loss):
 
     # TODO: mypy does not seem to like this annotation
     # @abc.abstractmethod
-    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: DAR401
         """
         Calculate the loss function.
 
@@ -919,20 +919,8 @@ class DoubleMarginLoss(PointwiseLoss):
 
         return self(x=predictions, target=labels)
 
-    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
-        """
-        Compute the double margin loss.
-
-        The scores have to be in broadcastable shape.
-
-        :param predictions:
-            The predicted scores.
-        :param labels:
-            The labels.
-
-        :return:
-            A scalar loss term.
-        """
+    # docstr-coverage: inherited
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         return self.positive_weight * self._reduction_method(
             target * self.margin_activation(self.positive_margin - x)
         ) + self.negative_weight * self._reduction_method(
