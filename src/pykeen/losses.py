@@ -419,7 +419,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
         :param reduction:
             The reduction, cf. :mod:`pykeen.nn.modules._Loss`
-        :param pos_weigt:
+        :param pos_weight:
             A weight for the positive class.
         """
         super().__init__(reduction=reduction)
