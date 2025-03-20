@@ -412,13 +412,31 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
     synonyms = {"Negative Log Likelihood Loss"}
 
+    pos_weight: FloatTensor | None
+
+    def __init__(self, reduction: str = "mean", pos_weight: None | float = None):
+        """Initialize the loss criterion.
+
+        :param reduction:
+            The reduction, cf. :mod:`pykeen.nn.modules._Loss`
+        :param pos_weigt:
+            A weight for the positive class.
+        """
+        super().__init__(reduction=reduction)
+        if pos_weight:
+            self.register_buffer("pos_weight", tensor=torch.as_tensor(pos_weight))
+        else:
+            self.pos_weight = None
+
     # docstr-coverage: inherited
     def forward(
         self,
         scores: FloatTensor,
         labels: FloatTensor,
     ) -> FloatTensor:  # noqa: D102
-        return functional.binary_cross_entropy_with_logits(scores, labels, reduction=self.reduction)
+        return functional.binary_cross_entropy_with_logits(
+            scores, labels, reduction=self.reduction, pos_weight=self.pos_weight
+        )
 
 
 @parse_docdata
