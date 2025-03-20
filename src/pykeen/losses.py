@@ -159,6 +159,7 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """  # noqa: E501
 
+import abc
 import logging
 import math
 from abc import abstractmethod
@@ -309,6 +310,11 @@ class Loss(_Loss):
         # TODO: Can we pull label smoothing inside?
         raise NotImplementedError
 
+    def _raise_on_label_smoothing(self, label_smoothing: float | None) -> None:
+        """Raise an error when weights are passed."""
+        if label_smoothing:
+            raise UnsupportedLabelSmoothingError(self)
+
     def _raise_on_weights(self, weight: FloatTensor | None) -> None:
         """Raise an error when weights are passed."""
         if weight is not None:
@@ -318,9 +324,9 @@ class Loss(_Loss):
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        batch_filter: BoolTensor | None = None,
         # TODO: why is label smoothing part of the process_*_scores call?!
         label_smoothing: float | None = None,
-        batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
@@ -406,8 +412,68 @@ class Loss(_Loss):
         return self(x=predictions, target=labels, weight=weights)
 
 
-class PointwiseLoss(Loss):
+class PointwiseLoss(Loss, abc.ABC):
     """Pointwise loss functions compute an independent loss term for each triple-label pair."""
+
+    @abc.abstractmethod
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: DAR401
+        """
+        Evaluate the point-wise loss function.
+
+        .. note ::
+            The three tensors need to be broadcastable, but not necessarily have the exact same shape.
+
+        :param x:
+            The score tensor.
+        :param target:
+            The target tensor, with values between 0 and 1.
+        :param weight:
+            The sample weights.
+        """
+        raise NotImplementedError
+
+    # docstr-coverage: inherited
+    def process_lcwa_scores(
+        self,
+        predictions: FloatTensor,
+        labels: FloatTensor,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
+        weights: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
+        labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=num_entities)
+        return self(x=predictions, target=labels, weight=weights)
+
+    # docstr-coverage: inherited
+    def process_slcwa_scores(
+        self,
+        positive_scores: FloatTensor,
+        negative_scores: FloatTensor,
+        batch_filter: BoolTensor | None = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
+        # note: batch filter can be ignored (as negative scores have already been pre-filtered)
+
+        # TODO: why do we need num_classes for label smoothing (in the binary classification interpretation)?
+        #  This seems to be mostly relevant for the "set-wise" / 1:n scoring interpretation
+        # TODO: smoothing can be done more efficiently
+
+        return self(
+            x=positive_scores,
+            target=apply_label_smoothing(
+                torch.ones_like(positive_scores), epsilon=label_smoothing, num_classes=num_entities
+            ),
+            weight=pos_weights,
+        ) + self(
+            x=negative_scores,
+            target=apply_label_smoothing(
+                torch.zeros_like(negative_scores), epsilon=label_smoothing, num_classes=num_entities
+            ),
+            weight=neg_weights,
+        )
 
     @staticmethod
     def validate_labels(labels: FloatTensor) -> bool:
@@ -417,6 +483,86 @@ class PointwiseLoss(Loss):
 
 class PairwiseLoss(Loss):
     """Pairwise loss functions compare the scores of a positive triple and a negative triple."""
+
+    @abc.abstractmethod
+    def forward(
+        self,
+        x_pos: FloatTensor,
+        x_neg: FloatTensor,
+        batch_filter: BoolTensor | None = None,
+        weight_pos: FloatTensor | None = None,
+        weight_neg: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: DAR401
+        """
+        Evaluate the pair-wise loss function.
+
+        :param x_pos:
+            The score tensor of positive triples.
+        :param x_neg:
+            The score tensor of negative triples.
+        :param batch_filter:
+            Boolean mask if x_neg is passed sparse.
+        :param weight_pos:
+            The sample weights for the positive.
+        :param weight_neg:
+            The sample weights for the negative.
+        """
+        raise NotImplementedError
+
+    # docstr-coverage: inherited
+    def process_lcwa_scores(
+        self,
+        predictions: FloatTensor,
+        labels: FloatTensor,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
+        weights: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
+        self._raise_on_label_smoothing(label_smoothing=label_smoothing)
+        # for LCWA scores, we consider all pairs of positive and negative scores for a single batch element.
+        # note: this leads to non-uniform memory requirements for different batches, depending on the total number of
+        # positive entries in the labels tensor.
+
+        # This shows how often one row has to be repeated,
+        # shape: (batch_num_positives,), if row i has k positive entries, this tensor will have k entries with i
+        repeat_rows = (labels < 0.5).nonzero(as_tuple=False)[:, 0]
+        # Create boolean indices for negative labels in the repeated rows, shape: (batch_num_positives, num_entities)
+        labels_negative = labels[repeat_rows] < 0.5
+        # Repeat the predictions and filter for negative labels, shape: (batch_num_pos_neg_pairs,)
+        negative_scores = predictions[repeat_rows][labels_negative]
+
+        # This tells us how often each true label should be repeated
+        repeat_true_labels = (labels[repeat_rows] < 0.5).nonzero(as_tuple=False)[:, 0]
+        # First filter the predictions for true labels and then repeat them based on the repeat vector
+        positive_scores = predictions[labels > 0.5][repeat_true_labels]
+
+        if weights is None:
+            weight_neg = weight_pos = None
+        else:
+            weight_neg = weights[repeat_rows][labels_negative]
+            weight_pos = weights[labels > 0.5][repeat_true_labels]
+
+        return self(x_pos=positive_scores, x_neg=negative_scores, weight_pos=weight_pos, weight_neg=weight_neg)
+
+    # docstr-coverage: inherited
+    def process_slcwa_scores(
+        self,
+        positive_scores: FloatTensor,
+        negative_scores: FloatTensor,
+        batch_filter: BoolTensor | None = None,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
+        self._raise_on_label_smoothing(label_smoothing=label_smoothing)
+        return self(
+            x_pos=positive_scores,
+            x_neg=negative_scores,
+            weight_pos=pos_weights,
+            weight_neg=neg_weights,
+            batch_filter=batch_filter,
+        )
 
 
 class SetwiseLoss(Loss):
