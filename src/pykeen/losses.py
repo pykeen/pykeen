@@ -276,7 +276,7 @@ _REDUCTION_METHODS = dict(
 )
 
 
-class Loss(_Loss):
+class Loss(_Loss, abc.ABC):
     """A loss function."""
 
     #: synonyms of this loss
@@ -295,7 +295,8 @@ class Loss(_Loss):
         super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
 
-    @abc.abstractmethod
+    # TODO: mypy does not seem to like this annotation
+    # @abc.abstractmethod
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
         # TODO: Can we pull label smoothing inside?
         raise NotImplementedError
