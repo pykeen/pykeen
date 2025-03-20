@@ -276,7 +276,7 @@ _REDUCTION_METHODS = dict(
 )
 
 
-class Loss(_Loss, abc.ABC):
+class Loss(_Loss):
     """A loss function."""
 
     #: synonyms of this loss
