@@ -159,12 +159,13 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """  # noqa: E501
 
+import abc
 import logging
 import math
 from abc import abstractmethod
 from collections.abc import Mapping
 from textwrap import dedent
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 import torch
 from class_resolver import ClassResolver, Hint
@@ -257,6 +258,7 @@ class UnsupportedLabelSmoothingError(RuntimeError):
         return f"{self.instance.__class__.__name__} does not support label smoothing."
 
 
+TorchReductionMethod = Literal["mean", "sum", "none"]
 _REDUCTION_METHODS = dict(
     mean=torch.mean,
     sum=torch.sum,
@@ -281,6 +283,17 @@ class Loss(_Loss):
         """
         super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
+
+    @abc.abstractmethod
+    def forward(
+        self,
+        x: FloatTensor,
+        target: FloatTensor,
+        weight: FloatTensor | None = None,
+        reduction: TorchReductionMethod = "mean",
+    ) -> FloatTensor:
+        # TODO: Can we pull label smoothing inside?
+        raise NotImplementedError
 
     def process_slcwa_scores(
         self,
@@ -313,8 +326,6 @@ class Loss(_Loss):
         :return:
             A scalar loss term.
         """
-        if weights is not None:
-            raise NotImplementedError(f"{self} does not support loss weights.")
         # flatten and stack
         positive_scores = positive_scores.view(-1)
         negative_scores = negative_scores.view(-1)
@@ -328,7 +339,7 @@ class Loss(_Loss):
             num_classes=num_entities,
         )
 
-        return self(predictions, labels)
+        return self(x=predictions, target=labels, weight=weights, reduction=self.reduction)
 
     def process_lcwa_scores(
         self,
@@ -355,15 +366,13 @@ class Loss(_Loss):
         :return:
             A scalar loss value.
         """
-        if weights is not None:
-            raise NotImplementedError(f"{self} does not support loss weights.")
         # TODO: Do label smoothing only once
         labels = apply_label_smoothing(
             labels=labels,
             epsilon=label_smoothing,
             num_classes=num_entities,
         )
-        return self(predictions, labels)
+        return self(x=predictions, target=labels, weight=weights, reduction=self.reduction)
 
 
 class PointwiseLoss(Loss):
@@ -426,10 +435,12 @@ class BCEWithLogitsLoss(PointwiseLoss):
     # docstr-coverage: inherited
     def forward(
         self,
-        scores: FloatTensor,
-        labels: FloatTensor,
+        x: FloatTensor,
+        target: FloatTensor,
+        weight: FloatTensor | None = None,
+        reduction: TorchReductionMethod = "mean",
     ) -> FloatTensor:  # noqa: D102
-        return functional.binary_cross_entropy_with_logits(scores, labels, reduction=self.reduction)
+        return functional.binary_cross_entropy_with_logits(x, target, reduction=reduction, weight=weight)
 
 
 @parse_docdata
