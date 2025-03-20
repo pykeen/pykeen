@@ -296,13 +296,7 @@ class Loss(_Loss):
         self._reduction_method = _REDUCTION_METHODS[reduction]
 
     @abc.abstractmethod
-    def forward(
-        self,
-        x: FloatTensor,
-        target: FloatTensor,
-        weight: FloatTensor | None = None,
-        reduction: TorchReductionMethod = "mean",
-    ) -> FloatTensor:
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
         # TODO: Can we pull label smoothing inside?
         raise NotImplementedError
 
@@ -449,14 +443,8 @@ class BCEWithLogitsLoss(PointwiseLoss):
     synonyms = {"Negative Log Likelihood Loss"}
 
     # docstr-coverage: inherited
-    def forward(
-        self,
-        x: FloatTensor,
-        target: FloatTensor,
-        weight: FloatTensor | None = None,
-        reduction: TorchReductionMethod = "mean",
-    ) -> FloatTensor:  # noqa: D102
-        return functional.binary_cross_entropy_with_logits(x, target, reduction=reduction, weight=weight)
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
+        return functional.binary_cross_entropy_with_logits(x, target, reduction=self.reduction, weight=weight)
 
 
 @parse_docdata
@@ -474,17 +462,11 @@ class MSELoss(PointwiseLoss):
     synonyms = {"Mean Square Error Loss", "Mean Squared Error Loss"}
 
     # docstr-coverage: inherited
-    def forward(
-        self,
-        x: FloatTensor,
-        target: FloatTensor,
-        weight: FloatTensor | None = None,
-        reduction: TorchReductionMethod = "mean",
-    ) -> FloatTensor:  # noqa: D102
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         self._raise_on_weights(weight)
         # TODO: this should not be run on every forward pass
         assert self.validate_labels(labels=target)
-        return functional.mse_loss(x, target, reduction=reduction)
+        return functional.mse_loss(x, target, reduction=self.reduction)
 
 
 class MarginPairwiseLoss(PairwiseLoss):
@@ -585,14 +567,9 @@ class MarginPairwiseLoss(PairwiseLoss):
         return self(x=negative_scores - positive_scores, target=1)
 
     # docstr-coverage: inherited
-    def forward(
-        self,
-        x: FloatTensor,
-        target: FloatTensor,
-        weight: FloatTensor | None = None,
-        reduction: TorchReductionMethod = "mean",
-    ) -> FloatTensor:  # noqa: D102
-        return _REDUCTION_METHODS[reduction](self.margin_activation(x * target + self.margin))
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
+        # note: this is relatively hacky
+        return self._reduction_method(self.margin_activation(x * target + self.margin))
 
 
 @parse_docdata
@@ -915,15 +892,9 @@ class DoubleMarginLoss(PointwiseLoss):
                 num_classes=num_entities,
             )
 
-        return self(x=predictions, target=labels, reduction=self.reduction)
+        return self(x=predictions, target=labels)
 
-    def forward(
-        self,
-        x: FloatTensor,
-        target: FloatTensor,
-        weight: FloatTensor | None = None,
-        reduction: TorchReductionMethod = "mean",
-    ) -> FloatTensor:
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
         """
         Compute the double margin loss.
 
@@ -984,13 +955,7 @@ class DeltaPointwiseLoss(PointwiseLoss):
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
-    def forward(
-        self,
-        x: FloatTensor,
-        target: FloatTensor,
-        weight: FloatTensor | None = None,
-        reduction: TorchReductionMethod = "mean",
-    ) -> FloatTensor:
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
         """Calculate the loss for the given scores and labels."""
         self._raise_on_weights(weight)
         # TODO: do not do this for every forward pass
@@ -998,7 +963,7 @@ class DeltaPointwiseLoss(PointwiseLoss):
         # scale labels from [0, 1] to [-1, 1]
         target = 2 * target - 1
         loss = self.margin_activation(self.margin - target * x)
-        loss = _REDUCTION_METHODS[reduction](loss)
+        loss = self._reduction_method(loss)
         return loss
 
 
@@ -1107,14 +1072,8 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
     """
 
     # docstr-coverage: inherited
-    def forward(
-        self,
-        x: FloatTensor,
-        target: FloatTensor,
-        weight: FloatTensor | None = None,
-        reduction: TorchReductionMethod = "mean",
-    ) -> FloatTensor:  # noqa: D102
-        return functional.binary_cross_entropy(x.sigmoid(), target, weight=weight, reduction=reduction)
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
+        return functional.binary_cross_entropy(x.sigmoid(), target, weight=weight, reduction=self.reduction)
 
 
 def prepare_negative_scores_for_softmax(
@@ -1645,13 +1604,7 @@ class FocalLoss(PointwiseLoss):
         self.gamma = gamma
 
     # docstr-coverage: inherited
-    def forward(
-        self,
-        x: FloatTensor,
-        target: FloatTensor,
-        weight: FloatTensor | None = None,
-        reduction: TorchReductionMethod = "mean",
-    ) -> FloatTensor:  # noqa: D102
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         self._raise_on_weights(weight)
         p = x.sigmoid()
         ce_loss = functional.binary_cross_entropy_with_logits(x, target, reduction="none")
@@ -1662,7 +1615,7 @@ class FocalLoss(PointwiseLoss):
             alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
             loss = alpha_t * loss
 
-        return _REDUCTION_METHODS[reduction](loss)
+        return self._reduction_method(loss)
 
 
 #: A resolver for loss modules
