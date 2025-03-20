@@ -932,7 +932,7 @@ class DoubleMarginLoss(PointwiseLoss):
                 num_classes=num_entities,
             )
 
-        return self(predictions=predictions, labels=labels)
+        return self(x=predictions, target=labels, reduction=self.reduction)
 
     def forward(
         self,
