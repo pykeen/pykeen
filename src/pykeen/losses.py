@@ -549,7 +549,7 @@ class MarginPairwiseLoss(PairwiseLoss):
             positive_scores = positive_scores.repeat(1, num_neg_per_pos)[batch_filter]
             # shape: (nnz,)
 
-        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+        return self(x=negative_scores - positive_scores, target=positive_scores.new_ones(size=tuple()))
 
     # docstr-coverage: inherited
     def process_lcwa_scores(
@@ -582,32 +582,17 @@ class MarginPairwiseLoss(PairwiseLoss):
         # First filter the predictions for true labels and then repeat them based on the repeat vector
         positive_scores = predictions[labels == 1][repeat_true_labels]
 
-        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+        return self(x=negative_scores - positive_scores, target=1)
 
+    # docstr-coverage: inherited
     def forward(
         self,
-        pos_scores: FloatTensor,
-        neg_scores: FloatTensor,
-    ) -> FloatTensor:
-        """
-        Compute the margin loss.
-
-        The scores have to be in broadcastable shape.
-
-        :param pos_scores:
-            The positive scores.
-        :param neg_scores:
-            The negative scores.
-
-        :return:
-            A scalar loss term.
-        """
-        # TODO: check signature
-        return self._reduction_method(
-            self.margin_activation(
-                neg_scores - pos_scores + self.margin,
-            )
-        )
+        x: FloatTensor,
+        target: FloatTensor,
+        weight: FloatTensor | None = None,
+        reduction: TorchReductionMethod = "mean",
+    ) -> FloatTensor:  # noqa: D102
+        return _REDUCTION_METHODS[reduction](self.margin_activation(x * target + self.margin))
 
 
 @parse_docdata
