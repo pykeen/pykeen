@@ -349,7 +349,7 @@ class Loss(_Loss):
             num_classes=num_entities,
         )
 
-        return self(x=predictions, target=labels, weight=weights, reduction=self.reduction)
+        return self(x=predictions, target=labels, weight=weights)
 
     def process_lcwa_scores(
         self,
@@ -382,7 +382,7 @@ class Loss(_Loss):
             epsilon=label_smoothing,
             num_classes=num_entities,
         )
-        return self(x=predictions, target=labels, weight=weights, reduction=self.reduction)
+        return self(x=predictions, target=labels, weight=weights)
 
 
 class PointwiseLoss(Loss):
