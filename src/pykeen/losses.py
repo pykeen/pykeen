@@ -298,6 +298,16 @@ class Loss(_Loss):
     # TODO: mypy does not seem to like this annotation
     # @abc.abstractmethod
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
+        """
+        Calculate the loss function.
+
+        :param x:
+            The input tensor.
+        :param target:
+            The target tensor.
+        :param weight:
+            The sample weights.
+        """
         # TODO: Can we pull label smoothing inside?
         raise NotImplementedError
 
