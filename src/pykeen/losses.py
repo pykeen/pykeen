@@ -164,7 +164,7 @@ import math
 from abc import abstractmethod
 from collections.abc import Mapping
 from textwrap import dedent
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar
 
 import torch
 from class_resolver import ClassResolver, Hint
@@ -268,7 +268,6 @@ class NoSampleWeightSupportError(RuntimeError):
         return f"{self.instance.__class__.__name__} does not support sample weights."
 
 
-TorchReductionMethod = Literal["mean", "sum", "none"]
 _REDUCTION_METHODS = dict(
     mean=torch.mean,
     sum=torch.sum,
