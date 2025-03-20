@@ -286,6 +286,7 @@ class Loss(_Loss):
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        # TODO: why is label smoothing part of the process_*_scores call?!
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
