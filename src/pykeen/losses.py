@@ -314,7 +314,8 @@ class Loss(_Loss, abc.ABC):
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
-        weights: FloatTensor | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
         """
         Process scores from sLCWA training loop.
@@ -331,8 +332,10 @@ class Loss(_Loss, abc.ABC):
             pre-filtered.
         :param num_entities:
             The number of entities. Only required if label smoothing is enabled.
-        :param weights: shape: (batch_size, num_neg_per_pos)
-            Sample weights.
+        :param pos_weights: shape: (batch_size, 1)
+            Positive sample weights.
+        :param neg_weights: shape: (batch_size, num_neg_per_pos)
+            Negative sample weights.
 
         :return:
             A scalar loss term.
@@ -342,6 +345,15 @@ class Loss(_Loss, abc.ABC):
         negative_scores = negative_scores.view(-1)
         predictions = torch.cat([positive_scores, negative_scores], dim=0)
         labels = torch.cat([torch.ones_like(positive_scores), torch.zeros_like(negative_scores)])
+        if pos_weights is None and neg_weights is None:
+            weights = None
+        else:
+            # TODO: broadcasting?
+            weights = torch.ones_like(predictions)
+            if pos_weights is not None:
+                weights[: len(positive_scores)] = pos_weights.view(-1)
+            if neg_weights is not None:
+                weights[len(positive_scores) :] = neg_weights.view(-1)
 
         # apply label smoothing if necessary.
         labels = apply_label_smoothing(
@@ -519,10 +531,12 @@ class MarginPairwiseLoss(PairwiseLoss):
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
-        weights: FloatTensor | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # Sanity check
-        self._raise_on_weights(weights)
+        self._raise_on_weights(pos_weights)
+        self._raise_on_weights(neg_weights)
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 
@@ -846,12 +860,14 @@ class DoubleMarginLoss(PointwiseLoss):
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
-        weights: FloatTensor | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
-        self._raise_on_weights(weights)
+        self._raise_on_weights(pos_weights)
+        self._raise_on_weights(neg_weights)
 
         # positive term
         if batch_filter is None:
@@ -1137,9 +1153,11 @@ class CrossEntropyLoss(SetwiseLoss):
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
-        weights: FloatTensor | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
-        self._raise_on_weights(weights)
+        self._raise_on_weights(pos_weights)
+        self._raise_on_weights(neg_weights)
         # we need dense negative scores => unfilter if necessary
         negative_scores = prepare_negative_scores_for_softmax(
             batch_filter=batch_filter,
@@ -1282,9 +1300,11 @@ class InfoNCELoss(CrossEntropyLoss):
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
-        weights: FloatTensor | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
-        self._raise_on_weights(weights)
+        self._raise_on_weights(pos_weights)
+        self._raise_on_weights(neg_weights)
         # subtract margin from positive scores
         positive_scores = positive_scores - self.margin
         # normalize positive score shape
@@ -1361,10 +1381,12 @@ class AdversarialLoss(SetwiseLoss):
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
-        weights: FloatTensor | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # Sanity check
-        self._raise_on_weights(weights)
+        self._raise_on_weights(pos_weights)
+        self._raise_on_weights(neg_weights)
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 

@@ -288,8 +288,9 @@ class LossTestCase(GenericTestCase[Loss]):
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
         batch_filter: torch.BoolTensor | None = None,
-        weights: FloatTensor | None = None,
-    ):
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
+    ) -> None:
         """Help test processing scores from SLCWA training loop."""
         loss_value = self.instance.process_slcwa_scores(
             positive_scores=positive_scores,
@@ -297,7 +298,8 @@ class LossTestCase(GenericTestCase[Loss]):
             label_smoothing=None,
             batch_filter=batch_filter,
             num_entities=self.num_entities,
-            weights=weights,
+            pos_weights=pos_weights,
+            neg_weights=neg_weights,
         )
         self._check_loss_value(loss_value=loss_value)
 
@@ -324,10 +326,14 @@ class LossTestCase(GenericTestCase[Loss]):
     def test_process_slcwa_scores_weights(self):
         """Test processing scores from SLCWA training loop with weights."""
         positive_scores, negative_scores = self._make_slcwa()
-        weights = torch.rand_like(negative_scores)
+        pos_weights = torch.rand_like(positive_scores)
+        neg_weights = torch.rand_like(negative_scores)
         try:
             self.help_test_process_slcwa_scores(
-                positive_scores=positive_scores, negative_scores=negative_scores, weights=weights
+                positive_scores=positive_scores,
+                negative_scores=negative_scores,
+                pos_weights=pos_weights,
+                neg_weights=neg_weights,
             )
         except NoSampleWeightSupportError as e:
             raise SkipTest(f"{self.cls} does not support sample weights") from e
