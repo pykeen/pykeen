@@ -208,6 +208,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 DEFAULT_MARGIN_HPO_STRATEGY = dict(type=float, low=0, high=3)
+DEFAULT_HPO_STRATEGY_REDUCTION = {"type": "categorical", "choices": ["mean", "sum"]}
+DEFAULT_HPO_STRATEGY_POS_WEIGHT = {"type": float, "low": 2**-2, "high": 2**10, "log": True}
 
 
 def apply_label_smoothing(
@@ -463,9 +465,32 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
     synonyms = {"Negative Log Likelihood Loss"}
 
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "reduction": DEFAULT_HPO_STRATEGY_REDUCTION,
+        "pos_weight": DEFAULT_HPO_STRATEGY_POS_WEIGHT,
+    }
+
+    pos_weight: FloatTensor | None
+
+    def __init__(self, reduction: str = "mean", pos_weight: None | float = None):
+        """Initialize the loss criterion.
+
+        :param reduction:
+            The reduction, cf. :mod:`pykeen.nn.modules._Loss`
+        :param pos_weight:
+            A weight for the positive class.
+        """
+        super().__init__(reduction=reduction)
+        if pos_weight:
+            self.register_buffer("pos_weight", tensor=torch.as_tensor(pos_weight))
+        else:
+            self.pos_weight = None
+
     # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
-        return functional.binary_cross_entropy_with_logits(x, target, reduction=self.reduction, weight=weight)
+        return functional.binary_cross_entropy_with_logits(
+          x, target, reduction=self.reduction, weight=weight, pos_weight=self.pos_weight
+        )
 
 
 @parse_docdata
