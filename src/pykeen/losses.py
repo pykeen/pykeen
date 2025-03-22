@@ -307,6 +307,8 @@ class Loss(_Loss):
             The target tensor.
         :param weight:
             The sample weights.
+
+        # noqa: DAR401
         """
         # TODO: Can we pull label smoothing inside?
         raise NotImplementedError
