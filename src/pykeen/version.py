@@ -87,6 +87,8 @@ def env_table(tablefmt: str = "github", headers: tuple[str, str] = ("Key", "Valu
         ("CUDA Available?", str(torch.cuda.is_available()).lower()),
         ("CUDA Version", torch.version.cuda or "N/A"),
         ("cuDNN Version", torch.backends.cudnn.version() or "N/A"),
+        ("MPS built?", str(torch.backends.mps.is_built()).lower()),
+        ("MPS Available?", str(torch.backends.mps.is_available()).lower()),
     ]
     return tabulate(rows, tablefmt=tablefmt, headers=headers)
 

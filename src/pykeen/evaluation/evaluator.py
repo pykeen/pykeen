@@ -302,7 +302,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
                 tqdm_kwargs=tqdm_kwargs,
             )
         except MemoryError as error:
-            if device.type == "cpu":
+            if device.type != "cuda":
                 raise error
             logger.error(
                 f"Memory error: {error}; falling back to evaluation on cpu. This will incur heavy runtime costs for "
