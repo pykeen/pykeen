@@ -297,7 +297,7 @@ class Loss(_Loss):
 
     # TODO: mypy does not seem to like this annotation
     # @abc.abstractmethod
-    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: DAR401
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
         """
         Calculate the loss function.
 
@@ -489,7 +489,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
     # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         return functional.binary_cross_entropy_with_logits(
-          x, target, reduction=self.reduction, weight=weight, pos_weight=self.pos_weight
+            x, target, reduction=self.reduction, weight=weight, pos_weight=self.pos_weight
         )
 
 
