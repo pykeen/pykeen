@@ -107,14 +107,10 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
         return LinkPropPredDataset(name=self.name, root=self.cache_root)
 
     @overload
-    def _load_data_dict_for_split(  # noqa: E704
-        self, dataset: LinkPropPredDataset, which: TrainKey
-    ) -> PreprocessedTrainDictType: ...
+    def _load_data_dict_for_split(self, dataset: LinkPropPredDataset, which: TrainKey) -> PreprocessedTrainDictType: ...
 
     @overload
-    def _load_data_dict_for_split(  # noqa: E704
-        self, dataset: LinkPropPredDataset, which: EvalKey
-    ) -> PreprocessedEvalDictType: ...
+    def _load_data_dict_for_split(self, dataset: LinkPropPredDataset, which: EvalKey) -> PreprocessedEvalDictType: ...
 
     @abc.abstractmethod
     def _load_data_dict_for_split(self, dataset, which):
