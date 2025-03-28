@@ -241,6 +241,7 @@ class EvaluationTrainingCallback(TrainingCallback):
         self,
         *,
         evaluation_triples: MappedTriples,
+        max_triples: int | None = None,
         frequency: int = 1,
         evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
@@ -252,6 +253,10 @@ class EvaluationTrainingCallback(TrainingCallback):
 
         :param evaluation_triples:
             the triples on which to evaluate
+        :param max_triples:
+            If given, ensure that at most the given number of triples are used for evaluation.
+            They are chosen uniformly at random once, i.e., the same set of evaluation triples
+            is used throughout the training.
         :param frequency:
             the evaluation frequency in epochs
         :param evaluator:
@@ -265,6 +270,8 @@ class EvaluationTrainingCallback(TrainingCallback):
         """
         super().__init__()
         self.frequency = frequency
+        if max_triples and len(evaluation_triples) > max_triples:
+            evaluation_triples = evaluation_triples[torch.randperm(len(evaluation_triples))[:max_triples]]
         self.evaluation_triples = evaluation_triples
         self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
         self.prefix = prefix
