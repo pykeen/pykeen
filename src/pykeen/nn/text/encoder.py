@@ -179,6 +179,54 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
             x = x.values
         return x
 
+class GeneralizedTransformerTextEncoder(TextEncoder):
+    def __init__(
+        self,
+        pretrained_model_name_or_path: str,
+        cls: type | None,
+        max_length: int | None = None,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        try:
+            from transformers import AutoModel, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
+        except ImportError as error:
+            raise ImportError(
+                "Please install the `transformers` library, use the _transformers_ extra"
+                " for PyKEEN with `pip install pykeen[transformers] when installing, or "
+                " see the PyKEEN installation docs at https://pykeen.readthedocs.io/en/stable/installation.html"
+                " for more information."
+            ) from error
+
+        if cls is None:
+            cls = AutoModel
+        self.model: PreTrainedModel = cls.from_pretrained(pretrained_model_name_or_path)
+        self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path)
+        self.max_length = max_length
+
+    # docstr-coverage: inherited
+    def forward_normalized(self, texts: Sequence[str]) -> torch.Tensor:  # noqa: D102
+        tokenizer_output = self.tokenizer(
+            texts, return_tensors="pt", padding=True, truncation=True, max_length=self.max_length
+        )
+        tokenizer_output = tokenizer_output.to(get_preferred_device(self.model))
+        model_output = self.model(**tokenizer_output)
+        # pooling along sequence dimension
+        # (batch_size, seq_length)
+        input_ids = tokenizer_output.input_ids
+        # (batch_size, padded_seq_length, embedding_dim)
+        last_hidden_state = model_output.last_hidden_state
+
+        # non-padding mask, shape: (batch_size, padded_seq_length)
+        non_padding_mask = torch.not_equal(input_ids, self.tokenizer.pad_token_id)
+        # masked sum along sequence dimension: (batch_size, embedding_dim)
+        pool_output = (last_hidden_state * non_padding_mask.unsqueeze(dim=-1)).sum(dim=1)
+        # the number of tokens, shape: (batch_size, 1)
+        num_tokens = non_padding_mask.sum(dim=1, keepdim=True)
+        # mean, shape: (batch_size, embedding_dim)
+        return pool_output / num_tokens.clamp(min=1)
+
 
 class TransformerTextEncoder(TextEncoder):
     """A combination of a tokenizer and a model."""
