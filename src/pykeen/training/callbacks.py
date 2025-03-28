@@ -240,7 +240,7 @@ class EvaluationTrainingCallback(TrainingCallback):
     def __init__(
         self,
         *,
-        evaluation_triples: MappedTriples,
+        evaluation_triples: MappedTriples | CoreTriplesFactory,
         max_triples: int | None = None,
         frequency: int = 1,
         evaluator: HintOrType[Evaluator] = None,
@@ -252,7 +252,7 @@ class EvaluationTrainingCallback(TrainingCallback):
         Initialize the callback.
 
         :param evaluation_triples:
-            the triples on which to evaluate
+            The triples on which to evaluate. You can also provide a triples factory.
         :param max_triples:
             If given, ensure that at most the given number of triples are used for evaluation.
             They are chosen uniformly at random once, i.e., the same set of evaluation triples
@@ -270,6 +270,8 @@ class EvaluationTrainingCallback(TrainingCallback):
         """
         super().__init__()
         self.frequency = frequency
+        if isinstance(evaluation_triples, CoreTriplesFactory):
+            evaluation_triples = evaluation_triples.mapped_triples
         if max_triples and len(evaluation_triples) > max_triples:
             evaluation_triples = evaluation_triples[torch.randperm(len(evaluation_triples))[:max_triples]]
         self.evaluation_triples = evaluation_triples
