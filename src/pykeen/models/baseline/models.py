@@ -50,6 +50,11 @@ class EvaluationOnlyModel(Model):
         """Non-parametric models do not implement :meth:`Model.score_r`."""
         raise RuntimeError
 
+    # docstr-coverage: inherited
+    @property
+    def device(self) -> torch.device:
+        return torch.device("cpu")
+
 
 class MarginalDistributionBaseline(EvaluationOnlyModel):
     r"""
