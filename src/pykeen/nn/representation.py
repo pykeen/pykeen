@@ -1835,7 +1835,7 @@ class TransformedRepresentation(Representation):
         # import here to avoid cyclic import
         from . import representation_resolver
 
-        base = representation_resolver.make(base, base_kwargs)
+        base = representation_resolver.make(base, base_kwargs, max_id=max_id)
 
         # infer shape
         shape = ShapeError.verify(
