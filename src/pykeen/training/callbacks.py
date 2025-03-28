@@ -230,7 +230,7 @@ class EvaluationTrainingCallback(TrainingCallback):
                 num_epochs=100,
                 callbacks="evaluation",
                 callback_kwargs=dict(
-                    evaluation_triples=dataset.training.mapped_triples,
+                    triples=dataset.training.mapped_triples,
                     prefix="training",
                 ),
             ),
@@ -240,7 +240,7 @@ class EvaluationTrainingCallback(TrainingCallback):
     def __init__(
         self,
         *,
-        evaluation_triples: MappedTriples | CoreTriplesFactory,
+        triples: MappedTriples | CoreTriplesFactory,
         max_triples: int | None = None,
         frequency: int = 1,
         evaluator: HintOrType[Evaluator] = None,
@@ -270,11 +270,11 @@ class EvaluationTrainingCallback(TrainingCallback):
         """
         super().__init__()
         self.frequency = frequency
-        if isinstance(evaluation_triples, CoreTriplesFactory):
-            evaluation_triples = evaluation_triples.mapped_triples
-        if max_triples and len(evaluation_triples) > max_triples:
-            evaluation_triples = evaluation_triples[torch.randperm(len(evaluation_triples))[:max_triples]]
-        self.evaluation_triples = evaluation_triples
+        if isinstance(triples, CoreTriplesFactory):
+            triples = triples.mapped_triples
+        if max_triples and len(triples) > max_triples:
+            triples = triples[torch.randperm(len(triples))[:max_triples]]
+        self.evaluation_triples = triples
         self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
         self.prefix = prefix
         self.kwargs = kwargs
