@@ -34,7 +34,7 @@ import torch
 import torch.nn
 import torch.nn.modules.batchnorm
 import yaml
-from class_resolver import normalize_string
+from class_resolver import OptionalKwargs, normalize_string
 from docdata import get_docdata
 from torch import nn
 from typing_extensions import ParamSpec
@@ -108,6 +108,7 @@ __all__ = [
     "isin_many_dim",
     "split_workload",
     "batched_dot",
+    "merge_kwargs",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1662,3 +1663,27 @@ def circular_correlation(a: FloatTensor, b: FloatTensor) -> FloatTensor:
     p_fft = a_fft * b_fft
     # inverse real FFT
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
+
+
+def merge_kwargs(kwargs: OptionalKwargs, **extra_kwargs: Any | None) -> OptionalKwargs:
+    """Add extra fields to parameters, skipping None entries.
+
+    :param kwargs:
+        The base parameters.
+    :param extra_kwargs:
+        The external parameters to add.
+
+    :raises ValueError:
+        If there is a key in both parameters, where the values are neither None and do not match.
+
+    :return:
+        Updated parameters.
+    """
+    kwargs = kwargs or {}
+    for key, value in extra_kwargs.items():
+        if value is None:
+            continue
+        if key in kwargs and kwargs[key] is not None and kwargs[key] != value:
+            raise ValueError(f"Found inconsistency for {key=} : {extra_kwargs[key]=} vs. {kwargs[key]=}")
+        kwargs[key] = value
+    return kwargs

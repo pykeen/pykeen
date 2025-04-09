@@ -62,6 +62,7 @@ from ..utils import (
     einsum,
     get_edge_index,
     get_preferred_device,
+    merge_kwargs,
     upgrade_to_sequence,
 )
 
@@ -111,30 +112,6 @@ normalizer_resolver = FunctionResolver(
     [functional.normalize, functional.softmax],
     location="pykeen.nn.representation.normalizer_resolver",
 )
-
-
-def _merge_kwargs(kwargs: OptionalKwargs, **extra_kwargs: Any | None) -> OptionalKwargs:
-    """Add extra fields to parameters, skipping None entries.
-
-    :param kwargs:
-        The base parameters.
-    :param extra_kwargs:
-        The external parameters to add.
-
-    :raises ValueError:
-        If there is a key in both parameters, where the values are neither None and do not match.
-
-    :return:
-        Updated parameters.
-    """
-    kwargs = kwargs or {}
-    for key, value in extra_kwargs.items():
-        if value is None:
-            continue
-        if key in kwargs and kwargs[key] is not None and kwargs[key] != value:
-            raise ValueError(f"Found inconsistency for {key=} : {extra_kwargs[key]=} vs. {kwargs[key]=}")
-        kwargs[key] = value
-    return kwargs
 
 
 class MaxIDMismatchError(ValueError):
@@ -603,7 +580,7 @@ class LowRankRepresentation(Representation):
 
         base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=num_bases, shape=shape)
         weight = representation_resolver.make(
-            weight, pos_kwargs=_merge_kwargs(weight_kwargs, max_id=max_id), shape=num_bases
+            weight, pos_kwargs=merge_kwargs(weight_kwargs, max_id=max_id), shape=num_bases
         )
 
         # Verification
@@ -923,7 +900,7 @@ def build_representation(
     from . import representation_resolver
 
     representation = representation_resolver.make(
-        representation, pos_kwargs=_merge_kwargs(representation_kwargs, max_id=max_id)
+        representation, pos_kwargs=merge_kwargs(representation_kwargs, max_id=max_id)
     )
     if representation.max_id != max_id:
         raise MaxIDMismatchError(
@@ -1377,7 +1354,7 @@ class CombinedRepresentation(Representation):
         from . import representation_resolver
 
         # create base representations
-        base = representation_resolver.make_many(base, kwargs=_merge_kwargs(base_kwargs, max_id=max_id))
+        base = representation_resolver.make_many(base, kwargs=merge_kwargs(base_kwargs, max_id=max_id))
 
         # verify same ID range
         max_ids = sorted(set(b.max_id for b in base))
@@ -1738,7 +1715,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
             # create a representation with an empty dimension.
             backfill_max_id = max_id - num_total_base_ids
             backfill = representation_resolver.make(
-                backfill, _merge_kwargs(backfill_kwargs, max_id=backfill_max_id), shape=shape
+                backfill, merge_kwargs(backfill_kwargs, max_id=backfill_max_id), shape=shape
             )
             if backfill_max_id != backfill.max_id:
                 raise MaxIDMismatchError(
@@ -1860,7 +1837,7 @@ class TransformedRepresentation(Representation):
         # import here to avoid cyclic import
         from . import representation_resolver
 
-        base = representation_resolver.make(base, _merge_kwargs(base_kwargs, max_id=max_id))
+        base = representation_resolver.make(base, merge_kwargs(base_kwargs, max_id=max_id))
 
         # infer shape
         shape = ShapeError.verify(
