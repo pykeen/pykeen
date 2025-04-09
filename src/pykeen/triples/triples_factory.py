@@ -28,6 +28,7 @@ from ..typing import (
 from ..utils import (
     ExtraReprMixin,
     compact_mapping,
+    ensure_torch_random_state,
     format_relative_comparison,
     get_edge_index,
     invert_mapping,
@@ -646,6 +647,45 @@ class CoreTriplesFactory(KGInfo):
                 **(extra_metadata or {}),
                 **(self.metadata if keep_metadata else {}),  # type: ignore
             },
+        )
+
+    def sample(self, n: int | None = None, frac: float | None = None, random_state: TorchRandomHint = None) -> Self:
+        """
+        Return a sample of triples.
+
+        This can be useful, for example, if you want to evaluate on a smaller subset of the evaluation triples to get a
+        cheaper estimate of performance.
+
+        :param n;
+            Number of triples to return. Cannot be used with frac.
+        :param frac:
+            Fraction of triples to return. Cannot be used with n.
+        :param random_state:
+            The random state. Can be used to ensure reproducible samples.
+
+        :raises ValueError:
+            If the fraction is invalid, or an invalid combination of n and frac is given.
+
+        :return:
+            A (new) triples factory with (at most) the given number / the fraction of triples.
+        """
+        # note: this method and its parameters are inspired by pandas.DataFrame.sample
+
+        # determine number of triples
+        if (frac is None) is (n is None):
+            raise ValueError("Must provide exactly one of `n` and `frac`.")
+        if frac is not None:
+            if frac < 0 or frac > 1:
+                raise ValueError(f"{frac=} is not a valid fraction.")
+            n = int(frac * self.num_triples)
+
+        # short-circuit
+        if self.num_triples <= n:
+            return self
+
+        generator = ensure_torch_random_state(random_state)
+        return self.clone_and_exchange_triples(
+            mapped_triples=self.mapped_triples[torch.randperm(self.num_triples, generator=generator)[:n]]
         )
 
     def make_condenser(self, entities: bool = True, relations: bool = False) -> TripleCondenser:
