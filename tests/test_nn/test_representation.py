@@ -495,7 +495,6 @@ class TransformedRepresentationTest(cases.RepresentationTestCase):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs)
         kwargs["transformation"] = torch.nn.Linear(5, 7)
-        kwargs["base_kwargs"]["max_id"] = kwargs.pop("max_id")
         return kwargs
 
 
