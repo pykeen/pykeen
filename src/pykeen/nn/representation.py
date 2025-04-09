@@ -113,26 +113,28 @@ normalizer_resolver = FunctionResolver(
 )
 
 
-def _maybe_add_max_id(base_kwargs: OptionalKwargs, max_id: int | None) -> OptionalKwargs:
-    """Add maximum ID, if not None.
+def _merge_kwargs(kwargs: OptionalKwargs, **extra_kwargs: Any | None) -> OptionalKwargs:
+    """Add extra fields to parameters, skipping None entries.
 
-    If max_id is already present in the base parameters, it takes precendence over the "external" max_id.
-
-    :param base_kwargs:
-        The base parameters, or None.
-    :param max_id:
-        The external maximum ID.
+    :param kwargs:
+        The base parameters.
+    :param extra_kwargs:
+        The external parameters to add.
 
     :raises ValueError:
-        If there is a max_id in base_kwargs that does not match the external one.
+        If there is a key in both parameters, where the values are neither None and do not match.
+
     :return:
-        Updated base parameters.
+        Updated parameters.
     """
-    if max_id is None:
-        return base_kwargs
-    if "max_id" in base_kwargs and base_kwargs["max_id"] != max_id:
-        raise ValueError(f"Found inconsistent external {max_id=} and {base_kwargs['max_id']=}")
-    return {"max_id": max_id} | (base_kwargs or {})
+    kwargs = kwargs or {}
+    for key, value in extra_kwargs.items():
+        if value is None:
+            continue
+        if key in kwargs and kwargs[key] is not None and kwargs[key] != value:
+            raise ValueError(f"Found inconsistency for {key=} : {extra_kwargs[key]=} vs. {kwargs[key]=}")
+        kwargs[key] = value
+    return kwargs
 
 
 class MaxIDMismatchError(ValueError):
@@ -601,7 +603,7 @@ class LowRankRepresentation(Representation):
 
         base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=num_bases, shape=shape)
         weight = representation_resolver.make(
-            weight, pos_kwargs=_maybe_add_max_id(weight_kwargs, max_id=max_id), shape=num_bases
+            weight, pos_kwargs=_merge_kwargs(weight_kwargs, max_id=max_id), shape=num_bases
         )
 
         # Verification
@@ -921,7 +923,7 @@ def build_representation(
     from . import representation_resolver
 
     representation = representation_resolver.make(
-        representation, pos_kwargs=_maybe_add_max_id(representation_kwargs, max_id=max_id)
+        representation, pos_kwargs=_merge_kwargs(representation_kwargs, max_id=max_id)
     )
     if representation.max_id != max_id:
         raise MaxIDMismatchError(
@@ -1375,7 +1377,7 @@ class CombinedRepresentation(Representation):
         from . import representation_resolver
 
         # create base representations
-        base = representation_resolver.make_many(base, kwargs=_maybe_add_max_id(base_kwargs, max_id=max_id))
+        base = representation_resolver.make_many(base, kwargs=_merge_kwargs(base_kwargs, max_id=max_id))
 
         # verify same ID range
         max_ids = sorted(set(b.max_id for b in base))
@@ -1736,7 +1738,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
             # create a representation with an empty dimension.
             backfill_max_id = max_id - num_total_base_ids
             backfill = representation_resolver.make(
-                backfill, _maybe_add_max_id(backfill_kwargs, max_id=backfill_max_id), shape=shape
+                backfill, _merge_kwargs(backfill_kwargs, max_id=backfill_max_id), shape=shape
             )
             if backfill_max_id != backfill.max_id:
                 raise MaxIDMismatchError(
@@ -1858,7 +1860,7 @@ class TransformedRepresentation(Representation):
         # import here to avoid cyclic import
         from . import representation_resolver
 
-        base = representation_resolver.make(base, _maybe_add_max_id(base_kwargs, max_id=max_id))
+        base = representation_resolver.make(base, _merge_kwargs(base_kwargs, max_id=max_id))
 
         # infer shape
         shape = ShapeError.verify(
