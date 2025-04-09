@@ -113,6 +113,28 @@ normalizer_resolver = FunctionResolver(
 )
 
 
+def _maybe_add_max_id(base_kwargs: OptionalKwargs, max_id: int | None) -> OptionalKwargs:
+    """Add maximum ID, if not None.
+
+    If max_id is already present in the base parameters, it takes precendence over the "external" max_id.
+
+    :param base_kwargs:
+        The base parameters, or None.
+    :param max_id:
+        The external maximum ID.
+
+    :raises ValueError:
+        If there is a max_id in base_kwargs that does not match the external one.
+    :return:
+        Updated base parameters.
+    """
+    if max_id is None:
+        return base_kwargs
+    if "max_id" in base_kwargs and base_kwargs["max_id"] != max_id:
+        raise ValueError(f"Found inconsistent external {max_id=} and {base_kwargs['max_id']=}")
+    return {"max_id": max_id} | (base_kwargs or {})
+
+
 class MaxIDMismatchError(ValueError):
     """Raised when the maximum ID of a representation is inconsistent."""
 
@@ -578,7 +600,9 @@ class LowRankRepresentation(Representation):
         from . import representation_resolver
 
         base = representation_resolver.make(base, pos_kwargs=base_kwargs, max_id=num_bases, shape=shape)
-        weight = representation_resolver.make(weight, pos_kwargs=weight_kwargs, max_id=max_id, shape=num_bases)
+        weight = representation_resolver.make(
+            weight, pos_kwargs=_maybe_add_max_id(weight_kwargs, max_id=max_id), shape=num_bases
+        )
 
         # Verification
         if max_id is None:
@@ -897,10 +921,7 @@ def build_representation(
     from . import representation_resolver
 
     representation = representation_resolver.make(
-        representation,
-        pos_kwargs=representation_kwargs,
-        # kwargs
-        max_id=max_id,
+        representation, pos_kwargs=_maybe_add_max_id(representation_kwargs, max_id=max_id)
     )
     if representation.max_id != max_id:
         raise MaxIDMismatchError(
@@ -1354,7 +1375,7 @@ class CombinedRepresentation(Representation):
         from . import representation_resolver
 
         # create base representations
-        base = representation_resolver.make_many(base, kwargs=base_kwargs, max_id=max_id)
+        base = representation_resolver.make_many(base, kwargs=_maybe_add_max_id(base_kwargs, max_id=max_id))
 
         # verify same ID range
         max_ids = sorted(set(b.max_id for b in base))
@@ -1714,7 +1735,9 @@ class MultiBackfillRepresentation(PartitionRepresentation):
             # if there are some remaining IDs. This is necessary to make sure we don't
             # create a representation with an empty dimension.
             backfill_max_id = max_id - num_total_base_ids
-            backfill = representation_resolver.make(backfill, backfill_kwargs, max_id=backfill_max_id, shape=shape)
+            backfill = representation_resolver.make(
+                backfill, _maybe_add_max_id(backfill_kwargs, max_id=backfill_max_id), shape=shape
+            )
             if backfill_max_id != backfill.max_id:
                 raise MaxIDMismatchError(
                     f"Mismatch between {backfill_max_id=} and {backfill.max_id=} of "
@@ -1835,7 +1858,7 @@ class TransformedRepresentation(Representation):
         # import here to avoid cyclic import
         from . import representation_resolver
 
-        base = representation_resolver.make(base, base_kwargs, max_id=max_id)
+        base = representation_resolver.make(base, _maybe_add_max_id(base_kwargs, max_id=max_id))
 
         # infer shape
         shape = ShapeError.verify(
