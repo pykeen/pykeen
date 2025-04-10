@@ -159,12 +159,13 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """  # noqa: E501
 
+import abc
 import logging
 import math
 from abc import abstractmethod
 from collections.abc import Mapping
 from textwrap import dedent
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypedDict
 
 import torch
 from class_resolver import ClassResolver, Hint
@@ -276,6 +277,48 @@ _REDUCTION_METHODS = dict(
 )
 
 
+class _LCWAInput(TypedDict):
+    predictions: FloatTensor
+    labels: FloatTensor
+    label_smoothing: float | None
+    num_entities: int | None
+    weights: FloatTensor | None
+
+
+def _slcwa_to_lcwa(
+    positive_scores: FloatTensor,
+    negative_scores: FloatTensor,
+    # TODO: why is label smoothing part of the process_*_scores call?!
+    label_smoothing: float | None = None,
+    batch_filter: BoolTensor | None = None,
+    num_entities: int | None = None,
+    pos_weights: FloatTensor | None = None,
+    neg_weights: FloatTensor | None = None,
+) -> _LCWAInput:
+    # TODO: batch_filter
+    # flatten and stack
+    positive_scores = positive_scores.view(-1)
+    negative_scores = negative_scores.view(-1)
+    predictions = torch.cat([positive_scores, negative_scores], dim=0)
+    labels = torch.cat([torch.ones_like(positive_scores), torch.zeros_like(negative_scores)])
+    if pos_weights is None and neg_weights is None:
+        weights = None
+    else:
+        # TODO: broadcasting?
+        weights = torch.ones_like(predictions)
+        if pos_weights is not None:
+            weights[: len(positive_scores)] = pos_weights.view(-1)
+        if neg_weights is not None:
+            weights[len(positive_scores) :] = neg_weights.view(-1)
+    return _LCWAInput(
+        predictions=predictions,
+        labels=labels,
+        label_smoothing=label_smoothing,
+        num_entities=num_entities,
+        weights=weights,
+    )
+
+
 class Loss(_Loss):
     """A loss function."""
 
@@ -295,29 +338,12 @@ class Loss(_Loss):
         super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
 
-    # TODO: mypy does not seem to like this annotation
-    # @abc.abstractmethod
-    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
-        """
-        Calculate the loss function.
-
-        :param x:
-            The input tensor.
-        :param target:
-            The target tensor.
-        :param weight:
-            The sample weights.
-
-        # noqa: DAR401
-        """
-        # TODO: Can we pull label smoothing inside?
-        raise NotImplementedError
-
     def _raise_on_weights(self, weight: FloatTensor | None) -> None:
         """Raise an error when weights are passed."""
         if weight is not None:
             raise NoSampleWeightSupportError(self)
 
+    @abc.abstractmethod
     def process_slcwa_scores(
         self,
         positive_scores: FloatTensor,
@@ -352,29 +378,7 @@ class Loss(_Loss):
         :return:
             A scalar loss term.
         """
-        # flatten and stack
-        positive_scores = positive_scores.view(-1)
-        negative_scores = negative_scores.view(-1)
-        predictions = torch.cat([positive_scores, negative_scores], dim=0)
-        labels = torch.cat([torch.ones_like(positive_scores), torch.zeros_like(negative_scores)])
-        if pos_weights is None and neg_weights is None:
-            weights = None
-        else:
-            # TODO: broadcasting?
-            weights = torch.ones_like(predictions)
-            if pos_weights is not None:
-                weights[: len(positive_scores)] = pos_weights.view(-1)
-            if neg_weights is not None:
-                weights[len(positive_scores) :] = neg_weights.view(-1)
-
-        # apply label smoothing if necessary.
-        labels = apply_label_smoothing(
-            labels=labels,
-            epsilon=label_smoothing,
-            num_classes=num_entities,
-        )
-
-        return self(x=predictions, target=labels, weight=weights)
+        raise NotImplementedError
 
     def process_lcwa_scores(
         self,
@@ -401,17 +405,36 @@ class Loss(_Loss):
         :return:
             A scalar loss value.
         """
-        # TODO: Do label smoothing only once
+        self._raise_on_weights(weight=weights)
         labels = apply_label_smoothing(
             labels=labels,
             epsilon=label_smoothing,
             num_classes=num_entities,
         )
-        return self(x=predictions, target=labels, weight=weights)
+        # TODO: weights
+        return self(x=predictions, target=labels)
 
 
 class PointwiseLoss(Loss):
     """Pointwise loss functions compute an independent loss term for each triple-label pair."""
+
+    # docstr-coverage: inherited
+    def process_slcwa_scores(
+        self,
+        positive_scores: FloatTensor,
+        negative_scores: FloatTensor,
+        # TODO: why is label smoothing part of the process_*_scores call?!
+        label_smoothing: float | None = None,
+        batch_filter: BoolTensor | None = None,
+        num_entities: int | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
+    ) -> FloatTensor:
+        return self.process_lcwa_scores(
+            **_slcwa_to_lcwa(
+                positive_scores, negative_scores, label_smoothing, batch_filter, num_entities, pos_weights, neg_weights
+            )
+        )
 
     @staticmethod
     def validate_labels(labels: FloatTensor) -> bool:
