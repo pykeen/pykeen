@@ -26,6 +26,7 @@ from typing import (
     Generic,
     TextIO,
     TypeVar,
+    overload,
 )
 
 import numpy as np
@@ -34,7 +35,7 @@ import torch
 import torch.nn
 import torch.nn.modules.batchnorm
 import yaml
-from class_resolver import OptionalKwargs, normalize_string
+from class_resolver import OneOrManyOptionalKwargs, OptionalKwargs, normalize_string
 from docdata import get_docdata
 from torch import nn
 from typing_extensions import ParamSpec
@@ -1665,7 +1666,15 @@ def circular_correlation(a: FloatTensor, b: FloatTensor) -> FloatTensor:
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
 
 
-def merge_kwargs(kwargs: OptionalKwargs, **extra_kwargs: Any | None) -> OptionalKwargs:
+@overload
+def merge_kwargs(kwargs: Sequence[OptionalKwargs], **extra_kwargs: Any | None) -> Sequence[OptionalKwargs]: ...
+
+
+@overload
+def merge_kwargs(kwargs: OptionalKwargs, **extra_kwargs: Any | None) -> OptionalKwargs: ...
+
+
+def merge_kwargs(kwargs: OneOrManyOptionalKwargs, **extra_kwargs: Any | None) -> OneOrManyOptionalKwargs:
     """Add extra fields to parameters, skipping None entries.
 
     :param kwargs:
@@ -1679,6 +1688,9 @@ def merge_kwargs(kwargs: OptionalKwargs, **extra_kwargs: Any | None) -> Optional
     :return:
         Updated parameters.
     """
+    if isinstance(kwargs, Sequence):
+        return [merge_kwargs(kw, **extra_kwargs) for kw in kwargs]
+
     kwargs = kwargs or {}
     for key, value in extra_kwargs.items():
         if value is None:
