@@ -276,6 +276,11 @@ _REDUCTION_METHODS = dict(
 )
 
 
+def safe_weighted_mean(x: FloatTensor, weight: FloatTensor) -> FloatTensor:
+    """Calculate weighted mean with safety against zero division."""
+    return x.mul(weight).sum().div(weight.sum().clamp_min_(torch.finfo(weight.dtype).eps))
+
+
 class Loss(_Loss):
     """A loss function."""
 
@@ -435,11 +440,6 @@ class PointwiseLoss(Loss):
         labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=num_entities)
         return self(x=predictions, target=labels, weight=weights)
 
-    @staticmethod
-    def validate_labels(labels: FloatTensor) -> bool:
-        """Check whether labels are in [0, 1]."""
-        return labels.min() >= 0 and labels.max() <= 1
-
 
 class PairwiseLoss(Loss):
     """Pairwise loss functions compare the scores of a positive triple and a negative triple."""
@@ -564,10 +564,9 @@ class MSELoss(PointwiseLoss):
 
     # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
-        self._raise_on_weights(weight)
-        # TODO: this should not be run on every forward pass
-        assert self.validate_labels(labels=target)
-        return functional.mse_loss(x, target, reduction=self.reduction)
+        if weight is None:
+            return functional.mse_loss(x, target, reduction=self.reduction)
+        return safe_weighted_mean(functional.mse_loss(x, target, reduction="none"), weight=weight)
 
 
 class MarginPairwiseLoss(PairwiseLoss):
@@ -1003,7 +1002,6 @@ class DoubleMarginLoss(PointwiseLoss):
         weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # Sanity check
-        self._raise_on_weights(weights)
         if label_smoothing:
             labels = apply_label_smoothing(
                 labels=labels,
@@ -1011,10 +1009,11 @@ class DoubleMarginLoss(PointwiseLoss):
                 num_classes=num_entities,
             )
 
-        return self(x=predictions, target=labels)
+        return self(x=predictions, target=labels, weight=weights)
 
     # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
+        self._raise_on_weights(weight)
         return self.positive_weight * self._reduction_method(
             target * self.margin_activation(self.positive_margin - x)
         ) + self.negative_weight * self._reduction_method(
@@ -1062,16 +1061,14 @@ class DeltaPointwiseLoss(PointwiseLoss):
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
+    # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
-        """Calculate the loss for the given scores and labels."""
-        self._raise_on_weights(weight)
-        # TODO: do not do this for every forward pass
-        assert self.validate_labels(target)
         # scale labels from [0, 1] to [-1, 1]
         target = 2 * target - 1
         loss = self.margin_activation(self.margin - target * x)
-        loss = self._reduction_method(loss)
-        return loss
+        if weight is None:
+            return self._reduction_method(loss)
+        return safe_weighted_mean(loss, weight=weight)
 
 
 @parse_docdata
@@ -1282,16 +1279,17 @@ class CrossEntropyLoss(SetwiseLoss):
         num_entities: int | None = None,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
-        self._raise_on_weights(weights)
         # make sure labels form a proper probability distribution
         labels = functional.normalize(labels, p=1, dim=-1)
         # calculate cross entropy loss
-        return functional.cross_entropy(
-            input=predictions,
-            target=labels,
-            label_smoothing=label_smoothing or 0.0,
-            reduction=self.reduction,
+        reduction = self.reduction if weights is None else "none"
+        loss = functional.cross_entropy(
+            input=predictions, target=labels, label_smoothing=label_smoothing or 0.0, reduction=reduction
         )
+        if weights is None:
+            return loss
+        weights = weights.sum(dim=-1)
+        return safe_weighted_mean(loss, weight=weights)
 
 
 @parse_docdata
@@ -1368,7 +1366,6 @@ class InfoNCELoss(CrossEntropyLoss):
         num_entities: int | None = None,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
-        self._raise_on_weights(weights)
         # determine positive; do not check with == since the labels are floats
         pos_mask = labels > 0.5
         # subtract margin from positive scores
@@ -1380,6 +1377,7 @@ class InfoNCELoss(CrossEntropyLoss):
             labels=labels,
             label_smoothing=label_smoothing,
             num_entities=num_entities,
+            weights=weights,
         )
 
     # docstr-coverage: inherited
@@ -1393,8 +1391,6 @@ class InfoNCELoss(CrossEntropyLoss):
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
-        self._raise_on_weights(pos_weights)
-        self._raise_on_weights(neg_weights)
         # subtract margin from positive scores
         positive_scores = positive_scores - self.margin
         # normalize positive score shape
@@ -1409,6 +1405,8 @@ class InfoNCELoss(CrossEntropyLoss):
             label_smoothing=label_smoothing,
             batch_filter=batch_filter,
             num_entities=num_entities,
+            pos_weights=pos_weights,
+            neg_weights=neg_weights,
         )
 
 
@@ -1718,7 +1716,6 @@ class FocalLoss(PointwiseLoss):
 
     # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
-        self._raise_on_weights(weight)
         p = x.sigmoid()
         ce_loss = functional.binary_cross_entropy_with_logits(x, target, reduction="none")
         p_t = p * target + (1 - p) * (1 - target)
@@ -1728,7 +1725,9 @@ class FocalLoss(PointwiseLoss):
             alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
             loss = alpha_t * loss
 
-        return self._reduction_method(loss)
+        if weight is None:
+            return self._reduction_method(loss)
+        return safe_weighted_mean(x=loss, weight=weight)
 
 
 #: A resolver for loss modules
