@@ -386,8 +386,9 @@ class PointwiseLoss(Loss):
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
-        if batch_filter is not None:
-            raise NotImplementedError(batch_filter)
+        # note: batch_filter
+        #  - negative scores have already been pre-filtered
+        #  - positive scores do not need to be filtered here
         # flatten and stack
         positive_scores = positive_scores.view(-1)
         negative_scores = negative_scores.view(-1)
