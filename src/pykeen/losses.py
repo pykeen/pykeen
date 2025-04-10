@@ -371,6 +371,19 @@ class PointwiseLoss(Loss):
 
     @abstractmethod
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor) -> FloatTensor:
+        """
+        Calculate the point-wise loss.
+
+        :param x:
+            The predictions.
+        :param target:
+            The target values (between 0 and 1).
+        :param weight:
+            The sample weights.
+
+        :return:
+            The scalar loss value.
+        """
         raise NotImplementedError
 
     # docstr-coverage: inherited
@@ -439,6 +452,21 @@ class PairwiseLoss(Loss):
         positive_weight: FloatTensor | None = None,
         negative_weight: FloatTensor | None = None,
     ) -> FloatTensor:
+        """
+        Calculate the point-wise loss.
+
+        :param positive_scores:
+            The positive scores.
+        :param target:
+            The negative scores.
+        :param positive_weight:
+            The sample weights for positives.
+        :param positive_weight:
+            The sample weights for negatives.
+
+        :return:
+            The scalar loss value.
+        """
         raise NotImplementedError
 
 
