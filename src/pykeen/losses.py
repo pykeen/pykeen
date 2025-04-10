@@ -457,11 +457,11 @@ class PairwiseLoss(Loss):
 
         :param positive_scores:
             The positive scores.
-        :param target:
+        :param negative_scores:
             The negative scores.
         :param positive_weight:
             The sample weights for positives.
-        :param positive_weight:
+        :param negative_weight:
             The sample weights for negatives.
 
         :return:
