@@ -443,13 +443,7 @@ class PointwiseLoss(Loss):
         num_entities: int | None = None,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
-        # TODO: weights
-        self._raise_on_weights(weight=weights)
-        labels = apply_label_smoothing(
-            labels=labels,
-            epsilon=label_smoothing,
-            num_classes=num_entities,
-        )
+        labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=num_entities)
         return self(x=predictions, target=labels, weight=weights)
 
     @staticmethod
