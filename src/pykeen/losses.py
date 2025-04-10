@@ -682,7 +682,11 @@ class MarginPairwiseLoss(PairwiseLoss):
     ) -> FloatTensor:  # noqa: D102
         self._raise_on_weights(positive_weight)
         self._raise_on_weights(negative_weight)
-        return self._reduction_method(self.margin_activation(negative_scores - positive_scores + self.margin))
+        return self._reduction_method(
+            self.margin_activation(
+                negative_scores - positive_scores + self.margin,
+            )
+        )
 
 
 @parse_docdata
