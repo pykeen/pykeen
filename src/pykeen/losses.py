@@ -455,6 +455,12 @@ class PairwiseLoss(Loss):
         """
         Calculate the point-wise loss.
 
+        .. note::
+            The positive and negative scores need to be broadcastable.
+
+        .. note ::
+            If given, the positve/negative weight needs to be broadcastable to the respective scores.
+
         :param positive_scores:
             The positive scores.
         :param negative_scores:
