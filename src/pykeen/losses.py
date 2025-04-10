@@ -159,7 +159,6 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """  # noqa: E501
 
-import abc
 import logging
 import math
 from abc import abstractmethod
@@ -301,7 +300,7 @@ class Loss(_Loss):
         if weight is not None:
             raise NoSampleWeightSupportError(self)
 
-    @abc.abstractmethod
+    @abstractmethod
     def process_slcwa_scores(
         self,
         positive_scores: FloatTensor,
@@ -338,7 +337,7 @@ class Loss(_Loss):
         """
         raise NotImplementedError
 
-    @abc.abstractmethod
+    @abstractmethod
     def process_lcwa_scores(
         self,
         predictions: FloatTensor,
@@ -370,7 +369,7 @@ class Loss(_Loss):
 class PointwiseLoss(Loss):
     """Pointwise loss functions compute an independent loss term for each triple-label pair."""
 
-    @abc.abstractmethod
+    @abstractmethod
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor) -> FloatTensor:
         raise NotImplementedError
 
@@ -432,7 +431,7 @@ class PointwiseLoss(Loss):
 class PairwiseLoss(Loss):
     """Pairwise loss functions compare the scores of a positive triple and a negative triple."""
 
-    @abc.abstractmethod
+    @abstractmethod
     def forward(
         self,
         positive_scores: FloatTensor,
