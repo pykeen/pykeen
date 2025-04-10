@@ -380,6 +380,7 @@ class Loss(_Loss):
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
     def process_lcwa_scores(
         self,
         predictions: FloatTensor,
@@ -405,18 +406,15 @@ class Loss(_Loss):
         :return:
             A scalar loss value.
         """
-        self._raise_on_weights(weight=weights)
-        labels = apply_label_smoothing(
-            labels=labels,
-            epsilon=label_smoothing,
-            num_classes=num_entities,
-        )
-        # TODO: weights
-        return self(x=predictions, target=labels)
+        raise NotImplementedError
 
 
 class PointwiseLoss(Loss):
     """Pointwise loss functions compute an independent loss term for each triple-label pair."""
+
+    @abc.abstractmethod
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor) -> FloatTensor:
+        raise NotImplementedError
 
     # docstr-coverage: inherited
     def process_slcwa_scores(
@@ -435,6 +433,24 @@ class PointwiseLoss(Loss):
                 positive_scores, negative_scores, label_smoothing, batch_filter, num_entities, pos_weights, neg_weights
             )
         )
+
+    # docstr-coverage: inherited
+    def process_lcwa_scores(
+        self,
+        predictions: FloatTensor,
+        labels: FloatTensor,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
+        weights: FloatTensor | None = None,
+    ) -> FloatTensor:
+        # TODO: weights
+        self._raise_on_weights(weight=weights)
+        labels = apply_label_smoothing(
+            labels=labels,
+            epsilon=label_smoothing,
+            num_classes=num_entities,
+        )
+        return self(x=predictions, target=labels, weight=weights)
 
     @staticmethod
     def validate_labels(labels: FloatTensor) -> bool:
