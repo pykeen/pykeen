@@ -165,7 +165,7 @@ import math
 from abc import abstractmethod
 from collections.abc import Mapping
 from textwrap import dedent
-from typing import Any, ClassVar, TypedDict
+from typing import Any, ClassVar
 
 import torch
 from class_resolver import ClassResolver, Hint
