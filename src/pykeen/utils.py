@@ -1679,8 +1679,10 @@ def merge_kwargs(kwargs: OptionalKwargs, **extra_kwargs: Any | None) -> Optional
 def merge_kwargs(kwargs: OneOrManyOptionalKwargs, **extra_kwargs: Any | None) -> OneOrManyOptionalKwargs:
     """Add extra fields to parameters, skipping None entries.
 
+    If a list is provided, extra parameters are added to each.
+
     :param kwargs:
-        The base parameters.
+        The base parameters, or a list thereof.
     :param extra_kwargs:
         The external parameters to add.
 
