@@ -395,6 +395,7 @@ class TestUtils(unittest.TestCase):
         ({}, {"max_id": 10}, {"max_id": 10}, None),
         ({"max_id": 10}, {"max_id": None}, {"max_id": 10}, None),
         ({"max_id": 10}, {"max_id": 7}, ..., ValueError),
+        ([{'shape': (3,)}, {'shape': (4,)}], {'max_id': 7}, ..., None)
     ],
 )
 def test_merge_kwargs(
