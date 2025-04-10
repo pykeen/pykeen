@@ -277,48 +277,6 @@ _REDUCTION_METHODS = dict(
 )
 
 
-class _LCWAInput(TypedDict):
-    predictions: FloatTensor
-    labels: FloatTensor
-    label_smoothing: float | None
-    num_entities: int | None
-    weights: FloatTensor | None
-
-
-def _slcwa_to_lcwa(
-    positive_scores: FloatTensor,
-    negative_scores: FloatTensor,
-    # TODO: why is label smoothing part of the process_*_scores call?!
-    label_smoothing: float | None = None,
-    batch_filter: BoolTensor | None = None,
-    num_entities: int | None = None,
-    pos_weights: FloatTensor | None = None,
-    neg_weights: FloatTensor | None = None,
-) -> _LCWAInput:
-    # TODO: batch_filter
-    # flatten and stack
-    positive_scores = positive_scores.view(-1)
-    negative_scores = negative_scores.view(-1)
-    predictions = torch.cat([positive_scores, negative_scores], dim=0)
-    labels = torch.cat([torch.ones_like(positive_scores), torch.zeros_like(negative_scores)])
-    if pos_weights is None and neg_weights is None:
-        weights = None
-    else:
-        # TODO: broadcasting?
-        weights = torch.ones_like(predictions)
-        if pos_weights is not None:
-            weights[: len(positive_scores)] = pos_weights.view(-1)
-        if neg_weights is not None:
-            weights[len(positive_scores) :] = neg_weights.view(-1)
-    return _LCWAInput(
-        predictions=predictions,
-        labels=labels,
-        label_smoothing=label_smoothing,
-        num_entities=num_entities,
-        weights=weights,
-    )
-
-
 class Loss(_Loss):
     """A loss function."""
 
@@ -428,10 +386,27 @@ class PointwiseLoss(Loss):
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
+        # TODO: batch_filter
+        # flatten and stack
+        positive_scores = positive_scores.view(-1)
+        negative_scores = negative_scores.view(-1)
+        predictions = torch.cat([positive_scores, negative_scores], dim=0)
+        labels = torch.cat([torch.ones_like(positive_scores), torch.zeros_like(negative_scores)])
+        if pos_weights is None and neg_weights is None:
+            weights = None
+        else:
+            # TODO: broadcasting?
+            weights = torch.ones_like(predictions)
+            if pos_weights is not None:
+                weights[: len(positive_scores)] = pos_weights.view(-1)
+            if neg_weights is not None:
+                weights[len(positive_scores) :] = neg_weights.view(-1)
         return self.process_lcwa_scores(
-            **_slcwa_to_lcwa(
-                positive_scores, negative_scores, label_smoothing, batch_filter, num_entities, pos_weights, neg_weights
-            )
+            predictions=predictions,
+            labels=labels,
+            label_smoothing=label_smoothing,
+            num_entities=num_entities,
+            weights=weights,
         )
 
     # docstr-coverage: inherited
