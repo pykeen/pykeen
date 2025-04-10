@@ -455,6 +455,16 @@ class PointwiseLoss(Loss):
 class PairwiseLoss(Loss):
     """Pairwise loss functions compare the scores of a positive triple and a negative triple."""
 
+    @abc.abstractmethod
+    def forward(
+        self,
+        positive_scores: FloatTensor,
+        negative_scores: FloatTensor,
+        positive_weight: FloatTensor | None = None,
+        negative_weight: FloatTensor | None = None,
+    ) -> FloatTensor:
+        raise NotImplementedError
+
 
 class SetwiseLoss(Loss):
     """Setwise loss functions compare the scores of several triples."""
@@ -603,8 +613,6 @@ class MarginPairwiseLoss(PairwiseLoss):
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # Sanity check
-        self._raise_on_weights(pos_weights)
-        self._raise_on_weights(neg_weights)
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
 
@@ -614,7 +622,12 @@ class MarginPairwiseLoss(PairwiseLoss):
             positive_scores = positive_scores.repeat(1, num_neg_per_pos)[batch_filter]
             # shape: (nnz,)
 
-        return self(x=negative_scores - positive_scores, target=positive_scores.new_ones(size=tuple()))
+        return self(
+            positive_scores=positive_scores,
+            negative_scores=negative_scores,
+            positive_weight=pos_weights,
+            negative_weight=neg_weights,
+        )
 
     # docstr-coverage: inherited
     def process_lcwa_scores(
@@ -647,12 +660,19 @@ class MarginPairwiseLoss(PairwiseLoss):
         # First filter the predictions for true labels and then repeat them based on the repeat vector
         positive_scores = predictions[labels == 1][repeat_true_labels]
 
-        return self(x=negative_scores - positive_scores, target=1)
+        return self(positive_scores=positive_scores, negative_scores=negative_scores)
 
     # docstr-coverage: inherited
-    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
-        # note: this is relatively hacky
-        return self._reduction_method(self.margin_activation(x * target + self.margin))
+    def forward(
+        self,
+        positive_scores: FloatTensor,
+        negative_scores: FloatTensor,
+        positive_weight: FloatTensor | None = None,
+        negative_weight: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
+        self._raise_on_weights(positive_weight)
+        self._raise_on_weights(negative_weight)
+        return self._reduction_method(self.margin_activation(negative_scores - positive_scores + self.margin))
 
 
 @parse_docdata
