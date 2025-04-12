@@ -1695,7 +1695,8 @@ def merge_kwargs(kwargs: OneOrManyOptionalKwargs, **extra_kwargs: Any | None) ->
     if isinstance(kwargs, Sequence):
         return [merge_kwargs(kw, **extra_kwargs) for kw in kwargs]
 
-    kwargs = kwargs or {}
+    # create shallow copy to avoid side-effects
+    kwargs = dict(kwargs or {})
     for key, value in extra_kwargs.items():
         if value is None:
             continue
