@@ -76,9 +76,9 @@ class SLCWATestCase(LossTestCase):
 
 test_case_resolver = Resolver(classes=[LCWATestCase, SLCWATestCase], base=LossTestCase, suffix="testcase")
 
+
 # if you want to add a new configuration, you can add everything except the value,
 # and it will automatically get added next time
-
 def get_cases() -> list[tuple[Loss, LossTestCase, float, int]]:
     """Get loss test cases."""
     records = json.loads(LOSSES_PATH.read_text())
@@ -95,7 +95,10 @@ def get_cases() -> list[tuple[Loss, LossTestCase, float, int]]:
         record["type"] = test_case_resolver.normalize_cls(test_case_resolver.lookup(record["type"]))
 
         loss_test_case: LossTestCase = test_case_resolver.make(record["type"], record["kwargs"])
-        seed = record["seed"]
+
+        seed = record.get("seed")
+        if seed is None:
+            seed = record["seed"] = 42
 
         value = record.get("value")
         if not value:
