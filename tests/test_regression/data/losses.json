@@ -3,6 +3,16 @@
     "kwargs": {
       "batch_size": 1,
       "label_smoothing": 0.5,
+      "num_entities": 32,
+      "weighted": true
+    },
+    "seed": 42,
+    "type": "lcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": 0.5,
       "num_entities": 32
     },
     "loss_name_to_value": {
@@ -17,6 +27,16 @@
       "pointwisehinge": 1.3910776376724243,
       "softplus": 0.9236602783203125,
       "softpointwisehinge": 1.6238161325454712
+    },
+    "seed": 42,
+    "type": "lcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": null,
+      "num_entities": 32,
+      "weighted": true
     },
     "seed": 42,
     "type": "lcwa"
@@ -52,6 +72,17 @@
       "batch_size": 1,
       "label_smoothing": 0.5,
       "num_entities": 32,
+      "num_negatives": 3,
+      "weighted": true
+    },
+    "seed": 42,
+    "type": "slcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": 0.5,
+      "num_entities": 32,
       "num_negatives": 3
     },
     "loss_name_to_value": {
@@ -64,6 +95,17 @@
       "pointwisehinge": 1.5460903644561768,
       "softplus": 1.0202176570892334,
       "softpointwisehinge": 1.7502429485321045
+    },
+    "seed": 42,
+    "type": "slcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": null,
+      "num_entities": 32,
+      "num_negatives": 3,
+      "weighted": true
     },
     "seed": 42,
     "type": "slcwa"

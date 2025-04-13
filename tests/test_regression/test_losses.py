@@ -13,7 +13,7 @@ import pytest
 import torch
 from class_resolver import ClassResolver
 
-from pykeen.losses import Loss, UnsupportedLabelSmoothingError, loss_resolver
+from pykeen.losses import Loss, NoSampleWeightSupportError, UnsupportedLabelSmoothingError, loss_resolver
 
 HERE = pathlib.Path(__file__).parent.resolve()
 DATA_DIRECTORY = HERE.joinpath("data")
@@ -40,14 +40,24 @@ class LCWALossCalculator(LossCalculator):
     label_smoothing: float | None
     num_entities: int
 
+    weighted: bool = False
+
     # docstr-coverage: inherited
     def __call__(self, instance: Loss, generator: torch.Generator) -> torch.Tensor:
         predictions = torch.rand(self.batch_size, self.num_entities, generator=generator)
         labels = (
             torch.rand(self.batch_size, self.num_entities, generator=generator).less(0.5).to(dtype=predictions.dtype)
         )
+        if self.weighted:
+            weights = torch.rand(self.batch_size, self.num_entities, generator=generator)
+        else:
+            weights = None
         return instance.process_lcwa_scores(
-            predictions=predictions, labels=labels, label_smoothing=self.label_smoothing, num_entities=self.num_entities
+            predictions=predictions,
+            labels=labels,
+            label_smoothing=self.label_smoothing,
+            num_entities=self.num_entities,
+            weights=weights,
         )
 
 
@@ -62,16 +72,26 @@ class SLCWALossCalculator(LossCalculator):
 
     num_negatives: int
 
+    weighted: bool = False
+
     # docstr-coverage: inherited
     def __call__(self, instance: Loss, generator: torch.Generator) -> torch.Tensor:
         positive_scores = torch.rand(self.batch_size, 1, generator=generator)
         negative_scores = torch.rand(self.batch_size, self.num_negatives, generator=generator)
+        if self.weighted:
+            pos_weights = torch.rand(self.batch_size, 1, generator=generator)
+            neg_weights = torch.rand(self.batch_size, self.num_negatives, generator=generator)
+        else:
+            pos_weights = None
+            neg_weights = None
         return instance.process_slcwa_scores(
             positive_scores=positive_scores,
             negative_scores=negative_scores,
             label_smoothing=self.label_smoothing,
             batch_filter=None,
             num_entities=self.num_entities,
+            pos_weights=pos_weights,
+            neg_weights=neg_weights,
         )
 
 
@@ -171,7 +191,7 @@ def update(path: pathlib.Path) -> None:
             key = loss_resolver.normalize_cls(cls)
             try:
                 value = case(instance=instance, generator=torch.manual_seed(data["seed"]))
-            except UnsupportedLabelSmoothingError:
+            except (UnsupportedLabelSmoothingError, NoSampleWeightSupportError):
                 continue
             loss_name_to_value[key] = float(value)
         records.append(data)
