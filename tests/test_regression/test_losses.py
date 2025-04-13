@@ -156,7 +156,7 @@ def update(path: pathlib.Path) -> None:
     for record in iter_records(path):
         total += 1
         unique_cases_jsons.add(json.dumps({key: record[key] for key in keys}, sort_keys=True))
-    logger.info(f"Found {len(unique_cases_jsons):_} unique setings at {path!s}")
+    logger.info(f"Found {len(unique_cases_jsons):_} unique settings at {path!s}")
 
     # create case for full cartesian product between cases & losses
     records: list[Record] = list()
