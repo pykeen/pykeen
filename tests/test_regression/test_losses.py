@@ -8,6 +8,7 @@ import pathlib
 
 import pytest
 import torch
+from class_resolver import Resolver
 
 from pykeen.losses import Loss, loss_resolver
 
@@ -70,11 +71,32 @@ class SLCWATestCase(LossTestCase):
         )
 
 
+test_case_resolver = Resolver(classes=[LCWATestCase, SLCWATestCase], base=LossTestCase, suffix="testcase")
+
+
+def get_cases() -> list[tuple[Loss, LossTestCase, float]]:
+    """Get loss test cases."""
+    path = pathlib.Path(__file__).parent.joinpath("data", "losses.json")
+    rv = []
+    for data in json.loads(path.read_text()):
+        loss = loss_resolver.make(data["loss"])
+        test_case: LossTestCase = test_case_resolver.make(data["type"], data["kwargs"])
+        rv.append((loss, test_case, data["value"]))
+    return rv
+
+
 def _ids(x: type | LossTestCase) -> str:
     """Determine part of test case name."""
     if isinstance(x, LossTestCase):
         return str(x)
     return x.__name__
+
+
+@pytest.mark.parametrize(("instance", "case", "expected"), get_cases())
+def test_regression_2(instance: Loss, case: LossTestCase, expected: float, generator: torch.Generator) -> None:
+    """Check whether the loss value is the expected one."""
+    actual = case(instance=instance, generator=generator)
+    assert torch.isclose(torch.as_tensor(expected), actual)
 
 
 @pytest.mark.parametrize(

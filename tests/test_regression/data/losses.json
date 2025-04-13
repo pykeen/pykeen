@@ -1,0 +1,23 @@
+[
+  {
+    "loss": "adversarialbcewithlogits",
+    "type": "lcwa",
+    "value": 0.83063805103302,
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": null,
+      "num_entities": 32
+    }
+  },
+  {
+    "loss": "adversarialbcewithlogits",
+    "type": "slcwa",
+    "value": 0.7664599418640137,
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": null,
+      "num_entities": 32,
+      "num_negatives": 3
+    }
+  }
+]
