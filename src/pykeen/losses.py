@@ -159,6 +159,8 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """  # noqa: E501
 
+from __future__ import annotations
+
 import logging
 import math
 from abc import abstractmethod
@@ -262,7 +264,7 @@ class UnsupportedLabelSmoothingError(RuntimeError):
 class NoSampleWeightSupportError(RuntimeError):
     """Raised if the loss does not support sample weights."""
 
-    def __init__(self, instance: object):
+    def __init__(self, instance: Loss):
         """Initialize the error."""
         self.instance = instance
 
