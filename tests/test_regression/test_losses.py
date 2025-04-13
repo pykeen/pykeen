@@ -2,10 +2,10 @@
 
 import abc
 import dataclasses
-import itertools
 import json
 import pathlib
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 import pytest
 import torch
@@ -17,12 +17,6 @@ HERE = pathlib.Path(__file__).parent.resolve()
 DATA_DIRECTORY = HERE.joinpath("data")
 LOSSES_DIRECTORY = DATA_DIRECTORY.joinpath("losses")
 LOSSES_PATH = DATA_DIRECTORY.joinpath("losses.json")
-
-
-@pytest.fixture
-def generator() -> torch.Generator:
-    """Create a generator with fixed seed."""
-    return torch.manual_seed(42)
 
 
 class LossTestCase(abc.ABC):
