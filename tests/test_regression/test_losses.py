@@ -3,20 +3,23 @@
 import abc
 import dataclasses
 import json
+import logging
 import pathlib
-from collections.abc import Iterator
-from typing import Any
+from collections.abc import Iterable, Iterator
+from typing import Any, TypedDict
 
+import click
 import pytest
 import torch
-from class_resolver import Resolver
+from class_resolver import ClassResolver
 
 from pykeen.losses import Loss, loss_resolver
 
 HERE = pathlib.Path(__file__).parent.resolve()
 DATA_DIRECTORY = HERE.joinpath("data")
-LOSSES_DIRECTORY = DATA_DIRECTORY.joinpath("losses")
 LOSSES_PATH = DATA_DIRECTORY.joinpath("losses.json")
+
+logger = logging.getLogger(__name__)
 
 
 class LossTestCase(abc.ABC):
@@ -29,7 +32,7 @@ class LossTestCase(abc.ABC):
 
 
 @dataclasses.dataclass
-class LCWATestCase(LossTestCase):
+class LCWALossTestCase(LossTestCase):
     """Test LCWA scores."""
 
     batch_size: int
@@ -48,7 +51,7 @@ class LCWATestCase(LossTestCase):
 
 
 @dataclasses.dataclass
-class SLCWATestCase(LossTestCase):
+class SLCWALossTestCase(LossTestCase):
     """Test SLCWA scores."""
 
     batch_size: int
@@ -69,53 +72,46 @@ class SLCWATestCase(LossTestCase):
         )
 
 
-test_case_resolver = Resolver(classes=[LCWATestCase, SLCWATestCase], base=LossTestCase, suffix="testcase")
+test_case_resolver: ClassResolver[LossTestCase] = ClassResolver.from_subclasses(base=LossTestCase)
 
 
-# if you want to add a new configuration, you can add everything except the value,
-# and it will automatically get added next time
+class Record(TypedDict):
+    """A regression test case record."""
+
+    type: str
+    kwargs: dict[str, Any]
+    seed: int
+
+    values: dict[str, float]
+
+
+def iter_records(path: pathlib.Path) -> Iterator[Record]:
+    """Iterate records from path."""
+    with path.open() as file:
+        yield from json.load(file)
+
+
+def save_records(path: pathlib.Path, records: Iterable[Record]) -> None:
+    """Save records to path."""
+    records = sorted(records, key=lambda r: (r["type"], r["seed"], json.dumps(r["kwargs"])))
+    with path.open(mode="w") as file:
+        json.dump(records, file, indent=2, sort_keys=True)
+
+
 # TODO: pytest.param is a private type...
-def iter_cases(*, automatic_calculation: bool = False) -> Iterator[Any]:
+def iter_cases() -> Iterator[Any]:
     """Get loss test cases."""
-    records = json.loads(LOSSES_PATH.read_text())
-    should_write = False
-
-    for record in records:
-        loss = loss_resolver.make(record["loss"])
-
-        # standardize loss key
-        record["loss"] = loss_resolver.normalize_cls(loss_resolver.lookup(loss))
-
-        # standardize type
-        record["type"] = test_case_resolver.normalize_cls(test_case_resolver.lookup(record["type"]))
-
-        loss_test_case: LossTestCase = test_case_resolver.make(record["type"], record["kwargs"])
-
-        seed = record.get("seed")
-        if seed is None:
-            if not automatic_calculation:
-                raise ValueError("missing seed")
-            seed = record["seed"] = 42
-            should_write = True
-
-        value = record.get("value")
-        if not value:
-            if not automatic_calculation:
-                raise ValueError("missing value")
-            value = record["value"] = loss_test_case(instance=loss, generator=torch.manual_seed(seed)).item()
-            should_write = True
-
-        yield pytest.param(
-            loss,
-            loss_test_case,
-            value,
-            seed,
-            id=f"{record['loss']}-{record['type']}-{record['seed']}-{record['kwargs']}",
-        )
-
-    if should_write:
-        records = sorted(records, key=lambda r: (r["loss"], r["type"], r["seed"]))
-        LOSSES_PATH.write_text(json.dumps(records, indent=2, sort_keys=True))
+    for record in iter_records(LOSSES_PATH):
+        loss_test_case = test_case_resolver.make(record["type"], record["kwargs"])
+        for name, value in record["values"].items():
+            loss = loss_resolver.make(name)
+            yield pytest.param(
+                loss,
+                loss_test_case,
+                value,
+                record["seed"],
+                id=f"{name}-{record['type']}-{record['seed']}-{record['kwargs']}",
+            )
 
 
 @pytest.mark.parametrize(("instance", "case", "expected", "seed"), iter_cases())
@@ -123,3 +119,38 @@ def test_regression(instance: Loss, case: LossTestCase, expected: float, seed: i
     """Check whether the loss value is the expected one."""
     actual = case(instance=instance, generator=torch.manual_seed(seed))
     assert torch.isclose(torch.as_tensor(expected), actual)
+
+
+@click.command()
+@click.option("--path", type=pathlib.Path, default=LOSSES_PATH)
+def update(path: pathlib.Path) -> None:
+    """Write test cases for all losses."""
+    logging.basicConfig(level=logging.INFO)
+
+    # determine unique settings (using JSON-representation)
+    unique_cases_jsons: set[str] = set()
+    total = 0
+    keys = {"seed", "type", "kwargs"}
+    for record in iter_records(path):
+        total += 1
+        unique_cases_jsons.add(json.dumps({key: record[key] for key in keys}))
+    logger.info(f"Found {len(unique_cases_jsons):_} unique setings at {path!s}")
+
+    # create case for full cartesian product between cases & losses
+    records: list[Record] = list()
+    for unique_case_json in unique_cases_jsons:
+        data = json.loads(unique_case_json)
+        data["values"] = values = {}
+        case = test_case_resolver.make(data["type"], data["kwargs"])
+        for cls in loss_resolver:
+            instance = loss_resolver.make(cls)
+            key = loss_resolver.normalize_cls(cls)
+            value = case(instance=instance, generator=torch.manual_seed(data["seed"]))
+            values[key] = float(value)
+        records.append(data)
+    save_records(path, records)
+    logger.info(f"Written {len(records):_} records to {path!s}")
+
+
+if __name__ == "__main__":
+    update()

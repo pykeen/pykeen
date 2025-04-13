@@ -5,10 +5,25 @@
       "label_smoothing": null,
       "num_entities": 32
     },
-    "loss": "adversarialbcewithlogits",
     "seed": 42,
     "type": "lcwa",
-    "value": 0.83063805103302
+    "values": {
+      "adversarialbcewithlogits": 0.83063805103302,
+      "bceaftersigmoid": 0.8754832744598389,
+      "bcewithlogits": 0.8754832744598389,
+      "crossentropy": 3.6959476470947266,
+      "doublemargin": 0.32447463274002075,
+      "focal": 0.335818886756897,
+      "infonce": 14.1015625,
+      "marginranking": 1.2994768619537354,
+      "mse": 0.4871828556060791,
+      "nssa": 4.857467174530029,
+      "pairwiselogistic": 0.8695288896560669,
+      "pointwisehinge": 1.2739492654800415,
+      "softmarginranking": 1.551514983177185,
+      "softplus": 0.8754832148551941,
+      "softpointwisehinge": 1.5467212200164795
+    }
   },
   {
     "kwargs": {
@@ -17,32 +32,24 @@
       "num_entities": 32,
       "num_negatives": 3
     },
-    "loss": "adversarialbcewithlogits",
     "seed": 42,
     "type": "slcwa",
-    "value": 0.7664599418640137
-  },
-  {
-    "kwargs": {
-      "batch_size": 1,
-      "label_smoothing": null,
-      "num_entities": 32
-    },
-    "loss": "bceaftersigmoid",
-    "seed": 42,
-    "type": "lcwa",
-    "value": 0.8754832744598389
-  },
-  {
-    "kwargs": {
-      "batch_size": 1,
-      "label_smoothing": null,
-      "num_entities": 32,
-      "num_negatives": 3
-    },
-    "loss": "bceaftersigmoid",
-    "seed": 42,
-    "type": "slcwa",
-    "value": 0.9461555480957031
+    "values": {
+      "adversarialbcewithlogits": 0.7664599418640137,
+      "bceaftersigmoid": 0.9461555480957031,
+      "bcewithlogits": 0.9461555480957031,
+      "crossentropy": 1.3137906789779663,
+      "doublemargin": 0.43506094813346863,
+      "focal": 0.4145054817199707,
+      "infonce": 2.382779359817505,
+      "marginranking": 0.8701217770576477,
+      "mse": 0.4794861972332001,
+      "nssa": 4.9069905281066895,
+      "pairwiselogistic": 0.6387856602668762,
+      "pointwisehinge": 1.3437260389328003,
+      "softmarginranking": 1.2273001670837402,
+      "softplus": 0.9461555480957031,
+      "softpointwisehinge": 1.6260156631469727
+    }
   }
 ]
