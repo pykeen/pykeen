@@ -12,7 +12,10 @@ from class_resolver import Resolver
 
 from pykeen.losses import Loss, loss_resolver
 
-DATA_ROOT = pathlib.Path(__file__).parent.joinpath("data", "losses")
+HERE = pathlib.Path(__file__).parent.resolve()
+DATA_DIRECTORY = HERE.joinpath("data")
+LOSSES_DIRECTORY = DATA_DIRECTORY.joinpath("losses")
+LOSSES_PATH = DATA_DIRECTORY.joinpath("losses.json")
 
 
 @pytest.fixture
@@ -74,14 +77,15 @@ class SLCWATestCase(LossTestCase):
 test_case_resolver = Resolver(classes=[LCWATestCase, SLCWATestCase], base=LossTestCase, suffix="testcase")
 
 
-def get_cases() -> list[tuple[Loss, LossTestCase, float]]:
+def get_cases() -> list[tuple[Loss, LossTestCase, float, int]]:
     """Get loss test cases."""
-    path = pathlib.Path(__file__).parent.joinpath("data", "losses.json")
     rv = []
-    for data in json.loads(path.read_text()):
+    for data in json.loads(LOSSES_PATH.read_text()):
         loss = loss_resolver.make(data["loss"])
         test_case: LossTestCase = test_case_resolver.make(data["type"], data["kwargs"])
-        rv.append((loss, test_case, data["value"]))
+        value = data["value"]
+        seed = data["seed"]
+        rv.append((loss, test_case, value, seed))
     return rv
 
 
@@ -92,10 +96,10 @@ def _ids(x: type | LossTestCase) -> str:
     return x.__name__
 
 
-@pytest.mark.parametrize(("instance", "case", "expected"), get_cases())
-def test_regression_2(instance: Loss, case: LossTestCase, expected: float, generator: torch.Generator) -> None:
+@pytest.mark.parametrize(("instance", "case", "expected", "seed"), get_cases())
+def test_regression_2(instance: Loss, case: LossTestCase, expected: float, seed: int) -> None:
     """Check whether the loss value is the expected one."""
-    actual = case(instance=instance, generator=generator)
+    actual = case(instance=instance, generator=torch.manual_seed(seed))
     assert torch.isclose(torch.as_tensor(expected), actual)
 
 
@@ -120,7 +124,7 @@ def test_regression(cls: type[Loss], case: LossTestCase, generator: torch.Genera
 
     # determine reference file path
     name = loss_resolver.normalize_cls(cls)
-    path = DATA_ROOT.joinpath(name).with_suffix(".json")
+    path = LOSSES_DIRECTORY.joinpath(name).with_suffix(".json")
 
     # TODO: is there a nicer way how to enable generating missing values more explicitly?
     # load expected value
