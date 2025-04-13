@@ -6,7 +6,7 @@ import json
 import logging
 import pathlib
 from collections.abc import Iterable, Iterator
-from typing import Any, TypedDict
+from typing import Any, NamedTuple, TypedDict
 
 import click
 import pytest
@@ -22,8 +22,8 @@ LOSSES_PATH = DATA_DIRECTORY.joinpath("losses.json")
 logger = logging.getLogger(__name__)
 
 
-class LossTestCase(abc.ABC):
-    """A test case for loss regression tests."""
+class LossCalculator(abc.ABC):
+    """Calculate loss values on randomized input for regression tests."""
 
     @abc.abstractmethod
     def __call__(self, instance: Loss, generator: torch.Generator) -> torch.Tensor:
@@ -32,10 +32,11 @@ class LossTestCase(abc.ABC):
 
 
 @dataclasses.dataclass
-class LCWALossTestCase(LossTestCase):
-    """Test LCWA scores."""
+class LCWALossCalculator(LossCalculator):
+    """Calculate loss values for LCWA."""
 
     batch_size: int
+
     label_smoothing: float | None
     num_entities: int
 
@@ -51,12 +52,14 @@ class LCWALossTestCase(LossTestCase):
 
 
 @dataclasses.dataclass
-class SLCWALossTestCase(LossTestCase):
-    """Test SLCWA scores."""
+class SLCWALossCalculator(LossCalculator):
+    """Calculate loss values for sLCWA."""
 
     batch_size: int
+
     label_smoothing: float | None
     num_entities: int
+
     num_negatives: int
 
     # docstr-coverage: inherited
@@ -72,16 +75,20 @@ class SLCWALossTestCase(LossTestCase):
         )
 
 
-test_case_resolver: ClassResolver[LossTestCase] = ClassResolver.from_subclasses(base=LossTestCase)
+calculator_resolver: ClassResolver[LossCalculator] = ClassResolver.from_subclasses(base=LossCalculator)
 
 
 class Record(TypedDict):
     """A regression test case record."""
 
+    #: the class name of the calculator
     type: str
+    #: keyword parameters for the calculator
     kwargs: dict[str, Any]
-    seed: int
 
+    #: the seed for randomized input
+    seed: int
+    #: a mapping from loss class name to value
     values: dict[str, float]
 
 
@@ -98,24 +105,39 @@ def save_records(path: pathlib.Path, records: Iterable[Record]) -> None:
         json.dump(records, file, indent=2, sort_keys=True)
 
 
-# TODO: pytest.param is a private type...
-def iter_cases() -> Iterator[Any]:
-    """Get loss test cases."""
-    for record in iter_records(LOSSES_PATH):
-        loss_test_case = test_case_resolver.make(record["type"], record["kwargs"])
-        for name, value in record["values"].items():
-            loss = loss_resolver.make(name)
-            yield pytest.param(
-                loss,
-                loss_test_case,
-                value,
-                record["seed"],
-                id=f"{name}-{record['type']}-{record['seed']}-{record['kwargs']}",
-            )
+class Case(NamedTuple):
+    """An individual test case."""
+
+    calculator: LossCalculator
+    loss: Loss
+    loss_name: str
+    seed: int
+    expected: float
 
 
-@pytest.mark.parametrize(("instance", "case", "expected", "seed"), iter_cases())
-def test_regression(instance: Loss, case: LossTestCase, expected: float, seed: int) -> None:
+def iter_cases(record: Record) -> Iterator[Case]:
+    """Iterate over individual test cases."""
+    calculator = calculator_resolver.make(record["type"], record["kwargs"])
+    for name, value in record["values"].items():
+        loss = loss_resolver.make(name)
+        yield Case(calculator=calculator, loss=loss, loss_name=name, seed=record["seed"], expected=value)
+
+
+@pytest.mark.parametrize(
+    ("instance", "case", "expected", "seed"),
+    [
+        pytest.param(
+            case.loss,
+            case.calculator,
+            case.expected,
+            case.seed,
+            id=f"{case.loss_name}-{record['type']}-{record['kwargs']}",
+        )
+        for record in iter_records(LOSSES_PATH)
+        for case in iter_cases(record)
+    ],
+)
+def test_regression(instance: Loss, case: LossCalculator, expected: float, seed: int) -> None:
     """Check whether the loss value is the expected one."""
     actual = case(instance=instance, generator=torch.manual_seed(seed))
     assert torch.isclose(torch.as_tensor(expected), actual)
@@ -141,7 +163,7 @@ def update(path: pathlib.Path) -> None:
     for unique_case_json in unique_cases_jsons:
         data = json.loads(unique_case_json)
         data["values"] = values = {}
-        case = test_case_resolver.make(data["type"], data["kwargs"])
+        case = calculator_resolver.make(data["type"], data["kwargs"])
         for cls in loss_resolver:
             instance = loss_resolver.make(cls)
             key = loss_resolver.normalize_cls(cls)
