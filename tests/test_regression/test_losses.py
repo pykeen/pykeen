@@ -89,7 +89,7 @@ class Record(TypedDict):
     #: the seed for randomized input
     seed: int
     #: a mapping from loss class name to value
-    values: dict[str, float]
+    loss_name_to_value: dict[str, float]
 
 
 def iter_records(path: pathlib.Path) -> Iterator[Record]:
@@ -118,7 +118,7 @@ class Case(NamedTuple):
 def iter_cases(record: Record) -> Iterator[Case]:
     """Iterate over individual test cases."""
     calculator = calculator_resolver.make(record["type"], record["kwargs"])
-    for name, value in record["values"].items():
+    for name, value in record["loss_name_to_value"].items():
         loss = loss_resolver.make(name)
         yield Case(calculator=calculator, loss=loss, loss_name=name, seed=record["seed"], expected=value)
 
@@ -162,13 +162,13 @@ def update(path: pathlib.Path) -> None:
     records: list[Record] = list()
     for unique_case_json in unique_cases_jsons:
         data = json.loads(unique_case_json)
-        data["values"] = values = {}
+        data["loss_name_to_value"] = loss_name_to_value = {}
         case = calculator_resolver.make(data["type"], data["kwargs"])
         for cls in loss_resolver:
             instance = loss_resolver.make(cls)
             key = loss_resolver.normalize_cls(cls)
             value = case(instance=instance, generator=torch.manual_seed(data["seed"]))
-            values[key] = float(value)
+            loss_name_to_value[key] = float(value)
         records.append(data)
     save_records(path, records)
     logger.info(f"Written {len(records):_} records to {path!s}")

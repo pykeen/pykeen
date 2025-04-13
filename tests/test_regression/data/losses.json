@@ -7,7 +7,7 @@
     },
     "seed": 42,
     "type": "lcwa",
-    "values": {
+    "loss_name_to_value": {
       "adversarialbcewithlogits": 0.83063805103302,
       "bceaftersigmoid": 0.8754832744598389,
       "bcewithlogits": 0.8754832744598389,
@@ -34,7 +34,7 @@
     },
     "seed": 42,
     "type": "slcwa",
-    "values": {
+    "loss_name_to_value": {
       "adversarialbcewithlogits": 0.7664599418640137,
       "bceaftersigmoid": 0.9461555480957031,
       "bcewithlogits": 0.9461555480957031,
