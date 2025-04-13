@@ -13,7 +13,7 @@ import pytest
 import torch
 from class_resolver import ClassResolver
 
-from pykeen.losses import Loss, loss_resolver
+from pykeen.losses import Loss, UnsupportedLabelSmoothingError, loss_resolver
 
 HERE = pathlib.Path(__file__).parent.resolve()
 DATA_DIRECTORY = HERE.joinpath("data")
@@ -120,7 +120,7 @@ class Case(NamedTuple):
 def iter_cases(record: Record) -> Iterator[Case]:
     """Iterate over individual test cases."""
     calculator = calculator_resolver.make(record["type"], record["kwargs"])
-    for name, value in record["loss_name_to_value"].items():
+    for name, value in record.get("loss_name_to_value", {}).items():
         loss = loss_resolver.make(name)
         yield Case(calculator=calculator, loss=loss, loss_name=name, seed=record["seed"], expected=value)
 
@@ -169,7 +169,10 @@ def update(path: pathlib.Path) -> None:
         for cls in loss_resolver:
             instance = loss_resolver.make(cls)
             key = loss_resolver.normalize_cls(cls)
-            value = case(instance=instance, generator=torch.manual_seed(data["seed"]))
+            try:
+                value = case(instance=instance, generator=torch.manual_seed(data["seed"]))
+            except UnsupportedLabelSmoothingError:
+                continue
             loss_name_to_value[key] = float(value)
         records.append(data)
     save_records(path, records)

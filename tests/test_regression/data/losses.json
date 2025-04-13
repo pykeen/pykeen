@@ -2,6 +2,28 @@
   {
     "kwargs": {
       "batch_size": 1,
+      "label_smoothing": 0.5,
+      "num_entities": 32
+    },
+    "loss_name_to_value": {
+      "adversarialbcewithlogits": 0.9116498827934265,
+      "bceaftersigmoid": 0.9340474009513855,
+      "bcewithlogits": 0.9340474009513855,
+      "crossentropy": 3.6023612022399902,
+      "doublemargin": 0.29432913661003113,
+      "focal": 0.3577633798122406,
+      "infonce": 12.104830741882324,
+      "mse": 0.3232237994670868,
+      "pointwisehinge": 1.3910776376724243,
+      "softplus": 0.9236602783203125,
+      "softpointwisehinge": 1.6238161325454712
+    },
+    "seed": 42,
+    "type": "lcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
       "label_smoothing": null,
       "num_entities": 32
     },
@@ -24,6 +46,27 @@
     },
     "seed": 42,
     "type": "lcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": 0.5,
+      "num_entities": 32,
+      "num_negatives": 3
+    },
+    "loss_name_to_value": {
+      "bceaftersigmoid": 1.0473377704620361,
+      "bcewithlogits": 1.0473376512527466,
+      "crossentropy": 1.362494945526123,
+      "focal": 0.4447277784347534,
+      "infonce": 3.2068657875061035,
+      "mse": 0.4945456087589264,
+      "pointwisehinge": 1.5460903644561768,
+      "softplus": 1.0202176570892334,
+      "softpointwisehinge": 1.7502429485321045
+    },
+    "seed": 42,
+    "type": "slcwa"
   },
   {
     "kwargs": {
