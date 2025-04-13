@@ -100,7 +100,7 @@ def iter_records(path: pathlib.Path) -> Iterator[Record]:
 
 def save_records(path: pathlib.Path, records: Iterable[Record]) -> None:
     """Save records to path."""
-    records = sorted(records, key=lambda r: (r["type"], r["seed"], json.dumps(r["kwargs"])))
+    records = sorted(records, key=lambda r: (r["type"], r["seed"], json.dumps(r["kwargs"], sort_keys=True)))
     with path.open(mode="w") as file:
         json.dump(records, file, indent=2, sort_keys=True)
 
@@ -155,7 +155,7 @@ def update(path: pathlib.Path) -> None:
     keys = {"seed", "type", "kwargs"}
     for record in iter_records(path):
         total += 1
-        unique_cases_jsons.add(json.dumps({key: record[key] for key in keys}))
+        unique_cases_jsons.add(json.dumps({key: record[key] for key in keys}, sort_keys=True))
     logger.info(f"Found {len(unique_cases_jsons):_} unique setings at {path!s}")
 
     # create case for full cartesian product between cases & losses
