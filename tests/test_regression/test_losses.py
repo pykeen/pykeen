@@ -5,6 +5,7 @@ import dataclasses
 import itertools
 import json
 import pathlib
+from typing import Any, Iterator
 
 import pytest
 import torch
@@ -79,12 +80,12 @@ test_case_resolver = Resolver(classes=[LCWATestCase, SLCWATestCase], base=LossTe
 
 # if you want to add a new configuration, you can add everything except the value,
 # and it will automatically get added next time
-def get_cases(*, automatic_calculation: bool = False) -> list[tuple[Loss, LossTestCase, float, int]]:
+# TODO: pytest.param is a private type...
+def iter_cases(*, automatic_calculation: bool = False) -> Iterator[Any]:
     """Get loss test cases."""
     records = json.loads(LOSSES_PATH.read_text())
     should_write = False
 
-    rv = []
     for record in records:
         loss = loss_resolver.make(record["loss"])
 
@@ -110,65 +111,21 @@ def get_cases(*, automatic_calculation: bool = False) -> list[tuple[Loss, LossTe
             value = record["value"] = loss_test_case(instance=loss, generator=torch.manual_seed(seed)).item()
             should_write = True
 
-        rv.append((loss, loss_test_case, value, seed))
+        yield pytest.param(
+            loss,
+            loss_test_case,
+            value,
+            seed,
+            id=f"{record['loss']}-{record['type']}-{record['seed']}-{record['kwargs']}",
+        )
 
     if should_write:
         records = sorted(records, key=lambda r: (r["loss"], r["type"], r["seed"]))
         LOSSES_PATH.write_text(json.dumps(records, indent=2, sort_keys=True))
 
-    return rv
 
-
-def _ids(x: type | LossTestCase) -> str:
-    """Determine part of test case name."""
-    if isinstance(x, LossTestCase):
-        return str(x)
-    return x.__name__
-
-
-@pytest.mark.parametrize(("instance", "case", "expected", "seed"), get_cases())
-def test_regression_2(instance: Loss, case: LossTestCase, expected: float, seed: int) -> None:
+@pytest.mark.parametrize(("instance", "case", "expected", "seed"), iter_cases())
+def test_regression(instance: Loss, case: LossTestCase, expected: float, seed: int) -> None:
     """Check whether the loss value is the expected one."""
     actual = case(instance=instance, generator=torch.manual_seed(seed))
     assert torch.isclose(torch.as_tensor(expected), actual)
-
-
-@pytest.mark.parametrize(
-    ("cls", "case"),
-    itertools.product(
-        set(loss_resolver),
-        [
-            LCWATestCase(batch_size=1, label_smoothing=None, num_entities=32),
-            SLCWATestCase(batch_size=1, label_smoothing=None, num_entities=32, num_negatives=3),
-        ],
-    ),
-    ids=_ids,
-)
-def test_regression(cls: type[Loss], case: LossTestCase, generator: torch.Generator) -> None:
-    """Check whether the loss value is the expected one."""
-    # create instance with default parameters.
-    instance = loss_resolver.make(cls)
-
-    # get loss value for the given case
-    loss_value = case(instance=instance, generator=generator)
-
-    # determine reference file path
-    name = loss_resolver.normalize_cls(cls)
-    path = LOSSES_DIRECTORY.joinpath(name).with_suffix(".json")
-
-    # TODO: is there a nicer way how to enable generating missing values more explicitly?
-    # load expected value
-    references = {}
-    if path.is_file():
-        with path.open() as file:
-            references = json.load(file)
-    key = str(case)
-    if key not in references:
-        references[str(case)] = loss_value.item()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open(mode="w") as file:
-            json.dump(references, file, indent=2, sort_keys=True)
-
-    # compare for approximate equivalence
-    reference_value = torch.as_tensor(references[str(case)])
-    assert torch.isclose(loss_value, reference_value)
