@@ -1,4 +1,0 @@
-{
-  "LCWATestCase(batch_size=1, label_smoothing=None, num_entities=32)": 1.2994768619537354,
-  "SLCWATestCase(batch_size=1, label_smoothing=None, num_entities=32, num_negatives=3)": 0.8701217770576477
-}
