@@ -75,7 +75,9 @@ class SLCWALossCalculator(LossCalculator):
         )
 
 
-calculator_resolver: ClassResolver[LossCalculator] = ClassResolver.from_subclasses(base=LossCalculator)
+calculator_resolver: ClassResolver[LossCalculator] = ClassResolver(
+    [SLCWALossCalculator, LCWALossCalculator], base=LossCalculator
+)
 
 
 class Record(TypedDict):
@@ -140,7 +142,7 @@ def iter_cases(record: Record) -> Iterator[Case]:
 def test_regression(instance: Loss, case: LossCalculator, expected: float, seed: int) -> None:
     """Check whether the loss value is the expected one."""
     actual = case(instance=instance, generator=torch.manual_seed(seed))
-    assert torch.isclose(torch.as_tensor(expected), actual)
+    assert torch.isclose(torch.as_tensor(expected), actual, rtol=1e-5)
 
 
 @click.command()
