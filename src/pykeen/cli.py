@@ -62,13 +62,13 @@ X = TypeVar("X")
 
 
 @click.group()
-def main():
+def main() -> None:
     """PyKEEN."""
 
 
 @main.command()
 @click.option("-f", "--tablefmt", default="github", show_default=True)
-def version(tablefmt):
+def version(tablefmt: str | None) -> None:
     """Print version information for debugging."""
     click.echo(env_table(tablefmt))
 
@@ -77,13 +77,13 @@ tablefmt_option = click.option("-f", "--tablefmt", default="plain", show_default
 
 
 @main.group(cls=DefaultGroup, default="github-readme", default_if_no_args=True)
-def ls():
+def ls() -> None:
     """List implementation details."""
 
 
 @ls.command()
 @tablefmt_option
-def models(tablefmt: str):
+def models(tablefmt: str) -> None:
     """List models."""
     click.echo(_help_models(tablefmt=tablefmt)[0])
 
@@ -213,7 +213,7 @@ def _help_representations(tablefmt: str = "github", *, link_fmt: str | None = No
 
 
 @ls.command()
-def importers():
+def importers() -> None:
     """List triple importers."""
     for prefix, f in sorted(PREFIX_IMPORTER_RESOLVER.lookup_dict.items()):
         click.secho(f"prefix: {prefix} from {inspect.getmodule(f).__name__}")
@@ -224,7 +224,7 @@ def importers():
 @ls.command()
 @tablefmt_option
 @click.option("--sort-size", is_flag=True)
-def datasets(tablefmt: str, sort_size: bool):
+def datasets(tablefmt: str, sort_size: bool) -> None:
     """List datasets."""
     click.echo(_help_datasets(tablefmt, sort_size=sort_size))
 
@@ -251,7 +251,7 @@ def _help_inductive_datasets(tablefmt: str, link_fmt: str | None = None):
 
 @ls.command()
 @tablefmt_option
-def training_loops(tablefmt: str):
+def training_loops(tablefmt: str) -> None:
     """List training approaches."""
     click.echo(_help_training(tablefmt))
 
@@ -267,7 +267,7 @@ def _help_training(tablefmt: str, link_fmt: str | None = None):
 
 @ls.command()
 @tablefmt_option
-def negative_samplers(tablefmt: str):
+def negative_samplers(tablefmt: str) -> None:
     """List negative samplers."""
     click.echo(_help_negative_samplers(tablefmt))
 
@@ -283,7 +283,7 @@ def _help_negative_samplers(tablefmt: str, link_fmt: str | None = None):
 
 @ls.command()
 @tablefmt_option
-def stoppers(tablefmt: str):
+def stoppers(tablefmt: str) -> None:
     """List stoppers."""
     click.echo(_help_stoppers(tablefmt))
 
@@ -299,7 +299,7 @@ def _help_stoppers(tablefmt: str, link_fmt: str | None = None):
 
 @ls.command()
 @tablefmt_option
-def evaluators(tablefmt: str):
+def evaluators(tablefmt: str) -> None:
     """List evaluators."""
     click.echo(_help_evaluators(tablefmt))
 
@@ -315,7 +315,7 @@ def _help_evaluators(tablefmt, link_fmt: str | None = None):
 
 @ls.command()
 @tablefmt_option
-def losses(tablefmt: str):
+def losses(tablefmt: str) -> None:
     """List losses."""
     click.echo(_help_losses(tablefmt))
 
@@ -331,7 +331,7 @@ def _help_losses(tablefmt: str, link_fmt: str | None = None):
 
 @ls.command()
 @tablefmt_option
-def optimizers(tablefmt: str):
+def optimizers(tablefmt: str) -> None:
     """List optimizers."""
     click.echo(_help_optimizers(tablefmt))
 
@@ -353,7 +353,7 @@ def _help_optimizers(tablefmt: str, link_fmt: str | None = None):
 
 @ls.command()
 @tablefmt_option
-def lr_schedulers(tablefmt: str):
+def lr_schedulers(tablefmt: str) -> None:
     """List optimizers."""
     click.echo(_help_lr_schedulers(tablefmt))
 
@@ -375,12 +375,12 @@ def _help_lr_schedulers(tablefmt: str, link_fmt: str | None = None):
 
 @ls.command()
 @tablefmt_option
-def regularizers(tablefmt: str):
+def regularizers(tablefmt: str) -> None:
     """List regularizers."""
     click.echo(_help_regularizers(tablefmt))
 
 
-def _help_regularizers(tablefmt, link_fmt: str | None = None):
+def _help_regularizers(tablefmt, link_fmt: str | None = None) -> str:
     lines = _get_resolver_lines(regularizer_resolver.lookup_dict, tablefmt, "regularizers", link_fmt=link_fmt)
     return tabulate(
         lines,
@@ -417,12 +417,12 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: s
 
 @ls.command()
 @tablefmt_option
-def metrics(tablefmt: str):
+def metrics(tablefmt: str) -> None:
     """List metrics."""
     click.echo(_help_metrics(tablefmt))
 
 
-def _help_metrics(tablefmt):
+def _help_metrics(tablefmt: str) -> str:
     headers = [
         "Name",
         "Interval",
@@ -444,12 +444,12 @@ def _help_metrics(tablefmt):
 
 @ls.command()
 @tablefmt_option
-def trackers(tablefmt: str):
+def trackers(tablefmt: str) -> None:
     """List trackers."""
     click.echo(_help_trackers(tablefmt))
 
 
-def _help_trackers(tablefmt: str, link_fmt: str | None = None):
+def _help_trackers(tablefmt: str, link_fmt: str | None = None) -> str:
     lines = _get_resolver_lines(tracker_resolver.lookup_dict, tablefmt, "trackers", link_fmt=link_fmt)
     return tabulate(
         lines,
@@ -460,12 +460,12 @@ def _help_trackers(tablefmt: str, link_fmt: str | None = None):
 
 @ls.command()
 @tablefmt_option
-def hpo_samplers(tablefmt: str):
+def hpo_samplers(tablefmt: str) -> None:
     """List HPO samplers."""
     click.echo(_help_hpo_samplers(tablefmt))
 
 
-def _help_hpo_samplers(tablefmt: str, link_fmt: str | None = None):
+def _help_hpo_samplers(tablefmt: str, link_fmt: str | None = None) -> str:
     lines = _get_lines_alternative(
         tablefmt,
         sampler_resolver.lookup_dict,
@@ -485,10 +485,10 @@ METRIC_NAMES: Mapping[type[MetricResults], str] = {
     RankBasedMetricResults: "Ranking",
 }
 
-METRICS_SKIP = {"standard_deviation", "variance", "median_absolute_deviation", "count"}
+METRICS_SKIP: set[str] = {"standard_deviation", "variance", "median_absolute_deviation", "count"}
 
 
-def _get_metrics_lines(tablefmt: str):
+def _get_metrics_lines(tablefmt: str) -> tuple[str, ...]:
     for key, metric, metric_results_cls in get_metric_list():
         if key in METRICS_SKIP:
             continue
@@ -539,7 +539,7 @@ def _get_resolver_lines(
             yield name, value.__doc__.splitlines()[0]
 
 
-def _get_dataset_lines(tablefmt, link_fmt: str | None = None):
+def _get_dataset_lines(tablefmt, link_fmt: str | None = None) -> Iterable[tuple[str, ...]]:
     for name, value in sorted(dataset_resolver.lookup_dict.items()):
         reference = f"pykeen.datasets.{value.__name__}"
         if tablefmt == "rst":
@@ -577,7 +577,7 @@ def _get_dataset_lines(tablefmt, link_fmt: str | None = None):
         yield name, reference, citation_str, entities, relations, triples
 
 
-def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None):
+def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Iterable[tuple[str ,...]]:
     for name, value in sorted(inductive_dataset_resolver.lookup_dict.items()):
         reference = f"pykeen.datasets.{value.__name__}"
         if tablefmt == "rst":
@@ -629,7 +629,7 @@ def get_metric_list() -> list[tuple[str, type[Metric], type[MetricResults]]]:
 
 @main.command()
 @click.option("--check", is_flag=True)
-def readme(check: bool):
+def readme(check: bool) -> None:
     """Generate the GitHub readme's ## Implementation section."""
     readme_path = os.path.abspath(os.path.join(HERE, os.pardir, os.pardir, "README.md"))
     new_readme = get_readme()
@@ -711,7 +711,7 @@ def get_readme() -> str:
 
 @main.group()
 @click.pass_context
-def train(ctx):
+def train(ctx: click.Context) -> None:
     """Train a KGE model."""
 
 

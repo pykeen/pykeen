@@ -675,7 +675,7 @@ class UnpackedRemoteDataset(PathDataset):
         create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
         download_kwargs: Mapping[str, Any] | None = None,
-    ):
+    ) -> None:
         """Initialize dataset.
 
         :param training_url: The URL of the training file
@@ -735,7 +735,7 @@ class RemoteDataset(PathDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         timeout=None,
-    ):
+    ) -> None:
         """Initialize dataset.
 
         :param url: The url where to download the dataset from.
@@ -825,7 +825,7 @@ class PackedZipRemoteDataset(LazyDataset):
         cache_root: str | None = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
-    ):
+    ) -> None:
         """Initialize dataset.
 
         :param relative_training_path: The path inside the zip file for the training data

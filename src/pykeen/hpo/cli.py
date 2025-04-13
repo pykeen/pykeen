@@ -27,7 +27,7 @@ def optimize(
     n_trials: int | None,
     timeout: int | None,
     output: str,
-):
+) -> None:
     """Optimize hyper-parameters for a KGE model.
 
     For example, use pykeen optimize TransE Nations --loss MarginRankingLoss
