@@ -356,15 +356,15 @@ class Loss(_Loss):
         """
         Process scores from LCWA training loop.
 
-        :param predictions: shape: (*shape)
+        :param predictions: shape: ``(*shape)``
             The scores.
-        :param labels: shape: (*shape)
+        :param labels: shape: ``(*shape)``
             The labels.
         :param label_smoothing:
             An optional label smoothing parameter.
         :param num_entities:
             The number of entities (required for label-smoothing).
-        :param weights: shape: (*shape)
+        :param weights: shape: ``(*shape)``
             Sample weights.
 
         :return:
