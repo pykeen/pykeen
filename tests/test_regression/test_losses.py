@@ -76,6 +76,8 @@ class SLCWATestCase(LossTestCase):
 
 test_case_resolver = Resolver(classes=[LCWATestCase, SLCWATestCase], base=LossTestCase, suffix="testcase")
 
+# if you want to add a new configuration, you can add everything except the value,
+# and it will automatically get added next time
 
 def get_cases() -> list[tuple[Loss, LossTestCase, float, int]]:
     """Get loss test cases."""
