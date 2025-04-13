@@ -79,7 +79,7 @@ test_case_resolver = Resolver(classes=[LCWATestCase, SLCWATestCase], base=LossTe
 
 # if you want to add a new configuration, you can add everything except the value,
 # and it will automatically get added next time
-def get_cases() -> list[tuple[Loss, LossTestCase, float, int]]:
+def get_cases(*, automatic_calculation: bool = False) -> list[tuple[Loss, LossTestCase, float, int]]:
     """Get loss test cases."""
     records = json.loads(LOSSES_PATH.read_text())
     should_write = False
@@ -98,10 +98,15 @@ def get_cases() -> list[tuple[Loss, LossTestCase, float, int]]:
 
         seed = record.get("seed")
         if seed is None:
+            if not automatic_calculation:
+                raise ValueError("missing seed")
             seed = record["seed"] = 42
+            should_write = True
 
         value = record.get("value")
         if not value:
+            if not automatic_calculation:
+                raise ValueError("missing value")
             value = record["value"] = loss_test_case(instance=loss, generator=torch.manual_seed(seed)).item()
             should_write = True
 
