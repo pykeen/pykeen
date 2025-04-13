@@ -79,13 +79,33 @@ test_case_resolver = Resolver(classes=[LCWATestCase, SLCWATestCase], base=LossTe
 
 def get_cases() -> list[tuple[Loss, LossTestCase, float, int]]:
     """Get loss test cases."""
+    records = json.loads(LOSSES_PATH.read_text())
+    should_write = False
+
     rv = []
-    for data in json.loads(LOSSES_PATH.read_text()):
-        loss = loss_resolver.make(data["loss"])
-        test_case: LossTestCase = test_case_resolver.make(data["type"], data["kwargs"])
-        value = data["value"]
-        seed = data["seed"]
-        rv.append((loss, test_case, value, seed))
+    for record in records:
+        loss = loss_resolver.make(record["loss"])
+
+        # standardize loss key
+        record["loss"] = loss_resolver.normalize_cls(loss_resolver.lookup(loss))
+
+        # standardize type
+        record["type"] = test_case_resolver.normalize_cls(test_case_resolver.lookup(record["type"]))
+
+        loss_test_case: LossTestCase = test_case_resolver.make(record["type"], record["kwargs"])
+        seed = record["seed"]
+
+        value = record.get("value")
+        if not value:
+            value = record["value"] = loss_test_case(instance=loss, generator=torch.manual_seed(seed)).item()
+            should_write = True
+
+        rv.append((loss, loss_test_case, value, seed))
+
+    if should_write:
+        records = sorted(records, key=lambda r: (r["loss"], r["type"], r["seed"]))
+        LOSSES_PATH.write_text(json.dumps(records, indent=2, sort_keys=True))
+
     return rv
 
 
