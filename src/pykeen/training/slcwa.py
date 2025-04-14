@@ -12,7 +12,7 @@ from ..losses import Loss
 from ..models.base import Model
 from ..sampling import NegativeSampler
 from ..triples import CoreTriplesFactory
-from ..triples.instances import BatchedSLCWAInstances, SLCWABatch, SLCWASampleType, SubGraphSLCWAInstances
+from ..triples.instances import BatchedSLCWAInstances, SLCWABatch, SubGraphSLCWAInstances
 from ..typing import FloatTensor, InductiveMode
 
 __all__ = [
@@ -22,7 +22,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
+class SLCWATrainingLoop(TrainingLoop[SLCWABatch, SLCWABatch]):
     """A training loop that uses the stochastic local closed world assumption training approach.
 
     [ruffinelli2020]_ call the sLCWA ``NegSamp`` in their work.
@@ -70,7 +70,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
     @staticmethod
     # docstr-coverage: inherited
     def _get_batch_size(batch: SLCWABatch) -> int:  # noqa: D102
-        return batch[0].shape[0]
+        return batch.positives.shape[0]
 
     @staticmethod
     def _process_batch_static(
@@ -88,7 +88,11 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
             raise AttributeError("Slicing is not possible for sLCWA training loops.")
 
         # split batch
-        positive_batch, negative_batch, positive_filter = batch
+        positive_batch = batch.positives
+        negative_batch = batch.negatives
+        positive_filter = batch.masks
+        pos_weights = batch.pos_weights
+        neg_weights = batch.neg_weights
 
         # send to device
         positive_batch = positive_batch[start:stop].to(device=model.device)
@@ -116,6 +120,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
                 label_smoothing=label_smoothing,
                 batch_filter=positive_filter,
                 num_entities=model._get_entity_len(mode=mode),
+                pos_weights=pos_weights,
+                neg_weights=neg_weights,
             )
             + model.collect_regularization_term()
         )
