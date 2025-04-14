@@ -110,7 +110,7 @@ T = TypeVar("T", bound=torch.Tensor)
 
 
 def _cat_or_none(xs: Iterable[T | None]) -> T | None:
-    ys = _list_or_none(xs)
+    ys: list[T] | None = _list_or_none(xs)
     if ys is None:
         return None
     return torch.cat(ys, dim=0)
