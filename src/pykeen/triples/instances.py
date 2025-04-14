@@ -165,7 +165,7 @@ class SLCWAInstances(Instances[SLCWABatch, SLCWABatch]):
         negatives = torch.cat([s.negatives for s in samples], dim=0)
         masks = _cat_or_none(s.masks for s in samples)
         pos_weights = _cat_or_none(s.pos_weights for s in samples)
-        neg_weights = _cat_or_none(s.pos_weights for s in samples)
+        neg_weights = _cat_or_none(s.neg_weights for s in samples)
         return SLCWABatch(
             positives=positives, negatives=negatives, masks=masks, pos_weights=pos_weights, neg_weights=neg_weights
         )
