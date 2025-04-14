@@ -162,12 +162,13 @@ def iter_cases(record: Record) -> Iterator[Case]:
 def test_regression(instance: Loss, case: LossCalculator, expected: float, seed: int) -> None:
     """Check whether the loss value is the expected one."""
     actual = case(instance=instance, generator=torch.manual_seed(seed))
-    assert torch.isclose(torch.as_tensor(expected), actual, rtol=1e-5)
+    assert torch.isclose(torch.as_tensor(expected), actual, atol=1e-5)
 
 
 @click.command()
 @click.option("--path", type=pathlib.Path, default=LOSSES_PATH)
-def update(path: pathlib.Path) -> None:
+@click.option("--digits", type=int, default=6)
+def update(path: pathlib.Path, digits: int) -> None:
     """Write test cases for all losses."""
     logging.basicConfig(level=logging.INFO)
 
@@ -193,7 +194,7 @@ def update(path: pathlib.Path) -> None:
                 value = case(instance=instance, generator=torch.manual_seed(data["seed"]))
             except (UnsupportedLabelSmoothingError, NoSampleWeightSupportError):
                 continue
-            loss_name_to_value[key] = float(value)
+            loss_name_to_value[key] = round(float(value), digits)
         records.append(data)
     save_records(path, records)
     logger.info(f"Written {len(records):_} records to {path!s}")
