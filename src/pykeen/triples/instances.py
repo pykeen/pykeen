@@ -55,7 +55,7 @@ class SLCWABatch(TypedDict):
     neg_weights: NotRequired[FloatTensor]
 
 
-class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):  # noqa: F821
+class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
     """Base class for training instances."""
 
     @abstractmethod
