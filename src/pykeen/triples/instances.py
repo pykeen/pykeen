@@ -24,8 +24,6 @@ __all__ = [
     "LCWAInstances",
 ]
 
-# TODO: the same
-SampleType = TypeVar("SampleType")
 BatchType = TypeVar("BatchType")
 
 

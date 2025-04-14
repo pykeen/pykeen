@@ -54,7 +54,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-SampleType = TypeVar("SampleType")
 BatchType = TypeVar("BatchType")
 
 
@@ -116,7 +115,7 @@ def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
     }
 
 
-class TrainingLoop(Generic[SampleType, BatchType], ABC):
+class TrainingLoop(Generic[BatchType], ABC):
     """A training loop."""
 
     lr_scheduler: LRScheduler | None

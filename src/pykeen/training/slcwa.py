@@ -22,7 +22,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class SLCWATrainingLoop(TrainingLoop[SLCWABatch, SLCWABatch]):
+class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
     """A training loop that uses the stochastic local closed world assumption training approach.
 
     [ruffinelli2020]_ call the sLCWA ``NegSamp`` in their work.

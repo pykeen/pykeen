@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 name_to_index = {name: index for index, name in enumerate("hrt")}
 
 
-class LCWATrainingLoop(TrainingLoop[LCWABatch, LCWABatch]):
+class LCWATrainingLoop(TrainingLoop[LCWABatch]):
     r"""A training loop that is based upon the local closed world assumption (LCWA).
 
     Under the LCWA, for a given true training triple $(h, r, t) \in \mathcal{T}_{train}$, all triples
@@ -232,7 +232,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch, LCWABatch]):
 
 
 # note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one
-class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedTriples]]):
+class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
     r"""A "symmetric" LCWA scoring heads *and* tails at once.
 
     This objective was introduced by [lacroix2018]_ as
