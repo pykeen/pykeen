@@ -34,6 +34,7 @@ class LCWABatch(NamedTuple):
 
     pairs: LongTensor
     target: FloatTensor
+    weights: FloatTensor | None
 
 
 class SLCWABatch(NamedTuple):
@@ -388,6 +389,9 @@ class LCWAInstances(Instances[LCWABatch, LCWABatch]):
         return self.pairs.shape[0]
 
     def __getitem__(self, item: int) -> LCWABatch:  # noqa: D105
+        # TODO: weights
         return LCWABatch(
-            pairs=self.pairs[item], target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :])
+            pairs=self.pairs[item],
+            target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :]),
+            weights=None,
         )
