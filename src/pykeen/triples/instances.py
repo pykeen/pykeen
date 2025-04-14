@@ -59,7 +59,7 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
     """Base class for training instances."""
 
     @abstractmethod
-    def __len__(self):  # noqa:D401
+    def __len__(self):
         """Get the number of instances."""
         raise NotImplementedError
 
