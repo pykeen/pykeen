@@ -7,15 +7,15 @@
       "weighted": true
     },
     "loss_name_to_value": {
-      "bceaftersigmoid": 0.42624396085739136,
-      "bcewithlogits": 0.42624396085739136,
-      "crossentropy": 3.6023612022399902,
-      "focal": 0.3232635259628296,
-      "infonce": 12.104830741882324,
-      "mse": 0.25884416699409485,
-      "pointwisehinge": 1.3250820636749268,
-      "softplus": 0.8827916383743286,
-      "softpointwisehinge": 1.5701014995574951
+      "bceaftersigmoid": 0.426244,
+      "bcewithlogits": 0.426244,
+      "crossentropy": 3.602361,
+      "focal": 0.323264,
+      "infonce": 12.104831,
+      "mse": 0.258844,
+      "pointwisehinge": 1.325082,
+      "softplus": 0.882792,
+      "softpointwisehinge": 1.570101
     },
     "seed": 42,
     "type": "lcwa"
@@ -50,15 +50,15 @@
       "weighted": true
     },
     "loss_name_to_value": {
-      "bceaftersigmoid": 0.39349305629730225,
-      "bcewithlogits": 0.39349308609962463,
-      "crossentropy": 3.6959476470947266,
-      "focal": 0.29554224014282227,
-      "infonce": 14.1015625,
-      "mse": 0.4405209720134735,
-      "pointwisehinge": 1.1877490282058716,
-      "softplus": 0.825009822845459,
-      "softpointwisehinge": 1.478769302368164
+      "bceaftersigmoid": 0.393493,
+      "bcewithlogits": 0.393493,
+      "crossentropy": 3.695948,
+      "focal": 0.295542,
+      "infonce": 14.101562,
+      "mse": 0.440521,
+      "pointwisehinge": 1.187749,
+      "softplus": 0.82501,
+      "softpointwisehinge": 1.478769
     },
     "seed": 42,
     "type": "lcwa"
@@ -98,13 +98,13 @@
       "weighted": true
     },
     "loss_name_to_value": {
-      "bceaftersigmoid": 0.5718402862548828,
-      "bcewithlogits": 0.5718402862548828,
-      "focal": 0.5117327570915222,
-      "mse": 0.6284819841384888,
-      "pointwisehinge": 1.6680852174758911,
-      "softplus": 1.097743034362793,
-      "softpointwisehinge": 1.8507932424545288
+      "bceaftersigmoid": 0.57184,
+      "bcewithlogits": 0.57184,
+      "focal": 0.511733,
+      "mse": 0.628482,
+      "pointwisehinge": 1.668085,
+      "softplus": 1.097743,
+      "softpointwisehinge": 1.850793
     },
     "seed": 42,
     "type": "slcwa"
@@ -139,13 +139,13 @@
       "weighted": true
     },
     "loss_name_to_value": {
-      "bceaftersigmoid": 0.5344632863998413,
-      "bcewithlogits": 0.5344632863998413,
-      "focal": 0.494472861289978,
-      "mse": 0.6252445578575134,
-      "pointwisehinge": 1.5216203927993774,
-      "softplus": 1.0471677780151367,
-      "softpointwisehinge": 1.7631056308746338
+      "bceaftersigmoid": 0.534463,
+      "bcewithlogits": 0.534463,
+      "focal": 0.494473,
+      "mse": 0.625245,
+      "pointwisehinge": 1.52162,
+      "softplus": 1.047168,
+      "softpointwisehinge": 1.763106
     },
     "seed": 42,
     "type": "slcwa"
