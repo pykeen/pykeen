@@ -456,10 +456,10 @@ class PairwiseLoss(Loss):
     @abstractmethod
     def forward(
         self,
-        positive_scores: FloatTensor,
-        negative_scores: FloatTensor,
-        positive_weight: FloatTensor | None = None,
-        negative_weight: FloatTensor | None = None,
+        pos_scores: FloatTensor,
+        neg_scores: FloatTensor,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
         """
         Calculate the point-wise loss.
@@ -470,13 +470,13 @@ class PairwiseLoss(Loss):
         .. note ::
             If given, the positve/negative weight needs to be broadcastable to the respective scores.
 
-        :param positive_scores:
+        :param pos_scores:
             The positive scores.
-        :param negative_scores:
+        :param neg_scores:
             The negative scores.
-        :param positive_weight:
+        :param pos_weights:
             The sample weights for positives.
-        :param negative_weight:
+        :param neg_weights:
             The sample weights for negatives.
 
         :return:
@@ -643,10 +643,7 @@ class MarginPairwiseLoss(PairwiseLoss):
             # shape: (nnz,)
 
         return self(
-            positive_scores=positive_scores,
-            negative_scores=negative_scores,
-            positive_weight=pos_weights,
-            negative_weight=neg_weights,
+            pos_scores=positive_scores, neg_scores=negative_scores, pos_weights=pos_weights, neg_weights=neg_weights
         )
 
     # docstr-coverage: inherited
@@ -680,21 +677,21 @@ class MarginPairwiseLoss(PairwiseLoss):
         # First filter the predictions for true labels and then repeat them based on the repeat vector
         positive_scores = predictions[labels == 1][repeat_true_labels]
 
-        return self(positive_scores=positive_scores, negative_scores=negative_scores)
+        return self(pos_scores=positive_scores, neg_scores=negative_scores)
 
     # docstr-coverage: inherited
     def forward(
         self,
-        positive_scores: FloatTensor,
-        negative_scores: FloatTensor,
-        positive_weight: FloatTensor | None = None,
-        negative_weight: FloatTensor | None = None,
+        pos_scores: FloatTensor,
+        neg_scores: FloatTensor,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
-        self._raise_on_weights(positive_weight)
-        self._raise_on_weights(negative_weight)
+        self._raise_on_weights(pos_weights)
+        self._raise_on_weights(neg_weights)
         return self._reduction_method(
             self.margin_activation(
-                negative_scores - positive_scores + self.margin,
+                neg_scores - pos_scores + self.margin,
             )
         )
 
