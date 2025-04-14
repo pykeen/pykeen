@@ -147,7 +147,8 @@ def test_regression(instance: Loss, case: LossCalculator, expected: float, seed:
 
 @click.command()
 @click.option("--path", type=pathlib.Path, default=LOSSES_PATH)
-def update(path: pathlib.Path) -> None:
+@click.option("--digits", type=int, default=5)
+def update(path: pathlib.Path, digits: int) -> None:
     """Write test cases for all losses."""
     logging.basicConfig(level=logging.INFO)
 
@@ -173,7 +174,7 @@ def update(path: pathlib.Path) -> None:
                 value = case(instance=instance, generator=torch.manual_seed(data["seed"]))
             except UnsupportedLabelSmoothingError:
                 continue
-            loss_name_to_value[key] = float(value)
+            loss_name_to_value[key] = round(float(value), digits)
         records.append(data)
     save_records(path, records)
     logger.info(f"Written {len(records):_} records to {path!s}")
