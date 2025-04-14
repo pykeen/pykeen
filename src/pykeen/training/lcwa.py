@@ -117,6 +117,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch, LCWABatch]):
         # Split batch components
         batch_pairs = batch.pairs
         batch_labels_full = batch.target
+        batch_weights = batch.weights
 
         # Send batch to device
         batch_pairs = batch_pairs[start:stop].to(device=model.device)
@@ -130,6 +131,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch, LCWABatch]):
                 labels=batch_labels_full,
                 label_smoothing=label_smoothing,
                 num_entities=num_targets,
+                weights=batch_weights,
             )
             + model.collect_regularization_term()
         )
