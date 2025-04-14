@@ -122,6 +122,8 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch, LCWABatch]):
         # Send batch to device
         batch_pairs = batch_pairs[start:stop].to(device=model.device)
         batch_labels_full = batch_labels_full[start:stop].to(device=model.device)
+        if batch_weights is not None:
+            batch_weights = batch_weights[start:stop].to(device=model.device)
 
         predictions = score_method(batch_pairs, slice_size=slice_size, mode=mode)
 
