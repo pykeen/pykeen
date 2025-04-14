@@ -3,6 +3,7 @@
 from collections.abc import MutableMapping
 from typing import Any
 
+from pykeen.training.lcwa import create_lcwa_instances
 from pykeen.triples import LCWAInstances, SLCWAInstances
 from pykeen.triples.instances import BatchedSLCWAInstances, SubGraphSLCWAInstances
 from tests import cases
@@ -15,7 +16,7 @@ class LCWAInstancesTestCase(cases.TrainingInstancesTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        other_instance = self.cls.from_triples(
+        other_instance = create_lcwa_instances(
             mapped_triples=self.factory.mapped_triples,
             num_entities=self.factory.num_entities,
             num_relations=self.factory.num_relations,

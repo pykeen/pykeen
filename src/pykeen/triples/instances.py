@@ -11,8 +11,9 @@ import scipy.sparse
 import torch
 from class_resolver import HintOrType, OptionalKwargs
 from torch.utils import data
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, Self
 
+from .triples_factory import CoreTriplesFactory
 from .utils import compute_compressed_adjacency_list
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..typing import BoolTensor, FloatTensor, LongTensor, MappedTriples
@@ -62,32 +63,6 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):  # noqa: F821
         """Get the number of instances."""
         raise NotImplementedError
 
-    @classmethod
-    @abstractmethod
-    def from_triples(
-        cls,
-        mapped_triples: MappedTriples,
-        *,
-        num_entities: int,
-        num_relations: int,
-        **kwargs,
-    ) -> Instances:
-        """Create instances from mapped triples.
-
-        :param mapped_triples: shape: (num_triples, 3) The ID-based triples.
-        :param num_entities: >0 The number of entities.
-        :param num_relations: >0 The number of relations.
-        :param kwargs: additional keyword-based parameters.
-
-        :returns: The instances.
-
-        # noqa:DAR201
-        # noqa:DAR202
-        # noqa:DAR401
-        """
-        # TODO: get rid of this method
-        raise NotImplementedError
-
 
 class SLCWAInstances(Instances[SLCWABatch]):
     """Training instances for the sLCWA."""
@@ -132,18 +107,6 @@ class SLCWAInstances(Instances[SLCWABatch]):
             result["masks"] = mask[0]
         # TODO: weights
         return result
-
-    # docstr-coverage: inherited
-    @classmethod
-    def from_triples(
-        cls,
-        mapped_triples: MappedTriples,
-        *,
-        num_entities: int,
-        num_relations: int,
-        **kwargs,
-    ) -> Instances:  # noqa: D102
-        return cls(mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations, **kwargs)
 
 
 class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
@@ -311,21 +274,14 @@ class LCWAInstances(Instances[LCWABatch]):
 
     @classmethod
     def from_triples(
-        cls,
-        mapped_triples: MappedTriples,
-        *,
-        num_entities: int,
-        num_relations: int,
-        target: int | None = None,
-        **kwargs,
-    ) -> Instances:
+        cls, mapped_triples: MappedTriples, *, num_entities: int, num_relations: int, target: int | None = None
+    ) -> Self:
         """Create LCWA instances from triples.
 
         :param mapped_triples: shape: (num_triples, 3) The ID-based triples.
         :param num_entities: The number of entities.
         :param num_relations: The number of relations.
         :param target: The column to predict
-        :param kwargs: Keyword arguments (thrown out)
 
         :returns: The instances.
         """
@@ -344,6 +300,16 @@ class LCWAInstances(Instances[LCWABatch]):
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
         return cls(pairs=unique_pairs, compressed=compressed)
+
+    @classmethod
+    def from_triples_factory(cls, tf: CoreTriplesFactory, target: int | None = None) -> Self:
+        """Create LCWA instances for triples factory."""
+        return cls.from_triples(
+            mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
+            num_entities=tf.num_entities,
+            num_relations=tf.num_relations,
+            target=target,
+        )
 
     def __len__(self) -> int:  # noqa: D105
         return self.pairs.shape[0]
