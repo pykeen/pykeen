@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import abc
+from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 from typing import Generic, TypedDict, TypeVar
 
@@ -54,16 +54,16 @@ class SLCWABatch(TypedDict):
     neg_weights: NotRequired[FloatTensor]
 
 
-class Instances(data.Dataset[BatchType], Generic[BatchType], abc.ABC):
+class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):  # noqa: F821
     """Base class for training instances."""
 
-    @abc.abstractmethod
+    @abstractmethod
     def __len__(self):  # noqa:D401
         """Get the number of instances."""
         raise NotImplementedError
 
     @classmethod
-    @abc.abstractmethod
+    @abstractmethod
     def from_triples(
         cls,
         mapped_triples: MappedTriples,
@@ -196,7 +196,7 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         # TODO: weights
         return result
 
-    @abc.abstractmethod
+    @abstractmethod
     def iter_triple_ids(self) -> Iterable[list[int]]:
         """Iterate over batches of IDs of positive triples."""
         raise NotImplementedError
