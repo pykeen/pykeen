@@ -6,7 +6,7 @@ from typing import Any
 import numpy
 
 from pykeen.triples import LCWAInstances, SLCWAInstances
-from pykeen.triples.instances import BatchedSLCWAInstances, LCWABatch, SLCWABatch, SubGraphSLCWAInstances
+from pykeen.triples.instances import BatchedSLCWAInstances, SubGraphSLCWAInstances
 from tests import cases
 
 

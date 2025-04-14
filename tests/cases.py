@@ -81,7 +81,7 @@ from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingCallback, TrainingLoop
 from pykeen.triples import Instances, TriplesFactory, generation
-from pykeen.triples.instances import BaseBatchedSLCWAInstances, SLCWABatch
+from pykeen.triples.instances import BaseBatchedSLCWAInstances
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
