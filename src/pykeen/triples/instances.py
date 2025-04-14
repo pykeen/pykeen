@@ -41,6 +41,8 @@ class LCWABatch(TypedDict):
 class SLCWABatch(TypedDict):
     """A batch for sLCWA training."""
 
+    # TODO: separately storing head/relation/tail corruptions would enable faster scoring (and thus training)
+
     #: the positive triples, shape: (batch_size, 3)
     positives: LongTensor
 
