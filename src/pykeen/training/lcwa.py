@@ -94,12 +94,12 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch, LCWABatch]):
             )
 
         dataset = create_lcwa_instances(triples_factory, target=self.target)
-        return DataLoader(dataset=dataset, collate_fn=dataset.get_collator(), **kwargs)
+        return DataLoader(dataset=dataset, **kwargs)
 
     @staticmethod
     # docstr-coverage: inherited
     def _get_batch_size(batch: LCWABatch) -> int:  # noqa: D102
-        return batch.pairs.shape[0]
+        return batch["pairs"].shape[0]
 
     @staticmethod
     def _process_batch_static(
@@ -115,9 +115,9 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch, LCWABatch]):
         slice_size: int | None = None,
     ) -> FloatTensor:
         # Split batch components
-        batch_pairs = batch.pairs
-        batch_labels_full = batch.target
-        batch_weights = batch.weights
+        batch_pairs = batch["pairs"]
+        batch_labels_full = batch["target"]
+        batch_weights = batch.get("weights")
 
         # Send batch to device
         batch_pairs = batch_pairs[start:stop].to(device=model.device)
