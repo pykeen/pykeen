@@ -354,6 +354,10 @@ class ERModel(
             triples_factory=triples_factory,
             representations=relation_representations,
             representations_kwargs=relation_representations_kwargs,
+            # note: this is the *effective* number of relations, since we also need
+            # representations for the inverse relations
+            max_id=self.effective_num_relations,
+            shapes=self.interaction.relation_shape,
             label="relation",
             skip_checks=skip_checks,
         )
@@ -369,16 +373,23 @@ class ERModel(
         representations: OneOrManyHintOrType[Representation] = None,
         representations_kwargs: OneOrManyOptionalKwargs = None,
         label: Literal["entity", "relation"] = "entity",
+        max_id: int | None = None,
+        shapes: Sequence[str] | None = None,
         **kwargs,
     ) -> Sequence[Representation]:
         """Build representations for the given factory."""
         # note, triples_factory is required instead of just using self.num_entities
         # and self.num_relations for the inductive case when this is different
+        if max_id is None:
+            # TODO maybe require this is explicit always
+            max_id = triples_factory.num_entities if label == "entity" else triples_factory.num_relations
+        if shapes is None:
+            shapes = self.interaction.entity_shape if label == "entity" else self.interaction.relation_shape
         return _prepare_representation_module_list(
             representations=representations,
             representations_kwargs=representations_kwargs,
-            max_id=triples_factory.num_entities if label == "entity" else triples_factory.num_relations,
-            shapes=self.interaction.entity_shape if label == "entity" else self.interaction.relation_shape,
+            max_id=max_id,
+            shapes=shapes,
             label=label,
             **kwargs,
         )
@@ -437,6 +448,7 @@ class ERModel(
         t_indices: LongTensor,
         slice_size: int | None = None,
         slice_dim: int = 0,
+        invert_relation: bool = False,
         *,
         mode: InductiveMode | None,
     ) -> FloatTensor:
@@ -455,6 +467,8 @@ class ERModel(
             The slice size.
         :param slice_dim:
             The dimension along which to slice
+        :param invert_relation:
+            Whether to invert relations
         :param mode:
             The pass mode, which is None in the transductive setting and one of "training",
             "validation", or "testing" in the inductive setting.
@@ -467,28 +481,26 @@ class ERModel(
         """
         if not self.entity_representations or not self.relation_representations:
             raise NotImplementedError("repeat scores not implemented for general case.")
-        h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode)
+        h, r, t = self._get_representations(
+            h=h_indices, r=r_indices, t=t_indices, mode=mode, invert_relation=invert_relation
+        )
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
-    def score_hrt(self, hrt_batch: LongTensor, *, mode: InductiveMode | None = None) -> FloatTensor:
-        """Forward pass.
-
-        This method takes head, relation and tail of each triple and calculates the corresponding score.
-
-        :param hrt_batch: shape: (batch_size, 3), dtype: long
-            The indices of (head, relation, tail) triples.
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return: shape: (batch_size, 1), dtype: float
-            The score for each triple.
-        """
+    # docstr-coverage: inherited
+    def score_hrt(  # noqa: D102
+        self, hrt_batch: LongTensor, invert_relation: bool = False, *, mode: InductiveMode | None = None
+    ) -> FloatTensor:
         # Note: slicing cannot be used here: the indices for score_hrt only have a batch
         # dimension, and slicing along this dimension is already considered by sub-batching.
         # Note: we do not delegate to the general method for performance reasons
         # Note: repetition is not necessary here
-        h, r, t = self._get_representations(h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2], mode=mode)
+        h, r, t = self._get_representations(
+            h=hrt_batch[:, 0],
+            r=hrt_batch[:, 1],
+            t=hrt_batch[:, 2],
+            mode=mode,
+            invert_relation=invert_relation,
+        )
         return self.interaction.score_hrt(h=h, r=r, t=t)
 
     def _check_slicing(self, slice_size: int | None) -> None:
@@ -501,7 +513,7 @@ class ERModel(
             raise ValueError("This model does not support slicing, since it has batch normalization layers.")
 
     # docstr-coverage: inherited
-    def score_t(
+    def score_t(  # noqa: D102
         self,
         hr_batch: LongTensor,
         *,
@@ -539,7 +551,7 @@ class ERModel(
         )
 
     # docstr-coverage: inherited
-    def score_h(
+    def score_h(  # noqa: D102
         self,
         rt_batch: LongTensor,
         *,
@@ -577,7 +589,7 @@ class ERModel(
         )
 
     # docstr-coverage: inherited
-    def score_r(
+    def score_r(  # noqa: D102
         self,
         ht_batch: LongTensor,
         *,
@@ -658,9 +670,13 @@ class ERModel(
         r: LongTensor | None,
         t: LongTensor | None,
         *,
+        invert_relation: bool = False,
         mode: InductiveMode | None,
     ) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
         """Get representations for head, relation and tails."""
+        if invert_relation:
+            # This would be necessary if we had a separate Representation module for inverse relations
+            raise NotImplementedError
         head_representations = tail_representations = self._get_entity_representations_from_inductive_mode(mode=mode)
         head_representations = [head_representations[i] for i in self.interaction.head_indices]
         tail_representations = [tail_representations[i] for i in self.interaction.tail_indices]

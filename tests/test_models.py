@@ -190,10 +190,8 @@ class TestNodePiece(cases.BaseNodePieceTest):
         edges = torch.tensor(
             [[0, 0, 1], [1, 1, 0], [3, 1, 0], [3, 2, 1]], dtype=torch.long
         )  # node ID 2 is missing as a disconnected node
-        factory = CoreTriplesFactory.create(
-            mapped_triples=edges, num_entities=4, num_relations=3, create_inverse_triples=True
-        )
-        pykeen.models.NodePiece(triples_factory=factory, num_tokens=2)
+        factory = CoreTriplesFactory.create(mapped_triples=edges, num_entities=4, num_relations=3)
+        pykeen.models.NodePiece(triples_factory=factory, num_tokens=2, create_inverse_triples=True)
 
 
 class TestNodePieceMLP(cases.BaseNodePieceTest):
@@ -264,7 +262,7 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
         assert len(node_piece.base) == 2
         anchor, relation = node_piece.base
         assert anchor.vocabulary.max_id == self.num_anchors + 1
-        assert relation.vocabulary.max_id == 2 * self.factory.real_num_relations + 1
+        assert relation.vocabulary.max_id == 2 * self.factory.num_relations + 1
 
 
 class TestInductiveNodePiece(cases.InductiveModelTestCase):
@@ -289,8 +287,7 @@ class TestInductiveNodePiece(cases.InductiveModelTestCase):
         factory = CoreTriplesFactory(
             mapped_triples=mapped_triples,
             num_entities=self.factory.num_entities,
-            num_relations=self.factory.real_num_relations,
-            create_inverse_triples=True,
+            num_relations=self.factory.num_relations,
         )
         new_instance = self.instance.create_entity_representation_for_new_triples(factory)
         assert isinstance(new_instance, pykeen.nn.NodePieceRepresentation)

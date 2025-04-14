@@ -50,15 +50,13 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
     #: The name of the dataset to download
     name: ClassVar[str]
 
-    def __init__(self, cache_root: str | None = None, create_inverse_triples: bool = False):
+    def __init__(self, cache_root: str | None = None):
         """Initialize the OGB loader.
 
         :param cache_root: An optional override for where data should be cached.
             If not specified, uses default PyKEEN location with :mod:`pystow`.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         self.cache_root = self._help_cache(cache_root)
-        self._create_inverse_triples = create_inverse_triples
 
     # docstr-coverage: inherited
     def _load(self) -> None:  # noqa: D102
@@ -69,7 +67,6 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
             mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "train")),
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
-            create_inverse_triples=self._create_inverse_triples,
         )
         self._testing = TriplesFactory(
             mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "test")),

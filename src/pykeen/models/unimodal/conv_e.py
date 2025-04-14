@@ -77,11 +77,12 @@ class ConvE(ERModel[FloatTensor, FloatTensor, tuple[FloatTensor, FloatTensor]]):
         apply_batch_normalization: bool = True,
         entity_initializer: Hint[Initializer] = xavier_normal_,
         relation_initializer: Hint[Initializer] = xavier_normal_,
+        create_inverse_triples: bool = True,
         **kwargs,
     ) -> None:
         """Initialize the model."""
         # ConvE should be trained with inverse triples
-        if not triples_factory.create_inverse_triples:
+        if not create_inverse_triples:
             logger.warning(
                 "\nThe ConvE model should be trained with inverse triples.\n"
                 "This can be done by defining the TriplesFactory class with the _create_inverse_triples_ parameter set "
@@ -120,5 +121,6 @@ class ConvE(ERModel[FloatTensor, FloatTensor, tuple[FloatTensor, FloatTensor]]):
                 shape=embedding_dim,
                 initializer=relation_initializer,
             ),
+            create_inverse_triples=create_inverse_triples,
             **kwargs,
         )

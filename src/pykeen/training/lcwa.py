@@ -3,7 +3,6 @@
 import logging
 from collections.abc import Callable
 from math import ceil
-from typing import ClassVar
 
 from torch.nn import functional
 from torch.utils.data import DataLoader, Dataset, TensorDataset
@@ -41,8 +40,6 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     [ruffinelli2020]_ call the LCWA ``KvsAll`` in their work.
     """
 
-    supports_slicing: ClassVar[bool] = True
-
     def __init__(
         self,
         *,
@@ -58,6 +55,8 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
             Additional keyword-based parameters passed to TrainingLoop.__init__
         :raises ValueError:
             If an invalid target column is given
+        :raises NotImplementedError:
+            For inverse triple configurations that aren't yet implemented
         """
         super().__init__(**kwargs)
 
@@ -71,11 +70,20 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         # The type inference is so confusing between the function switching
         # and polymorphism introduced by slicability that these need to be ignored
         if self.target == 0:
-            self.score_method = self.model.score_h  # type: ignore
+            if self.model.use_inverse_triples:
+                self.score_method = self.model.score_h_inverse  # type: ignore
+            else:
+                self.score_method = self.model.score_h  # type: ignore
         elif self.target == 1:
-            self.score_method = self.model.score_r  # type: ignore
+            if self.model.use_inverse_triples:
+                raise NotImplementedError
+            else:
+                self.score_method = self.model.score_r  # type: ignore
         elif self.target == 2:
-            self.score_method = self.model.score_t  # type: ignore
+            if self.model.use_inverse_triples:
+                self.score_method = self.model.score_t_inverse  # type: ignore
+            else:
+                self.score_method = self.model.score_t  # type: ignore
         else:
             raise ValueError(f"Invalid target column: {self.target}. Must be from {{0, 1, 2}}.")
 
@@ -306,7 +314,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedT
 def create_lcwa_instances(tf: CoreTriplesFactory, target: int | None = None) -> Dataset:
     """Create LCWA instances for this factory's triples."""
     return LCWAInstances.from_triples(
-        mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
+        mapped_triples=tf.mapped_triples,
         num_entities=tf.num_entities,
         num_relations=tf.num_relations,
         target=target,

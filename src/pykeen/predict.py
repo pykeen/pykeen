@@ -1008,7 +1008,7 @@ def predict_all(
     """
     # note: the models' predict method takes care of setting the model to evaluation mode
     logger.warning(
-        f"predict is an expensive operation, involving {model.num_entities**2 * model.num_real_relations:,} "
+        f"predict is an expensive operation, involving {model.num_entities**2 * model.num_relations:,} "
         f"score evaluations.",
     )
 
@@ -1021,10 +1021,10 @@ def predict_all(
         logger.warning(
             "Not providing k to `predict_all` entails huge memory requirements for reasonably-sized knowledge graphs.",
         )
-        consumer = AllScoreConsumer(num_entities=num_entities, num_relations=model.num_real_relations)
+        consumer = AllScoreConsumer(num_entities=num_entities, num_relations=model.num_relations)
     else:
         consumer = TopKScoreConsumer(k=k, device=model.device)
-    dataset = AllPredictionDataset(num_entities=num_entities, num_relations=model.num_real_relations, target=target)
+    dataset = AllPredictionDataset(num_entities=num_entities, num_relations=model.num_relations, target=target)
     batch_size = determine_maximum_batch_size(
         batch_size=batch_size, device=model.device, maximum_batch_size=len(dataset)
     )

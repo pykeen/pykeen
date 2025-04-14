@@ -871,13 +871,22 @@ class CompGCNLayer(nn.Module):
         :return: shape: ``(num_entities, output_dim)`` / ``(2 * num_relations, output_dim)``
             The updated entity and relation representations.
         """
+        # FIXME remove this?
         # prepare for inverse relations
         edge_type = 2 * edge_type
         # update entity representations: mean over self-loops / forward edges / backward edges
+
+        # FIXME do these need to get passed the relation inverter? or how should
+        #  this math get updated
+        inverse_edge_index = edge_index.flip(0)
+        inverse_edge_type = edge_type + 1
+
         x_e = (
             self.composition(x_e, self.self_loop) @ self.w_loop
             + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
+            + self.message(
+                x_e=x_e, x_r=x_r, edge_index=inverse_edge_index, edge_type=inverse_edge_type, weight=self.w_bwd
+            )
         ) / 3
 
         if self.bias:
@@ -975,15 +984,14 @@ class CombinedCompGCNRepresentations(nn.Module):
             2. If the dimensions were given as a ist but it does not match the number of layers that were given
         """
         super().__init__()
-        # TODO: Check
-        assert triples_factory.create_inverse_triples
         self.entity_representations = build_representation(
             max_id=triples_factory.num_entities,
             representation=entity_representations,
             representation_kwargs=entity_representations_kwargs,
         )
+        # always create inverse relations
         self.relation_representations = build_representation(
-            max_id=2 * triples_factory.real_num_relations,
+            max_id=2 * triples_factory.num_relations,
             representation=relation_representations,
             representation_kwargs=relation_representations_kwargs,
         )
