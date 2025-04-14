@@ -278,9 +278,16 @@ _REDUCTION_METHODS = dict(
 )
 
 
-def safe_weighted_mean(x: FloatTensor, weight: FloatTensor) -> FloatTensor:
-    """Calculate weighted mean with safety against zero division."""
-    return x.mul(weight).sum().div(weight.sum().clamp_min_(torch.finfo(weight.dtype).eps))
+def weighted_reduction(x: FloatTensor, weight: FloatTensor, reduction: str) -> FloatTensor:
+    """Calculate weighted reduction."""
+    match reduction:
+        case "mean":
+            # note: we clamp here to avoid division by zero
+            return x.mul(weight).sum().div(weight.sum().clamp_min_(torch.finfo(weight.dtype).eps))
+        case "sum":
+            return x.mul(weight).sum()
+        case _:
+            raise ValueError(f"Unsupported weighted {reduction=}")
 
 
 class Loss(_Loss):
@@ -568,7 +575,9 @@ class MSELoss(PointwiseLoss):
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         if weight is None:
             return functional.mse_loss(x, target, reduction=self.reduction)
-        return safe_weighted_mean(functional.mse_loss(x, target, reduction="none"), weight=weight)
+        return weighted_reduction(
+            functional.mse_loss(x, target, reduction="none"), weight=weight, reduction=self.reduction
+        )
 
 
 class MarginPairwiseLoss(PairwiseLoss):
@@ -1070,7 +1079,7 @@ class DeltaPointwiseLoss(PointwiseLoss):
         loss = self.margin_activation(self.margin - target * x)
         if weight is None:
             return self._reduction_method(loss)
-        return safe_weighted_mean(loss, weight=weight)
+        return weighted_reduction(loss, weight=weight, reduction=self.reduction)
 
 
 @parse_docdata
@@ -1291,7 +1300,7 @@ class CrossEntropyLoss(SetwiseLoss):
         if weights is None:
             return loss
         weights = weights.sum(dim=-1)
-        return safe_weighted_mean(loss, weight=weights)
+        return weighted_reduction(loss, weight=weights, reduction=self.reduction)
 
 
 @parse_docdata
@@ -1729,7 +1738,7 @@ class FocalLoss(PointwiseLoss):
 
         if weight is None:
             return self._reduction_method(loss)
-        return safe_weighted_mean(x=loss, weight=weight)
+        return weighted_reduction(x=loss, weight=weight, reduction=self.reduction)
 
 
 #: A resolver for loss modules
