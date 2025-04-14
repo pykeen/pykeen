@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import abc
-import typing
 from collections.abc import Iterable, Iterator
 from typing import Generic, TypedDict, TypeVar
 
@@ -90,32 +89,6 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], abc.ABC):
         """
         # TODO: get rid of this method
         raise NotImplementedError
-
-
-X = TypeVar("X")
-
-
-def _list_or_none(xs: Iterable[X | None]) -> list[X] | None:
-    xs = list(xs)
-    if not xs:
-        return None
-    if xs[0] is None:
-        if any(x is not None for x in xs):
-            raise ValueError(f"{xs=} contains None and not None")
-        return None
-    if any(x is None for x in xs):
-        raise ValueError(f"{xs=} contains None and not None")
-    return typing.cast(list[X], xs)
-
-
-T = TypeVar("T", bound=torch.Tensor)
-
-
-def _cat_or_none(xs: Iterable[T | None]) -> T | None:
-    ys: list[T] | None = _list_or_none(xs)
-    if ys is None:
-        return None
-    return torch.cat(ys, dim=0)
 
 
 class SLCWAInstances(Instances[SLCWABatch]):
