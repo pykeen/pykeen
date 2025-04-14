@@ -175,6 +175,7 @@ def create_slcwa_instances(
     **kwargs: Any,
 ) -> Dataset:
     """Create sLCWA instances for this factory's triples."""
+    # TODO: move into classmethods?
     cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
     if "shuffle" in kwargs:
         if kwargs.pop("shuffle"):
