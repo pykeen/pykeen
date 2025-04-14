@@ -3,7 +3,6 @@
 from collections.abc import MutableMapping
 from typing import Any
 
-from pykeen.training.lcwa import create_lcwa_instances
 from pykeen.triples import LCWAInstances, SLCWAInstances
 from pykeen.triples.instances import BatchedSLCWAInstances, SubGraphSLCWAInstances
 from tests import cases
