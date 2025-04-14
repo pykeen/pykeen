@@ -13,7 +13,7 @@ from .training_loop import TrainingLoop
 from ..losses import Loss
 from ..models import Model
 from ..triples import CoreTriplesFactory, LCWAInstances
-from ..triples.instances import LCWABatchType, LCWASampleType
+from ..triples.instances import LCWABatch
 from ..typing import FloatTensor, InductiveMode, MappedTriples
 
 __all__ = [
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 name_to_index = {name: index for index, name in enumerate("hrt")}
 
 
-class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
+class LCWATrainingLoop(TrainingLoop[LCWABatch, LCWABatch]):
     r"""A training loop that is based upon the local closed world assumption (LCWA).
 
     Under the LCWA, for a given true training triple $(h, r, t) \in \mathcal{T}_{train}$, all triples
@@ -86,7 +86,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     # docstr-coverage: inherited
     def _create_training_data_loader(
         self, triples_factory: CoreTriplesFactory, sampler: str | None, **kwargs
-    ) -> DataLoader[LCWABatchType]:  # noqa: D102
+    ) -> DataLoader[LCWABatch]:  # noqa: D102
         if sampler:
             raise NotImplementedError(
                 f"LCWA training does not support non-default batch sampling. Expected sampler=None, but got "
@@ -98,8 +98,8 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
     @staticmethod
     # docstr-coverage: inherited
-    def _get_batch_size(batch: LCWABatchType) -> int:  # noqa: D102
-        return batch[0].shape[0]
+    def _get_batch_size(batch: LCWABatch) -> int:  # noqa: D102
+        return batch.pairs.shape[0]
 
     @staticmethod
     def _process_batch_static(
@@ -108,14 +108,15 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         loss: Loss,
         num_targets: int | None,
         mode: InductiveMode | None,
-        batch: LCWABatchType,
+        batch: LCWABatch,
         start: int | None,
         stop: int | None,
         label_smoothing: float = 0.0,
         slice_size: int | None = None,
     ) -> FloatTensor:
         # Split batch components
-        batch_pairs, batch_labels_full = batch
+        batch_pairs = batch.pairs
+        batch_labels_full = batch.target
 
         # Send batch to device
         batch_pairs = batch_pairs[start:stop].to(device=model.device)
@@ -136,7 +137,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     # docstr-coverage: inherited
     def _process_batch(
         self,
-        batch: LCWABatchType,
+        batch: LCWABatch,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
