@@ -16,7 +16,6 @@ import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
-from pykeen.training.lcwa import create_lcwa_instances
 from pykeen.training.slcwa import create_slcwa_instances
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory, generation
 from pykeen.triples.splitting import splitter_resolver
@@ -231,7 +230,7 @@ class TestTriplesFactory(unittest.TestCase):
     def test_create_lcwa_instances(self):
         """Test create_lcwa_instances."""
         factory = Nations().training
-        instances = create_lcwa_instances(factory)
+        instances = LCWAInstances.from_triples_factory(factory)
         assert isinstance(instances, LCWAInstances)
 
         # check compressed triples

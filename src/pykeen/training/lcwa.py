@@ -6,7 +6,7 @@ from math import ceil
 from typing import ClassVar
 
 from torch.nn import functional
-from torch.utils.data import DataLoader, Dataset, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset
 from torch_max_mem.api import is_oom_error
 
 from .training_loop import TrainingLoop
@@ -93,7 +93,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
                 f"sampler='{sampler}'.",
             )
 
-        dataset = create_lcwa_instances(triples_factory, target=self.target)
+        dataset = LCWAInstances.from_triples_factory(triples_factory, target=self.target)
         return DataLoader(dataset=dataset, **kwargs)
 
     @staticmethod
@@ -306,13 +306,3 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
     def _slice_size_search(self, **kwargs) -> int:
         # TODO?
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
-
-
-def create_lcwa_instances(tf: CoreTriplesFactory, target: int | None = None) -> Dataset:
-    """Create LCWA instances for this factory's triples."""
-    return LCWAInstances.from_triples(
-        mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
-        num_entities=tf.num_entities,
-        num_relations=tf.num_relations,
-        target=target,
-    )

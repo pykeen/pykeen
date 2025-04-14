@@ -39,8 +39,8 @@ from pykeen.models.cli import options
 from pykeen.optimizers import optimizer_resolver
 from pykeen.sampling import NegativeSampler
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
-from pykeen.training.lcwa import create_lcwa_instances
 from pykeen.training.slcwa import create_slcwa_instances
+from pykeen.triples.instances import LCWAInstances
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.typing import FloatTensor, InductiveMode, LongTensor, OneOrSequence
 
@@ -243,7 +243,7 @@ class LCWALitModule(LitModule):
     # docstr-coverage: inherited
     def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:  # noqa: D102
         return torch.utils.data.DataLoader(
-            dataset=create_lcwa_instances(triples_factory),
+            dataset=LCWAInstances.from_triples_factory(triples_factory),
             batch_size=self.batch_size,
             shuffle=shuffle,
         )
