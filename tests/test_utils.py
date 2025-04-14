@@ -1,5 +1,6 @@
 """Tests for the :mod:`pykeen.utils` module."""
 
+import contextlib
 import functools
 import itertools
 import operator
@@ -8,6 +9,7 @@ import string
 import timeit
 import unittest
 from collections.abc import Iterable
+from typing import Any
 
 import numpy
 import pytest
@@ -27,6 +29,7 @@ from pykeen.utils import (
     get_until_first_blank,
     iter_weisfeiler_lehman,
     logcumsumexp,
+    merge_kwargs,
     project_entity,
     set_random_seed,
     split_complex,
@@ -383,3 +386,27 @@ class TestUtils(unittest.TestCase):
         sim_ref = reference[None, :] == reference[:, None]
         sim_approx = approx[None, :] == approx[:, None]
         assert torch.allclose(sim_ref, sim_approx)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "extra", "expected", "error"),
+    [
+        ({"max_id": 10}, {}, {"max_id": 10}, None),
+        ({}, {"max_id": 10}, {"max_id": 10}, None),
+        ({"max_id": 10}, {"max_id": None}, {"max_id": 10}, None),
+        ({"max_id": 10}, {"max_id": 7}, ..., ValueError),
+        (
+            [{"shape": (3,)}, {"shape": (4,)}],
+            {"max_id": 7},
+            [{"shape": (3,), "max_id": 7}, {"shape": (4,), "max_id": 7}],
+            None,
+        ),
+    ],
+)
+def test_merge_kwargs(
+    kwargs: dict[str, Any], extra: dict[str, Any], expected: dict[str, Any], error: type[BaseException] | None
+) -> None:
+    """Test merging of parameters."""
+    with pytest.raises(error) if error else contextlib.nullcontext():
+        merged_kwargs = merge_kwargs(kwargs=kwargs, **extra)
+        assert merged_kwargs == expected
