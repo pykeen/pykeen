@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import typing
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Iterator
 from typing import Generic, NamedTuple, TypeVar
@@ -26,9 +27,13 @@ __all__ = [
 # TODO: the same
 SampleType = TypeVar("SampleType")
 BatchType = TypeVar("BatchType")
-LCWASampleType = tuple[MappedTriples, FloatTensor]
-LCWABatchType = tuple[MappedTriples, FloatTensor]
-SLCWASampleType = tuple[MappedTriples, MappedTriples, BoolTensor | None]
+
+
+class LCWABatch(NamedTuple):
+    """A batch for LCWA training."""
+
+    pairs: LongTensor
+    target: FloatTensor
 
 
 class SLCWABatch(NamedTuple):
@@ -42,6 +47,10 @@ class SLCWABatch(NamedTuple):
 
     #: filtering masks for negative triples, shape: (batch_size, num_negatives_per_positive)
     masks: BoolTensor | None
+
+    #: sample weights
+    pos_weights: FloatTensor | None
+    neg_weights: FloatTensor | None
 
 
 class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
@@ -80,7 +89,33 @@ class Instances(data.Dataset[BatchType], Generic[SampleType, BatchType], ABC):
         raise NotImplementedError
 
 
-class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
+X = TypeVar("X")
+
+
+def _list_or_none(xs: Iterable[X | None]) -> list[X] | None:
+    xs = list(xs)
+    if not xs:
+        return None
+    if xs[0] is None:
+        if any(x is not None for x in xs):
+            raise ValueError(f"{xs=} contains None and not None")
+        return None
+    if any(x is None for x in xs):
+        raise ValueError(f"{xs=} contains None and not None")
+    return typing.cast(list[X], xs)
+
+
+T = TypeVar("T", bound=torch.Tensor)
+
+
+def _cat_or_none(xs: Iterable[T | None]) -> T | None:
+    ys = _list_or_none(xs)
+    if ys is None:
+        return None
+    return torch.cat(ys, dim=0)
+
+
+class SLCWAInstances(Instances[SLCWABatch, SLCWABatch]):
     """Training instances for the sLCWA."""
 
     def __init__(
@@ -112,31 +147,30 @@ class SLCWAInstances(Instances[SLCWASampleType, SLCWABatch]):
     def __len__(self) -> int:  # noqa: D105
         return self.mapped_triples.shape[0]
 
-    def __getitem__(self, item: int) -> SLCWASampleType:  # noqa: D105
+    def __getitem__(self, item: int) -> SLCWABatch:  # noqa: D105
         positive = self.mapped_triples[item].unsqueeze(dim=0)
         # TODO: some negative samplers require batches
         negative, mask = self.sampler.sample(positive_batch=positive)
         # shape: (1, 3), (1, k, 3), (1, k, 3)?
-        return positive, negative, mask
+        # TODO: weights
+        return SLCWABatch(positives=positive, negatives=negative, masks=mask, pos_weights=None, neg_weights=None)
 
     @staticmethod
-    def collate(samples: Iterable[SLCWASampleType]) -> SLCWABatch:
+    def collate(samples: Iterable[SLCWABatch]) -> SLCWABatch:
         """Collate samples."""
+        samples = list(samples)
         # each shape: (1, 3), (1, k, 3), (1, k, 3)?
-        masks: LongTensor | None
-        positives, negatives, masks = zip(*samples, strict=False)
-        positives = torch.cat(positives, dim=0)
-        negatives = torch.cat(negatives, dim=0)
-        mask_batch: BoolTensor | None
-        if masks[0] is None:
-            assert all(m is None for m in masks)
-            mask_batch = None
-        else:
-            mask_batch = torch.cat(masks, dim=0)
-        return SLCWABatch(positives, negatives, mask_batch)
+        positives = torch.cat([s.positives for s in samples], dim=0)
+        negatives = torch.cat([s.negatives for s in samples], dim=0)
+        masks = _cat_or_none(s.masks for s in samples)
+        pos_weights = _cat_or_none(s.pos_weights for s in samples)
+        neg_weights = _cat_or_none(s.pos_weights for s in samples)
+        return SLCWABatch(
+            positives=positives, negatives=negatives, masks=masks, pos_weights=pos_weights, neg_weights=neg_weights
+        )
 
     # docstr-coverage: inherited
-    def get_collator(self) -> Callable[[list[SLCWASampleType]], SLCWABatch] | None:  # noqa: D102
+    def get_collator(self) -> Callable[[list[SLCWABatch]], SLCWABatch] | None:  # noqa: D102
         return self.collate
 
     # docstr-coverage: inherited
@@ -196,7 +230,10 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         """Get a batch from the given list of positive triple IDs."""
         positive_batch = self.mapped_triples[item]
         negative_batch, masks = self.negative_sampler.sample(positive_batch=positive_batch)
-        return SLCWABatch(positives=positive_batch, negatives=negative_batch, masks=masks)
+        # TODO: weights
+        return SLCWABatch(
+            positives=positive_batch, negatives=negative_batch, masks=masks, pos_weights=None, neg_weights=None
+        )
 
     @abstractmethod
     def iter_triple_ids(self) -> Iterable[list[int]]:
@@ -299,7 +336,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         yield from (self.subgraph_sample() for _ in split_workload(len(self)))
 
 
-class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
+class LCWAInstances(Instances[LCWABatch, LCWABatch]):
     """Triples and mappings to their indices for LCWA."""
 
     def __init__(self, *, pairs: np.ndarray, compressed: scipy.sparse.csr_matrix):
@@ -350,5 +387,7 @@ class LCWAInstances(Instances[LCWASampleType, LCWABatchType]):
     def __len__(self) -> int:  # noqa: D105
         return self.pairs.shape[0]
 
-    def __getitem__(self, item: int) -> LCWABatchType:  # noqa: D105
-        return self.pairs[item], np.asarray(self.compressed[item, :].todense())[0, :]
+    def __getitem__(self, item: int) -> LCWABatch:  # noqa: D105
+        return LCWABatch(
+            pairs=self.pairs[item], target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :])
+        )
