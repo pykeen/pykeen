@@ -6,6 +6,17 @@
       "num_entities": 32,
       "weighted": true
     },
+    "loss_name_to_value": {
+      "bceaftersigmoid": 0.42624396085739136,
+      "bcewithlogits": 0.42624396085739136,
+      "crossentropy": 3.6023612022399902,
+      "focal": 0.3232635259628296,
+      "infonce": 12.104830741882324,
+      "mse": 0.25884416699409485,
+      "pointwisehinge": 1.3250820636749268,
+      "softplus": 0.8827916383743286,
+      "softpointwisehinge": 1.5701014995574951
+    },
     "seed": 42,
     "type": "lcwa"
   },
@@ -17,7 +28,7 @@
     },
     "loss_name_to_value": {
       "adversarialbcewithlogits": 0.9116498827934265,
-      "bceaftersigmoid": 0.9340474009513855,
+      "bceaftersigmoid": 0.934047520160675,
       "bcewithlogits": 0.9340474009513855,
       "crossentropy": 3.6023612022399902,
       "doublemargin": 0.29432913661003113,
@@ -37,6 +48,17 @@
       "label_smoothing": null,
       "num_entities": 32,
       "weighted": true
+    },
+    "loss_name_to_value": {
+      "bceaftersigmoid": 0.39349305629730225,
+      "bcewithlogits": 0.39349308609962463,
+      "crossentropy": 3.6959476470947266,
+      "focal": 0.29554224014282227,
+      "infonce": 14.1015625,
+      "mse": 0.4405209720134735,
+      "pointwisehinge": 1.1877490282058716,
+      "softplus": 0.825009822845459,
+      "softpointwisehinge": 1.478769302368164
     },
     "seed": 42,
     "type": "lcwa"
@@ -61,7 +83,7 @@
       "pairwiselogistic": 0.8695288896560669,
       "pointwisehinge": 1.2739492654800415,
       "softmarginranking": 1.551514983177185,
-      "softplus": 0.8754832744598389,
+      "softplus": 0.8754832148551941,
       "softpointwisehinge": 1.5467212200164795
     },
     "seed": 42,
@@ -74,6 +96,15 @@
       "num_entities": 32,
       "num_negatives": 3,
       "weighted": true
+    },
+    "loss_name_to_value": {
+      "bceaftersigmoid": 0.5718402862548828,
+      "bcewithlogits": 0.5718402862548828,
+      "focal": 0.5117327570915222,
+      "mse": 0.6284819841384888,
+      "pointwisehinge": 1.6680852174758911,
+      "softplus": 1.097743034362793,
+      "softpointwisehinge": 1.8507932424545288
     },
     "seed": 42,
     "type": "slcwa"
@@ -106,6 +137,15 @@
       "num_entities": 32,
       "num_negatives": 3,
       "weighted": true
+    },
+    "loss_name_to_value": {
+      "bceaftersigmoid": 0.5344632863998413,
+      "bcewithlogits": 0.5344632863998413,
+      "focal": 0.494472861289978,
+      "mse": 0.6252445578575134,
+      "pointwisehinge": 1.5216203927993774,
+      "softplus": 1.0471677780151367,
+      "softpointwisehinge": 1.7631056308746338
     },
     "seed": 42,
     "type": "slcwa"
