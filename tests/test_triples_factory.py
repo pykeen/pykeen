@@ -245,9 +245,12 @@ class TestTriplesFactory(unittest.TestCase):
 
         # check data loader
         for batch in torch.utils.data.DataLoader(instances, batch_size=2):
-            assert len(batch) == 2
-            assert all(torch.is_tensor(x) for x in batch)
-            x, y = batch
+            self.assertIsInstance(batch, dict)  # i.e., a  LCWABatch
+            self.assertEqual({"pairs", "target"}, batch.keys())
+            self.assertTrue(torch.is_tensor(batch["pairs"]))
+            self.assertTrue(torch.is_tensor(batch["target"]))
+
+            x, y = batch["pairs"], batch["target"]
             batch_size = x.shape[0]
             assert x.shape == (batch_size, 2)
             assert x.dtype == torch.long
