@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 from typing import Generic, TypedDict, TypeVar
@@ -177,6 +178,22 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         if remainder and not self.drop_last:
             num_batches += 1
         return num_batches
+
+    @classmethod
+    def from_triples_factory(cls, tf: CoreTriplesFactory, **kwargs) -> Self:
+        """Create sLCWA instances for triples factory."""
+        # TODO: can we better type `kwargs`?
+        if "shuffle" in kwargs:
+            if kwargs.pop("shuffle"):
+                warnings.warn("Training instances are always shuffled.", DeprecationWarning, stacklevel=2)
+            else:
+                raise AssertionError("If shuffle is provided, it must be True.")
+        return cls(
+            mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
+            num_entities=tf.num_entities,
+            num_relations=tf.num_relations,
+            **kwargs,
+        )
 
 
 class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):

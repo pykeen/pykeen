@@ -1,11 +1,9 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-import warnings
-from typing import Any
 
 from class_resolver import HintOrType, OptionalKwargs
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 
 from .training_loop import TrainingLoop
 from ..losses import Loss
@@ -51,8 +49,9 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
         self, triples_factory: CoreTriplesFactory, sampler: str | None, batch_size: int, drop_last: bool, **kwargs
     ) -> DataLoader[SLCWABatch]:  # noqa: D102
         assert "batch_sampler" not in kwargs
+        cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
         return DataLoader(
-            dataset=create_slcwa_instances(
+            dataset=cls.from_triples_factory(
                 triples_factory,
                 batch_size=batch_size,
                 shuffle=kwargs.pop("shuffle", True),
@@ -166,25 +165,3 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
             report = "This model doesn't support sub-batching and slicing is not possible for sLCWA"
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
-
-
-def create_slcwa_instances(
-    triples_factory: CoreTriplesFactory,
-    *,
-    sampler: str | None = None,
-    **kwargs: Any,
-) -> Dataset:
-    """Create sLCWA instances for this factory's triples."""
-    # TODO: move into classmethods?
-    cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
-    if "shuffle" in kwargs:
-        if kwargs.pop("shuffle"):
-            warnings.warn("Training instances are always shuffled.", DeprecationWarning, stacklevel=2)
-        else:
-            raise AssertionError("If shuffle is provided, it must be True.")
-    return cls(
-        mapped_triples=triples_factory._add_inverse_triples_if_necessary(mapped_triples=triples_factory.mapped_triples),
-        num_entities=triples_factory.num_entities,
-        num_relations=triples_factory.num_relations,
-        **kwargs,
-    )

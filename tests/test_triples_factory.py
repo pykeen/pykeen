@@ -16,8 +16,8 @@ import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
-from pykeen.training.slcwa import create_slcwa_instances
 from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory, generation
+from pykeen.triples.instances import BatchedSLCWAInstances
 from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import (
     INVERSE_SUFFIX,
@@ -90,7 +90,7 @@ class TestTriplesFactory(unittest.TestCase):
         ]
         t = np.array(t, dtype=str)
         factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
-        instances = create_slcwa_instances(factory)
+        instances = BatchedSLCWAInstances.from_triples_factory(factory)
         assert len(instances) == 4
 
     def test_automatic_incomplete_inverse_detection(self):
