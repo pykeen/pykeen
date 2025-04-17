@@ -55,8 +55,14 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
         drop_last: bool,
         **kwargs,
     ) -> DataLoader[SLCWABatch]:  # noqa: D102
-        assert "batch_sampler" not in kwargs
-        cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
+        cls: type[BatchedSLCWAInstances] | type[SubGraphSLCWAInstances]
+        match sampler:
+            case None:
+                cls = BatchedSLCWAInstances
+            case "schlichtkrull":
+                cls = SubGraphSLCWAInstances
+            case _:
+                raise ValueError(f"Invalid {sampler=}")
         return DataLoader(
             dataset=cls.from_triples_factory(
                 triples_factory,
