@@ -1,0 +1,180 @@
+[
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": 0.5,
+      "num_entities": 32,
+      "weighted": true
+    },
+    "loss_name_to_value": {
+      "bceaftersigmoid": 0.426244,
+      "bcewithlogits": 0.426244,
+      "crossentropy": 3.602361,
+      "focal": 0.323264,
+      "infonce": 12.104831,
+      "mse": 0.258844,
+      "pointwisehinge": 1.325082,
+      "softplus": 0.882792,
+      "softpointwisehinge": 1.570101
+    },
+    "seed": 42,
+    "type": "lcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": 0.5,
+      "num_entities": 32
+    },
+    "loss_name_to_value": {
+      "adversarialbcewithlogits": 0.91165,
+      "bceaftersigmoid": 0.934048,
+      "bcewithlogits": 0.934047,
+      "crossentropy": 3.602361,
+      "doublemargin": 0.294329,
+      "focal": 0.357763,
+      "infonce": 12.104831,
+      "mse": 0.323224,
+      "pointwisehinge": 1.391078,
+      "softplus": 0.92366,
+      "softpointwisehinge": 1.623816
+    },
+    "seed": 42,
+    "type": "lcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": null,
+      "num_entities": 32,
+      "weighted": true
+    },
+    "loss_name_to_value": {
+      "bceaftersigmoid": 0.393493,
+      "bcewithlogits": 0.393493,
+      "crossentropy": 3.695948,
+      "focal": 0.295542,
+      "infonce": 14.101562,
+      "mse": 0.440521,
+      "pointwisehinge": 1.187749,
+      "softplus": 0.82501,
+      "softpointwisehinge": 1.478769
+    },
+    "seed": 42,
+    "type": "lcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": null,
+      "num_entities": 32
+    },
+    "loss_name_to_value": {
+      "adversarialbcewithlogits": 0.830638,
+      "bceaftersigmoid": 0.875483,
+      "bcewithlogits": 0.875483,
+      "crossentropy": 3.695948,
+      "doublemargin": 0.324475,
+      "focal": 0.335819,
+      "infonce": 14.101562,
+      "marginranking": 1.299477,
+      "mse": 0.487183,
+      "nssa": 4.857467,
+      "pairwiselogistic": 0.869529,
+      "pointwisehinge": 1.273949,
+      "softmarginranking": 1.551515,
+      "softplus": 0.875483,
+      "softpointwisehinge": 1.546721
+    },
+    "seed": 42,
+    "type": "lcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": 0.5,
+      "num_entities": 32,
+      "num_negatives": 3,
+      "weighted": true
+    },
+    "loss_name_to_value": {
+      "bceaftersigmoid": 0.57184,
+      "bcewithlogits": 0.57184,
+      "focal": 0.511733,
+      "mse": 0.628482,
+      "pointwisehinge": 1.668085,
+      "softplus": 1.097743,
+      "softpointwisehinge": 1.850793
+    },
+    "seed": 42,
+    "type": "slcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": 0.5,
+      "num_entities": 32,
+      "num_negatives": 3
+    },
+    "loss_name_to_value": {
+      "bceaftersigmoid": 1.047338,
+      "bcewithlogits": 1.047338,
+      "crossentropy": 1.362495,
+      "focal": 0.444728,
+      "infonce": 3.206866,
+      "mse": 0.494546,
+      "pointwisehinge": 1.54609,
+      "softplus": 1.020218,
+      "softpointwisehinge": 1.750243
+    },
+    "seed": 42,
+    "type": "slcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": null,
+      "num_entities": 32,
+      "num_negatives": 3,
+      "weighted": true
+    },
+    "loss_name_to_value": {
+      "bceaftersigmoid": 0.534463,
+      "bcewithlogits": 0.534463,
+      "focal": 0.494473,
+      "mse": 0.625245,
+      "pointwisehinge": 1.52162,
+      "softplus": 1.047168,
+      "softpointwisehinge": 1.763106
+    },
+    "seed": 42,
+    "type": "slcwa"
+  },
+  {
+    "kwargs": {
+      "batch_size": 1,
+      "label_smoothing": null,
+      "num_entities": 32,
+      "num_negatives": 3
+    },
+    "loss_name_to_value": {
+      "adversarialbcewithlogits": 0.76646,
+      "bceaftersigmoid": 0.946156,
+      "bcewithlogits": 0.946156,
+      "crossentropy": 1.313791,
+      "doublemargin": 0.435061,
+      "focal": 0.414505,
+      "infonce": 2.382779,
+      "marginranking": 0.870122,
+      "mse": 0.479486,
+      "nssa": 4.906991,
+      "pairwiselogistic": 0.638786,
+      "pointwisehinge": 1.343726,
+      "softmarginranking": 1.2273,
+      "softplus": 0.946156,
+      "softpointwisehinge": 1.626016
+    },
+    "seed": 42,
+    "type": "slcwa"
+  }
+]

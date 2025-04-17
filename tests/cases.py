@@ -20,6 +20,7 @@ from typing import (
 from unittest.case import SkipTest
 from unittest.mock import Mock, patch
 
+import more_itertools
 import numpy
 import numpy.random
 import pandas
@@ -51,7 +52,15 @@ from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults, evaluator_resolver
-from pykeen.losses import Loss, PairwiseLoss, PointwiseLoss, SetwiseLoss, UnsupportedLabelSmoothingError, loss_resolver
+from pykeen.losses import (
+    Loss,
+    NoSampleWeightSupportError,
+    PairwiseLoss,
+    PointwiseLoss,
+    SetwiseLoss,
+    UnsupportedLabelSmoothingError,
+    loss_resolver,
+)
 from pykeen.metrics import rank_based_metric_resolver
 from pykeen.metrics.ranking import (
     DerivedRankBasedMetric,
@@ -72,7 +81,7 @@ from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingCallback, TrainingLoop
 from pykeen.triples import Instances, TriplesFactory, generation
-from pykeen.triples.instances import BaseBatchedSLCWAInstances, SLCWABatch
+from pykeen.triples.instances import BaseBatchedSLCWAInstances
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
@@ -84,6 +93,7 @@ from pykeen.typing import (
     RANK_REALISTIC,
     SIDE_BOTH,
     TRAINING,
+    FloatTensor,
     HeadRepresentation,
     InductiveMode,
     Initializer,
@@ -263,7 +273,7 @@ class LossTestCase(GenericTestCase[Loss]):
     #: The number of entities LCWA training loop / label smoothing.
     num_entities: ClassVar[int] = 7
 
-    def _check_loss_value(self, loss_value: torch.FloatTensor) -> None:
+    def _check_loss_value(self, loss_value: FloatTensor) -> None:
         """Check loss value dimensionality, and ability for backward."""
         # test reduction
         self.assertEqual(0, loss_value.ndim)
@@ -279,7 +289,9 @@ class LossTestCase(GenericTestCase[Loss]):
         positive_scores: torch.FloatTensor,
         negative_scores: torch.FloatTensor,
         batch_filter: torch.BoolTensor | None = None,
-    ):
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
+    ) -> None:
         """Help test processing scores from SLCWA training loop."""
         loss_value = self.instance.process_slcwa_scores(
             positive_scores=positive_scores,
@@ -287,19 +299,24 @@ class LossTestCase(GenericTestCase[Loss]):
             label_smoothing=None,
             batch_filter=batch_filter,
             num_entities=self.num_entities,
+            pos_weights=pos_weights,
+            neg_weights=neg_weights,
         )
         self._check_loss_value(loss_value=loss_value)
 
-    def test_process_slcwa_scores(self):
-        """Test processing scores from SLCWA training loop."""
+    def _make_slcwa(self) -> tuple[FloatTensor, FloatTensor]:
         positive_scores = torch.rand(self.batch_size, 1, requires_grad=True)
         negative_scores = torch.rand(self.batch_size, self.num_neg_per_pos, requires_grad=True)
+        return positive_scores, negative_scores
+
+    def test_process_slcwa_scores(self):
+        """Test processing scores from SLCWA training loop."""
+        positive_scores, negative_scores = self._make_slcwa()
         self.help_test_process_slcwa_scores(positive_scores=positive_scores, negative_scores=negative_scores)
 
     def test_process_slcwa_scores_filtered(self):
         """Test processing scores from SLCWA training loop with filtering."""
-        positive_scores = torch.rand(self.batch_size, 1, requires_grad=True)
-        negative_scores = torch.rand(self.batch_size, self.num_neg_per_pos, requires_grad=True)
+        positive_scores, negative_scores = self._make_slcwa()
         batch_filter = torch.rand(self.batch_size, self.num_neg_per_pos) < 0.5
         self.help_test_process_slcwa_scores(
             positive_scores=positive_scores,
@@ -307,26 +324,62 @@ class LossTestCase(GenericTestCase[Loss]):
             batch_filter=batch_filter,
         )
 
+    def test_process_slcwa_scores_weights(self):
+        """Test processing scores from SLCWA training loop with weights."""
+        positive_scores, negative_scores = self._make_slcwa()
+        pos_weights = torch.rand_like(positive_scores)
+        neg_weights = torch.rand_like(negative_scores)
+        try:
+            self.help_test_process_slcwa_scores(
+                positive_scores=positive_scores,
+                negative_scores=negative_scores,
+                pos_weights=pos_weights,
+                neg_weights=neg_weights,
+            )
+        except NoSampleWeightSupportError as e:
+            raise SkipTest(f"{self.cls} does not support sample weights") from e
+
+    def _make_lcwa(self) -> tuple[FloatTensor, FloatTensor]:
+        predictions = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
+        labels = (torch.rand(self.batch_size, self.num_entities, requires_grad=True) > 0.8).float()
+        return predictions, labels
+
     def test_process_lcwa_scores(self):
         """Test processing scores from LCWA training loop without smoothing."""
-        self.help_test_process_lcwa_scores(label_smoothing=None)
+        predictions, labels = self._make_lcwa()
+        self.help_test_process_lcwa_scores(predictions=predictions, labels=labels)
 
     def test_process_lcwa_scores_smooth(self):
         """Test processing scores from LCWA training loop with smoothing."""
+        predictions, labels = self._make_lcwa()
         try:
-            self.help_test_process_lcwa_scores(label_smoothing=0.01)
+            self.help_test_process_lcwa_scores(predictions=predictions, labels=labels, label_smoothing=0.01)
         except UnsupportedLabelSmoothingError as error:
             raise SkipTest from error
 
-    def help_test_process_lcwa_scores(self, label_smoothing):
+    def test_process_lcwa_scores_weights(self):
+        """Test processing scores from LCWA training loop with weights."""
+        predictions, labels = self._make_lcwa()
+        weights = torch.rand_like(predictions)
+        try:
+            self.help_test_process_lcwa_scores(predictions=predictions, labels=labels, weights=weights)
+        except NoSampleWeightSupportError as e:
+            raise SkipTest(f"{self.cls} does not support sample weights") from e
+
+    def help_test_process_lcwa_scores(
+        self,
+        predictions: FloatTensor,
+        labels: FloatTensor,
+        label_smoothing: float | None = None,
+        weights: FloatTensor | None = None,
+    ) -> None:
         """Help test processing scores from LCWA training loop."""
-        predictions = torch.rand(self.batch_size, self.num_entities, requires_grad=True)
-        labels = (torch.rand(self.batch_size, self.num_entities, requires_grad=True) > 0.8).float()
         loss_value = self.instance.process_lcwa_scores(
             predictions=predictions,
             labels=labels,
             label_smoothing=label_smoothing,
             num_entities=self.num_entities,
+            weights=weights,
         )
         self._check_loss_value(loss_value=loss_value)
 
@@ -2308,26 +2361,11 @@ class TrainingInstancesTestCase(unittest_templates.GenericTestCase[Instances]):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         self.factory = Nations().training
-        return {}
-
-    @abstractmethod
-    def _get_expected_length(self) -> int:
-        raise NotImplementedError
-
-    def test_getitem(self):
-        """Test __getitem__."""
-        self.instance: Instances
-        assert self.instance[0] is not None
-
-    def test_len(self):
-        """Test __len__."""
-        self.assertEqual(len(self.instance), self._get_expected_length())
+        return kwargs
 
     def test_data_loader(self):
         """Test usage with data loader."""
-        for batch in torch.utils.data.DataLoader(
-            dataset=self.instance, batch_size=2, shuffle=True, collate_fn=self.instance.get_collator()
-        ):
+        for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=2, shuffle=True):
             assert batch is not None
 
 
@@ -2351,20 +2389,19 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
     def test_data_loader(self):
         """Test data loader."""
         for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None):
-            assert isinstance(batch, SLCWABatch)
-            assert batch.positives.shape == (self.batch_size, 3)
-            assert batch.negatives.shape == (self.batch_size, self.num_negatives_per_positive, 3)
-            assert batch.masks is None
+            assert batch["positives"].shape == (self.batch_size, 3)
+            assert batch["negatives"].shape == (self.batch_size, self.num_negatives_per_positive, 3)
+            assert "masks" not in batch
 
     def test_length(self):
         """Test length."""
-        assert len(self.instance) == len(list(iter(self.instance)))
+        assert len(self.instance) == more_itertools.ilen(self.instance)
 
     def test_data_loader_multiprocessing(self):
         """Test data loader with multiple workers."""
         self.assertEqual(
             sum(
-                batch.positives.shape[0]
+                batch["positives"].shape[0]
                 for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
             ),
             self.factory.num_triples,

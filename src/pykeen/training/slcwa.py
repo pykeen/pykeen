@@ -1,18 +1,17 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-import warnings
-from typing import Any
+from typing import Literal
 
 from class_resolver import HintOrType, OptionalKwargs
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 
 from .training_loop import TrainingLoop
 from ..losses import Loss
 from ..models.base import Model
 from ..sampling import NegativeSampler
 from ..triples import CoreTriplesFactory
-from ..triples.instances import BatchedSLCWAInstances, SLCWABatch, SLCWASampleType, SubGraphSLCWAInstances
+from ..triples.instances import BatchedSLCWAInstances, SLCWABatch, SubGraphSLCWAInstances
 from ..typing import FloatTensor, InductiveMode
 
 __all__ = [
@@ -22,7 +21,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
+class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
     """A training loop that uses the stochastic local closed world assumption training approach.
 
     [ruffinelli2020]_ call the sLCWA ``NegSamp`` in their work.
@@ -48,18 +47,30 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
 
     # docstr-coverage: inherited
     def _create_training_data_loader(
-        self, triples_factory: CoreTriplesFactory, sampler: str | None, batch_size: int, drop_last: bool, **kwargs
+        self,
+        triples_factory: CoreTriplesFactory,
+        *,
+        sampler: Literal["schlichtkrull"] | None,
+        batch_size: int,
+        drop_last: bool,
+        **kwargs,
     ) -> DataLoader[SLCWABatch]:  # noqa: D102
-        assert "batch_sampler" not in kwargs
+        cls: type[BatchedSLCWAInstances] | type[SubGraphSLCWAInstances]
+        match sampler:
+            case None:
+                cls = BatchedSLCWAInstances
+            case "schlichtkrull":
+                cls = SubGraphSLCWAInstances
+            case _:
+                raise ValueError(f"Invalid {sampler=}")
         return DataLoader(
-            dataset=create_slcwa_instances(
+            dataset=cls.from_triples_factory(
                 triples_factory,
                 batch_size=batch_size,
                 shuffle=kwargs.pop("shuffle", True),
                 drop_last=drop_last,
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=self.negative_sampler_kwargs,
-                sampler=sampler,
             ),
             # disable automatic batching
             batch_size=None,
@@ -70,7 +81,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
     @staticmethod
     # docstr-coverage: inherited
     def _get_batch_size(batch: SLCWABatch) -> int:  # noqa: D102
-        return batch[0].shape[0]
+        return batch["positives"].shape[0]
 
     @staticmethod
     def _process_batch_static(
@@ -88,7 +99,11 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
             raise AttributeError("Slicing is not possible for sLCWA training loops.")
 
         # split batch
-        positive_batch, negative_batch, positive_filter = batch
+        positive_batch = batch["positives"]
+        negative_batch = batch["negatives"]
+        positive_filter = batch.get("masks")
+        pos_weights = batch.get("pos_weights")
+        neg_weights = batch.get("neg_weights")
 
         # send to device
         positive_batch = positive_batch[start:stop].to(device=model.device)
@@ -97,6 +112,10 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
             positive_filter = positive_filter[start:stop]
             negative_batch = negative_batch[positive_filter]
             positive_filter = positive_filter.to(model.device)
+        if pos_weights is not None:
+            pos_weights = pos_weights[start:stop].to(device=model.device)
+        if neg_weights is not None:
+            neg_weights = neg_weights[start:stop].to(device=model.device)
         # Make it negative batch broadcastable (required for num_negs_per_pos > 1).
         negative_score_shape = negative_batch.shape[:-1]
         negative_batch = negative_batch.view(-1, 3)
@@ -116,6 +135,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
                 label_smoothing=label_smoothing,
                 batch_filter=positive_filter,
                 num_entities=model._get_entity_len(mode=mode),
+                pos_weights=pos_weights,
+                neg_weights=neg_weights,
             )
             + model.collect_regularization_term()
         )
@@ -156,24 +177,3 @@ class SLCWATrainingLoop(TrainingLoop[SLCWASampleType, SLCWABatch]):
             report = "This model doesn't support sub-batching and slicing is not possible for sLCWA"
         logger.warning(report)
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
-
-
-def create_slcwa_instances(
-    triples_factory: CoreTriplesFactory,
-    *,
-    sampler: str | None = None,
-    **kwargs: Any,
-) -> Dataset:
-    """Create sLCWA instances for this factory's triples."""
-    cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances
-    if "shuffle" in kwargs:
-        if kwargs.pop("shuffle"):
-            warnings.warn("Training instances are always shuffled.", DeprecationWarning, stacklevel=2)
-        else:
-            raise AssertionError("If shuffle is provided, it must be True.")
-    return cls(
-        mapped_triples=triples_factory._add_inverse_triples_if_necessary(mapped_triples=triples_factory.mapped_triples),
-        num_entities=triples_factory.num_entities,
-        num_relations=triples_factory.num_relations,
-        **kwargs,
-    )

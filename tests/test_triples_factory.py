@@ -16,9 +16,7 @@ import torch
 
 from pykeen.datasets import Hetionet, Nations, SingleTabbedDataset
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
-from pykeen.training.lcwa import create_lcwa_instances
-from pykeen.training.slcwa import create_slcwa_instances
-from pykeen.triples import CoreTriplesFactory, LCWAInstances, TriplesFactory, TriplesNumericLiteralsFactory, generation
+from pykeen.triples import CoreTriplesFactory, TriplesFactory, TriplesNumericLiteralsFactory, generation
 from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import (
     INVERSE_SUFFIX,
@@ -82,17 +80,6 @@ class TestTriplesFactory(unittest.TestCase):
     def setUp(self) -> None:
         """Instantiate test instance."""
         self.factory = Nations().training
-
-    def test_correct_inverse_creation(self):
-        """Test if the triples and the corresponding inverses are created."""
-        t = [
-            ["e1", "a.", "e5"],
-            ["e1", "a", "e2"],
-        ]
-        t = np.array(t, dtype=str)
-        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
-        instances = create_slcwa_instances(factory)
-        assert len(instances) == 4
 
     def test_automatic_incomplete_inverse_detection(self):
         """Test detecting that the triples contain inverses, warns about them, and filters them out."""
@@ -227,33 +214,6 @@ class TestTriplesFactory(unittest.TestCase):
                         relation_restriction=relation_restriction,
                         invert_relation_selection=invert_relation_selection,
                     )
-
-    def test_create_lcwa_instances(self):
-        """Test create_lcwa_instances."""
-        factory = Nations().training
-        instances = create_lcwa_instances(factory)
-        assert isinstance(instances, LCWAInstances)
-
-        # check compressed triples
-        # reconstruct triples from compressed form
-        reconstructed_triples = set()
-        for hr, row_id in zip(instances.pairs, range(instances.compressed.shape[0]), strict=False):
-            h, r = hr.tolist()
-            _, tails = instances.compressed[row_id].nonzero()
-            reconstructed_triples.update((h, r, t) for t in tails.tolist())
-        original_triples = {tuple(hrt) for hrt in factory.mapped_triples.tolist()}
-        assert original_triples == reconstructed_triples
-
-        # check data loader
-        for batch in torch.utils.data.DataLoader(instances, batch_size=2):
-            assert len(batch) == 2
-            assert all(torch.is_tensor(x) for x in batch)
-            x, y = batch
-            batch_size = x.shape[0]
-            assert x.shape == (batch_size, 2)
-            assert x.dtype == torch.long
-            assert y.shape == (batch_size, factory.num_entities)
-            assert y.dtype == torch.get_default_dtype()
 
     def test_split_inverse_triples(self):
         """Test whether inverse triples are only created in the training factory."""
