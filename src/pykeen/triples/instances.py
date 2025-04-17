@@ -107,7 +107,7 @@ class SLCWAInstances(Instances[SLCWABatch]):
         result = SLCWABatch(positives=positive, negatives=negative)
         if mask is not None:
             result["masks"] = mask
-        # TODO: weights
+        # TODO: weights (see https://github.com/pykeen/pykeen/issues/1533)
         return result
 
 
@@ -158,7 +158,7 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         result = SLCWABatch(positives=positive_batch, negatives=negative_batch)
         if masks is not None:
             result["masks"] = masks
-        # TODO: weights
+        # TODO: weights (see https://github.com/pykeen/pykeen/issues/1533)
         return result
 
     @abstractmethod
