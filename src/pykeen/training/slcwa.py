@@ -65,7 +65,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
                 drop_last=drop_last,
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=self.negative_sampler_kwargs,
-                sampler=sampler,
             ),
             # disable automatic batching
             batch_size=None,

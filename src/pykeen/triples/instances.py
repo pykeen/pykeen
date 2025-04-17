@@ -187,6 +187,9 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
                 warnings.warn("Training instances are always shuffled.", DeprecationWarning, stacklevel=2)
             else:
                 raise AssertionError("If shuffle is provided, it must be True.")
+        if kwargs.pop("sampler", None):
+            raise AssertionError("sampler is not handled in sLCWA instances")
+
         return cls(
             mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
             num_entities=tf.num_entities,
