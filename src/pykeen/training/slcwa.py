@@ -1,6 +1,7 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
+from typing import Literal
 
 from class_resolver import HintOrType, OptionalKwargs
 from torch.utils.data import DataLoader
@@ -46,7 +47,13 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
 
     # docstr-coverage: inherited
     def _create_training_data_loader(
-        self, triples_factory: CoreTriplesFactory, sampler: str | None, batch_size: int, drop_last: bool, **kwargs
+        self,
+        triples_factory: CoreTriplesFactory,
+        *,
+        sampler: Literal["schlichtkrull"] | None,
+        batch_size: int,
+        drop_last: bool,
+        **kwargs,
     ) -> DataLoader[SLCWABatch]:  # noqa: D102
         assert "batch_sampler" not in kwargs
         cls = BatchedSLCWAInstances if sampler is None else SubGraphSLCWAInstances

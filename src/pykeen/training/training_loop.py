@@ -14,7 +14,7 @@ from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import IO, Any, ClassVar, Generic, TypeVar
+from typing import IO, Any, ClassVar, Generic, Literal, TypeVar
 
 import numpy as np
 import torch
@@ -207,7 +207,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         batch_size: int | None = None,
         slice_size: int | None = None,
         label_smoothing: float = 0.0,
-        sampler: str | None = None,
+        sampler: Literal["schlichtkrull"] | None = None,
         continue_training: bool = False,
         only_size_probing: bool = False,
         use_tqdm: bool = True,
@@ -488,7 +488,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         batch_size: int | None = None,
         slice_size: int | None = None,
         label_smoothing: float = 0.0,
-        sampler: str | None = None,
+        sampler: Literal["schlichtkrull"] | None = None,
         continue_training: bool = False,
         only_size_probing: bool = False,
         use_tqdm: bool = True,
@@ -791,7 +791,13 @@ class TrainingLoop(Generic[BatchType], ABC):
 
     @abstractmethod
     def _create_training_data_loader(
-        self, triples_factory: CoreTriplesFactory, *, sampler: str | None, batch_size: int, drop_last: bool, **kwargs
+        self,
+        triples_factory: CoreTriplesFactory,
+        *,
+        sampler: Literal["schlichtkrull"] | None,
+        batch_size: int,
+        drop_last: bool,
+        **kwargs,
     ) -> DataLoader[BatchType]:
         """Create a data loader over training instances.
 
@@ -934,7 +940,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         self,
         *,
         batch_size: int,
-        sampler: str | None,
+        sampler: Literal["schlichtkrull"] | None,
         triples_factory: CoreTriplesFactory,
     ) -> tuple[int, int | None]:
         """Check if sub-batching and/or slicing is necessary to train the model on the hardware at hand."""
@@ -986,7 +992,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         self,
         *,
         batch_size: int,
-        sampler: str | None,
+        sampler: Literal["schlichtkrull"] | None,
         triples_factory: CoreTriplesFactory,
     ) -> tuple[int, bool, bool]:
         """Find the allowable sub batch size for training with the current setting.
