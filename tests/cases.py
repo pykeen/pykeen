@@ -20,6 +20,7 @@ from typing import (
 from unittest.case import SkipTest
 from unittest.mock import Mock, patch
 
+import more_itertools
 import numpy
 import numpy.random
 import pandas
@@ -80,7 +81,7 @@ from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.trackers import ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingCallback, TrainingLoop
 from pykeen.triples import Instances, TriplesFactory, generation
-from pykeen.triples.instances import BaseBatchedSLCWAInstances, SLCWABatch
+from pykeen.triples.instances import BaseBatchedSLCWAInstances
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
@@ -2360,26 +2361,11 @@ class TrainingInstancesTestCase(unittest_templates.GenericTestCase[Instances]):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         self.factory = Nations().training
-        return {}
-
-    @abstractmethod
-    def _get_expected_length(self) -> int:
-        raise NotImplementedError
-
-    def test_getitem(self):
-        """Test __getitem__."""
-        self.instance: Instances
-        assert self.instance[0] is not None
-
-    def test_len(self):
-        """Test __len__."""
-        self.assertEqual(len(self.instance), self._get_expected_length())
+        return kwargs
 
     def test_data_loader(self):
         """Test usage with data loader."""
-        for batch in torch.utils.data.DataLoader(
-            dataset=self.instance, batch_size=2, shuffle=True, collate_fn=self.instance.get_collator()
-        ):
+        for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=2, shuffle=True):
             assert batch is not None
 
 
@@ -2403,20 +2389,19 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
     def test_data_loader(self):
         """Test data loader."""
         for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None):
-            assert isinstance(batch, SLCWABatch)
-            assert batch.positives.shape == (self.batch_size, 3)
-            assert batch.negatives.shape == (self.batch_size, self.num_negatives_per_positive, 3)
-            assert batch.masks is None
+            assert batch["positives"].shape == (self.batch_size, 3)
+            assert batch["negatives"].shape == (self.batch_size, self.num_negatives_per_positive, 3)
+            assert "masks" not in batch
 
     def test_length(self):
         """Test length."""
-        assert len(self.instance) == len(list(iter(self.instance)))
+        assert len(self.instance) == more_itertools.ilen(self.instance)
 
     def test_data_loader_multiprocessing(self):
         """Test data loader with multiple workers."""
         self.assertEqual(
             sum(
-                batch.positives.shape[0]
+                batch["positives"].shape[0]
                 for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
             ),
             self.factory.num_triples,
