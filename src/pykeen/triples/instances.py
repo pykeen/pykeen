@@ -100,14 +100,13 @@ class SLCWAInstances(Instances[SLCWABatch]):
         return self.mapped_triples.shape[0]
 
     def __getitem__(self, item: int) -> SLCWABatch:  # noqa: D105
-        positive = self.mapped_triples[item].unsqueeze(dim=0)
+        positive = self.mapped_triples[item]
         # TODO: some negative samplers require batches
         negative, mask = self.sampler.sample(positive_batch=positive)
-        # shape: (1, 3), (1, k, 3), (1, k, 3)?
-        # TODO: default collate adds a batch dimension
-        result = SLCWABatch(positives=positive[0], negatives=negative[0])
+        # shape: (3,), (k, 3), (k, 3)?
+        result = SLCWABatch(positives=positive, negatives=negative)
         if mask is not None:
-            result["masks"] = mask[0]
+            result["masks"] = mask
         # TODO: weights
         return result
 
