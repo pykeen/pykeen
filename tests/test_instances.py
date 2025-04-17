@@ -3,11 +3,13 @@
 from collections.abc import MutableMapping
 from typing import Any
 
+import numpy
 import torch
 
 from pykeen.datasets.nations import Nations
 from pykeen.triples import LCWAInstances, SLCWAInstances
 from pykeen.triples.instances import BatchedSLCWAInstances, SubGraphSLCWAInstances
+from pykeen.triples.triples_factory import TriplesFactory
 from tests import cases
 
 
@@ -84,6 +86,17 @@ class SLCWAInstancesTestCase(cases.TrainingInstancesTestCase):
             assert item["pos_weights"].shape == item["positives"].shape
         if "neg_weights" in item:
             assert item["neg_weights"].shape == item["negatives"].shape
+
+    def test_correct_inverse_creation(self):
+        """Test if the triples and the corresponding inverses are created."""
+        t = [
+            ["e1", "a.", "e5"],
+            ["e1", "a", "e2"],
+        ]
+        t = numpy.array(t, dtype=str)
+        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
+        instances = BatchedSLCWAInstances.from_triples_factory(factory)
+        assert len(instances) == 4
 
 
 class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
