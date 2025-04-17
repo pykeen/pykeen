@@ -6,7 +6,7 @@ from typing import Any
 import numpy
 import torch
 
-from pykeen.datasets.nations import Nations
+from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.triples import LCWAInstances, SLCWAInstances
 from pykeen.triples.instances import BatchedSLCWAInstances, SubGraphSLCWAInstances
 from pykeen.triples.triples_factory import TriplesFactory
@@ -36,7 +36,7 @@ class LCWAInstancesTestCase(cases.TrainingInstancesTestCase):
 
     def test_construction(self) -> None:
         """Test proper construction."""
-        factory = Nations().training
+        factory = TriplesFactory.from_path(NATIONS_TRAIN_PATH)
         instances = LCWAInstances.from_triples_factory(factory)
         assert isinstance(instances, LCWAInstances)
 
