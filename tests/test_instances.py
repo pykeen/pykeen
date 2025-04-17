@@ -42,7 +42,7 @@ class LCWAInstancesTestCase(cases.TrainingInstancesTestCase):
 
         # check compressed triples
         # reconstruct triples from compressed form
-        reconstructed_triples = set()
+        reconstructed_triples: set[tuple[int, int, int]] = set()
         for hr, row_id in zip(instances.pairs, range(instances.compressed.shape[0]), strict=False):
             h, r = hr.tolist()
             _, tails = instances.compressed[row_id].nonzero()
