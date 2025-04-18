@@ -23,8 +23,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-name_to_index = {name: index for index, name in enumerate("hrt")}
-
 
 class LCWATrainingLoop(TrainingLoop[LCWABatch]):
     r"""A training loop that is based upon the local closed world assumption (LCWA).
