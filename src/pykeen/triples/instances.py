@@ -293,6 +293,8 @@ class LCWAInstances(Instances[LCWABatch]):
 
         :param pairs: The unique pairs
         :param compressed: The compressed triples in CSR format
+        :param target:
+            The prediction target.
         :param sample_weighter:
             The method to determine sample weights.
         :param sample_weighter_kwargs:
