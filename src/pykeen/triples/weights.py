@@ -1,6 +1,6 @@
 """Sample weights."""
 
-import abc
+from abc import ABC, abstractmethod
 
 import torch
 from class_resolver import ClassResolver
@@ -15,10 +15,10 @@ __all__ = [
 ]
 
 
-class SampleWeighter(abc.ABC):
+class SampleWeighter(ABC):
     """Determine sample weights."""
 
-    @abc.abstractmethod
+    @abstractmethod
     def __call__(self, h: LongTensor | None, r: LongTensor | None, t: LongTensor | None) -> FloatTensor:
         """
         Calculate the sample weights for the given triples.
