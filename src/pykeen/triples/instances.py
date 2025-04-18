@@ -5,7 +5,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from typing import Generic, TypeAlias, TypedDict, TypeVar
+from typing import Generic, Literal, TypeAlias, TypedDict, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -17,9 +17,18 @@ from typing_extensions import NotRequired, Self
 from .triples_factory import CoreTriplesFactory
 from .utils import compute_compressed_adjacency_list
 from .weights import SampleWeighter, sample_weighter_resolver
+from .. import typing as pykeen_typing
 from ..constants import TARGET_TO_INDEX
 from ..sampling import NegativeSampler, negative_sampler_resolver
-from ..typing import COLUMN_TAIL, BoolTensor, FloatTensor, LongTensor, MappedTriples, Target, TargetColumn
+from ..typing import (
+    COLUMN_TAIL,
+    BoolTensor,
+    FloatTensor,
+    LongTensor,
+    MappedTriples,
+    Target,
+    TargetColumn,
+)
 from ..utils import split_workload
 
 __all__ = [
@@ -292,7 +301,7 @@ class LCWAInstances(Instances[LCWABatch]):
         self.pairs = pairs
         self.compressed = compressed
         self.sample_weighter = sample_weighter_resolver.make_safe(sample_weighter, sample_weighter_kwargs)
-        self.target = get_target_column(target=target)
+        self.target: TargetColumn = get_target_column(target=target)
 
     @classmethod
     def from_triples(
@@ -355,9 +364,23 @@ class LCWAInstances(Instances[LCWABatch]):
     def __getitem__(self, item: int) -> LCWABatch:  # noqa: D105
         pairs = self.pairs[item]
         result = LCWABatch(pairs=pairs, target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :]))
-        if self.sample_weighter is not None:
-            # TODO: this only holds for the default target!!
-            if self.target != COLUMN_TAIL:
-                raise NotImplementedError(self.target)
-            result["weights"] = self.sample_weighter(h=pairs[..., None, 0], r=pairs[..., None, 1], t=None)
+        if self.sample_weighter is None:
+            return result
+        kwargs: dict[Literal["h", "r", "t"], None | LongTensor] = {"h": None, "r": None, "t": None}
+        x = pairs[..., None, 0]
+        y = pairs[..., None, 1]
+        match self.target:
+            # note: we need qualification here
+            case pykeen_typing.COLUMN_HEAD:
+                kwargs["r"] = x
+                kwargs["t"] = y
+            case pykeen_typing.COLUMN_RELATION:
+                kwargs["h"] = x
+                kwargs["t"] = y
+            case pykeen_typing.COLUMN_TAIL:
+                kwargs["h"] = x
+                kwargs["r"] = y
+            case _:
+                raise AssertionError(self.target)
+        result["weights"] = self.sample_weighter(**kwargs)
         return result
