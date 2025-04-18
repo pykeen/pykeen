@@ -5,7 +5,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from typing import Generic, TypedDict, TypeVar
+from typing import Generic, TypeAlias, TypedDict, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -17,8 +17,9 @@ from typing_extensions import NotRequired, Self
 from .triples_factory import CoreTriplesFactory
 from .utils import compute_compressed_adjacency_list
 from .weights import SampleWeighter, sample_weighter_resolver
+from ..constants import TARGET_TO_INDEX
 from ..sampling import NegativeSampler, negative_sampler_resolver
-from ..typing import BoolTensor, FloatTensor, LongTensor, MappedTriples
+from ..typing import COLUMN_TAIL, BoolTensor, FloatTensor, LongTensor, MappedTriples, Target, TargetColumn
 from ..utils import split_workload
 
 __all__ = [
@@ -252,6 +253,18 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         yield from (self.subgraph_sample() for _ in split_workload(len(self)))
 
 
+TargetHint: TypeAlias = TargetColumn | Target | None
+
+
+def get_target_column(target: TargetHint = None) -> TargetColumn:
+    """Normalize target choice to column."""
+    if target is None:
+        return COLUMN_TAIL
+    if isinstance(target, str):
+        return TARGET_TO_INDEX[target]
+    return target
+
+
 class LCWAInstances(Instances[LCWABatch]):
     """Triples and mappings to their indices for LCWA."""
 
@@ -263,6 +276,7 @@ class LCWAInstances(Instances[LCWABatch]):
         *,
         pairs: np.ndarray,
         compressed: scipy.sparse.csr_matrix,
+        target: TargetHint = None,
         sample_weighter: HintOrType[SampleWeighter] = None,
         sample_weighter_kwargs: OptionalKwargs = None,
     ):
@@ -278,6 +292,7 @@ class LCWAInstances(Instances[LCWABatch]):
         self.pairs = pairs
         self.compressed = compressed
         self.sample_weighter = sample_weighter_resolver.make_safe(sample_weighter, sample_weighter_kwargs)
+        self.target = get_target_column(target=target)
 
     @classmethod
     def from_triples(
@@ -286,7 +301,7 @@ class LCWAInstances(Instances[LCWABatch]):
         *,
         num_entities: int,
         num_relations: int,
-        target: int | None = None,
+        target: TargetHint = None,
         **kwargs,
     ) -> Self:
         """Create LCWA instances from triples.
@@ -300,8 +315,7 @@ class LCWAInstances(Instances[LCWABatch]):
 
         :returns: The instances.
         """
-        if target is None:
-            target = 2
+        target = get_target_column(target)
         mapped_triples = mapped_triples.numpy()
         other_columns = sorted(set(range(3)).difference({target}))
         unique_pairs, pair_idx_to_triple_idx = np.unique(mapped_triples[:, other_columns], return_inverse=True, axis=0)
@@ -314,7 +328,7 @@ class LCWAInstances(Instances[LCWABatch]):
         )
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
-        return cls(pairs=unique_pairs, compressed=compressed, **kwargs)
+        return cls(pairs=unique_pairs, compressed=compressed, target=target, **kwargs)
 
     @classmethod
     def from_triples_factory(cls, tf: CoreTriplesFactory, **kwargs) -> Self:
@@ -343,5 +357,7 @@ class LCWAInstances(Instances[LCWABatch]):
         result = LCWABatch(pairs=pairs, target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :]))
         if self.sample_weighter is not None:
             # TODO: this only holds for the default target!!
+            if self.target != COLUMN_TAIL:
+                raise NotImplementedError(self.target)
             result["weights"] = self.sample_weighter(h=pairs[..., None, 0], r=pairs[..., None, 1], t=None)
         return result

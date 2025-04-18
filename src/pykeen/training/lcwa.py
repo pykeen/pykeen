@@ -13,7 +13,7 @@ from .training_loop import TrainingLoop
 from ..losses import Loss
 from ..models import Model
 from ..triples import CoreTriplesFactory, LCWAInstances
-from ..triples.instances import LCWABatch
+from ..triples.instances import LCWABatch, TargetHint, get_target_column
 from ..typing import FloatTensor, InductiveMode, MappedTriples
 
 __all__ = [
@@ -43,17 +43,12 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
 
     supports_slicing: ClassVar[bool] = True
 
-    def __init__(
-        self,
-        *,
-        target: None | str | int = None,
-        **kwargs,
-    ):
+    def __init__(self, *, target: TargetHint = None, **kwargs):
         """
         Initialize the training loop.
 
         :param target:
-            The target column. From {0, 1, 2} for head/relation/tail prediction. Defaults to 2, i.e., tail prediction.
+            The target column. Defaults to tail prediction.
         :param kwargs:
             Additional keyword-based parameters passed to TrainingLoop.__init__
         :raises ValueError:
@@ -62,11 +57,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         super().__init__(**kwargs)
 
         # normalize target column
-        if target is None:
-            target = 2
-        if isinstance(target, str):
-            target = name_to_index[target]
-        self.target = target
+        self.target = get_target_column(target)
 
         # The type inference is so confusing between the function switching
         # and polymorphism introduced by slicability that these need to be ignored
