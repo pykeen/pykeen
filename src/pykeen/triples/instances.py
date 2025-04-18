@@ -23,8 +23,9 @@ from ..utils import split_workload
 
 __all__ = [
     "Instances",
-    "SLCWAInstances",
     "LCWAInstances",
+    "BatchedSLCWAInstances",
+    "SubGraphSLCWAInstances",
 ]
 
 BatchType = TypeVar("BatchType")
@@ -66,52 +67,6 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
     def __len__(self):
         """Get the number of instances."""
         raise NotImplementedError
-
-
-class SLCWAInstances(Instances[SLCWABatch]):
-    """Training instances for the sLCWA."""
-
-    # TODO: unused?
-
-    def __init__(
-        self,
-        *,
-        mapped_triples: MappedTriples,
-        num_entities: int | None = None,
-        num_relations: int | None = None,
-        negative_sampler: HintOrType[NegativeSampler] = None,
-        negative_sampler_kwargs: OptionalKwargs = None,
-    ):
-        """Initialize the sLCWA instances.
-
-        :param mapped_triples: shape: (num_triples, 3) the ID-based triples, passed to the negative sampler
-        :param num_entities: >0 the number of entities, passed to the negative sampler
-        :param num_relations: >0 the number of relations, passed to the negative sampler
-        :param negative_sampler: the negative sampler, or a hint thereof
-        :param negative_sampler_kwargs: additional keyword-based arguments passed to the negative sampler
-        """
-        self.mapped_triples = mapped_triples
-        self.sampler = negative_sampler_resolver.make(
-            negative_sampler,
-            pos_kwargs=negative_sampler_kwargs,
-            mapped_triples=mapped_triples,
-            num_entities=num_entities,
-            num_relations=num_relations,
-        )
-
-    def __len__(self) -> int:  # noqa: D105
-        return self.mapped_triples.shape[0]
-
-    def __getitem__(self, item: int) -> SLCWABatch:  # noqa: D105
-        positive = self.mapped_triples[item]
-        # TODO: some negative samplers require batches
-        negative, mask = self.sampler.sample(positive_batch=positive)
-        # shape: (3,), (k, 3), (k, 3)?
-        result = SLCWABatch(positives=positive, negatives=negative)
-        if mask is not None:
-            result["masks"] = mask
-        # TODO: weights (see https://github.com/pykeen/pykeen/issues/1533)
-        return result
 
 
 class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):

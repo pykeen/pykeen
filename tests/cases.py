@@ -2392,6 +2392,10 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
             assert batch["positives"].shape == (self.batch_size, 3)
             assert batch["negatives"].shape == (self.batch_size, self.num_negatives_per_positive, 3)
             assert "masks" not in batch
+            if "pos_weights" in batch:
+                assert batch["pos_weights"].shape == batch["positives"].shape
+            if "neg_weights" in batch:
+                assert batch["neg_weights"].shape == batch["negatives"].shape
 
     def test_length(self):
         """Test length."""

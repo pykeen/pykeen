@@ -56,14 +56,15 @@ or relations (in :mod:`pykeen.triples.stats`), as well as advanced analysis of r
 (:mod:`pykeen.triples.analysis`).
 """
 
-from .instances import Instances, LCWAInstances, SLCWAInstances
+from .instances import BatchedSLCWAInstances, Instances, LCWAInstances, SubGraphSLCWAInstances
 from .triples_factory import AnyTriples, CoreTriplesFactory, KGInfo, TriplesFactory, get_mapped_triples
 from .triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 
 __all__ = [
     "Instances",
     "LCWAInstances",
-    "SLCWAInstances",
+    "BatchedSLCWAInstances",
+    "SubGraphSLCWAInstances",
     "KGInfo",
     "CoreTriplesFactory",
     "TriplesFactory",
