@@ -38,6 +38,7 @@ from .callbacks import (
     TrainingCallbackKwargsHint,
 )
 from ..constants import PYKEEN_CHECKPOINTS, PYKEEN_DEFAULT_CHECKPOINT
+from ..losses import NoSampleWeightSupportError, UnsupportedLabelSmoothingError
 from ..lr_schedulers import LRScheduler
 from ..models import RGCN, Model
 from ..stoppers import Stopper
@@ -1028,6 +1029,9 @@ class TrainingLoop(Generic[BatchType], ABC):
             )
         except RuntimeError as runtime_error:
             self._free_graph_and_cache()
+            # TODO: hotfix for is_oom_error not properly handling UnsupportedWeight
+            if isinstance(runtime_error, NoSampleWeightSupportError | UnsupportedLabelSmoothingError):
+                raise
             if not is_oom_error(runtime_error):
                 raise runtime_error
             logger.debug(f"The batch_size {batch_size=:_} was too big, sub_batching is required.")
