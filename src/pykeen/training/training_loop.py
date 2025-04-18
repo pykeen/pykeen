@@ -550,7 +550,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         if batch_size is None:
             if self.automatic_memory_optimization:
                 # Using automatic memory optimization on CPU may result in undocumented crashes due to OS' OOM killer.
-                if self.model.device.type == "cpu":
+                if self.model.device.type != "cuda":
                     batch_size = 256
                     batch_size_sufficient = True
                     logger.info(

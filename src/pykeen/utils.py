@@ -132,13 +132,29 @@ def at_least_eps(x: FloatTensor) -> FloatTensor:
 
 def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
-    if device is None or device == "gpu":
+    cuda_available = torch.cuda.is_available()
+    mps_available = torch.backends.mps.is_available()
+    if device is None:
+        if cuda_available:
+            return torch.device("cuda")
+        elif mps_available:
+            return torch.device("mps")
+        else:
+            return torch.device("cpu")
+    if device == "gpu":
         device = "cuda"
     if isinstance(device, str):
         device = torch.device(device)
-    if not torch.cuda.is_available() and device.type == "cuda":
-        device = torch.device("cpu")
-        logger.warning("No cuda devices were available. The model runs on CPU")
+    if device.type == "cuda" and not cuda_available:
+        if mps_available:
+            logger.warning("CUDA was not available, but MPS was, so using MPS")
+            return torch.device("mps")
+        else:
+            logger.warning("CUDA was not available, defaulting to CPU")
+            return torch.device("cpu")
+    if device.type == "mps" and not mps_available:
+        logger.warning("MPS was not available, defaulting to CPU")
+        return torch.device("cpu")
     return device
 
 
@@ -1569,15 +1585,15 @@ def determine_maximum_batch_size(batch_size: int | None, device: torch.device, m
         A maximum batch size.
     """
     if batch_size is None:
-        if device.type == "cuda":
-            batch_size = maximum_batch_size
-        else:
+        if device.type != "cuda":
             batch_size = 32
             logger.warning(
                 f"Using automatic batch size on {device.type=} can cause unexplained out-of-memory crashes. "
                 f"Therefore, we use a conservative small {batch_size=:_}. "
                 f"Performance may be improved by explicitly specifying a larger batch size."
             )
+        else:
+            batch_size = maximum_batch_size
         logger.debug(f"Automatically set maximum batch size to {batch_size=:_}")
     return batch_size
 

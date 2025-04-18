@@ -46,7 +46,7 @@ jobs:
     name: Tests
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: [ "3.10", "3.12" ]
         # cannot use macos-latest for now, cf.
         # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners
