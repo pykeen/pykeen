@@ -343,5 +343,5 @@ class LCWAInstances(Instances[LCWABatch]):
         result = LCWABatch(pairs=pairs, target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :]))
         if self.sample_weighter is not None:
             # TODO: this only holds for the default target!!
-            result["weights"] = self.sample_weighter(h=pairs[:, 0], r=pairs[:, 1], t=None)
+            result["weights"] = self.sample_weighter(h=pairs[..., None, 0], r=pairs[..., None, 1], t=None)
         return result
