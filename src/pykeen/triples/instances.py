@@ -270,6 +270,10 @@ class LCWAInstances(Instances[LCWABatch]):
 
         :param pairs: The unique pairs
         :param compressed: The compressed triples in CSR format
+        :param sample_weighter:
+            The method to determine sample weights.
+        :param sample_weighter_kwargs:
+            Parameters for the method to determine sample weights.
         """
         self.pairs = pairs
         self.compressed = compressed
@@ -291,6 +295,8 @@ class LCWAInstances(Instances[LCWABatch]):
         :param num_entities: The number of entities.
         :param num_relations: The number of relations.
         :param target: The column to predict
+        :param kwargs:
+            Additional keyword-based parameters passed to :meth:`__init__`
 
         :returns: The instances.
         """
@@ -312,7 +318,16 @@ class LCWAInstances(Instances[LCWABatch]):
 
     @classmethod
     def from_triples_factory(cls, tf: CoreTriplesFactory, **kwargs) -> Self:
-        """Create LCWA instances for triples factory."""
+        """Create LCWA instances for triples factory.
+
+        :param tf:
+            The triples factory.
+        :param kwargs:
+            Additional keyword-based parameters passed to :meth:`from_triples`
+
+        :return:
+            The instances.
+        """
         return cls.from_triples(
             mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
             num_entities=tf.num_entities,
