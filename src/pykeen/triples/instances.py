@@ -322,7 +322,13 @@ class LCWAInstances(Instances[LCWABatch]):
 
     @classmethod
     def from_triples(
-        cls, mapped_triples: MappedTriples, *, num_entities: int, num_relations: int, target: int | None = None
+        cls,
+        mapped_triples: MappedTriples,
+        *,
+        num_entities: int,
+        num_relations: int,
+        target: int | None = None,
+        **kwargs,
     ) -> Self:
         """Create LCWA instances from triples.
 
@@ -347,16 +353,16 @@ class LCWAInstances(Instances[LCWABatch]):
         )
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
-        return cls(pairs=unique_pairs, compressed=compressed)
+        return cls(pairs=unique_pairs, compressed=compressed, **kwargs)
 
     @classmethod
-    def from_triples_factory(cls, tf: CoreTriplesFactory, target: int | None = None) -> Self:
+    def from_triples_factory(cls, tf: CoreTriplesFactory, **kwargs) -> Self:
         """Create LCWA instances for triples factory."""
         return cls.from_triples(
             mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
             num_entities=tf.num_entities,
             num_relations=tf.num_relations,
-            target=target,
+            **kwargs,
         )
 
     def __len__(self) -> int:  # noqa: D105
