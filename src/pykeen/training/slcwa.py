@@ -3,7 +3,7 @@
 import logging
 from typing import Literal
 
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch.utils.data import DataLoader
 
 from .training_loop import TrainingLoop
@@ -12,6 +12,7 @@ from ..models.base import Model
 from ..sampling import NegativeSampler
 from ..triples import CoreTriplesFactory
 from ..triples.instances import BatchedSLCWAInstances, SLCWABatch, SubGraphSLCWAInstances
+from ..triples.weights import SampleWeighter
 from ..typing import FloatTensor, InductiveMode
 
 __all__ = [
@@ -27,10 +28,17 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
     [ruffinelli2020]_ call the sLCWA ``NegSamp`` in their work.
     """
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("negative_sampler", "pykeen.sampling.negative_sampler_resolver"),
+        ResolverKey("sample_weighter", "pykeen.triples.weights.sample_weighter_resolver"),
+    )
     def __init__(
         self,
+        *,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
+        sample_weighter: HintOrType[SampleWeighter] = None,
+        sample_weighter_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
         """Initialize the training loop.
@@ -44,6 +52,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
         super().__init__(**kwargs)
         self.negative_sampler = negative_sampler
         self.negative_sampler_kwargs = negative_sampler_kwargs
+        self.sample_weighter = sample_weighter
+        self.sample_weighter_kwargs = sample_weighter_kwargs
 
     # docstr-coverage: inherited
     def _create_training_data_loader(
@@ -71,6 +81,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
                 drop_last=drop_last,
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=self.negative_sampler_kwargs,
+                sample_weighter=self.sample_weighter,
+                sample_weighter_kwargs=self.sample_weighter_kwargs,
             ),
             # disable automatic batching
             batch_size=None,
