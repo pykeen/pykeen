@@ -10,12 +10,13 @@ from typing import Generic, TypedDict, TypeVar
 import numpy as np
 import scipy.sparse
 import torch
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch.utils import data
 from typing_extensions import NotRequired, Self
 
 from .triples_factory import CoreTriplesFactory
 from .utils import compute_compressed_adjacency_list
+from .weights import SampleWeighter, sample_weighter_resolver
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..typing import BoolTensor, FloatTensor, LongTensor, MappedTriples
 from ..utils import split_workload
@@ -70,6 +71,8 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
 class SLCWAInstances(Instances[SLCWABatch]):
     """Training instances for the sLCWA."""
 
+    # TODO: unused?
+
     def __init__(
         self,
         *,
@@ -120,6 +123,10 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         `batch_sampler` of torch.utils.data.DataLoader` are set to `None`.
     """
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("negative_sampler", "pykeen.sampling.negative_sampler_resolver"),
+        ResolverKey("sample_weighter", "pykeen.triples.weights.sample_weighter_resolver"),
+    )
     def __init__(
         self,
         mapped_triples: MappedTriples,
@@ -129,6 +136,8 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         num_relations: int | None = None,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
+        sample_weighter: HintOrType[SampleWeighter] = None,
+        sample_weighter_kwargs: OptionalKwargs = None,
     ):
         """Initialize the dataset.
 
@@ -139,6 +148,10 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         :param num_relations: >0 the number of relations, passed to the negative sampler
         :param negative_sampler: the negative sampler, or a hint thereof
         :param negative_sampler_kwargs: additional keyword-based parameters used to instantiate the negative sampler
+        :param sample_weighter:
+            The method to determine sample weights.
+        :param sample_weighter_kwargs:
+            Parameters for the method to determine sample weights.
         """
         self.mapped_triples = mapped_triples
         self.batch_size = batch_size
@@ -150,6 +163,7 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
             num_entities=num_entities,
             num_relations=num_relations,
         )
+        self.sample_weighter = sample_weighter_resolver.make_safe(sample_weighter, sample_weighter_kwargs)
 
     def __getitem__(self, item: list[int]) -> SLCWABatch:
         """Get a batch from the given list of positive triple IDs."""
@@ -158,7 +172,9 @@ class BaseBatchedSLCWAInstances(data.IterableDataset[SLCWABatch]):
         result = SLCWABatch(positives=positive_batch, negatives=negative_batch)
         if masks is not None:
             result["masks"] = masks
-        # TODO: weights (see https://github.com/pykeen/pykeen/issues/1533)
+        if self.sample_weighter is not None:
+            result["pos_weights"] = self.sample_weighter.weight_triples(positive_batch)
+            result["neg_weights"] = self.sample_weighter.weight_triples(negative_batch)
         return result
 
     @abstractmethod

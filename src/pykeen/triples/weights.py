@@ -37,6 +37,18 @@ class SampleWeighter(abc.ABC):
         """
         raise NotImplementedError
 
+    def weight_triples(self, mapped_triples: MappedTriples) -> FloatTensor:
+        """Calculate the sample weights for the given batch of triples.
+
+        :param mapped_triples: shape: (..., 3)
+            The ID-based triples.
+
+        :return:
+            The sample weights.
+        """
+        h, r, t = mapped_triples.unbind(dim=-1)
+        return self(h=h, r=r, t=t)
+
 
 class RelationSampleWeighter(SampleWeighter):
     """Determine sample weights based solely on the relation."""
@@ -63,4 +75,4 @@ class RelationSampleWeighter(SampleWeighter):
         return cls(weights=torch.reciprocal(counts))
 
 
-sample_weighter_resolver = ClassResolver.from_subclasses(base=SampleWeighter)
+sample_weighter_resolver: ClassResolver[SampleWeighter] = ClassResolver.from_subclasses(base=SampleWeighter)
