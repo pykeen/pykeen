@@ -93,7 +93,12 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
                 f"sampler='{sampler}'.",
             )
 
-        dataset = LCWAInstances.from_triples_factory(triples_factory, target=self.target)
+        dataset = LCWAInstances.from_triples_factory(
+            triples_factory,
+            target=self.target,
+            sample_weighter=self.sample_weighter,
+            sample_weighter_kwargs=self.sample_weighter_kwargs,
+        )
         return DataLoader(dataset=dataset, **kwargs)
 
     @staticmethod
