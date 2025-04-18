@@ -19,18 +19,18 @@ class SampleWeighter(abc.ABC):
     """Determine sample weights."""
 
     @abc.abstractmethod
-    def __call__(self, h: LongTensor, r: LongTensor, t: LongTensor) -> FloatTensor:
+    def __call__(self, h: LongTensor | None, r: LongTensor | None, t: LongTensor | None) -> FloatTensor:
         """
         Calculate the sample weights for the given triples.
 
         Does support broadcasting semantics.
 
         :param h:
-            The head indices.
+            The head indices, or None to denote all of them.
         :param r:
-            The relation indices.
+            The relation indices, or None to denote all of them.
         :param t:
-            The tail indices.
+            The tail indices, or None to denote all of them.
 
         :return:
             The sample weights.
@@ -63,7 +63,9 @@ class RelationSampleWeighter(SampleWeighter):
         self.weights = weights
 
     # docstr-coverage: inherited
-    def __call__(self, h: LongTensor, r: LongTensor, t: LongTensor) -> FloatTensor:
+    def __call__(self, h: LongTensor | None, r: LongTensor | None, t: LongTensor | None) -> FloatTensor:
+        if r is None:
+            return self.weights
         return self.weights[r]
 
     @classmethod

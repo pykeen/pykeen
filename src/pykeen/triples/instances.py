@@ -300,7 +300,17 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
 class LCWAInstances(Instances[LCWABatch]):
     """Triples and mappings to their indices for LCWA."""
 
-    def __init__(self, *, pairs: np.ndarray, compressed: scipy.sparse.csr_matrix):
+    @update_docstring_with_resolver_keys(
+        ResolverKey("sample_weighter", "pykeen.triples.weights.sample_weighter_resolver")
+    )
+    def __init__(
+        self,
+        *,
+        pairs: np.ndarray,
+        compressed: scipy.sparse.csr_matrix,
+        sample_weighter: HintOrType[SampleWeighter] = None,
+        sample_weighter_kwargs: OptionalKwargs = None,
+    ):
         """Initialize the LCWA instances.
 
         :param pairs: The unique pairs
@@ -308,6 +318,7 @@ class LCWAInstances(Instances[LCWABatch]):
         """
         self.pairs = pairs
         self.compressed = compressed
+        self.sample_weighter = sample_weighter_resolver.make_safe(sample_weighter, sample_weighter_kwargs)
 
     @classmethod
     def from_triples(
@@ -352,8 +363,9 @@ class LCWAInstances(Instances[LCWABatch]):
         return self.pairs.shape[0]
 
     def __getitem__(self, item: int) -> LCWABatch:  # noqa: D105
-        # TODO: weights
-        return LCWABatch(
-            pairs=self.pairs[item],
-            target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :]),
-        )
+        pairs = self.pairs[item]
+        result = LCWABatch(pairs=pairs, target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :]))
+        if self.sample_weighter is not None:
+            # TODO: this only holds for the default target!!
+            result["weights"] = self.sample_weighter(h=pairs[:, 0], r=pairs[:, 1], t=None)
+        return result
