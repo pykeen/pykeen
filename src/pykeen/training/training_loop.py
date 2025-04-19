@@ -1044,9 +1044,6 @@ class TrainingLoop(Generic[BatchType], ABC):
             )
         except RuntimeError as runtime_error:
             self._free_graph_and_cache()
-            # TODO: hotfix for is_oom_error not properly handling UnsupportedWeight
-            if isinstance(runtime_error, NoSampleWeightSupportError | UnsupportedLabelSmoothingError):
-                raise
             if not is_oom_error(runtime_error):
                 raise runtime_error
             logger.debug(f"The batch_size {batch_size=:_} was too big, sub_batching is required.")
