@@ -5,7 +5,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from typing import Generic, Literal, TypedDict, TypeVar
+from typing import Generic, TypedDict, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -355,21 +355,14 @@ class LCWAInstances(Instances[LCWABatch]):
         result = LCWABatch(pairs=pairs, target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :]))
         if self.sample_weighter is None:
             return result
-        kwargs: dict[Literal["h", "r", "t"], None | LongTensor] = {"h": None, "r": None, "t": None}
         x = pairs[..., None, 0]
         y = pairs[..., None, 1]
         match self.target:
             # note: we need qualification here
             case pykeen_typing.COLUMN_HEAD:
-                kwargs["r"] = x
-                kwargs["t"] = y
+                result["weights"] = self.sample_weighter(h=None, r=x, t=y)
             case pykeen_typing.COLUMN_RELATION:
-                kwargs["h"] = x
-                kwargs["t"] = y
+                result["weights"] = self.sample_weighter(h=x, r=None, t=y)
             case pykeen_typing.COLUMN_TAIL:
-                kwargs["h"] = x
-                kwargs["r"] = y
-            case _:
-                raise AssertionError(self.target)
-        result["weights"] = self.sample_weighter(**kwargs)
+                result["weights"] = self.sample_weighter(h=x, r=y, t=None)
         return result
