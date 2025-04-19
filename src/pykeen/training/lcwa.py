@@ -10,11 +10,12 @@ from torch.utils.data import DataLoader, TensorDataset
 from torch_max_mem.api import is_oom_error
 
 from .training_loop import TrainingLoop
+from ..constants import get_target_column
 from ..losses import Loss
 from ..models import Model
 from ..triples import CoreTriplesFactory, LCWAInstances
-from ..triples.instances import LCWABatch, TargetHint, get_target_column
-from ..typing import FloatTensor, InductiveMode, MappedTriples
+from ..triples.instances import LCWABatch
+from ..typing import FloatTensor, InductiveMode, MappedTriples, TargetHint
 
 __all__ = [
     "LCWATrainingLoop",
@@ -41,7 +42,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
 
     supports_slicing: ClassVar[bool] = True
 
-    def __init__(self, *, target: TargetHint = None, **kwargs):
+    def __init__(self, *, target: TargetHint = None, **kwargs) -> None:
         """
         Initialize the training loop.
 

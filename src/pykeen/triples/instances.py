@@ -5,7 +5,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from typing import Generic, Literal, TypeAlias, TypedDict, TypeVar
+from typing import Generic, Literal, TypedDict, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -18,16 +18,15 @@ from .triples_factory import CoreTriplesFactory
 from .utils import compute_compressed_adjacency_list
 from .weights import SampleWeighter, sample_weighter_resolver
 from .. import typing as pykeen_typing
-from ..constants import TARGET_TO_INDEX
+from ..constants import get_target_column
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..typing import (
-    COLUMN_TAIL,
     BoolTensor,
     FloatTensor,
     LongTensor,
     MappedTriples,
-    Target,
     TargetColumn,
+    TargetHint,
 )
 from ..utils import split_workload
 
@@ -260,18 +259,6 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
     # docstr-coverage: inherited
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
         yield from (self.subgraph_sample() for _ in split_workload(len(self)))
-
-
-TargetHint: TypeAlias = TargetColumn | Target | None
-
-
-def get_target_column(target: TargetHint = None) -> TargetColumn:
-    """Normalize target choice to column."""
-    if target is None:
-        return COLUMN_TAIL
-    if isinstance(target, str):
-        return TARGET_TO_INDEX[target]
-    return target
 
 
 class LCWAInstances(Instances[LCWABatch]):

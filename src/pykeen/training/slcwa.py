@@ -34,7 +34,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
         **kwargs,
-    ):
+    ) -> None:
         """Initialize the training loop.
 
         :param negative_sampler: The class, instance, or name of the negative sampler
