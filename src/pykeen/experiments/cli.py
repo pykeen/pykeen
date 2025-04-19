@@ -75,13 +75,13 @@ def experiments() -> None:
 @click.argument("model")
 @click.argument("reference")
 @click.argument("dataset")
-@replicates_option
-@move_to_cpu_option
-@discard_replicates_option
-@directory_option
-@verbose_option
-@extra_config_option
-@keep_seed_option
+@replicates_option  # type:ignore
+@move_to_cpu_option  # type:ignore
+@discard_replicates_option  # type:ignore
+@directory_option  # type:ignore
+@verbose_option  # type:ignore
+@extra_config_option  # type:ignore
+@keep_seed_option  # type:ignore
 def reproduce(
     model: str,
     reference: str,
@@ -122,13 +122,13 @@ def reproduce(
 
 @experiments.command()
 @click.argument("path")
-@replicates_option
-@move_to_cpu_option
-@discard_replicates_option
-@directory_option
-@extra_config_option
-@keep_seed_option
-@verbose_option
+@replicates_option  # type:ignore
+@move_to_cpu_option  # type:ignore
+@discard_replicates_option  # type:ignore
+@directory_option  # type:ignore
+@extra_config_option  # type:ignore
+@keep_seed_option  # type:ignore
+@verbose_option  # type:ignore
 def run(
     path: str,
     replicates: int,
@@ -205,7 +205,7 @@ def _help_reproduce(
 
 @experiments.command()
 @click.argument("path")
-@verbose_option
+@verbose_option  # type:ignore
 @click.option("-d", "--directory", type=click.Path(file_okay=False, dir_okay=True))
 def optimize(path: str, directory: str) -> None:
     """Run a single HPO experiment."""
@@ -217,11 +217,11 @@ def optimize(path: str, directory: str) -> None:
 
 @experiments.command()
 @click.argument("path", type=click.Path(file_okay=True, dir_okay=False, exists=True))
-@directory_option
+@directory_option  # type:ignore
 @click.option("--dry-run", is_flag=True)
 @click.option("-r", "--best-replicates", type=int, help="Number of times to retrain the best model.")
-@move_to_cpu_option
-@discard_replicates_option
+@move_to_cpu_option  # type:ignore
+@discard_replicates_option  # type:ignore
 @click.option("-s", "--save-artifacts", is_flag=True)
 @verbose_option
 def ablation(

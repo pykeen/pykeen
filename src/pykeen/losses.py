@@ -164,9 +164,9 @@ from __future__ import annotations
 import logging
 import math
 from abc import abstractmethod
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from textwrap import dedent
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 import torch
 from class_resolver import ClassResolver, Hint
@@ -272,13 +272,15 @@ class NoSampleWeightSupportError(RuntimeError):
         return f"{self.instance.__class__.__name__} does not support sample weights."
 
 
-_REDUCTION_METHODS = dict(
+Reduction = Literal["mean", "sum"]
+
+_REDUCTION_METHODS: dict[Reduction, Callable] = dict(
     mean=torch.mean,
     sum=torch.sum,
 )
 
 
-def weighted_reduction(x: FloatTensor, weight: FloatTensor, reduction: str) -> FloatTensor:
+def weighted_reduction(x: FloatTensor, weight: FloatTensor, reduction: Reduction) -> FloatTensor:
     """Calculate weighted reduction."""
     match reduction:
         case "mean":
@@ -292,6 +294,8 @@ def weighted_reduction(x: FloatTensor, weight: FloatTensor, reduction: str) -> F
 
 class Loss(_Loss):
     """A loss function."""
+
+    reduction: Reduction
 
     #: synonyms of this loss
     synonyms: ClassVar[set[str] | None] = None

@@ -19,12 +19,13 @@ import os
 import sys
 from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import click
 from class_resolver import ClassResolver
 from class_resolver.contrib.optuna import sampler_resolver
 from click_default_group import DefaultGroup
+from docdata import get_docdata
 from tabulate import tabulate
 
 from .datasets import dataset_resolver
@@ -82,7 +83,7 @@ def ls() -> None:
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 def models(tablefmt: str) -> None:
     """List models."""
     click.echo(_help_models(tablefmt=tablefmt)[0])
@@ -216,13 +217,20 @@ def _help_representations(tablefmt: str = "github", *, link_fmt: str | None = No
 def importers() -> None:
     """List triple importers."""
     for prefix, f in sorted(PREFIX_IMPORTER_RESOLVER.lookup_dict.items()):
-        click.secho(f"prefix: {prefix} from {inspect.getmodule(f).__name__}")
+        click.secho(f"prefix: {prefix} from {_get_module_name(f)}")
     for suffix, f in sorted(EXTENSION_IMPORTER_RESOLVER.lookup_dict.items()):
-        click.secho(f"suffix: {suffix} from {inspect.getmodule(f).__name__}")
+        click.secho(f"suffix: {suffix} from {_get_module_name(f)}")
+
+
+def _get_module_name(f: Any) -> str:
+    m = inspect.getmodule(f)
+    if m:
+        return m.__name__
+    return "<module not found>"
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 @click.option("--sort-size", is_flag=True)
 def datasets(tablefmt: str, sort_size: bool) -> None:
     """List datasets."""
@@ -250,7 +258,7 @@ def _help_inductive_datasets(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 def training_loops(tablefmt: str) -> None:
     """List training approaches."""
     click.echo(_help_training(tablefmt))
@@ -266,7 +274,7 @@ def _help_training(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 def negative_samplers(tablefmt: str) -> None:
     """List negative samplers."""
     click.echo(_help_negative_samplers(tablefmt))
@@ -282,7 +290,7 @@ def _help_negative_samplers(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 def stoppers(tablefmt: str) -> None:
     """List stoppers."""
     click.echo(_help_stoppers(tablefmt))
@@ -298,7 +306,7 @@ def _help_stoppers(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 def evaluators(tablefmt: str) -> None:
     """List evaluators."""
     click.echo(_help_evaluators(tablefmt))
@@ -314,7 +322,7 @@ def _help_evaluators(tablefmt, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 def losses(tablefmt: str) -> None:
     """List losses."""
     click.echo(_help_losses(tablefmt))
@@ -330,7 +338,7 @@ def _help_losses(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 def optimizers(tablefmt: str) -> None:
     """List optimizers."""
     click.echo(_help_optimizers(tablefmt))
@@ -352,7 +360,7 @@ def _help_optimizers(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 def lr_schedulers(tablefmt: str) -> None:
     """List optimizers."""
     click.echo(_help_lr_schedulers(tablefmt))
@@ -374,7 +382,7 @@ def _help_lr_schedulers(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 def regularizers(tablefmt: str) -> None:
     """List regularizers."""
     click.echo(_help_regularizers(tablefmt))
@@ -396,7 +404,7 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: s
         else:  # from pykeen
             path = f"{pykeen_prefix}.{cls.__qualname__}"
 
-        docdata = getattr(cls, "__docdata__", None)
+        docdata = get_docdata(cls)
         if docdata is not None:
             name = docdata.get("name", name)
 
@@ -416,7 +424,7 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: s
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 def metrics(tablefmt: str) -> None:
     """List metrics."""
     click.echo(_help_metrics(tablefmt))
@@ -443,7 +451,7 @@ def _help_metrics(tablefmt: str) -> str:
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 def trackers(tablefmt: str) -> None:
     """List trackers."""
     click.echo(_help_trackers(tablefmt))
@@ -459,7 +467,7 @@ def _help_trackers(tablefmt: str, link_fmt: str | None = None) -> str:
 
 
 @ls.command()
-@tablefmt_option
+@tablefmt_option  # type:ignore
 def hpo_samplers(tablefmt: str) -> None:
     """List HPO samplers."""
     click.echo(_help_hpo_samplers(tablefmt))
@@ -488,7 +496,7 @@ METRIC_NAMES: Mapping[type[MetricResults], str] = {
 METRICS_SKIP: set[str] = {"standard_deviation", "variance", "median_absolute_deviation", "count"}
 
 
-def _get_metrics_lines(tablefmt: str) -> tuple[str, ...]:
+def _get_metrics_lines(tablefmt: str) -> Iterable[tuple[str, ...]]:
     for key, metric, metric_results_cls in get_metric_list():
         if key in METRICS_SKIP:
             continue
@@ -549,9 +557,8 @@ def _get_dataset_lines(tablefmt, link_fmt: str | None = None) -> Iterable[tuple[
         else:
             reference = f"`{reference}`"
 
-        try:
-            docdata = value.__docdata__
-        except AttributeError:
+        docdata = get_docdata(value)
+        if docdata is None:
             yield name, reference, "", "", "", ""
             continue
 
@@ -577,7 +584,7 @@ def _get_dataset_lines(tablefmt, link_fmt: str | None = None) -> Iterable[tuple[
         yield name, reference, citation_str, entities, relations, triples
 
 
-def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Iterable[tuple[str ,...]]:
+def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Iterable[tuple[str, ...]]:
     for name, value in sorted(inductive_dataset_resolver.lookup_dict.items()):
         reference = f"pykeen.datasets.{value.__name__}"
         if tablefmt == "rst":
@@ -587,9 +594,8 @@ def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Itera
         else:
             reference = f"`{reference}`"
 
-        try:
-            docdata = value.__docdata__
-        except AttributeError:
+        docdata = get_docdata(value)
+        if docdata is None:
             yield name, reference, "", "", "", ""
             continue
 
@@ -709,8 +715,8 @@ def get_readme() -> str:
     )
 
 
-@main.group()
-@click.pass_context
+@main.group()  # type:ignore
+@click.pass_context  # type:ignore
 def train(ctx: click.Context) -> None:
     """Train a KGE model."""
 

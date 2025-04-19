@@ -4,6 +4,8 @@
 - Paper: https://arxiv.org/abs/2009.07810
 """
 
+from typing import Any
+
 import click
 from docdata import parse_docdata
 from more_click import verbose_option

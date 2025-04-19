@@ -286,11 +286,11 @@ def lit_pipeline(
 @options.inverse_triples_option
 @model_resolver.get_option("-m", "--model", default="mure")
 @loss_resolver.get_option("-l", "--loss", default="bcewithlogits")
-@options.batch_size_option
+@options.batch_size_option  # type:ignore
 @click.option("--embedding-dim", type=int, default=128)
 @click.option("-b", "--batch-size", type=int, default=128)
 @click.option("--mixed-precision", is_flag=True)
-@options.number_epochs_option
+@options.number_epochs_option  # type:ignore
 def _main(
     training_loop: HintOrType[LitModule],
     dataset: HintOrType[Dataset],
@@ -301,7 +301,7 @@ def _main(
     embedding_dim: int,
     mixed_precision: bool,
     number_epochs: int,
-):
+) -> None:
     """Run PyTorch lightning model."""
     lit_pipeline(
         training_loop=training_loop,
