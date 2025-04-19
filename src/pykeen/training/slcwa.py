@@ -73,8 +73,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
                 drop_last=drop_last,
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=self.negative_sampler_kwargs,
-                sample_weighter=self.sample_weighter,
-                sample_weighter_kwargs=self.sample_weighter_kwargs,
+                loss_weighter=self.loss_weighter,
+                loss_weighter_kwargs=self.loss_weighter_kwargs,
             ),
             # disable automatic batching
             batch_size=None,

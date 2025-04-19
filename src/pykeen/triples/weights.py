@@ -9,14 +9,14 @@ from typing_extensions import Self
 from ..typing import COLUMN_RELATION, FloatTensor, LongTensor, MappedTriples
 
 __all__ = [
-    "SampleWeighter",
-    "RelationSampleWeighter",
-    "sample_weighter_resolver",
+    "LossWeighter",
+    "RelationLossWeighter",
+    "loss_weighter_resolver",
 ]
 
 
-class SampleWeighter(ABC):
-    """Determine sample weights."""
+class LossWeighter(ABC):
+    """Determine loss weights for triples."""
 
     @abstractmethod
     def __call__(self, h: LongTensor | None, r: LongTensor | None, t: LongTensor | None) -> FloatTensor:
@@ -43,8 +43,8 @@ class SampleWeighter(ABC):
         return self(h=h, r=r, t=t)
 
 
-class RelationSampleWeighter(SampleWeighter):
-    """Determine sample weights based solely on the relation."""
+class RelationLossWeighter(LossWeighter):
+    """Determine loss weights based solely on the relation."""
 
     def __init__(self, weights: FloatTensor):
         """Initialize the weighter.
@@ -69,4 +69,4 @@ class RelationSampleWeighter(SampleWeighter):
         return cls(weights=torch.reciprocal(counts))
 
 
-sample_weighter_resolver: ClassResolver[SampleWeighter] = ClassResolver.from_subclasses(base=SampleWeighter)
+loss_weighter_resolver: ClassResolver[LossWeighter] = ClassResolver.from_subclasses(base=LossWeighter)

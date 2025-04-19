@@ -9,11 +9,11 @@ from tests import cases
 class RelationFrequencyLossWeighterTests(cases.LossWeightTestCase):
     """Unit test for relation sample weighter."""
 
-    cls = pykeen.triples.weights.RelationSampleWeighter
+    cls = pykeen.triples.weights.RelationLossWeighter
 
 
-class TestLossWeighters(unittest_templates.MetaTestCase[pykeen.triples.weights.SampleWeighter]):
+class TestLossWeighters(unittest_templates.MetaTestCase[pykeen.triples.weights.LossWeighter]):
     """Test that the loss weighters all have tests."""
 
-    base_cls = pykeen.triples.weights.SampleWeighter
+    base_cls = pykeen.triples.weights.LossWeighter
     base_test = cases.LossWeightTestCase

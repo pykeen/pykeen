@@ -16,7 +16,7 @@ from typing_extensions import NotRequired, Self
 
 from .triples_factory import CoreTriplesFactory
 from .utils import compute_compressed_adjacency_list
-from .weights import SampleWeighter, sample_weighter_resolver
+from .weights import LossWeighter, loss_weighter_resolver
 from .. import typing as pykeen_typing
 from ..constants import get_target_column
 from ..sampling import NegativeSampler, negative_sampler_resolver
@@ -92,7 +92,7 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
 
     @update_docstring_with_resolver_keys(
         ResolverKey("negative_sampler", "pykeen.sampling.negative_sampler_resolver"),
-        ResolverKey("sample_weighter", "pykeen.triples.weights.sample_weighter_resolver"),
+        ResolverKey("loss_weighter", "pykeen.triples.weights.loss_weighter_resolver"),
     )
     def __init__(
         self,
@@ -103,8 +103,8 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
         num_relations: int | None = None,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
-        sample_weighter: HintOrType[SampleWeighter] = None,
-        sample_weighter_kwargs: OptionalKwargs = None,
+        loss_weighter: HintOrType[LossWeighter] = None,
+        loss_weighter_kwargs: OptionalKwargs = None,
     ):
         """Initialize the dataset.
 
@@ -115,8 +115,8 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
         :param num_relations: >0 the number of relations, passed to the negative sampler
         :param negative_sampler: the negative sampler, or a hint thereof
         :param negative_sampler_kwargs: additional keyword-based parameters used to instantiate the negative sampler
-        :param sample_weighter: The method to determine sample weights.
-        :param sample_weighter_kwargs: Parameters for the method to determine sample weights.
+        :param loss_weighter: The method to determine sample weights.
+        :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
         """
         self.mapped_triples = mapped_triples
         self.batch_size = batch_size
@@ -128,7 +128,7 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
             num_entities=num_entities,
             num_relations=num_relations,
         )
-        self.sample_weighter = sample_weighter_resolver.make_safe(sample_weighter, sample_weighter_kwargs)
+        self.loss_weighter = loss_weighter_resolver.make_safe(loss_weighter, loss_weighter_kwargs)
 
     def __getitem__(self, item: list[int]) -> SLCWABatch:
         """Get a batch from the given list of positive triple IDs."""
@@ -137,9 +137,9 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
         result = SLCWABatch(positives=positive_batch, negatives=negative_batch)
         if masks is not None:
             result["masks"] = masks
-        if self.sample_weighter is not None:
-            result["pos_weights"] = self.sample_weighter.weight_triples(positive_batch)
-            result["neg_weights"] = self.sample_weighter.weight_triples(negative_batch)
+        if self.loss_weighter is not None:
+            result["pos_weights"] = self.loss_weighter.weight_triples(positive_batch)
+            result["neg_weights"] = self.loss_weighter.weight_triples(negative_batch)
         return result
 
     @abstractmethod
@@ -265,29 +265,27 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
 class LCWAInstances(Instances[LCWABatch]):
     """Triples and mappings to their indices for LCWA."""
 
-    @update_docstring_with_resolver_keys(
-        ResolverKey("sample_weighter", "pykeen.triples.weights.sample_weighter_resolver")
-    )
+    @update_docstring_with_resolver_keys(ResolverKey("loss_weighter", "pykeen.triples.weights.loss_weighter_resolver"))
     def __init__(
         self,
         *,
         pairs: np.ndarray,
         compressed: scipy.sparse.csr_matrix,
         target: TargetHint = None,
-        sample_weighter: HintOrType[SampleWeighter] = None,
-        sample_weighter_kwargs: OptionalKwargs = None,
+        loss_weighter: HintOrType[LossWeighter] = None,
+        loss_weighter_kwargs: OptionalKwargs = None,
     ):
         """Initialize the LCWA instances.
 
         :param pairs: The unique pairs
         :param compressed: The compressed triples in CSR format
         :param target: The prediction target.
-        :param sample_weighter: The method to determine sample weights.
-        :param sample_weighter_kwargs: Parameters for the method to determine sample weights.
+        :param loss_weighter: The method to determine sample weights.
+        :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
         """
         self.pairs = pairs
         self.compressed = compressed
-        self.sample_weighter = sample_weighter_resolver.make_safe(sample_weighter, sample_weighter_kwargs)
+        self.loss_weighter = loss_weighter_resolver.make_safe(loss_weighter, loss_weighter_kwargs)
         self.target: TargetColumn = get_target_column(target=target)
 
     @classmethod
@@ -347,16 +345,16 @@ class LCWAInstances(Instances[LCWABatch]):
     def __getitem__(self, item: int) -> LCWABatch:  # noqa: D105
         pairs = self.pairs[item]
         result = LCWABatch(pairs=pairs, target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :]))
-        if self.sample_weighter is None:
+        if self.loss_weighter is None:
             return result
         x = pairs[..., None, 0]
         y = pairs[..., None, 1]
         match self.target:
             # note: we need qualification here
             case pykeen_typing.COLUMN_HEAD:
-                result["weights"] = self.sample_weighter(h=None, r=x, t=y)
+                result["weights"] = self.loss_weighter(h=None, r=x, t=y)
             case pykeen_typing.COLUMN_RELATION:
-                result["weights"] = self.sample_weighter(h=x, r=None, t=y)
+                result["weights"] = self.loss_weighter(h=x, r=None, t=y)
             case pykeen_typing.COLUMN_TAIL:
-                result["weights"] = self.sample_weighter(h=x, r=y, t=None)
+                result["weights"] = self.loss_weighter(h=x, r=y, t=None)
         return result

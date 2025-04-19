@@ -85,7 +85,7 @@ from pykeen.triples.instances import BaseBatchedSLCWAInstances
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
-from pykeen.triples.weights import SampleWeighter
+from pykeen.triples.weights import LossWeighter
 from pykeen.typing import (
     EA_SIDE_LEFT,
     EA_SIDE_RIGHT,
@@ -262,7 +262,7 @@ def iter_hpo_configs(hpo_default: Mapping[str, Mapping[str, Any]]) -> Iterable[M
         yield ChainMap(*combination)
 
 
-class LossWeightTestCase(GenericTestCase[SampleWeighter]):
+class LossWeightTestCase(GenericTestCase[LossWeighter]):
     """Base unittest for loss weighters."""
 
 
