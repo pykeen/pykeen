@@ -11,7 +11,7 @@ from ..losses import Loss
 from ..models.base import Model
 from ..sampling import NegativeSampler
 from ..triples import CoreTriplesFactory
-from ..triples.instances import BatchedSLCWAInstances, SLCWABatch, SubGraphSLCWAInstances
+from ..triples.instances import BaseBatchedSLCWAInstances, BatchedSLCWAInstances, SLCWABatch, SubGraphSLCWAInstances
 from ..typing import FloatTensor, InductiveMode
 
 __all__ = [
@@ -57,7 +57,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
         drop_last: bool,
         **kwargs,
     ) -> DataLoader[SLCWABatch]:  # noqa: D102
-        cls: type[BatchedSLCWAInstances] | type[SubGraphSLCWAInstances]
+        cls: type[BaseBatchedSLCWAInstances]
         match sampler:
             case None:
                 cls = BatchedSLCWAInstances
