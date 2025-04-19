@@ -115,10 +115,8 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
         :param num_relations: >0 the number of relations, passed to the negative sampler
         :param negative_sampler: the negative sampler, or a hint thereof
         :param negative_sampler_kwargs: additional keyword-based parameters used to instantiate the negative sampler
-        :param sample_weighter:
-            The method to determine sample weights.
-        :param sample_weighter_kwargs:
-            Parameters for the method to determine sample weights.
+        :param sample_weighter: The method to determine sample weights.
+        :param sample_weighter_kwargs: Parameters for the method to determine sample weights.
         """
         self.mapped_triples = mapped_triples
         self.batch_size = batch_size
@@ -283,12 +281,9 @@ class LCWAInstances(Instances[LCWABatch]):
 
         :param pairs: The unique pairs
         :param compressed: The compressed triples in CSR format
-        :param target:
-            The prediction target.
-        :param sample_weighter:
-            The method to determine sample weights.
-        :param sample_weighter_kwargs:
-            Parameters for the method to determine sample weights.
+        :param target: The prediction target.
+        :param sample_weighter: The method to determine sample weights.
+        :param sample_weighter_kwargs: Parameters for the method to determine sample weights.
         """
         self.pairs = pairs
         self.compressed = compressed
@@ -311,8 +306,7 @@ class LCWAInstances(Instances[LCWABatch]):
         :param num_entities: The number of entities.
         :param num_relations: The number of relations.
         :param target: The column to predict
-        :param kwargs:
-            Additional keyword-based parameters passed to :meth:`__init__`
+        :param kwargs: Additional keyword-based parameters passed to :meth:`__init__`
 
         :returns: The instances.
         """
@@ -335,13 +329,10 @@ class LCWAInstances(Instances[LCWABatch]):
     def from_triples_factory(cls, tf: CoreTriplesFactory, **kwargs) -> Self:
         """Create LCWA instances for triples factory.
 
-        :param tf:
-            The triples factory.
-        :param kwargs:
-            Additional keyword-based parameters passed to :meth:`from_triples`
+        :param tf: The triples factory.
+        :param kwargs: Additional keyword-based parameters passed to :meth:`from_triples`
 
-        :return:
-            The instances.
+        :returns: The instances.
         """
         return cls.from_triples(
             mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),

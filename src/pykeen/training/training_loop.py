@@ -169,10 +169,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         :param mode: The inductive training mode. None if transductive.
         :param result_tracker: the result tracker
         :param result_tracker_kwargs: additional keyword-based parameters to instantiate the result tracker
-        :param sample_weighter:
-            The method to determine sample weights.
-        :param sample_weighter_kwargs:
-            Parameters for the method to determine sample weights.
+        :param sample_weighter: The method to determine sample weights.
+        :param sample_weighter_kwargs: Parameters for the method to determine sample weights.
         """
         self.model = model
         self.optimizer = optimizer_resolver.make(optimizer, pos_kwargs=optimizer_kwargs, params=model.get_grad_params())
