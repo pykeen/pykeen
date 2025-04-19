@@ -33,8 +33,11 @@ from ..utils import split_workload
 __all__ = [
     "Instances",
     "LCWAInstances",
+    "BaseBatchedSLCWAInstances",
     "BatchedSLCWAInstances",
     "SubGraphSLCWAInstances",
+    "LCWABatch",
+    "SLCWABatch",
 ]
 
 BatchType = TypeVar("BatchType")
