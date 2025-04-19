@@ -1,4 +1,4 @@
-"""Training with sample weights."""
+"""Training with relation-specific loss weights."""
 
 from pykeen.datasets.utils import get_dataset
 from pykeen.pipeline import pipeline
