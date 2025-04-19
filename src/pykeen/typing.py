@@ -136,6 +136,8 @@ COLUMN_HEAD: TargetColumn = 0
 COLUMN_RELATION: TargetColumn = 1
 COLUMN_TAIL: TargetColumn = 2
 
+TargetHint: TypeAlias = TargetColumn | Target | None
+
 #: the rank types
 RankType = Literal["optimistic", "realistic", "pessimistic"]
 RANK_OPTIMISTIC: RankType = "optimistic"

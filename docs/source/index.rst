@@ -56,6 +56,7 @@ PyKEEN
     reference/training
     reference/stoppers
     reference/losses
+    reference/loss_weighting
     reference/regularizers
     reference/trackers
     reference/negative_sampling
