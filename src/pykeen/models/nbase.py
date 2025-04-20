@@ -634,7 +634,7 @@ class ERModel(
             raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         return self.entity_representations
 
-    def _get_entity_len(self, *, mode: InductiveMode | None) -> int | None:  # noqa:D105
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int:  # noqa:D105
         """
         Return the number of entities for the given inductive mode.
 
