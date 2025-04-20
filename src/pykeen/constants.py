@@ -1,5 +1,7 @@
 """Constants for PyKEEN."""
 
+from __future__ import annotations
+
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -15,6 +17,7 @@ from .typing import (
     LABEL_TAIL,
     Target,
     TargetColumn,
+    TargetHint,
 )
 
 __all__ = [
@@ -68,3 +71,12 @@ TARGET_TO_INDEX: Mapping[Target, TargetColumn] = {
 COLUMN_LABELS: tuple[Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
 TARGET_TO_KEY_LABELS = {target: [c for c in COLUMN_LABELS if c != target] for target in COLUMN_LABELS}
 TARGET_TO_KEYS = {target: [TARGET_TO_INDEX[c] for c in cs] for target, cs in TARGET_TO_KEY_LABELS.items()}
+
+
+def get_target_column(target: TargetHint = None) -> TargetColumn:
+    """Normalize target choice to column."""
+    if target is None:
+        return COLUMN_TAIL
+    if isinstance(target, str):
+        return TARGET_TO_INDEX[target]
+    return target

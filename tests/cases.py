@@ -85,6 +85,7 @@ from pykeen.triples.instances import BaseBatchedSLCWAInstances
 from pykeen.triples.splitting import Cleaner, Splitter
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.triples.utils import get_entities
+from pykeen.triples.weights import LossWeighter
 from pykeen.typing import (
     EA_SIDE_LEFT,
     EA_SIDE_RIGHT,
@@ -97,6 +98,7 @@ from pykeen.typing import (
     HeadRepresentation,
     InductiveMode,
     Initializer,
+    LongTensor,
     MappedTriples,
     RelationRepresentation,
     TailRepresentation,
@@ -259,6 +261,62 @@ def iter_hpo_configs(hpo_default: Mapping[str, Mapping[str, Any]]) -> Iterable[M
         *(iter_from_space(key=key, space=space) for key, space in hpo_default.items())
     ):
         yield ChainMap(*combination)
+
+
+class LossWeightTestCase(GenericTestCase[LossWeighter]):
+    """Base unittest for loss weighters."""
+
+    # docstr-coverage: inherited
+    def pre_setup_hook(self) -> None:
+        super().pre_setup_hook()
+        self.batch_size = 3
+        self.num_negatives = 5
+        self.num_entities = 7
+        self.num_relations = 11
+
+    def _make_ids(self, size: tuple[int, ...] | None, max_id: int) -> LongTensor | None:
+        if size is None:
+            return None
+        return torch.randint(max_id, size=size, generator=self.generator)
+
+    def _help_test_inference(
+        self,
+        hs: tuple[int, ...] | None,
+        rs: tuple[int, ...] | None,
+        ts: tuple[int, ...] | None,
+        expected_shape: tuple[int, ...],
+    ) -> None:
+        """Help testing inference."""
+        h = self._make_ids(hs, max_id=self.num_entities)
+        r = self._make_ids(rs, max_id=self.num_relations)
+        t = self._make_ids(ts, max_id=self.num_entities)
+        result = self.instance(h=h, r=r, t=t)
+        assert torch.is_tensor(result)
+        assert torch.is_floating_point(result)
+        # assert the result is of appropriate shape
+        torch.broadcast_shapes(result.shape, expected_shape)
+
+    def test_lcwa_heads(self) -> None:
+        """Test calculating weights for LCWA head prediction."""
+        self._help_test_inference(hs=None, rs=(1,), ts=(1,), expected_shape=(self.num_entities,))
+
+    def test_lcwa_relations(self) -> None:
+        """Test calculating weights for LCWA relation prediction."""
+        self._help_test_inference(hs=(1,), rs=None, ts=(1,), expected_shape=(self.num_relations,))
+
+    def test_lcwa_tails(self) -> None:
+        """Test calculating weights for LCWA tail prediction."""
+        self._help_test_inference(hs=(1,), rs=(1,), ts=None, expected_shape=(self.num_entities,))
+
+    def test_slcwa_positive(self) -> None:
+        """Test calculating weights for sLCWA prediction, positive triples."""
+        size = (self.batch_size,)
+        self._help_test_inference(hs=size, rs=size, ts=size, expected_shape=size)
+
+    def test_slcwa_negative(self) -> None:
+        """Test calculating weights for sLCWA prediction, negative triples."""
+        size = (self.batch_size, self.num_negatives)
+        self._help_test_inference(hs=size, rs=size, ts=size, expected_shape=size)
 
 
 class LossTestCase(GenericTestCase[Loss]):
@@ -2392,6 +2450,10 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
             assert batch["positives"].shape == (self.batch_size, 3)
             assert batch["negatives"].shape == (self.batch_size, self.num_negatives_per_positive, 3)
             assert "masks" not in batch
+            if "pos_weights" in batch:
+                assert batch["pos_weights"].shape == batch["positives"].shape
+            if "neg_weights" in batch:
+                assert batch["neg_weights"].shape == batch["negatives"].shape
 
     def test_length(self):
         """Test length."""

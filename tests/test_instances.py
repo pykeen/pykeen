@@ -7,7 +7,7 @@ import numpy
 import torch
 
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
-from pykeen.triples import LCWAInstances, SLCWAInstances
+from pykeen.triples import LCWAInstances
 from pykeen.triples.instances import BatchedSLCWAInstances, SubGraphSLCWAInstances
 from pykeen.triples.triples_factory import TriplesFactory
 from tests import cases
@@ -65,27 +65,10 @@ class LCWAInstancesTestCase(cases.TrainingInstancesTestCase):
             assert y.dtype == torch.get_default_dtype()
 
 
-class SLCWAInstancesTestCase(cases.TrainingInstancesTestCase):
-    """Tests for sLCWA training instances."""
+class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
+    """Tests for batched sLCWA training instances."""
 
-    cls = SLCWAInstances
-
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
-        kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["mapped_triples"] = self.factory.mapped_triples
-        return kwargs
-
-    def test_getitem(self) -> None:
-        """Test item access."""
-        self.instance: SLCWAInstances
-        item = self.instance[0]
-        assert {"positives", "negatives"}.issubset(item.keys())
-        assert item["positives"].shape == (3,)
-        assert item["negatives"].shape == (self.instance.sampler.num_negs_per_pos, 3)
-        if "pos_weights" in item:
-            assert item["pos_weights"].shape == item["positives"].shape
-        if "neg_weights" in item:
-            assert item["neg_weights"].shape == item["negatives"].shape
+    cls = BatchedSLCWAInstances
 
     def test_correct_inverse_creation(self):
         """Test if the triples and the corresponding inverses are created."""
@@ -97,12 +80,6 @@ class SLCWAInstancesTestCase(cases.TrainingInstancesTestCase):
         factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
         instances = BatchedSLCWAInstances.from_triples_factory(factory)
         assert len(instances) == 4
-
-
-class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
-    """Tests for batched sLCWA training instances."""
-
-    cls = BatchedSLCWAInstances
 
 
 class SubGraphSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
