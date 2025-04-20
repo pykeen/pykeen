@@ -12,6 +12,7 @@ import click
 import docdata
 import pandas as pd
 import scipy.stats
+import torch
 from more_click import force_option, log_level_option, verbose_option
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
@@ -281,6 +282,7 @@ def expected_metrics(
         else:
             expected_metrics_dict = dict()
             for key, factory in dataset_instance.factory_dict.items():
+                additional_filter_triples: list[torch.Tensor] | None
                 if key == "training":
                     additional_filter_triples = None
                 elif key == "validation":

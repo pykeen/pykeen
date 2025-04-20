@@ -49,11 +49,11 @@ _SKIP_ANNOTATIONS = {
     Union[None, str, Decomposition],  # noqa:UP007
 }
 _SKIP_HINTS = {
-    Hint[Initializer],
-    Hint[Constrainer],
-    Hint[Normalizer],
-    Hint[Regularizer],
-    HintOrType[nn.Module],
+    Hint[Initializer],  # type:ignore[misc]
+    Hint[Constrainer],  # type:ignore[misc]
+    Hint[Normalizer],  # type:ignore[misc]
+    Hint[Regularizer],  # type:ignore[misc]
+    HintOrType[nn.Module],  # type:ignore[misc]
 }
 
 
