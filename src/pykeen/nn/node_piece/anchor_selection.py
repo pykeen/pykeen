@@ -14,7 +14,7 @@ import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from torch_ppr import page_rank
 
-from ...triples.splitting import get_absolute_split_sizes, normalize_ratios
+from ...triples.splitting import construct_uniform_probability, get_absolute_split_sizes, normalize_ratios
 from ...typing import OneOrSequence
 from ...utils import ExtraReprMixin
 
@@ -219,8 +219,7 @@ class MixtureAnchorSelection(AnchorSelection):
         if selections_kwargs is None:
             selections_kwargs = [None] * n_selections
         if ratios is None:
-            # TODO check that these are "normalized" by construction
-            norm_ratios = tuple((numpy.ones(shape=(n_selections,)) / n_selections).tolist())
+            norm_ratios = construct_uniform_probability(n_selections)
         else:
             norm_ratios = normalize_ratios(ratios)
         # determine absolute number of anchors for each strategy
