@@ -23,7 +23,7 @@ embedding models that has some nice features:
     trainer.fit(model=model)
 """
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 import click
 import pytorch_lightning
@@ -51,7 +51,7 @@ __all__ = [
 ]
 
 
-class LitModule(pytorch_lightning.LightningModule):
+class LitModule(pytorch_lightning.LightningModule, ABC):
     """A base module for training models with PyTorch Lightning.
 
     .. seealso::

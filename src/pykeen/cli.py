@@ -17,7 +17,7 @@ import importlib
 import inspect
 import os
 import sys
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -69,7 +69,7 @@ def main() -> None:
 
 @main.command()
 @click.option("-f", "--tablefmt", default="github", show_default=True)
-def version(tablefmt: str | None) -> None:
+def version(tablefmt: str) -> None:
     """Print version information for debugging."""
     click.echo(env_table(tablefmt))
 
@@ -496,7 +496,7 @@ METRIC_NAMES: Mapping[type[MetricResults], str] = {
 METRICS_SKIP: set[str] = {"standard_deviation", "variance", "median_absolute_deviation", "count"}
 
 
-def _get_metrics_lines(tablefmt: str) -> Iterable[tuple[str, ...]]:
+def _get_metrics_lines(tablefmt: str) -> Iterable[Sequence[str]]:
     for key, metric, metric_results_cls in get_metric_list():
         if key in METRICS_SKIP:
             continue
