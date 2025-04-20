@@ -1,17 +1,29 @@
 """Loss weighting for triples.
 
-In the current implementation, these weights are loss weights, i.e. they influence how much a given triple is weighted
-in the loss function. Thus, they are primarily a tool to shape your optimization criterion, e.g. to focus more or less
-on certain types of triples, e.g. because they are not that important to you, or you want to counteract imbalances, etc.
+Loss weights influence how much a given triple is weighted in the loss function. They are primarily a tool to shape your
+optimization criterion, i.e., what you optimize your embedding models on. For example, you may want to focus more or
+less on certain types of triples because they are more or less important for your application. You can also use loss
+weights to counteract imbalances in relation frequencies, i.e., to down-weight frequent relation types.
 
 They are not:
 
-1. (static) weights for message passing - we already support those, cf. :class:`pykeen.nn.weighting.EdgeWeighting`
+1. (static) weights for message passing - we already support those, cf. :class:`~pykeen.nn.weighting.EdgeWeighting`
 2. weights in the sense of how reliable a particular triple is. If you have a source of uncertainty about triples, you
    might want to set lower loss weights for uncertain triples (in the sense of "it does not matter so much if the model
    reproduces an uncertain label"). Another alternative would be to use softer labels for them (i.e., try to predict the
    uncertain label directly), or more advanced ways of incorporating uncertainty.
 3. more general qualifiers on the triples, e.g., ``(km, multiple_of, m)`` could have a qualifier ``(factor, 10)`` on it
+
+The current implementation defines the general interface for (dynamic) loss weights via
+:class:`~pykeen.triples.weights.LossWeighter`, which you can extend with your own weighting logic. It also provides an
+implementation of relation-specific weighting, where the loss weight of a triple depends only on the relation type
+involved: :class:`~pykeen.triples.weights.RelationLossWeighter`.
+
+Example
+-------
+Below is a minimal example of how to use it via the high-level :func:`~pykeen.pipeline.api.pipeline` API:
+
+.. literalinclude:: ../examples/training/loss_weights.py
 """
 
 from abc import ABC, abstractmethod
