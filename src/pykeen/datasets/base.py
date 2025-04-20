@@ -843,7 +843,12 @@ class PackedZipRemoteDataset(LazyDataset):
         """
         self.cache_root = self._help_cache(cache_root)
 
-        self.name = name or name_from_url(url)
+        if name:
+            self.name = name
+        elif url:
+            self.name = name_from_url(url)
+        else:
+            raise ValueError("must give at least one of name or URL")
         self.path = self.cache_root.joinpath(self.name)
         logger.debug("file path at %s", self.path)
 
