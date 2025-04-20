@@ -155,7 +155,7 @@ class CooccurrenceFilteredModel(Model):
         return new_scores
 
     # docstr-coverage: inherited
-    def _get_entity_len(self, *, mode: InductiveMode | None) -> int | None:
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int:
         return self.base._get_entity_len(mode=mode)
 
     # docstr-coverage: inherited
