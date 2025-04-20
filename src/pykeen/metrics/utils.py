@@ -178,8 +178,7 @@ def weighted_mean_variance(individual: np.ndarray, weights: np.ndarray | None) -
     n = individual.size
     if weights is None:
         return individual.mean() / n
-    weights = weights / weights.sum()
-    return (individual * weights**2).sum().item()
+    return (individual * (weights / weights.sum()) ** 2).sum().item()
 
 
 def stable_product(a: np.ndarray, is_log: bool = False) -> np.ndarray:
