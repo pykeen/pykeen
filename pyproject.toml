@@ -103,7 +103,8 @@ ogb = [
     "ogb>=1.3.4",
 ]
 wandb = [
-    "wandb", ]
+    "wandb",
+]
 neptune = [
     "neptune-client",
 ]
