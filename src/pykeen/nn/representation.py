@@ -1435,7 +1435,7 @@ class CachedTextRepresentation(TextRepresentation):
         **kwargs,
     ) -> TextRepresentation:  # noqa: D102
         labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
-        return cls(identifiers=labeling.all_labels(), **kwargs)
+        return cls(identifiers=labeling.all_labels().tolist(), **kwargs)
 
 
 @parse_docdata
