@@ -219,10 +219,10 @@ def _prepare_representation_module_list(
     return rs
 
 
-def repeat_if_necessary(
+def _repeat_when_missing_representations(
     scores: FloatTensor,
     representations: Sequence[Representation],
-    num: int | None,
+    num: int,
 ) -> FloatTensor:
     """
     Repeat score tensor if necessary.
@@ -230,6 +230,10 @@ def repeat_if_necessary(
     If a model does not have entity/relation representations, the scores for
     `score_{h,t}` / `score_r` are always the same. For efficiency, they are thus
     only computed once, but to meet the API, they have to be brought into the correct shape afterwards.
+
+    For example, this is the case for :class:`pykeen.models.UM`, which does not have any relation
+    representation. Therefore, the scores for all ``(h, *, t)`` will be the same. We calculate
+    them only once, but need to repeat them for downstream use of the scores.
 
     :param scores: shape: (batch_size, ?)
         the score tensor
@@ -532,7 +536,7 @@ class ERModel(
         # unsqueeze if necessary
         if tails is None or tails.ndimension() == 1:
             t = parallel_unsqueeze(t, dim=0)
-        return repeat_if_necessary(
+        return _repeat_when_missing_representations(
             scores=self.interaction(h=h, r=r, t=t),
             representations=self.entity_representations,
             num=self._get_entity_len(mode=mode) if tails is None else tails.shape[-1],
@@ -570,7 +574,7 @@ class ERModel(
         # unsqueeze if necessary
         if heads is None or heads.ndimension() == 1:
             h = parallel_unsqueeze(h, dim=0)
-        return repeat_if_necessary(
+        return _repeat_when_missing_representations(
             scores=self.interaction(h=h, r=r, t=t),
             representations=self.entity_representations,
             num=self._get_entity_len(mode=mode) if heads is None else heads.shape[-1],
@@ -608,7 +612,7 @@ class ERModel(
         # unsqueeze if necessary
         if relations is None or relations.ndimension() == 1:
             r = parallel_unsqueeze(r, dim=0)
-        return repeat_if_necessary(
+        return _repeat_when_missing_representations(
             scores=self.interaction(h=h, r=r, t=t),
             representations=self.relation_representations,
             num=self.num_relations if relations is None else relations.shape[-1],
@@ -634,7 +638,7 @@ class ERModel(
             raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         return self.entity_representations
 
-    def _get_entity_len(self, *, mode: InductiveMode | None) -> int | None:  # noqa:D105
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int:  # noqa:D105
         """
         Return the number of entities for the given inductive mode.
 
