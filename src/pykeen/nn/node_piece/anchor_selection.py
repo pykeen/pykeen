@@ -219,9 +219,12 @@ class MixtureAnchorSelection(AnchorSelection):
         if selections_kwargs is None:
             selections_kwargs = [None] * n_selections
         if ratios is None:
-            ratios = numpy.ones(shape=(n_selections,)) / n_selections
+            # TODO check that these are "normalized" by construction
+            norm_ratios = tuple(numpy.ones(shape=(n_selections,)) / n_selections)
+        else:
+            norm_ratios = normalize_ratios(ratios)
         # determine absolute number of anchors for each strategy
-        num_anchors = get_absolute_split_sizes(n_total=self.num_anchors, ratios=normalize_ratios(ratios=ratios))
+        num_anchors = get_absolute_split_sizes(n_total=self.num_anchors, ratios=norm_ratios)
         self.selections = [
             anchor_selection_resolver.make(selection, selection_kwargs, num_anchors=num)
             for selection, selection_kwargs, num in zip(selections, selections_kwargs, num_anchors, strict=False)
