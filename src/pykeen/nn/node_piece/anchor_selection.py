@@ -246,10 +246,14 @@ class MixtureAnchorSelection(AnchorSelection):
         edge_index: numpy.ndarray,
         known_anchors: numpy.ndarray | None = None,
     ) -> numpy.ndarray:  # noqa: D102
-        anchors = known_anchors or None
-        for selection in self.selections:
-            anchors = selection(edge_index=edge_index, known_anchors=anchors)
-        return anchors
+        # split this up into first and rest, because once
+        # we apply one selection, even to a none value for `known_anchors`,
+        # we are guaranteed to have a non-none anchor
+        first, *rest = self.selections
+        anchor: numpy.ndarray = first(edge_index=edge_index, known_anchors=known_anchors)
+        for selection in rest:
+            anchor = selection(edge_index=edge_index, known_anchors=known_anchors)
+        return anchor
 
 
 #: A resolver for NodePiece anchor selectors
