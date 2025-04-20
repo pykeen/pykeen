@@ -220,7 +220,7 @@ class MixtureAnchorSelection(AnchorSelection):
             selections_kwargs = [None] * n_selections
         if ratios is None:
             # TODO check that these are "normalized" by construction
-            norm_ratios = tuple(numpy.ones(shape=(n_selections,)) / n_selections)
+            norm_ratios = tuple((numpy.ones(shape=(n_selections,)) / n_selections).tolist())
         else:
             norm_ratios = normalize_ratios(ratios)
         # determine absolute number of anchors for each strategy
