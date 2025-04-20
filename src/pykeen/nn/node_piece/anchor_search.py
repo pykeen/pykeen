@@ -264,11 +264,11 @@ class SparseBFSSearcher(AnchorSearcher):
         :returns: shape: (2, 2m + n) edge list with inverse edges and self-loops
         """
         num_entities = ensure_num_entities(edge_index, num_entities=num_entities)
-        edge_index = torch.as_tensor(edge_index, dtype=torch.long)
+        edge_index_torch = torch.as_tensor(edge_index, dtype=torch.long)
 
         # symmetric + self-loops
         edge_list = torch.cat(
-            [edge_index, edge_index.flip(0), torch.arange(num_entities).unsqueeze(0).repeat(2, 1)], dim=-1
+            [edge_index_torch, edge_index_torch.flip(0), torch.arange(num_entities).unsqueeze(0).repeat(2, 1)], dim=-1
         ).unique(dim=1)  # unique for deduplicating repeated edges
 
         return edge_list
