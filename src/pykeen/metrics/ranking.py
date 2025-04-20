@@ -991,7 +991,7 @@ class GeometricMeanRank(RankBasedMetric):
 
     @classmethod
     def _individual_variance(
-        cls, num_candidates: np.ndarray, weights: np.ndarray, individual_expectation: np.ndarray
+        cls, num_candidates: np.ndarray, weights: np.ndarray | None, individual_expectation: np.ndarray
     ) -> np.ndarray:
         # use V[x] = E[x^2] - E[x]^2
         x2 = (
