@@ -84,13 +84,13 @@ def run_inverse_stability_workflow(
         device=device,
     )
     test_tf = dataset_instance.testing
-    model = pipeline_result.model
+    model_inst = pipeline_result.model
     # Score with original triples
-    scores_forward = model.score_hrt(test_tf.mapped_triples, mode=mode)
+    scores_forward = model_inst.score_hrt(test_tf.mapped_triples, mode=mode)
     scores_forward_np = scores_forward.detach().numpy()[:, 0]
 
     # Score with inverse triples
-    scores_inverse = model.score_hrt_inverse(test_tf.mapped_triples, mode=mode)
+    scores_inverse = model_inst.score_hrt_inverse(test_tf.mapped_triples, mode=mode)
     scores_inverse_np = scores_inverse.detach().numpy()[:, 0]
 
     scores_path = dataset_dir / f"{model_name}_{training_loop}_scores.tsv"

@@ -12,6 +12,7 @@ import click
 import docdata
 import pandas as pd
 import scipy.stats
+import torch
 from more_click import force_option, log_level_option, verbose_option
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
@@ -41,7 +42,7 @@ IMG_DIR = ROOT.joinpath("docs", "source", "img")
 
 
 @click.group()
-def main():
+def main() -> None:
     """Run the dataset CLI."""
 
 
@@ -50,7 +51,7 @@ def main():
 @dataset_regex_option
 @min_triples_option
 @max_triples_option
-def summarize(dataset_regex: str | None, min_triples: int | None, max_triples: int | None):
+def summarize(dataset_regex: str | None, min_triples: int | None, max_triples: int | None) -> None:
     """Load all datasets."""
     for name, dataset in iter_dataset_instances(
         regex_name_filter=dataset_regex, min_triples=min_triples, max_triples=max_triples
@@ -78,7 +79,7 @@ def analyze(
     force: bool,
     countplots: bool,
     directory,
-):
+) -> None:
     """Generate analysis."""
     for name, dataset in iter_dataset_instances(
         regex_name_filter=dataset_regex, min_triples=min_triples, max_triples=max_triples
@@ -98,7 +99,7 @@ def _analyze(
     force: bool,
     countplots: bool,
     directory: None | str | pathlib.Path,
-):
+) -> None:
     from . import analysis
 
     plt, sns = _get_plotting_libraries()
@@ -206,7 +207,7 @@ def _get_plotting_libraries():
 @dataset_regex_option
 @min_triples_option
 @max_triples_option
-def verify(dataset_regex: str | None, min_triples: int | None, max_triples: int | None):
+def verify(dataset_regex: str | None, min_triples: int | None, max_triples: int | None) -> None:
     """Verify dataset integrity."""
     data = []
     keys = None
@@ -266,7 +267,7 @@ def expected_metrics(
     samples: int,
     force: bool,
     output_directory: pathlib.Path,
-):
+) -> None:
     """Compute expected metrics for all datasets (matching the given pattern)."""
     logging.getLogger("pykeen").setLevel(level=log_level)
     df_data: list[tuple[str, str, str, str, float]] = []
@@ -281,6 +282,7 @@ def expected_metrics(
         else:
             expected_metrics_dict = dict()
             for key, factory in dataset_instance.factory_dict.items():
+                additional_filter_triples: list[torch.Tensor] | None
                 if key == "training":
                     additional_filter_triples = None
                 elif key == "validation":
@@ -394,7 +396,7 @@ def degree(
     force: bool,
     plot: bool,
     output_root: pathlib.Path,
-):
+) -> None:
     """Analyze degree distributions."""
     output_root.mkdir(exist_ok=True, parents=True)
     base_path = output_root.joinpath("degree-distributions")

@@ -265,3 +265,6 @@ autoclass_content = "both"
 # autodoc_member_order = 'bysource'
 autodoc_typehints = "both"
 # autodoc_preserve_defaults = True
+
+# Output SVG inheritance diagrams
+graphviz_output_format = "svg"

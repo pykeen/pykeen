@@ -164,9 +164,9 @@ from __future__ import annotations
 import logging
 import math
 from abc import abstractmethod
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from textwrap import dedent
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal, TypeAlias
 
 import torch
 from class_resolver import ClassResolver, Hint
@@ -272,13 +272,16 @@ class NoSampleWeightSupportError(RuntimeError):
         return f"{self.instance.__class__.__name__} does not support sample weights."
 
 
-_REDUCTION_METHODS = dict(
+Reduction: TypeAlias = Literal["mean", "sum"]
+ReductionMethod: TypeAlias = Callable
+
+_REDUCTION_METHODS: dict[Reduction, ReductionMethod] = dict(
     mean=torch.mean,
     sum=torch.sum,
 )
 
 
-def weighted_reduction(x: FloatTensor, weight: FloatTensor, reduction: str) -> FloatTensor:
+def weighted_reduction(x: FloatTensor, weight: FloatTensor, reduction: Reduction) -> FloatTensor:
     """Calculate weighted reduction."""
     match reduction:
         case "mean":
@@ -293,13 +296,16 @@ def weighted_reduction(x: FloatTensor, weight: FloatTensor, reduction: str) -> F
 class Loss(_Loss):
     """A loss function."""
 
+    reduction: Reduction
+    _reduction_method: ReductionMethod
+
     #: synonyms of this loss
     synonyms: ClassVar[set[str] | None] = None
 
     #: The default strategy for optimizing the loss's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    def __init__(self, reduction: str = "mean"):
+    def __init__(self, reduction: Reduction = "mean"):
         """
         Initialize the loss.
 
@@ -536,7 +542,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
     pos_weight: FloatTensor | None
 
-    def __init__(self, reduction: str = "mean", pos_weight: None | float = None):
+    def __init__(self, reduction: Reduction = "mean", pos_weight: None | float = None):
         """Initialize the loss criterion.
 
         :param reduction:
@@ -603,7 +609,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         self,
         margin: float = 1.0,
         margin_activation: Hint[nn.Module] = None,
-        reduction: str = "mean",
+        reduction: Reduction = "mean",
     ):
         r"""Initialize the margin loss instance.
 
@@ -728,7 +734,7 @@ class MarginRankingLoss(MarginPairwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = "mean"):
+    def __init__(self, margin: float = 1.0, reduction: Reduction = "mean"):
         r"""Initialize the margin loss instance.
 
         :param margin:
@@ -764,7 +770,7 @@ class SoftMarginRankingLoss(MarginPairwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = "mean"):
+    def __init__(self, margin: float = 1.0, reduction: Reduction = "mean"):
         """
         Initialize the loss.
 
@@ -799,7 +805,7 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
     # within the ablation pipeline.
     hpo_default: ClassVar[Mapping[str, Any]] = dict()
 
-    def __init__(self, reduction: str = "mean"):
+    def __init__(self, reduction: Reduction = "mean"):
         """
         Initialize the loss.
 
@@ -922,7 +928,7 @@ class DoubleMarginLoss(PointwiseLoss):
         offset: float | None = None,
         positive_negative_balance: float = 0.5,
         margin_activation: Hint[nn.Module] = "relu",
-        reduction: str = "mean",
+        reduction: Reduction = "mean",
     ):
         r"""Initialize the double margin loss.
 
@@ -1053,7 +1059,7 @@ class DeltaPointwiseLoss(PointwiseLoss):
         self,
         margin: float | None = 0.0,
         margin_activation: Hint[nn.Module] = "softplus",
-        reduction: str = "mean",
+        reduction: Reduction = "mean",
     ) -> None:
         """
         Initialize the loss.
@@ -1096,7 +1102,7 @@ class PointwiseHingeLoss(DeltaPointwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = "mean") -> None:
+    def __init__(self, margin: float = 1.0, reduction: Reduction = "mean") -> None:
         """
         Initialize the loss.
 
@@ -1128,7 +1134,7 @@ class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = "mean") -> None:
+    def __init__(self, margin: float = 1.0, reduction: Reduction = "mean") -> None:
         """
         Initialize the loss.
 
@@ -1161,7 +1167,7 @@ class SoftplusLoss(SoftPointwiseHingeLoss):
     # within the ablation pipeline.
     hpo_default: ClassVar[Mapping[str, Any]] = dict()
 
-    def __init__(self, reduction: str = "mean") -> None:
+    def __init__(self, reduction: Reduction = "mean") -> None:
         """
         Initialize the loss.
 
@@ -1329,7 +1335,7 @@ class InfoNCELoss(CrossEntropyLoss):
         self,
         margin: float = 0.02,
         log_adversarial_temperature: float = DEFAULT_LOG_ADVERSARIAL_TEMPERATURE,
-        reduction: str = "mean",
+        reduction: Reduction = "mean",
     ) -> None:
         r"""Initialize the loss.
 
@@ -1421,7 +1427,7 @@ class InfoNCELoss(CrossEntropyLoss):
 class AdversarialLoss(SetwiseLoss):
     """A loss with adversarial weighting of negative samples."""
 
-    def __init__(self, inverse_softmax_temperature: float = 1.0, reduction: str = "mean") -> None:
+    def __init__(self, inverse_softmax_temperature: float = 1.0, reduction: Reduction = "mean") -> None:
         """Initialize the adversarial loss.
 
         :param inverse_softmax_temperature:
@@ -1577,7 +1583,9 @@ class NSSALoss(AdversarialLoss):
         adversarial_temperature=dict(type=float, low=0.5, high=1.0),
     )
 
-    def __init__(self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: str = "mean") -> None:
+    def __init__(
+        self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: Reduction = "mean"
+    ) -> None:
         """Initialize the NSSA loss.
 
         :param margin: The loss's margin (also written as gamma in the reference paper)
