@@ -1,5 +1,7 @@
 """Utilities for non-parametric baseline models."""
 
+from typing import Literal, TypeAlias
+
 import numpy
 import scipy.sparse
 import torch
@@ -13,15 +15,19 @@ __all__ = [
     "get_csr_matrix",
     "marginal_score",
     "get_relation_similarity",
+    "VectorNormalizationMethod",
 ]
+
+#: Methods allowed for vector normalization in :func:`sklearn.preprocessing.normalize`
+VectorNormalizationMethod: TypeAlias = Literal["l1", "l2", "max"]
 
 
 def get_csr_matrix(
     row_indices: numpy.ndarray,
     col_indices: numpy.ndarray,
     shape: tuple[int, int],
-    dtype: numpy.dtype = numpy.float32,
-    norm: str | None = "l1",
+    dtype: type[numpy.number] = numpy.float32,
+    norm: VectorNormalizationMethod | None = "l1",
 ) -> scipy.sparse.csr_matrix:
     """Create a sparse matrix, with ones for the given non-zero locations.
 

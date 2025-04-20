@@ -14,7 +14,7 @@ import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from torch_ppr import page_rank
 
-from ...triples.splitting import get_absolute_split_sizes, normalize_ratios
+from ...triples.splitting import construct_uniform_probability, get_absolute_split_sizes, normalize_ratios
 from ...typing import OneOrSequence
 from ...utils import ExtraReprMixin
 
@@ -219,9 +219,11 @@ class MixtureAnchorSelection(AnchorSelection):
         if selections_kwargs is None:
             selections_kwargs = [None] * n_selections
         if ratios is None:
-            ratios = numpy.ones(shape=(n_selections,)) / n_selections
+            norm_ratios = construct_uniform_probability(n_selections)
+        else:
+            norm_ratios = normalize_ratios(ratios)
         # determine absolute number of anchors for each strategy
-        num_anchors = get_absolute_split_sizes(n_total=self.num_anchors, ratios=normalize_ratios(ratios=ratios))
+        num_anchors = get_absolute_split_sizes(n_total=self.num_anchors, ratios=norm_ratios)
         self.selections = [
             anchor_selection_resolver.make(selection, selection_kwargs, num_anchors=num)
             for selection, selection_kwargs, num in zip(selections, selections_kwargs, num_anchors, strict=False)
@@ -243,10 +245,14 @@ class MixtureAnchorSelection(AnchorSelection):
         edge_index: numpy.ndarray,
         known_anchors: numpy.ndarray | None = None,
     ) -> numpy.ndarray:  # noqa: D102
-        anchors = known_anchors or None
-        for selection in self.selections:
-            anchors = selection(edge_index=edge_index, known_anchors=anchors)
-        return anchors
+        # split this up into first and rest, because once
+        # we apply one selection, even to a none value for `known_anchors`,
+        # we are guaranteed to have a non-none anchor
+        first, *rest = self.selections
+        anchor: numpy.ndarray = first(edge_index=edge_index, known_anchors=known_anchors)
+        for selection in rest:
+            anchor = selection(edge_index=edge_index, known_anchors=anchor)
+        return anchor
 
 
 #: A resolver for NodePiece anchor selectors

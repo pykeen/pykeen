@@ -224,9 +224,8 @@ class FilterIndex:
             bounds.append(len(indices))
         # convert lists to arrays
         indices = torch.as_tensor(indices)
-        bounds = numpy.asarray(bounds)
         # instantiate
-        return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=bounds, indices=indices)
+        return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=numpy.asarray(bounds), indices=indices)
 
     def __getitem__(self, item: int) -> numpy.ndarray:  # noqa: D105
         # return indices corresponding to the `item`-th triple
