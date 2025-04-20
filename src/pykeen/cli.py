@@ -17,7 +17,8 @@ import importlib
 import inspect
 import os
 import sys
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping
+from operator import itemgetter
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -444,7 +445,7 @@ def _help_metrics(tablefmt: str) -> str:
         headers.append("Reference")
         headers[0] = "Metric"
     return tabulate(
-        sorted(_get_metrics_lines(tablefmt), key=lambda t: (t[4], t[0])),
+        sorted(_get_metrics_lines(tablefmt), key=itemgetter(4, 0)),  # type:ignore
         headers=headers,
         tablefmt=tablefmt,
     )
@@ -496,7 +497,7 @@ METRIC_NAMES: Mapping[type[MetricResults], str] = {
 METRICS_SKIP: set[str] = {"standard_deviation", "variance", "median_absolute_deviation", "count"}
 
 
-def _get_metrics_lines(tablefmt: str) -> Iterable[Sequence[str]]:
+def _get_metrics_lines(tablefmt: str) -> Iterable[tuple[str, ...]]:
     for key, metric, metric_results_cls in get_metric_list():
         if key in METRICS_SKIP:
             continue
