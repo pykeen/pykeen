@@ -472,14 +472,14 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         if self.use_tqdm:
             progress = tqdm(progress, unit="batch", unit_scale=True)
         # batch-wise computation of PPR
-        anchors = torch.as_tensor(anchors, dtype=torch.long)
+        anchors_torch = torch.as_tensor(anchors, dtype=torch.long)
         for start in progress:
             # run page-rank calculation, shape: (batch_size, n)
             ppr = page_rank(
                 adj=adj, x0=prepare_x0(indices=range(start, start + self.batch_size), n=n), **self.page_rank_kwargs
             )
             # select PPR values for the anchors, shape: (batch_size, num_anchors)
-            yield ppr[:, anchors.to(ppr.device)]
+            yield ppr[:, anchors_torch.to(ppr.device)]
 
 
 #: A resolver for NodePiece anchor searchers
