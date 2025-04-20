@@ -222,7 +222,7 @@ def _prepare_representation_module_list(
 def repeat_if_necessary(
     scores: FloatTensor,
     representations: Sequence[Representation],
-    num: int | None,
+    num: int,
 ) -> FloatTensor:
     """
     Repeat score tensor if necessary.
@@ -236,7 +236,7 @@ def repeat_if_necessary(
     :param representations:
         the representations. If empty (i.e. no representations for this 1:n scoring), repetition needs to be applied
     :param num:
-        the number of times to repeat, if necessary.
+        the number of times to repeat.
 
     :return:
         the score tensor, which has been repeated, if necessary
