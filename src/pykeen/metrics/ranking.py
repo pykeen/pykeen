@@ -176,7 +176,7 @@ def generate_ranks(
         an array of sampled rank values
     """
     if dtype is None:
-        dtype = int
+        dtype = np.int_
     generator = np.random.default_rng(seed=seed)
     return generator.integers(low=1, high=num_candidates + 1, size=prefix_shape + num_candidates.shape, dtype=dtype)
 
