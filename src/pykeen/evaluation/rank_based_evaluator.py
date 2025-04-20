@@ -269,14 +269,19 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         metric_cls: type[RankBasedMetric]
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
-            for (target, i), (j, rank_type) in itertools.product(
-                ((LABEL_HEAD, 0), (LABEL_TAIL, 1), (SIDE_BOTH, slice(None))), enumerate(RANK_TYPES)
-            ):
+            for (target, i), (j, rank_type) in itertools.product(RANDOM_TARGET_SLICE, enumerate(RANK_TYPES)):
                 this_ranks = ranks[j, i].flatten()
                 data[RankBasedMetricKey(side=target, rank_type=rank_type, metric=metric.key)] = metric(
                     ranks=this_ranks, num_candidates=num_candidates[i].flatten()
                 )
         return cls(data=data)
+
+
+RANDOM_TARGET_SLICE: list[tuple[ExtendedTarget, int | slice]] = [
+    (LABEL_HEAD, 0),
+    (LABEL_TAIL, 1),
+    (SIDE_BOTH, slice(None)),
+]
 
 
 class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
