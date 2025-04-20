@@ -73,10 +73,10 @@ dependencies = [
     "more_click",
     "more_itertools",
     "pystow>=0.4.3",
-    "docdata",
+    "docdata>=0.0.5",
     "class_resolver>=0.5.4",
     "pyyaml",
-    "torch_max_mem>=0.1.1",
+    "torch_max_mem>=0.1.4",
     "torch-ppr>=0.0.7",
     "typing_extensions",
 ]
@@ -103,7 +103,8 @@ ogb = [
     "ogb>=1.3.4",
 ]
 wandb = [
-    "wandb", ]
+    "wandb",
+]
 neptune = [
     "neptune-client",
 ]

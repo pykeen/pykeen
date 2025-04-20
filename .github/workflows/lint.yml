@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ "3.10", "3.12" ]
+        python-version: [ "3.10", "3.13" ]
     steps:
       - uses: actions/checkout@v4
       
@@ -24,7 +24,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
           cache: 'pip'
-          cache-dependency-path: './setup.cfg'
+          cache-dependency-path: './pyproject.toml'
       
       - name: Install dependencies
         run: pip install tox tox-uv
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ "3.12" ]
+        python-version: [ "3.13" ]
     steps:
     - uses: actions/checkout@v4
     
@@ -50,7 +50,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
         cache: 'pip'
-        cache-dependency-path: './setup.cfg'
+        cache-dependency-path: './pyproject.toml'
     
     - name: Install dependencies
       run: pip install tox tox-uv

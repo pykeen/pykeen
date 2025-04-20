@@ -87,7 +87,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         cls,
         triples: LabeledTriples,
         *,
-        numeric_triples: LabeledTriples = None,
+        numeric_triples: LabeledTriples | None = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if numeric_triples is None:

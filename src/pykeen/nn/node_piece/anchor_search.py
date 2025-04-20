@@ -264,11 +264,11 @@ class SparseBFSSearcher(AnchorSearcher):
         :returns: shape: (2, 2m + n) edge list with inverse edges and self-loops
         """
         num_entities = ensure_num_entities(edge_index, num_entities=num_entities)
-        edge_index = torch.as_tensor(edge_index, dtype=torch.long)
+        edge_index_torch = torch.as_tensor(edge_index, dtype=torch.long)
 
         # symmetric + self-loops
         edge_list = torch.cat(
-            [edge_index, edge_index.flip(0), torch.arange(num_entities).unsqueeze(0).repeat(2, 1)], dim=-1
+            [edge_index_torch, edge_index_torch.flip(0), torch.arange(num_entities).unsqueeze(0).repeat(2, 1)], dim=-1
         ).unique(dim=1)  # unique for deduplicating repeated edges
 
         return edge_list
@@ -472,14 +472,14 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         if self.use_tqdm:
             progress = tqdm(progress, unit="batch", unit_scale=True)
         # batch-wise computation of PPR
-        anchors = torch.as_tensor(anchors, dtype=torch.long)
+        anchors_torch = torch.as_tensor(anchors, dtype=torch.long)
         for start in progress:
             # run page-rank calculation, shape: (batch_size, n)
             ppr = page_rank(
                 adj=adj, x0=prepare_x0(indices=range(start, start + self.batch_size), n=n), **self.page_rank_kwargs
             )
             # select PPR values for the anchors, shape: (batch_size, num_anchors)
-            yield ppr[:, anchors.to(ppr.device)]
+            yield ppr[:, anchors_torch.to(ppr.device)]
 
 
 #: A resolver for NodePiece anchor searchers
