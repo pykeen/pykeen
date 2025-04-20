@@ -252,7 +252,7 @@ class MixtureAnchorSelection(AnchorSelection):
         first, *rest = self.selections
         anchor: numpy.ndarray = first(edge_index=edge_index, known_anchors=known_anchors)
         for selection in rest:
-            anchor = selection(edge_index=edge_index, known_anchors=known_anchors)
+            anchor = selection(edge_index=edge_index, known_anchors=anchor)
         return anchor
 
 
