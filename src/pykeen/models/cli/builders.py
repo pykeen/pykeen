@@ -69,7 +69,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
     """
     signature = inspect.signature(model.__init__)
 
-    def _decorate_model_kwargs(command: click.Command) -> click.Command:
+    def _decorate_model_kwargs(command: click.decorators.FC) -> click.decorators.FC:
         for name, annotation in model.__init__.__annotations__.items():
             if name in _SKIP_ARGS or annotation in _SKIP_ANNOTATIONS:
                 continue
