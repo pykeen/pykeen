@@ -42,6 +42,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
     """
 
     supports_slicing: ClassVar[bool] = True
+    num_targets: int
 
     def __init__(
         self,
@@ -106,7 +107,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         model: Model,
         score_method: Callable,
         loss: Loss,
-        num_targets: int | None,
+        num_targets: int,
         mode: InductiveMode | None,
         batch: LCWABatch,
         start: int | None,
