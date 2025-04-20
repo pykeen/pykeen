@@ -1138,8 +1138,8 @@ def harmonic_variances(n: int) -> np.ndarray:
     """
     h = generalized_harmonic_numbers(n)
     h2 = generalized_harmonic_numbers(n, p=-2)
-    n = np.arange(1, n + 1, dtype=float)
-    v = (n * h2 - h**2) / n**2
+    n_range = np.arange(1, n + 1, dtype=float)
+    v = (n_range * h2 - h**2) / n_range**2
     # ensure non-negativity, mathematically not necessary, but just to be safe from the numeric perspective
     # cf. https://en.wikipedia.org/wiki/Loss_of_significance#Subtraction
     v = np.maximum(v, 0.0)
