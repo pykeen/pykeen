@@ -115,7 +115,8 @@ class CooccurrenceFilteredModel(Model):
                     row_indices=mapped_triples[:, row_index],
                     col_indices=mapped_triples[:, col_index],
                     shape=(num_rows, num_cols),
-                    dtype=bool,
+                    # TODO how to type this properly? np.bool and np.bool_ don't work either
+                    dtype=bool,  # type:ignore
                     norm=None,
                 )
                 for num_rows, (row_label, row_index) in zip(nums, TARGET_TO_INDEX.items(), strict=False)
