@@ -219,7 +219,7 @@ def _prepare_representation_module_list(
     return rs
 
 
-def repeat_if_necessary(
+def _repeat_when_missing_representations(
     scores: FloatTensor,
     representations: Sequence[Representation],
     num: int,
@@ -236,7 +236,7 @@ def repeat_if_necessary(
     :param representations:
         the representations. If empty (i.e. no representations for this 1:n scoring), repetition needs to be applied
     :param num:
-        the number of times to repeat.
+        the number of times to repeat, if necessary.
 
     :return:
         the score tensor, which has been repeated, if necessary
@@ -532,7 +532,7 @@ class ERModel(
         # unsqueeze if necessary
         if tails is None or tails.ndimension() == 1:
             t = parallel_unsqueeze(t, dim=0)
-        return repeat_if_necessary(
+        return _repeat_when_missing_representations(
             scores=self.interaction(h=h, r=r, t=t),
             representations=self.entity_representations,
             num=self._get_entity_len(mode=mode) if tails is None else tails.shape[-1],
@@ -570,7 +570,7 @@ class ERModel(
         # unsqueeze if necessary
         if heads is None or heads.ndimension() == 1:
             h = parallel_unsqueeze(h, dim=0)
-        return repeat_if_necessary(
+        return _repeat_when_missing_representations(
             scores=self.interaction(h=h, r=r, t=t),
             representations=self.entity_representations,
             num=self._get_entity_len(mode=mode) if heads is None else heads.shape[-1],
@@ -608,7 +608,7 @@ class ERModel(
         # unsqueeze if necessary
         if relations is None or relations.ndimension() == 1:
             r = parallel_unsqueeze(r, dim=0)
-        return repeat_if_necessary(
+        return _repeat_when_missing_representations(
             scores=self.interaction(h=h, r=r, t=t),
             representations=self.relation_representations,
             num=self.num_relations if relations is None else relations.shape[-1],
