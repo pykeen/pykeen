@@ -545,6 +545,10 @@ class RGCNRepresentation(Representation):
         github: https://github.com/MichSchli/RelationPrediction
     """
 
+    sources: LongTensor
+    targets: LongTensor
+    edge_types: LongTensor
+
     @update_docstring_with_resolver_keys(
         ResolverKey("entity_representations", resolver="pykeen.nn.representation_resolver"),
         ResolverKey("activation", resolver="class_resolver.contrib.torch.activation_resolver"),

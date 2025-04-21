@@ -152,7 +152,7 @@ __all__ = [
 
 #: A resolver for knowledge graph embedding models
 model_resolver: ClassResolver[Model] = ClassResolver.from_subclasses(
-    base=Model,
+    base=Model,  # type:ignore[type-abstract]
     skip={
         # Abstract Models
         _NewAbstractModel,

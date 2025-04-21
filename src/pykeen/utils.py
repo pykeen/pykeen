@@ -21,13 +21,7 @@ from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapp
 from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
-from typing import (
-    Any,
-    Generic,
-    TextIO,
-    TypeVar,
-    overload,
-)
+from typing import Any, Generic, TextIO, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -944,8 +938,8 @@ def powersum_norm(x: FloatTensor, p: float, dim: int | None, normalize: bool) ->
     value = x.abs().pow(p).sum(dim=dim)
     if not normalize:
         return value
-    dim = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
-    return value / dim
+    denominator = torch.as_tensor(x.shape[-1], dtype=torch.float, device=x.device)
+    return value / denominator
 
 
 def complex_normalize(x: torch.Tensor) -> torch.Tensor:
@@ -1261,7 +1255,7 @@ def _weisfeiler_lehman_iteration_approx(
     :return: shape: `(n,)`
         the new node colors
     """
-    num_colors = colors.max() + 1
+    num_colors: int = colors.max() + 1
 
     # create random indicator functions of low dimensionality
     rand = torch.rand(num_colors, dim, device=colors.device)
@@ -1330,7 +1324,8 @@ def iter_weisfeiler_lehman(
     # only keep connectivity, but remove multiplicity
     edge_index = edge_index.unique(dim=1)
 
-    num_nodes = num_nodes or edge_index.max().item() + 1
+    if num_nodes is None:
+        num_nodes = cast(int, edge_index.max().item() + 1)
     colors = edge_index.new_zeros(size=(num_nodes,), dtype=torch.long)
     # note: in theory, we could return this uniform coloring as the first coloring; however, for featurization,
     #       this is rather useless
