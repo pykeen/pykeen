@@ -494,7 +494,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
 #: - :func:`pykeen.nn.init.xavier_normal_norm_`
 #:
 #: as well as initializers from :mod:`torch.nn.init`.
-initializer_resolver: FunctionResolver[Initializer] = FunctionResolver(
+initializer_resolver: FunctionResolver[[FloatTensor], FloatTensor] = FunctionResolver(
     [
         getattr(torch.nn.init, func)
         for func in dir(torch.nn.init)
