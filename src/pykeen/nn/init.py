@@ -18,7 +18,7 @@ from torch.nn import functional
 from .text import TextEncoder, text_encoder_resolver
 from .utils import iter_matrix_power, safe_diagonal
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..typing import FloatTensor, Initializer, LongTensor, MappedTriples, OneOrSequence
+from ..typing import FloatTensor, Initializer, LabeledTriples, LongTensor, MappedTriples, OneOrSequence
 from ..utils import compose, get_edge_index, iter_weisfeiler_lehman, upgrade_to_sequence
 
 __all__ = [
@@ -494,7 +494,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
 #: - :func:`pykeen.nn.init.xavier_normal_norm_`
 #:
 #: as well as initializers from :mod:`torch.nn.init`.
-initializer_resolver: FunctionResolver[Initializer] = FunctionResolver(
+initializer_resolver: FunctionResolver[str, LabeledTriples] = FunctionResolver(
     [
         getattr(torch.nn.init, func)
         for func in dir(torch.nn.init)
