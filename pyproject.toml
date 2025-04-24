@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pykeen"
-version = "1.11.1"
+version = "1.11.2-dev"
 description = "A package for training and evaluating multimodal knowledge graph embeddings"
 readme = "README.md"
 authors = [
@@ -290,7 +290,7 @@ markers = [
 ]
 
 [tool.bumpversion]
-current_version = "1.11.1"
+current_version = "1.11.2-dev"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(?:-(?P<release>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+(?P<build>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?"
 serialize = [
     "{major}.{minor}.{patch}-{release}+{build}",
