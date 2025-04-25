@@ -3,7 +3,7 @@
 import logging
 from typing import Literal
 
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch.utils.data import DataLoader
 
 from .training_loop import TrainingLoop
@@ -11,7 +11,7 @@ from ..losses import Loss
 from ..models.base import Model
 from ..sampling import NegativeSampler
 from ..triples import CoreTriplesFactory
-from ..triples.instances import BatchedSLCWAInstances, SLCWABatch, SubGraphSLCWAInstances
+from ..triples.instances import BaseBatchedSLCWAInstances, BatchedSLCWAInstances, SLCWABatch, SubGraphSLCWAInstances
 from ..typing import FloatTensor, InductiveMode
 
 __all__ = [
@@ -27,12 +27,14 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
     [ruffinelli2020]_ call the sLCWA ``NegSamp`` in their work.
     """
 
+    @update_docstring_with_resolver_keys(ResolverKey("negative_sampler", "pykeen.sampling.negative_sampler_resolver"))
     def __init__(
         self,
+        *,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
         **kwargs,
-    ):
+    ) -> None:
         """Initialize the training loop.
 
         :param negative_sampler: The class, instance, or name of the negative sampler
@@ -55,7 +57,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
         drop_last: bool,
         **kwargs,
     ) -> DataLoader[SLCWABatch]:  # noqa: D102
-        cls: type[BatchedSLCWAInstances] | type[SubGraphSLCWAInstances]
+        cls: type[BaseBatchedSLCWAInstances]
         match sampler:
             case None:
                 cls = BatchedSLCWAInstances
@@ -71,6 +73,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch]):
                 drop_last=drop_last,
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=self.negative_sampler_kwargs,
+                loss_weighter=self.loss_weighter,
+                loss_weighter_kwargs=self.loss_weighter_kwargs,
             ),
             # disable automatic batching
             batch_size=None,

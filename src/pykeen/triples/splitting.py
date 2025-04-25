@@ -197,6 +197,11 @@ def normalize_ratios(
     return ratios
 
 
+def construct_uniform_probability(n: int) -> tuple[float, ...]:
+    """Construct a uniform distribution."""
+    return tuple((numpy.ones(shape=(n,)) / n).tolist())
+
+
 def get_absolute_split_sizes(
     n_total: int,
     ratios: Sequence[float],

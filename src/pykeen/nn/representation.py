@@ -99,7 +99,7 @@ logger = logging.getLogger(__name__)
 #: - :func:`complex_normalize`
 #: - :func:`torch.clamp`
 #: - :func:`clamp_norm`
-constrainer_resolver = FunctionResolver(
+constrainer_resolver: FunctionResolver[[FloatTensor], FloatTensor] = FunctionResolver(
     [functional.normalize, complex_normalize, torch.clamp, clamp_norm],
     location="pykeen.nn.representation.constrainer_resolver",
 )
@@ -108,7 +108,7 @@ constrainer_resolver = FunctionResolver(
 #:
 #: - :func:`torch.nn.functional.normalize`
 #: - :func:`torch.nn.functional.softmax`
-normalizer_resolver = FunctionResolver(
+normalizer_resolver: FunctionResolver[[FloatTensor], FloatTensor] = FunctionResolver(
     [functional.normalize, functional.softmax],
     location="pykeen.nn.representation.normalizer_resolver",
 )
@@ -1435,7 +1435,7 @@ class CachedTextRepresentation(TextRepresentation):
         **kwargs,
     ) -> TextRepresentation:  # noqa: D102
         labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
-        return cls(identifiers=labeling.all_labels(), **kwargs)
+        return cls(identifiers=labeling.all_labels().tolist(), **kwargs)
 
 
 @parse_docdata

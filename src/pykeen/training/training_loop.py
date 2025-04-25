@@ -18,7 +18,7 @@ from typing import IO, Any, ClassVar, Generic, Literal, TypeVar
 
 import numpy as np
 import torch
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from class_resolver.contrib.torch import lr_scheduler_resolver, optimizer_resolver
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
@@ -43,6 +43,7 @@ from ..models import RGCN, Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker, tracker_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples.weights import LossWeighter
 from ..typing import FloatTensor, InductiveMode
 from ..utils import format_relative_comparison, get_batchnorm_modules, get_preferred_device, normalize_string
 
@@ -131,6 +132,12 @@ class TrainingLoop(Generic[BatchType], ABC):
 
     supports_slicing: ClassVar[bool] = False
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("optimizer", "class_resolver.contrib.torch.optimizer_resolver"),
+        ResolverKey("lr_scheduler", "class_resolver.contrib.torch.lr_scheduler_resolver"),
+        ResolverKey("result_tracker", "pykeen.trackers.tracker_resolver"),
+        ResolverKey("loss_weighter", "pykeen.triples.weights.loss_weighter_resolver"),
+    )
     def __init__(
         self,
         model: Model,
@@ -143,6 +150,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         mode: InductiveMode | None = None,
         result_tracker: HintOrType[ResultTracker] = None,
         result_tracker_kwargs: OptionalKwargs = None,
+        loss_weighter: HintOrType[LossWeighter] = None,
+        loss_weighter_kwargs: OptionalKwargs = None,
     ) -> None:
         """Initialize the training loop.
 
@@ -159,6 +168,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         :param mode: The inductive training mode. None if transductive.
         :param result_tracker: the result tracker
         :param result_tracker_kwargs: additional keyword-based parameters to instantiate the result tracker
+        :param loss_weighter: The method to determine loss weights for each triple.
+        :param loss_weighter_kwargs: Parameters for the method to determine loss weights.
         """
         self.model = model
         self.optimizer = optimizer_resolver.make(optimizer, pos_kwargs=optimizer_kwargs, params=model.get_grad_params())
@@ -176,6 +187,10 @@ class TrainingLoop(Generic[BatchType], ABC):
         # The internal epoch state tracks the last finished epoch of the training loop to allow for
         # seamless loading and saving of training checkpoints
         self._epoch = 0
+
+        # store sample weighter
+        self.loss_weighter = loss_weighter
+        self.loss_weighter_kwargs = loss_weighter_kwargs
 
     @classmethod
     def get_normalized_name(cls) -> str:

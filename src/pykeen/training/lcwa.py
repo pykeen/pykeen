@@ -10,11 +10,12 @@ from torch.utils.data import DataLoader, TensorDataset
 from torch_max_mem.api import is_oom_error
 
 from .training_loop import TrainingLoop
+from ..constants import get_target_column
 from ..losses import Loss
 from ..models import Model
 from ..triples import CoreTriplesFactory, LCWAInstances
 from ..triples.instances import LCWABatch
-from ..typing import FloatTensor, InductiveMode, MappedTriples
+from ..typing import FloatTensor, InductiveMode, MappedTriples, TargetHint
 
 __all__ = [
     "LCWATrainingLoop",
@@ -22,8 +23,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-name_to_index = {name: index for index, name in enumerate("hrt")}
 
 
 class LCWATrainingLoop(TrainingLoop[LCWABatch]):
@@ -44,17 +43,12 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
     supports_slicing: ClassVar[bool] = True
     num_targets: int
 
-    def __init__(
-        self,
-        *,
-        target: None | str | int = None,
-        **kwargs,
-    ):
+    def __init__(self, *, target: TargetHint = None, **kwargs) -> None:
         """
         Initialize the training loop.
 
         :param target:
-            The target column. From {0, 1, 2} for head/relation/tail prediction. Defaults to 2, i.e., tail prediction.
+            The target column. Defaults to tail prediction.
         :param kwargs:
             Additional keyword-based parameters passed to TrainingLoop.__init__
         :raises ValueError:
@@ -63,11 +57,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         super().__init__(**kwargs)
 
         # normalize target column
-        if target is None:
-            target = 2
-        if isinstance(target, str):
-            target = name_to_index[target]
-        self.target = target
+        self.target = get_target_column(target)
 
         # The type inference is so confusing between the function switching
         # and polymorphism introduced by slicability that these need to be ignored
@@ -94,7 +84,12 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
                 f"sampler='{sampler}'.",
             )
 
-        dataset = LCWAInstances.from_triples_factory(triples_factory, target=self.target)
+        dataset = LCWAInstances.from_triples_factory(
+            triples_factory,
+            target=self.target,
+            loss_weighter=self.loss_weighter,
+            loss_weighter_kwargs=self.loss_weighter_kwargs,
+        )
         return DataLoader(dataset=dataset, **kwargs)
 
     @staticmethod

@@ -176,7 +176,7 @@ def generate_ranks(
         an array of sampled rank values
     """
     if dtype is None:
-        dtype = int
+        dtype = np.int_
     generator = np.random.default_rng(seed=seed)
     return generator.integers(low=1, high=num_candidates + 1, size=prefix_shape + num_candidates.shape, dtype=dtype)
 
@@ -991,7 +991,7 @@ class GeometricMeanRank(RankBasedMetric):
 
     @classmethod
     def _individual_variance(
-        cls, num_candidates: np.ndarray, weights: np.ndarray, individual_expectation: np.ndarray
+        cls, num_candidates: np.ndarray, weights: np.ndarray | None, individual_expectation: np.ndarray
     ) -> np.ndarray:
         # use V[x] = E[x^2] - E[x]^2
         x2 = (
@@ -1138,8 +1138,8 @@ def harmonic_variances(n: int) -> np.ndarray:
     """
     h = generalized_harmonic_numbers(n)
     h2 = generalized_harmonic_numbers(n, p=-2)
-    n = np.arange(1, n + 1, dtype=float)
-    v = (n * h2 - h**2) / n**2
+    n_range = np.arange(1, n + 1, dtype=float)
+    v = (n_range * h2 - h**2) / n_range**2
     # ensure non-negativity, mathematically not necessary, but just to be safe from the numeric perspective
     # cf. https://en.wikipedia.org/wiki/Loss_of_significance#Subtraction
     v = np.maximum(v, 0.0)

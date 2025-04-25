@@ -48,7 +48,7 @@ copyright = f"2019-{date.today().year}, PyKEEN Project Team"
 author = "PyKEEN Project Team"
 
 # The full version, including alpha/beta/rc tags.
-release = "1.11.1-dev"
+release = "1.11.2-dev"
 
 # The short X.Y version.
 parsed_version = re.match(
@@ -265,3 +265,6 @@ autoclass_content = "both"
 # autodoc_member_order = 'bysource'
 autodoc_typehints = "both"
 # autodoc_preserve_defaults = True
+
+# Output SVG inheritance diagrams
+graphviz_output_format = "svg"

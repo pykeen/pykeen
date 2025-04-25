@@ -254,9 +254,9 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         :returns: A visual representation from the triples factory.
         """
         return cls(
-            wikidata_ids=(
-                triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
-            ).all_labels(),
+            wikidata_ids=(triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling)
+            .all_labels()
+            .tolist(),
             **kwargs,
         )
 

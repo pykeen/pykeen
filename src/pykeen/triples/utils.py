@@ -26,12 +26,12 @@ TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", 
 Importer = Callable[[str], LabeledTriples]
 
 #: Functions for specifying exotic resources with a given prefix
-PREFIX_IMPORTER_RESOLVER: FunctionResolver[Importer] = FunctionResolver.from_entrypoint(
+PREFIX_IMPORTER_RESOLVER: FunctionResolver[[str], LabeledTriples] = FunctionResolver.from_entrypoint(
     "pykeen.triples.prefix_importer"
 )
 
 #: Functions for specifying exotic resources based on their file extension
-EXTENSION_IMPORTER_RESOLVER: FunctionResolver[Importer] = FunctionResolver.from_entrypoint(
+EXTENSION_IMPORTER_RESOLVER: FunctionResolver[[str], LabeledTriples] = FunctionResolver.from_entrypoint(
     "pykeen.triples.extension_importer"
 )
 

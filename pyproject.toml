@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pykeen"
-version = "1.11.1-dev"
+version = "1.11.2-dev"
 description = "A package for training and evaluating multimodal knowledge graph embeddings"
 readme = "README.md"
 authors = [
@@ -73,10 +73,10 @@ dependencies = [
     "more_click",
     "more_itertools",
     "pystow>=0.4.3",
-    "docdata",
-    "class_resolver>=0.5.4",
+    "docdata>=0.0.5",
+    "class_resolver>=0.6.0",
     "pyyaml",
-    "torch_max_mem>=0.1.1",
+    "torch_max_mem>=0.1.4",
     "torch-ppr>=0.0.7",
     "typing_extensions",
 ]
@@ -103,7 +103,8 @@ ogb = [
     "ogb>=1.3.4",
 ]
 wandb = [
-    "wandb", ]
+    "wandb",
+]
 neptune = [
     "neptune-client",
 ]
@@ -289,7 +290,7 @@ markers = [
 ]
 
 [tool.bumpversion]
-current_version = "1.11.1-dev"
+current_version = "1.11.2-dev"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(?:-(?P<release>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+(?P<build>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?"
 serialize = [
     "{major}.{minor}.{patch}-{release}+{build}",
