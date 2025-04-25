@@ -386,7 +386,11 @@ class Loss(_Loss):
         raise NotImplementedError
 
     def process_bcwa_scores(
-        self, predictions: FloatTensor, targets: LongTensor, label_smoothing: float | None = None
+        self,
+        predictions: FloatTensor,
+        targets: LongTensor,
+        label_smoothing: float | None = None,
+        weights: FloatTensor | None = None,
     ) -> FloatTensor:
         """
         Process scores for BCWA training loop.
@@ -401,6 +405,7 @@ class Loss(_Loss):
         :return:
             A scalar loss value.
         """
+        self._raise_on_weights(weights)  # TODO use weights
         labels = torch.zeros_like(predictions)
         hs, rs, ts = targets.unbind(dim=-1)
         labels[hs, rs, ts] = 1.0

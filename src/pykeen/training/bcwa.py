@@ -1,7 +1,7 @@
 """(Batch) Closed World Assumption."""
 
 from collections.abc import Sequence
-from typing import NamedTuple
+from typing import Any, Literal, NamedTuple
 
 import torch
 from torch.utils.data import DataLoader, Dataset
@@ -30,11 +30,13 @@ class BatchCWABatch(NamedTuple):
     Only filled during collation.
     """
 
+    weights: FloatTensor | None = None
+    """Sample weights."""
 
 class BatchCWADataset(Dataset[BatchCWABatch]):
     """A map-style dataset for BCWA training."""
 
-    def __init__(self, mapped_triples: LongTensor):
+    def __init__(self, mapped_triples: LongTensor) -> None:
         """Initialize the dataset.
 
         :param mapped_triples: shape: (num_triples, 3)
@@ -87,7 +89,7 @@ class BatchCWACollator:
         The current implementation is rather memory demanding.
     """
 
-    def __init__(self, mapped_triples: LongTensor):
+    def __init__(self, mapped_triples: LongTensor) -> None:
         """Initialize the collator.
 
         :param mapped_triples: shape: (num_triples, 3)
@@ -111,11 +113,17 @@ class BatchCWACollator:
         return BatchCWABatch(hs=hs_uniq, rs=rs_uniq, ts=ts_uniq, targets=targets)
 
 
-class BatchCWATrainingLoop(TrainingLoop[LongTensor, BatchCWABatch]):
+class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
     """A training loop for BCWA training."""
 
     def _create_training_data_loader(
-        self, triples_factory: CoreTriplesFactory, *, sampler: str | None, batch_size: int, drop_last: bool, **kwargs
+        self,
+        triples_factory: CoreTriplesFactory,
+        *,
+        sampler: Literal["schlichtkrull"] | None | None,
+        batch_size: int,
+        drop_last: bool,
+        **kwargs: Any,
     ) -> DataLoader[BatchCWABatch]:
         if sampler:
             raise NotImplementedError("No support for custom samplers yet.")
@@ -160,7 +168,12 @@ class BatchCWATrainingLoop(TrainingLoop[LongTensor, BatchCWABatch]):
         # calculate loss
         return (
             # loss
-            self.loss.process_bcwa_scores(scores, targets=batch.targets, label_smoothing=label_smoothing)
+            self.loss.process_bcwa_scores(
+                scores,
+                targets=batch.targets,
+                label_smoothing=label_smoothing,
+                weights=batch.weights,
+            )
             # regularization
             + self.model.collect_regularization_term()
         )
