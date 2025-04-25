@@ -33,6 +33,7 @@ class BatchCWABatch(NamedTuple):
     weights: FloatTensor | None = None
     """Sample weights."""
 
+
 class BatchCWADataset(Dataset[BatchCWABatch]):
     """A map-style dataset for BCWA training."""
 
