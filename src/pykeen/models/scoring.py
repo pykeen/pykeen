@@ -110,6 +110,9 @@ def parallel_prefix_unsqueeze(x: OneOrSequence[FloatTensor], ndim: int) -> OneOr
     return xs[0] if len(xs) == 1 else xs
 
 
+# TODO: extract inverse relations scorer as an adapter?
+
+
 @dataclasses.dataclass
 class Scorer:
     """Calculate scores."""
