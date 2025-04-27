@@ -37,21 +37,25 @@ def model() -> ERModel:
     )
 
 
+B = 2
+K = 3
+
+
 @pytest.mark.parametrize(
     "hd, rd, td, shape",
     [
         # hrt
-        ((2,), (2,), (2,), (2,)),
+        ((B,), (B,), (B,), (B,)),
         # score_t
-        ((2,), (2,), None, (2, NUM_ENTITIES)),
+        ((B,), (B,), None, (B, NUM_ENTITIES)),
         # score_r
-        ((2,), None, (2,), (2, NUM_RELATIONS)),
+        ((B,), None, (B,), (B, NUM_RELATIONS)),
         # score_h
-        (None, (2,), (2,), (2, NUM_ENTITIES)),
+        (None, (B,), (B,), (B, NUM_ENTITIES)),
         # score_ts
-        ((2,), (2,), (2, 5), (2, 5)),
+        ((B,), (B,), (B, K), (B, K)),
         # score_ts_all?
-        ((2,), (2, 3), None, (2, 3, NUM_ENTITIES)),
+        ((B,), (B, K), None, (B, K, NUM_ENTITIES)),
     ],
     ids=str,
 )
