@@ -24,36 +24,43 @@ def make_tensor(size: tuple[int, ...] | None, num: int, generator: torch.Generat
     return torch.randint(num, size=size, generator=generator)
 
 
+NUM_ENTITIES = 7
+NUM_RELATIONS = 5
+
+
 @pytest.fixture()
 def model() -> ERModel:
     """Build a test model."""
     return DistMult(
-        triples_factory=KGInfo(num_entities=20, num_relations=3, create_inverse_triples=False), embedding_dim=8
+        triples_factory=KGInfo(num_entities=NUM_ENTITIES, num_relations=NUM_RELATIONS, create_inverse_triples=False),
+        embedding_dim=8,
     )
 
 
 @pytest.mark.parametrize(
-    "hd, rd, td",
+    "hd, rd, td, shape",
     [
         # hrt
-        ((2,), (2,), (2,)),
+        ((2,), (2,), (2,), (2,)),
         # score_t
-        ((2,), (2,), None),
+        ((2,), (2,), None, (2, NUM_ENTITIES)),
         # score_r
-        ((2,), None, (2,)),
+        ((2,), None, (2,), (2, NUM_RELATIONS)),
         # score_h
-        (None, (2,), (2,)),
+        (None, (2,), (2,), (2, NUM_ENTITIES)),
         # score_ts
-        ((2,), (2,), (2, 5)),
+        ((2,), (2,), (2, 5), (2, 5)),
         # score_ts_all?
-        ((2,), (2, 3), None),
+        ((2,), (2, 3), None, (2, 3, NUM_ENTITIES)),
     ],
+    ids=str,
 )
 def test_scoring(
-    model: ERModel,
     hd: tuple[int, ...] | None,
     rd: tuple[int, ...] | None,
     td: tuple[int, ...] | None,
+    shape: tuple[int, ...],
+    model: ERModel,
     generator: torch.Generator,
 ) -> None:
     """Test scorer."""
@@ -66,4 +73,4 @@ def test_scoring(
             tail=make_tensor(size=td, num=model.num_entities, generator=generator),
         ),
     )
-    assert scores.shape
+    assert scores.shape == shape
