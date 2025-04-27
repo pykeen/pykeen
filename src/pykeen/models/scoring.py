@@ -206,6 +206,7 @@ class Scorer:
         if batch.use_inverse_relation and not model.use_inverse_triples:
             raise ValueError
 
+        nums: tuple[()] | tuple[int]
         if batch.all_target is None:
             nums = tuple()
         elif batch.all_target == LABEL_RELATION:
