@@ -41,9 +41,12 @@ class Batch:
     head: LongTensor | None
     relation: LongTensor | None
     tail: LongTensor | None
+
     use_inverse_relation: bool = False
+
+    # inferred fields
     index_ndim: int = dataclasses.field(init=False)
-    all_target: Target | None = None
+    all_target: Target | None = dataclasses.field(init=False, default=None)
 
     @staticmethod
     def maybe_add_trailing_dims(x: LongTensor | None, max_ndim: int) -> LongTensor | None:
@@ -57,19 +60,21 @@ class Batch:
 
     @classmethod
     def from_lcwa(cls, x: LCWABatch, target: Target) -> Self:
+        """Create LCWA batch."""
         pairs = x["pairs"]
         a, b = pairs.unbind(dim=-1)
         match target:
             case pykeen_typing.LABEL_HEAD:
-                return cls(head=None, relation=a, tail=b, all_target=target)
+                return cls(head=None, relation=a, tail=b)
             case pykeen_typing.LABEL_RELATION:
-                return cls(head=a, relation=None, tail=b, all_target=target)
+                return cls(head=a, relation=None, tail=b)
             case pykeen_typing.LABEL_TAIL:
-                return cls(head=a, relation=b, tail=None, all_target=target)
+                return cls(head=a, relation=b, tail=None)
         raise NotImplementedError(target)
 
     @classmethod
     def from_slcwa(cls, x: SLCWABatch) -> Self:
+        """Create sLCWA batch."""
         # TODO: we cannot easily exploit structure in the negative samples, e.g., shared head/tail
         #: the positive triples, shape: (batch_size, 3)
         pos = x["positives"]
