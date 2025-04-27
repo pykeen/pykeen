@@ -182,7 +182,7 @@ def parallel_prefix_unsqueeze(x: OneOrSequence[FloatTensor], ndim: int) -> OneOr
         return x
     xs = upgrade_to_sequence(x)
     ones = (1,) * ndim
-    xs = [xx.view(*ones, *x.shape) for xx in xs]
+    xs = [xx.view(*ones, *xx.shape) for xx in xs]
     return xs[0] if len(xs) == 1 else xs
 
 
