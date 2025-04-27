@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from typing import Any
 
 import torch
@@ -32,6 +32,14 @@ __all__ = [
     "Batch",
     "Scorer",
 ]
+
+
+def guarantee_broadcastable(shapes: Iterable[tuple[int, ...]]) -> None:
+    """Raise an error if the shapes are not broadcastable."""
+    # dimensions either have to agree, or be 1
+    for i, dims in enumerate(zip(*shapes, strict=True)):
+        if len(set(dims).difference({1})) > 1:
+            raise ValueError(f"Cannot broadcast shapes {shapes=} because of {dims=} at {i=}")
 
 
 @dataclasses.dataclass
@@ -99,6 +107,7 @@ class Batch:
         self.head = self.maybe_add_trailing_dims(self.head, max_ndim=max_ndim)
         self.relation = self.maybe_add_trailing_dims(self.relation, max_ndim=max_ndim)
         self.tail = self.maybe_add_trailing_dims(self.tail, max_ndim=max_ndim)
+        guarantee_broadcastable(indices.shape for indices in self.indices if indices is not None)
         self.index_ndim = max_ndim
 
     def __getitem__(self, index: Target) -> LongTensor | None:
