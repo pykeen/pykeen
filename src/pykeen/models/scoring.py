@@ -215,21 +215,21 @@ class Scorer:
         if batch.use_inverse_relation and not model.use_inverse_triples:
             raise ValueError
 
-        nums: tuple[()] | tuple[int]
+        num: int | None
         if batch.all_target is None:
-            nums = tuple()
+            num = None
         elif batch.all_target == LABEL_RELATION:
-            nums = (model.num_relations,)
+            num = model.num_relations
         else:
-            nums = (model.num_entities,)
+            num = model.num_entities
 
         if slice_size:
-            if not nums:
+            if num is None:
                 raise ValueError
             return torch.cat(
                 [
                     self.score(model=model, batch=batch_slice, slice_size=None, mode=mode)
-                    for batch_slice in batch.slice(slice_size=slice_size, num=nums[0])
+                    for batch_slice in batch.slice(slice_size=slice_size, num=num)
                 ],
                 dim=batch.index_ndim,
             )
@@ -243,7 +243,9 @@ class Scorer:
 
         scores = model.interaction(h=h, r=r, t=t)
         # expected shape: *index.shape, num?
-        expected_shape = tuple(torch.broadcast_shapes(*(i.shape for i in batch.indices if i is not None))) + nums
+        expected_shape = tuple(torch.broadcast_shapes(*(i.shape for i in batch.indices if i is not None)))
+        if num is not None:
+            expected_shape += (num,)
         # repeat if necessary
         return scores.expand(*expected_shape)
 
