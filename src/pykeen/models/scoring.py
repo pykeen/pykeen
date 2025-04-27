@@ -101,6 +101,16 @@ class Batch:
         self.tail = self.maybe_add_trailing_dims(self.tail, max_ndim=max_ndim)
         self.index_ndim = max_ndim
 
+    def __getitem__(self, index: Target) -> LongTensor | None:
+        match index:
+            case pykeen_typing.LABEL_HEAD:
+                return self.head
+            case pykeen_typing.LABEL_RELATION:
+                return self.relation
+            case pykeen_typing.LABEL_TAIL:
+                return self.tail
+        raise KeyError(index)
+
     @property
     def indices(self) -> tuple[LongTensor | None, LongTensor | None, LongTensor | None]:
         """Return the indices."""
@@ -126,7 +136,7 @@ class Batch:
             use_inverse_relation=self.use_inverse_relation,
         )
         if self.all_target is None:
-            raise ValueError
+            raise ValueError("Cannot slice, because there are only batch dimensions. Look into subbatching instead.")
         for start in range(0, num, slice_size):
             kwargs[self.all_target] = torch.arange(start=start, end=min(start + slice_size, num))
             yield Batch(**kwargs)
