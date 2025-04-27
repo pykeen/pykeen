@@ -228,7 +228,7 @@ class Scorer:
         if batch.all_target is not None:
             h, r, t = (
                 self.unsqueeze(x, indices=i, index_ndim=batch.index_ndim)
-                for x, i in zip((h, r, t), batch.indices, strict=False)
+                for x, i in zip((h, r, t), batch.indices, strict=True)
             )
 
         scores = model.interaction(h=h, r=r, t=t)
