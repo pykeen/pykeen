@@ -34,10 +34,10 @@ class PrecomputedTokenizerLoader(ABC):
 
 
 class GalkinPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
-    """
-    A loader for pickle files provided by Galkin *et al*.
+    """A loader for pickle files provided by Galkin *et al*.
 
-    .. seealso ::
+    .. seealso::
+
         https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/download_data.sh
         https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/ogb/download.sh
     """
@@ -63,15 +63,11 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
 
     @staticmethod
     def save(path: pathlib.Path, order: numpy.ndarray, anchor_ids: numpy.ndarray) -> None:
-        """
-        Save tokenization to path.
+        """Save tokenization to path.
 
-        :param path:
-            the output path
-        :param order: shape: (num_entities, num_anchors)
-            the sorted `anchor_ids`' ids per entity
-        :param anchor_ids: shape: (num_anchors,)
-            the anchor entity IDs
+        :param path: the output path
+        :param order: shape: (num_entities, num_anchors) the sorted `anchor_ids`' ids per entity
+        :param anchor_ids: shape: (num_anchors,) the anchor entity IDs
         """
         # ensure parent directory exists
         path.parent.mkdir(parents=True, exist_ok=True)

@@ -18,16 +18,14 @@ def _torch_kl_similarity(
 ) -> torch.FloatTensor:
     """Compute KL similarity using torch.distributions.
 
-    :param h: shape: (batch_size, num_heads, 1, 1, d)
-        The head entity Gaussian distribution.
-    :param r: shape: (batch_size, 1, num_relations, 1, d)
-        The relation Gaussian distribution.
-    :param t: shape: (batch_size, 1, 1, num_tails, d)
-        The tail entity Gaussian distribution.
-    :return: torch.Tensor, shape: (s_1, ..., s_k)
-        The KL-divergence.
+    :param h: shape: (batch_size, num_heads, 1, 1, d) The head entity Gaussian distribution.
+    :param r: shape: (batch_size, 1, num_relations, 1, d) The relation Gaussian distribution.
+    :param t: shape: (batch_size, 1, 1, num_tails, d) The tail entity Gaussian distribution.
 
-    .. warning ::
+    :returns: torch.Tensor, shape: (s_1, ..., s_k) The KL-divergence.
+
+    .. warning::
+
         Do not use this method in production code.
     """
     e_mean = h.mean - t.mean

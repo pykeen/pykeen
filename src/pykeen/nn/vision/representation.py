@@ -1,5 +1,4 @@
-"""
-A module of vision related components.
+"""A module of vision related components.
 
 Generally requires :mod:`torchvision` to be installed.
 """
@@ -51,10 +50,10 @@ ImageHints: TypeAlias = Sequence[ImageHint]
 
 
 class VisionDataset(torch.utils.data.Dataset):
-    """
-    A dataset of images with data augmentation.
+    """A dataset of images with data augmentation.
 
-    .. note ::
+    .. note::
+
         requires :mod:`torchvision` to be installed.
     """
 
@@ -64,16 +63,12 @@ class VisionDataset(torch.utils.data.Dataset):
         transforms: Sequence | None = None,
         root: pathlib.Path | None = None,
     ) -> None:
-        """
-        Initialize the dataset.
+        """Initialize the dataset.
 
-        :param images:
-            The images, either as (relative) path, or preprocessed tensors.
-        :param transforms:
-            A sequence of transformations to apply to the images, cf. :mod:`torchvision.transforms`.
+        :param images: The images, either as (relative) path, or preprocessed tensors.
+        :param transforms: A sequence of transformations to apply to the images, cf. :mod:`torchvision.transforms`.
             Defaults to random size crops.
-        :param root:
-            The root directory for images.
+        :param root: The root directory for images.
         """
         _ensure_vision(self, vision_transforms)
         super().__init__()
@@ -126,34 +121,22 @@ class VisualRepresentation(Representation):
         trainable: bool = True,
         **kwargs,
     ):
-        """
-        Initialize the representations.
+        """Initialize the representations.
 
-        :param images:
-            The images, either as tensors, or paths to image files.
-        :param encoder:
-            The encoder to use. If given as a string, lookup in :mod:`torchvision.models`.
-        :param layer_name:
-            The model's layer name to use for extracting the features, cf.
+        :param images: The images, either as tensors, or paths to image files.
+        :param encoder: The encoder to use. If given as a string, lookup in :mod:`torchvision.models`.
+        :param layer_name: The model's layer name to use for extracting the features, cf.
             :func:`torchvision.models.feature_extraction.create_feature_extractor`
-        :param max_id:
-            The number of representations. If given, it must match the number of images.
-        :param shape:
-            The shape of an individual representation. If provided, it must match the encoder output dimension
-        :param transforms:
-            Transformations to apply to the images. Notice that stochastic transformations will result in
+        :param max_id: The number of representations. If given, it must match the number of images.
+        :param shape: The shape of an individual representation. If provided, it must match the encoder output dimension
+        :param transforms: Transformations to apply to the images. Notice that stochastic transformations will result in
             stochastic representations, too.
-        :param encoder_kwargs:
-            Additional keyword-based parameters passed to encoder upon instantiation.
-        :param batch_size:
-            The batch size to use during encoding.
-        :param trainable:
-            Whether the encoder should be trainable.
-        :param kwargs:
-            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`.
+        :param encoder_kwargs: Additional keyword-based parameters passed to encoder upon instantiation.
+        :param batch_size: The batch size to use during encoding.
+        :param trainable: Whether the encoder should be trainable.
+        :param kwargs: Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`.
 
-        :raises ValueError:
-            If `max_id` is provided and does not match the number of images.
+        :raises ValueError: If `max_id` is provided and does not match the number of images.
         """
         _ensure_vision(self, models)
         self.images = VisionDataset(images=images, transforms=transforms)
@@ -193,17 +176,13 @@ class VisualRepresentation(Representation):
     def _encode(
         images: FloatTensor, encoder: torch.nn.Module, pool: Callable[[FloatTensor], FloatTensor]
     ) -> FloatTensor:
-        """
-        Encode images with the given encoder and pooling methods.
+        """Encode images with the given encoder and pooling methods.
 
-        :param images: shape: ``(batch_size, num_channels, height, width)``
-            A batch of images.
-        :param encoder:
-            The encoder, returning a dictionary with key "features".
-        :param pool:
-            The pooling method to use.
-        :return: shape: (batch_size, dim)
-            The encoded representations.
+        :param images: shape: ``(batch_size, num_channels, height, width)`` A batch of images.
+        :param encoder: The encoder, returning a dictionary with key "features".
+        :param pool: The pooling method to use.
+
+        :returns: shape: (batch_size, dim) The encoded representations.
         """
         return pool(encoder(images)["feature"])
 
@@ -222,8 +201,7 @@ class VisualRepresentation(Representation):
 
 @parse_docdata
 class WikidataVisualRepresentation(BackfillRepresentation):
-    """
-    Visual representations obtained from Wikidata and encoded with a vision encoder.
+    """Visual representations obtained from Wikidata and encoded with a vision encoder.
 
     If no image could be found for a certain Wikidata ID, a plain (trainable) embedding will be used instead.
 
@@ -238,20 +216,16 @@ class WikidataVisualRepresentation(BackfillRepresentation):
     def __init__(
         self, wikidata_ids: Sequence[str], max_id: int | None = None, image_kwargs: OptionalKwargs = None, **kwargs
     ):
-        """
-        Initialize the representation.
+        """Initialize the representation.
 
-        :param wikidata_ids:
-            The Wikidata IDs.
-        :param max_id:
-            The total number of IDs. If provided, must match the length of ``wikidata_ids``.
-        :param image_kwargs:
-            Keyword-based parameters passed to :meth:`pykeen.nn.vision.cache.WikidataImageCache.get_image_paths`.
-        :param kwargs:
-            Additional keyword-based parameters passed to :class:`pykeen.nn.vision.representation.VisualRepresentation`.
+        :param wikidata_ids: The Wikidata IDs.
+        :param max_id: The total number of IDs. If provided, must match the length of ``wikidata_ids``.
+        :param image_kwargs: Keyword-based parameters passed to
+            :meth:`pykeen.nn.vision.cache.WikidataImageCache.get_image_paths`.
+        :param kwargs: Additional keyword-based parameters passed to
+            :class:`pykeen.nn.vision.representation.VisualRepresentation`.
 
-        :raises ValueError:
-            If the max_id does not match the number of Wikidata IDs.
+        :raises ValueError: If the max_id does not match the number of Wikidata IDs.
         """
         max_id = max_id or len(wikidata_ids)
         if len(wikidata_ids) != max_id:
@@ -270,24 +244,19 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         for_entities: bool = True,
         **kwargs,
     ) -> Self:
-        """
-        Prepare a visual representations for Wikidata entities from a triples factory.
+        """Prepare a visual representations for Wikidata entities from a triples factory.
 
-        :param triples_factory:
-            The triples factory.
-        :param for_entities:
-            Whether to create the initializer for entities (or relations).
-        :param kwargs:
-            Additional keyword-based arguments passed to
+        :param triples_factory: The triples factory.
+        :param for_entities: Whether to create the initializer for entities (or relations).
+        :param kwargs: Additional keyword-based arguments passed to
             :class:`pykeen.nn.vision.representation.WikidataVisualRepresentation`.
 
-        :returns:
-            A visual representation from the triples factory.
+        :returns: A visual representation from the triples factory.
         """
         return cls(
-            wikidata_ids=(
-                triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
-            ).all_labels(),
+            wikidata_ids=(triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling)
+            .all_labels()
+            .tolist(),
             **kwargs,
         )
 
@@ -300,20 +269,14 @@ class WikidataVisualRepresentation(BackfillRepresentation):
     ) -> Self:
         """Prepare representations from a dataset.
 
-        :param dataset:
-            The dataset; needs to have Wikidata IDs as entity names.
-        :param for_entities:
-            Whether to create the initializer for entities (or relations).
-
-        :param kwargs:
-            Additional keyword-based arguments passed to
+        :param dataset: The dataset; needs to have Wikidata IDs as entity names.
+        :param for_entities: Whether to create the initializer for entities (or relations).
+        :param kwargs: Additional keyword-based arguments passed to
             :class:`pykeen.nn.vision.representation.WikidataVisualRepresentation`.
 
-        :return:
-            A visual representation from the training factory in the dataset.
+        :returns: A visual representation from the training factory in the dataset.
 
-        :raises TypeError:
-            If the triples factory does not provide labels.
+        :raises TypeError: If the triples factory does not provide labels.
         """
         if not isinstance(dataset.training, TriplesFactory):
             raise TypeError(f"{cls.__name__} requires access to labels, but dataset.training does not provide such.")

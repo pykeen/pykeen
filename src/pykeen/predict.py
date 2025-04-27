@@ -270,9 +270,7 @@ import math
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
-from typing import (
-    TypeAlias,  # Python <=3.9
-)
+from typing import TypeAlias
 
 import numpy
 import pandas
@@ -1111,7 +1109,7 @@ def predict_target(
 def predict_triples(
     model: Model,
     *,
-    triples: None | MappedTriples | LabeledTriples | tuple[str, str, str] | Sequence[tuple[str, str, str]],
+    triples: None | MappedTriples | LabeledTriples | tuple[str, str, str] | Sequence[tuple[str, str, str]] = None,
     triples_factory: CoreTriplesFactory | None = None,
     batch_size: int | None = None,
     mode: InductiveMode | None = None,

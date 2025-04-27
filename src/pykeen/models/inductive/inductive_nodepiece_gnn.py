@@ -43,13 +43,11 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         gnn_encoder: Iterable[nn.Module] | None = None,
         **kwargs,
     ) -> None:
-        """
-        Initialize the model.
+        """Initialize the model.
 
-        :param gnn_encoder:
-            an iterable of message passing layers. Defaults to 2-layer CompGCN with Hadamard composition.
-        :param kwargs:
-            additional keyword-based parameters passed to `InductiveNodePiece.__init__`.
+        :param gnn_encoder: an iterable of message passing layers. Defaults to 2-layer CompGCN with Hadamard
+            composition.
+        :param kwargs: additional keyword-based parameters passed to `InductiveNodePiece.__init__`.
         """
         super().__init__(**kwargs)
 

@@ -49,29 +49,27 @@ _SKIP_ANNOTATIONS = {
     Union[None, str, Decomposition],  # noqa:UP007
 }
 _SKIP_HINTS = {
-    Hint[Initializer],
-    Hint[Constrainer],
-    Hint[Normalizer],
-    Hint[Regularizer],
-    HintOrType[nn.Module],
+    Hint[Initializer],  # type:ignore[misc]
+    Hint[Constrainer],  # type:ignore[misc]
+    Hint[Normalizer],  # type:ignore[misc]
+    Hint[Regularizer],  # type:ignore[misc]
+    HintOrType[nn.Module],  # type:ignore[misc]
 }
 
 
 def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
     """Build a :mod:`click` command line interface for a KGE model.
 
-    Allows users to specify all of the (hyper)parameters to the
-    model via command line options using :class:`click.Option`.
+    Allows users to specify all of the (hyper)parameters to the model via command line options using
+    :class:`click.Option`.
 
-    :param model:
-        the model class
+    :param model: the model class
 
-    :return:
-        a click command for training a model of the given class
+    :returns: a click command for training a model of the given class
     """
     signature = inspect.signature(model.__init__)
 
-    def _decorate_model_kwargs(command: click.Command) -> click.Command:
+    def _decorate_model_kwargs(command: click.decorators.FC) -> click.decorators.FC:
         for name, annotation in model.__init__.__annotations__.items():
             if name in _SKIP_ARGS or annotation in _SKIP_ANNOTATIONS:
                 continue

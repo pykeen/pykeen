@@ -57,12 +57,10 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     ) -> None:
         """Initialize the multi-modal triples factory.
 
-        :param numeric_literals: shape: (num_entities, num_literals)
-            the numeric literals as a dense matrix.
-        :param literals_to_id:
-            a mapping from literal names to their IDs, i.e., the columns in the `numeric_literals` matrix.
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`TriplesFactory.__init__`.
+        :param numeric_literals: shape: (num_entities, num_literals) the numeric literals as a dense matrix.
+        :param literals_to_id: a mapping from literal names to their IDs, i.e., the columns in the `numeric_literals`
+            matrix.
+        :param kwargs: additional keyword-based parameters passed to :meth:`TriplesFactory.__init__`.
         """
         super().__init__(**kwargs)
         self.numeric_literals = numeric_literals
@@ -89,7 +87,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         cls,
         triples: LabeledTriples,
         *,
-        numeric_triples: LabeledTriples = None,
+        numeric_triples: LabeledTriples | None = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
         if numeric_triples is None:

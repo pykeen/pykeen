@@ -160,7 +160,11 @@ def adjacency_tensor_to_stacked_matrix(
     )
 
 
-class ShapeError(ValueError):
+class BaseShapeError(ValueError):
+    """Raised when there are inconsistent shapes."""
+
+
+class ShapeError(BaseShapeError):
     """An error for a mismatch in shapes."""
 
     def __init__(self, shape: Sequence[int], reference: Sequence[int]) -> None:

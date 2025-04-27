@@ -6,15 +6,16 @@ from math import ceil
 from typing import ClassVar
 
 from torch.nn import functional
-from torch.utils.data import DataLoader, Dataset, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset
 from torch_max_mem.api import is_oom_error
 
 from .training_loop import TrainingLoop
+from ..constants import get_target_column
 from ..losses import Loss
 from ..models import Model
 from ..triples import CoreTriplesFactory, LCWAInstances
-from ..triples.instances import LCWABatchType, LCWASampleType
-from ..typing import FloatTensor, InductiveMode, MappedTriples
+from ..triples.instances import LCWABatch
+from ..typing import FloatTensor, InductiveMode, MappedTriples, TargetHint
 
 __all__ = [
     "LCWATrainingLoop",
@@ -23,10 +24,8 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-name_to_index = {name: index for index, name in enumerate("hrt")}
 
-
-class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
+class LCWATrainingLoop(TrainingLoop[LCWABatch]):
     r"""A training loop that is based upon the local closed world assumption (LCWA).
 
     Under the LCWA, for a given true training triple $(h, r, t) \in \mathcal{T}_{train}$, all triples
@@ -42,18 +41,14 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     """
 
     supports_slicing: ClassVar[bool] = True
+    num_targets: int
 
-    def __init__(
-        self,
-        *,
-        target: None | str | int = None,
-        **kwargs,
-    ):
+    def __init__(self, *, target: TargetHint = None, **kwargs) -> None:
         """
         Initialize the training loop.
 
         :param target:
-            The target column. From {0, 1, 2} for head/relation/tail prediction. Defaults to 2, i.e., tail prediction.
+            The target column. Defaults to tail prediction.
         :param kwargs:
             Additional keyword-based parameters passed to TrainingLoop.__init__
         :raises ValueError:
@@ -62,11 +57,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
         super().__init__(**kwargs)
 
         # normalize target column
-        if target is None:
-            target = 2
-        if isinstance(target, str):
-            target = name_to_index[target]
-        self.target = target
+        self.target = get_target_column(target)
 
         # The type inference is so confusing between the function switching
         # and polymorphism introduced by slicability that these need to be ignored
@@ -86,40 +77,49 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     # docstr-coverage: inherited
     def _create_training_data_loader(
         self, triples_factory: CoreTriplesFactory, sampler: str | None, **kwargs
-    ) -> DataLoader[LCWABatchType]:  # noqa: D102
+    ) -> DataLoader[LCWABatch]:  # noqa: D102
         if sampler:
             raise NotImplementedError(
                 f"LCWA training does not support non-default batch sampling. Expected sampler=None, but got "
                 f"sampler='{sampler}'.",
             )
 
-        dataset = create_lcwa_instances(triples_factory, target=self.target)
-        return DataLoader(dataset=dataset, collate_fn=dataset.get_collator(), **kwargs)
+        dataset = LCWAInstances.from_triples_factory(
+            triples_factory,
+            target=self.target,
+            loss_weighter=self.loss_weighter,
+            loss_weighter_kwargs=self.loss_weighter_kwargs,
+        )
+        return DataLoader(dataset=dataset, **kwargs)
 
     @staticmethod
     # docstr-coverage: inherited
-    def _get_batch_size(batch: LCWABatchType) -> int:  # noqa: D102
-        return batch[0].shape[0]
+    def _get_batch_size(batch: LCWABatch) -> int:  # noqa: D102
+        return batch["pairs"].shape[0]
 
     @staticmethod
     def _process_batch_static(
         model: Model,
         score_method: Callable,
         loss: Loss,
-        num_targets: int | None,
+        num_targets: int,
         mode: InductiveMode | None,
-        batch: LCWABatchType,
+        batch: LCWABatch,
         start: int | None,
         stop: int | None,
         label_smoothing: float = 0.0,
         slice_size: int | None = None,
     ) -> FloatTensor:
         # Split batch components
-        batch_pairs, batch_labels_full = batch
+        batch_pairs = batch["pairs"]
+        batch_labels_full = batch["target"]
+        batch_weights = batch.get("weights")
 
         # Send batch to device
         batch_pairs = batch_pairs[start:stop].to(device=model.device)
         batch_labels_full = batch_labels_full[start:stop].to(device=model.device)
+        if batch_weights is not None:
+            batch_weights = batch_weights[start:stop].to(device=model.device)
 
         predictions = score_method(batch_pairs, slice_size=slice_size, mode=mode)
 
@@ -129,6 +129,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
                 labels=batch_labels_full,
                 label_smoothing=label_smoothing,
                 num_entities=num_targets,
+                weights=batch_weights,
             )
             + model.collect_regularization_term()
         )
@@ -136,7 +137,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
     # docstr-coverage: inherited
     def _process_batch(
         self,
-        batch: LCWABatchType,
+        batch: LCWABatch,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
@@ -227,7 +228,7 @@ class LCWATrainingLoop(TrainingLoop[LCWASampleType, LCWABatchType]):
 
 
 # note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one
-class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedTriples]]):
+class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
     r"""A "symmetric" LCWA scoring heads *and* tails at once.
 
     This objective was introduced by [lacroix2018]_ as
@@ -301,13 +302,3 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples], tuple[MappedT
     def _slice_size_search(self, **kwargs) -> int:
         # TODO?
         raise MemoryError("The current model can't be trained on this hardware with these parameters.")
-
-
-def create_lcwa_instances(tf: CoreTriplesFactory, target: int | None = None) -> Dataset:
-    """Create LCWA instances for this factory's triples."""
-    return LCWAInstances.from_triples(
-        mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
-        num_entities=tf.num_entities,
-        num_relations=tf.num_relations,
-        target=target,
-    )

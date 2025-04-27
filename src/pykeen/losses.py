@@ -159,12 +159,14 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
     \mathcal{L}_L(\mathcal{B}) = \frac{1}{|\mathcal{B}|} \sum \limits_{\mathcal{b} \in \mathcal{B}} L(\mathcal{b})
 """  # noqa: E501
 
+from __future__ import annotations
+
 import logging
 import math
 from abc import abstractmethod
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from textwrap import dedent
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal, TypeAlias
 
 import torch
 from class_resolver import ClassResolver, Hint
@@ -208,6 +210,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 DEFAULT_MARGIN_HPO_STRATEGY = dict(type=float, low=0, high=3)
+DEFAULT_HPO_STRATEGY_REDUCTION = {"type": "categorical", "choices": ["mean", "sum"]}
+DEFAULT_HPO_STRATEGY_POS_WEIGHT = {"type": float, "low": 2**-2, "high": 2**10, "log": True}
 
 
 def apply_label_smoothing(
@@ -257,14 +261,43 @@ class UnsupportedLabelSmoothingError(RuntimeError):
         return f"{self.instance.__class__.__name__} does not support label smoothing."
 
 
-_REDUCTION_METHODS = dict(
+class NoSampleWeightSupportError(RuntimeError):
+    """Raised if the loss does not support sample weights."""
+
+    def __init__(self, instance: Loss):
+        """Initialize the error."""
+        self.instance = instance
+
+    def __str__(self) -> str:
+        return f"{self.instance.__class__.__name__} does not support sample weights."
+
+
+Reduction: TypeAlias = Literal["mean", "sum"]
+ReductionMethod: TypeAlias = Callable
+
+_REDUCTION_METHODS: dict[Reduction, ReductionMethod] = dict(
     mean=torch.mean,
     sum=torch.sum,
 )
 
 
+def weighted_reduction(x: FloatTensor, weight: FloatTensor, reduction: Reduction) -> FloatTensor:
+    """Calculate weighted reduction."""
+    match reduction:
+        case "mean":
+            # note: we clamp here to avoid division by zero
+            return x.mul(weight).sum().div(weight.sum().clamp_min_(torch.finfo(weight.dtype).eps))
+        case "sum":
+            return x.mul(weight).sum()
+        case _:
+            raise ValueError(f"Unsupported weighted {reduction=}")
+
+
 class Loss(_Loss):
     """A loss function."""
+
+    reduction: Reduction
+    _reduction_method: ReductionMethod
 
     #: synonyms of this loss
     synonyms: ClassVar[set[str] | None] = None
@@ -272,7 +305,7 @@ class Loss(_Loss):
     #: The default strategy for optimizing the loss's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    def __init__(self, reduction: str = "mean"):
+    def __init__(self, reduction: Reduction = "mean"):
         """
         Initialize the loss.
 
@@ -282,13 +315,22 @@ class Loss(_Loss):
         super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
 
+    def _raise_on_weights(self, weight: FloatTensor | None) -> None:
+        """Raise an error when weights are passed."""
+        if weight is not None:
+            raise NoSampleWeightSupportError(self)
+
+    @abstractmethod
     def process_slcwa_scores(
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        # TODO: why is label smoothing part of the process_*_scores call?!
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
         """
         Process scores from sLCWA training loop.
@@ -305,67 +347,148 @@ class Loss(_Loss):
             pre-filtered.
         :param num_entities:
             The number of entities. Only required if label smoothing is enabled.
+        :param pos_weights: shape: (batch_size, 1)
+            Positive sample weights.
+        :param neg_weights: shape: (batch_size, num_neg_per_pos)
+            Negative sample weights.
 
         :return:
             A scalar loss term.
         """
-        # flatten and stack
-        positive_scores = positive_scores.view(-1)
-        negative_scores = negative_scores.view(-1)
-        predictions = torch.cat([positive_scores, negative_scores], dim=0)
-        labels = torch.cat([torch.ones_like(positive_scores), torch.zeros_like(negative_scores)])
+        raise NotImplementedError
 
-        # apply label smoothing if necessary.
-        labels = apply_label_smoothing(
-            labels=labels,
-            epsilon=label_smoothing,
-            num_classes=num_entities,
-        )
-
-        return self(predictions, labels)
-
+    @abstractmethod
     def process_lcwa_scores(
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
+        weights: FloatTensor | None = None,
     ) -> FloatTensor:
         """
         Process scores from LCWA training loop.
 
-        :param predictions: shape: (batch_size, num_entities)
+        :param predictions: shape: ``(*shape)``
             The scores.
-        :param labels: shape: (batch_size, num_entities)
+        :param labels: shape: ``(*shape)``
             The labels.
         :param label_smoothing:
             An optional label smoothing parameter.
         :param num_entities:
             The number of entities (required for label-smoothing).
+        :param weights: shape: ``(*shape)``
+            Sample weights.
 
         :return:
             A scalar loss value.
         """
-        # TODO: Do label smoothing only once
-        labels = apply_label_smoothing(
-            labels=labels,
-            epsilon=label_smoothing,
-            num_classes=num_entities,
-        )
-        return self(predictions, labels)
+        raise NotImplementedError
 
 
 class PointwiseLoss(Loss):
     """Pointwise loss functions compute an independent loss term for each triple-label pair."""
 
-    @staticmethod
-    def validate_labels(labels: FloatTensor) -> bool:
-        """Check whether labels are in [0, 1]."""
-        return labels.min() >= 0 and labels.max() <= 1
+    @abstractmethod
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor) -> FloatTensor:
+        """
+        Calculate the point-wise loss.
+
+        :param x:
+            The predictions.
+        :param target:
+            The target values (between 0 and 1).
+        :param weight:
+            The sample weights.
+
+        :return:
+            The scalar loss value.
+        """
+        raise NotImplementedError
+
+    # docstr-coverage: inherited
+    def process_slcwa_scores(
+        self,
+        positive_scores: FloatTensor,
+        negative_scores: FloatTensor,
+        # TODO: why is label smoothing part of the process_*_scores call?!
+        label_smoothing: float | None = None,
+        batch_filter: BoolTensor | None = None,
+        num_entities: int | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
+    ) -> FloatTensor:
+        # note: batch_filter
+        #  - negative scores have already been pre-filtered
+        #  - positive scores do not need to be filtered here
+        # flatten and stack
+        positive_scores = positive_scores.view(-1)
+        negative_scores = negative_scores.view(-1)
+        predictions = torch.cat([positive_scores, negative_scores], dim=0)
+        labels = torch.cat([torch.ones_like(positive_scores), torch.zeros_like(negative_scores)])
+        if pos_weights is None and neg_weights is None:
+            weights = None
+        else:
+            # TODO: broadcasting?
+            weights = torch.ones_like(predictions)
+            if pos_weights is not None:
+                weights[: len(positive_scores)] = pos_weights.view(-1)
+            if neg_weights is not None:
+                weights[len(positive_scores) :] = neg_weights.view(-1)
+        return self.process_lcwa_scores(
+            predictions=predictions,
+            labels=labels,
+            label_smoothing=label_smoothing,
+            num_entities=num_entities,
+            weights=weights,
+        )
+
+    # docstr-coverage: inherited
+    def process_lcwa_scores(
+        self,
+        predictions: FloatTensor,
+        labels: FloatTensor,
+        label_smoothing: float | None = None,
+        num_entities: int | None = None,
+        weights: FloatTensor | None = None,
+    ) -> FloatTensor:
+        labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=num_entities)
+        return self(x=predictions, target=labels, weight=weights)
 
 
 class PairwiseLoss(Loss):
     """Pairwise loss functions compare the scores of a positive triple and a negative triple."""
+
+    @abstractmethod
+    def forward(
+        self,
+        pos_scores: FloatTensor,
+        neg_scores: FloatTensor,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
+    ) -> FloatTensor:
+        """
+        Calculate the point-wise loss.
+
+        .. note::
+            The positive and negative scores need to be broadcastable.
+
+        .. note ::
+            If given, the positve/negative weight needs to be broadcastable to the respective scores.
+
+        :param pos_scores:
+            The positive scores.
+        :param neg_scores:
+            The negative scores.
+        :param pos_weights:
+            The sample weights for positives.
+        :param neg_weights:
+            The sample weights for negatives.
+
+        :return:
+            The scalar loss value.
+        """
+        raise NotImplementedError
 
 
 class SetwiseLoss(Loss):
@@ -412,13 +535,32 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
     synonyms = {"Negative Log Likelihood Loss"}
 
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "reduction": DEFAULT_HPO_STRATEGY_REDUCTION,
+        "pos_weight": DEFAULT_HPO_STRATEGY_POS_WEIGHT,
+    }
+
+    pos_weight: FloatTensor | None
+
+    def __init__(self, reduction: Reduction = "mean", pos_weight: None | float = None):
+        """Initialize the loss criterion.
+
+        :param reduction:
+            The reduction, cf. :mod:`pykeen.nn.modules._Loss`
+        :param pos_weight:
+            A weight for the positive class.
+        """
+        super().__init__(reduction=reduction)
+        if pos_weight:
+            self.register_buffer("pos_weight", tensor=torch.as_tensor(pos_weight))
+        else:
+            self.pos_weight = None
+
     # docstr-coverage: inherited
-    def forward(
-        self,
-        scores: FloatTensor,
-        labels: FloatTensor,
-    ) -> FloatTensor:  # noqa: D102
-        return functional.binary_cross_entropy_with_logits(scores, labels, reduction=self.reduction)
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
+        return functional.binary_cross_entropy_with_logits(
+            x, target, reduction=self.reduction, weight=weight, pos_weight=self.pos_weight
+        )
 
 
 @parse_docdata
@@ -436,13 +578,12 @@ class MSELoss(PointwiseLoss):
     synonyms = {"Mean Square Error Loss", "Mean Squared Error Loss"}
 
     # docstr-coverage: inherited
-    def forward(
-        self,
-        scores: FloatTensor,
-        labels: FloatTensor,
-    ) -> FloatTensor:  # noqa: D102
-        assert self.validate_labels(labels=labels)
-        return functional.mse_loss(scores, labels, reduction=self.reduction)
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
+        if weight is None:
+            return functional.mse_loss(x, target, reduction=self.reduction)
+        return weighted_reduction(
+            functional.mse_loss(x, target, reduction="none"), weight=weight, reduction=self.reduction
+        )
 
 
 class MarginPairwiseLoss(PairwiseLoss):
@@ -468,7 +609,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         self,
         margin: float = 1.0,
         margin_activation: Hint[nn.Module] = None,
-        reduction: str = "mean",
+        reduction: Reduction = "mean",
     ):
         r"""Initialize the margin loss instance.
 
@@ -494,6 +635,8 @@ class MarginPairwiseLoss(PairwiseLoss):
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
@@ -505,7 +648,9 @@ class MarginPairwiseLoss(PairwiseLoss):
             positive_scores = positive_scores.repeat(1, num_neg_per_pos)[batch_filter]
             # shape: (nnz,)
 
-        return self(pos_scores=positive_scores, neg_scores=negative_scores)
+        return self(
+            pos_scores=positive_scores, neg_scores=negative_scores, pos_weights=pos_weights, neg_weights=neg_weights
+        )
 
     # docstr-coverage: inherited
     def process_lcwa_scores(
@@ -514,10 +659,12 @@ class MarginPairwiseLoss(PairwiseLoss):
         labels: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
+        weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
+        self._raise_on_weights(weights)
 
         # for LCWA scores, we consider all pairs of positive and negative scores for a single batch element.
         # note: this leads to non-uniform memory requirements for different batches, depending on the total number of
@@ -538,24 +685,16 @@ class MarginPairwiseLoss(PairwiseLoss):
 
         return self(pos_scores=positive_scores, neg_scores=negative_scores)
 
+    # docstr-coverage: inherited
     def forward(
         self,
         pos_scores: FloatTensor,
         neg_scores: FloatTensor,
-    ) -> FloatTensor:
-        """
-        Compute the margin loss.
-
-        The scores have to be in broadcastable shape.
-
-        :param pos_scores:
-            The positive scores.
-        :param neg_scores:
-            The negative scores.
-
-        :return:
-            A scalar loss term.
-        """
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
+    ) -> FloatTensor:  # noqa: D102
+        self._raise_on_weights(pos_weights)
+        self._raise_on_weights(neg_weights)
         return self._reduction_method(
             self.margin_activation(
                 neg_scores - pos_scores + self.margin,
@@ -595,7 +734,7 @@ class MarginRankingLoss(MarginPairwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = "mean"):
+    def __init__(self, margin: float = 1.0, reduction: Reduction = "mean"):
         r"""Initialize the margin loss instance.
 
         :param margin:
@@ -631,7 +770,7 @@ class SoftMarginRankingLoss(MarginPairwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = "mean"):
+    def __init__(self, margin: float = 1.0, reduction: Reduction = "mean"):
         """
         Initialize the loss.
 
@@ -666,7 +805,7 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
     # within the ablation pipeline.
     hpo_default: ClassVar[Mapping[str, Any]] = dict()
 
-    def __init__(self, reduction: str = "mean"):
+    def __init__(self, reduction: Reduction = "mean"):
         """
         Initialize the loss.
 
@@ -789,7 +928,7 @@ class DoubleMarginLoss(PointwiseLoss):
         offset: float | None = None,
         positive_negative_balance: float = 0.5,
         margin_activation: Hint[nn.Module] = "relu",
-        reduction: str = "mean",
+        reduction: Reduction = "mean",
     ):
         r"""Initialize the double margin loss.
 
@@ -836,10 +975,14 @@ class DoubleMarginLoss(PointwiseLoss):
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
+        self._raise_on_weights(pos_weights)
+        self._raise_on_weights(neg_weights)
 
         # positive term
         if batch_filter is None:
@@ -870,6 +1013,7 @@ class DoubleMarginLoss(PointwiseLoss):
         labels: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
+        weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # Sanity check
         if label_smoothing:
@@ -879,30 +1023,15 @@ class DoubleMarginLoss(PointwiseLoss):
                 num_classes=num_entities,
             )
 
-        return self(predictions=predictions, labels=labels)
+        return self(x=predictions, target=labels, weight=weights)
 
-    def forward(
-        self,
-        predictions: FloatTensor,
-        labels: FloatTensor,
-    ) -> FloatTensor:
-        """
-        Compute the double margin loss.
-
-        The scores have to be in broadcastable shape.
-
-        :param predictions:
-            The predicted scores.
-        :param labels:
-            The labels.
-
-        :return:
-            A scalar loss term.
-        """
+    # docstr-coverage: inherited
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
+        self._raise_on_weights(weight)
         return self.positive_weight * self._reduction_method(
-            labels * self.margin_activation(self.positive_margin - predictions),
+            target * self.margin_activation(self.positive_margin - x)
         ) + self.negative_weight * self._reduction_method(
-            (1.0 - labels) * self.margin_activation(self.negative_margin + predictions),
+            (1.0 - target) * self.margin_activation(self.negative_margin + x)
         )
 
 
@@ -930,7 +1059,7 @@ class DeltaPointwiseLoss(PointwiseLoss):
         self,
         margin: float | None = 0.0,
         margin_activation: Hint[nn.Module] = "softplus",
-        reduction: str = "mean",
+        reduction: Reduction = "mean",
     ) -> None:
         """
         Initialize the loss.
@@ -946,18 +1075,14 @@ class DeltaPointwiseLoss(PointwiseLoss):
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
-    def forward(
-        self,
-        logits: FloatTensor,
-        labels: FloatTensor,
-    ) -> FloatTensor:
-        """Calculate the loss for the given scores and labels."""
-        assert 0.0 <= labels.min() and labels.max() <= 1.0
+    # docstr-coverage: inherited
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
         # scale labels from [0, 1] to [-1, 1]
-        labels = 2 * labels - 1
-        loss = self.margin_activation(self.margin - labels * logits)
-        loss = self._reduction_method(loss)
-        return loss
+        target = 2 * target - 1
+        loss = self.margin_activation(self.margin - target * x)
+        if weight is None:
+            return self._reduction_method(loss)
+        return weighted_reduction(loss, weight=weight, reduction=self.reduction)
 
 
 @parse_docdata
@@ -977,7 +1102,7 @@ class PointwiseHingeLoss(DeltaPointwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = "mean") -> None:
+    def __init__(self, margin: float = 1.0, reduction: Reduction = "mean") -> None:
         """
         Initialize the loss.
 
@@ -1009,7 +1134,7 @@ class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
         margin=DEFAULT_MARGIN_HPO_STRATEGY,
     )
 
-    def __init__(self, margin: float = 1.0, reduction: str = "mean") -> None:
+    def __init__(self, margin: float = 1.0, reduction: Reduction = "mean") -> None:
         """
         Initialize the loss.
 
@@ -1042,7 +1167,7 @@ class SoftplusLoss(SoftPointwiseHingeLoss):
     # within the ablation pipeline.
     hpo_default: ClassVar[Mapping[str, Any]] = dict()
 
-    def __init__(self, reduction: str = "mean") -> None:
+    def __init__(self, reduction: Reduction = "mean") -> None:
         """
         Initialize the loss.
 
@@ -1065,13 +1190,8 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
     """
 
     # docstr-coverage: inherited
-    def forward(
-        self,
-        logits: FloatTensor,
-        labels: FloatTensor,
-        **kwargs,
-    ) -> FloatTensor:  # noqa: D102
-        return functional.binary_cross_entropy(logits.sigmoid(), labels, **kwargs)
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
+        return functional.binary_cross_entropy(x.sigmoid(), target, weight=weight, reduction=self.reduction)
 
 
 def prepare_negative_scores_for_softmax(
@@ -1134,7 +1254,11 @@ class CrossEntropyLoss(SetwiseLoss):
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
+        self._raise_on_weights(pos_weights)
+        self._raise_on_weights(neg_weights)
         # we need dense negative scores => unfilter if necessary
         negative_scores = prepare_negative_scores_for_softmax(
             batch_filter=batch_filter,
@@ -1167,16 +1291,19 @@ class CrossEntropyLoss(SetwiseLoss):
         labels: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
+        weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # make sure labels form a proper probability distribution
         labels = functional.normalize(labels, p=1, dim=-1)
         # calculate cross entropy loss
-        return functional.cross_entropy(
-            input=predictions,
-            target=labels,
-            label_smoothing=label_smoothing or 0.0,
-            reduction=self.reduction,
+        reduction = self.reduction if weights is None else "none"
+        loss = functional.cross_entropy(
+            input=predictions, target=labels, label_smoothing=label_smoothing or 0.0, reduction=reduction
         )
+        if weights is None:
+            return loss
+        weights = weights.sum(dim=-1)
+        return weighted_reduction(loss, weight=weights, reduction=self.reduction)
 
 
 @parse_docdata
@@ -1208,7 +1335,7 @@ class InfoNCELoss(CrossEntropyLoss):
         self,
         margin: float = 0.02,
         log_adversarial_temperature: float = DEFAULT_LOG_ADVERSARIAL_TEMPERATURE,
-        reduction: str = "mean",
+        reduction: Reduction = "mean",
     ) -> None:
         r"""Initialize the loss.
 
@@ -1251,6 +1378,7 @@ class InfoNCELoss(CrossEntropyLoss):
         labels: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
+        weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # determine positive; do not check with == since the labels are floats
         pos_mask = labels > 0.5
@@ -1263,6 +1391,7 @@ class InfoNCELoss(CrossEntropyLoss):
             labels=labels,
             label_smoothing=label_smoothing,
             num_entities=num_entities,
+            weights=weights,
         )
 
     # docstr-coverage: inherited
@@ -1273,6 +1402,8 @@ class InfoNCELoss(CrossEntropyLoss):
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # subtract margin from positive scores
         positive_scores = positive_scores - self.margin
@@ -1288,13 +1419,15 @@ class InfoNCELoss(CrossEntropyLoss):
             label_smoothing=label_smoothing,
             batch_filter=batch_filter,
             num_entities=num_entities,
+            pos_weights=pos_weights,
+            neg_weights=neg_weights,
         )
 
 
 class AdversarialLoss(SetwiseLoss):
     """A loss with adversarial weighting of negative samples."""
 
-    def __init__(self, inverse_softmax_temperature: float = 1.0, reduction: str = "mean") -> None:
+    def __init__(self, inverse_softmax_temperature: float = 1.0, reduction: Reduction = "mean") -> None:
         """Initialize the adversarial loss.
 
         :param inverse_softmax_temperature:
@@ -1313,28 +1446,34 @@ class AdversarialLoss(SetwiseLoss):
         labels: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
+        weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
+        self._raise_on_weights(weights)
         # determine positive; do not check with == since the labels are floats
         pos_mask = labels > 0.5
 
+        # start with positive term, which can directly be reduced
+        pos_loss = self.positive_loss_term(
+            pos_scores=predictions[pos_mask], label_smoothing=label_smoothing, num_entities=num_entities
+        )
+
         # compute negative weights (without gradient tracking)
         # clone is necessary since we modify in-place
-        weights = predictions.detach().clone()
-        weights[pos_mask] = float("-inf")
-        weights = weights.mul(self.inverse_softmax_temperature).softmax(dim=1)
-
-        # Split positive and negative scores
-        positive_scores = predictions[pos_mask]
         # we pass *all* scores as negatives, but set the weight of positives to zero
         # this allows keeping a dense shape
-
-        return self(
-            pos_scores=positive_scores,
-            neg_scores=predictions,
-            neg_weights=weights,
-            label_smoothing=label_smoothing,
-            num_entities=num_entities,
+        # TODO: we could end up with all -inf rows?
+        neg_weights = predictions.detach().clone()
+        neg_weights[pos_mask] = float("-inf")
+        neg_weights = neg_weights.mul(self.inverse_softmax_temperature).softmax(dim=1)
+        neg_loss = self.negative_loss_term_unreduced(
+            neg_scores=predictions, label_smoothing=label_smoothing, num_entities=num_entities
         )
+        # note: this is a reduction along the softmax dim; since the weights are already normalized
+        #       to sum to one, we want a sum reduction here, instead of using the self._reduction
+        neg_loss = (neg_weights * neg_loss).sum(dim=-1)
+        neg_loss = self._reduction_method(neg_loss)
+
+        return self.factor * (pos_loss + neg_loss)
 
     # docstr-coverage: inherited
     def process_slcwa_scores(
@@ -1344,10 +1483,19 @@ class AdversarialLoss(SetwiseLoss):
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
         num_entities: int | None = None,
+        pos_weights: FloatTensor | None = None,
+        neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         # Sanity check
+        self._raise_on_weights(pos_weights)
+        self._raise_on_weights(neg_weights)
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
+
+        # start with positive term, which can directly be reduced
+        pos_loss = self.positive_loss_term(
+            pos_scores=positive_scores, label_smoothing=label_smoothing, num_entities=num_entities
+        )
 
         negative_scores = prepare_negative_scores_for_softmax(
             batch_filter=batch_filter,
@@ -1358,18 +1506,20 @@ class AdversarialLoss(SetwiseLoss):
 
         # compute weights (without gradient tracking)
         assert negative_scores.ndimension() == 2
-        weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
+        neg_weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
 
         # fill negative scores with some finite value, e.g., 0 (they will get masked out anyway)
         negative_scores = torch.masked_fill(negative_scores, mask=~torch.isfinite(negative_scores), value=0.0)
 
-        return self(
-            pos_scores=positive_scores,
-            neg_scores=negative_scores,
-            neg_weights=weights,
-            label_smoothing=label_smoothing,
-            num_entities=num_entities,
+        neg_loss = self.negative_loss_term_unreduced(
+            neg_scores=negative_scores, label_smoothing=label_smoothing, num_entities=num_entities
         )
+        # note: this is a reduction along the softmax dim; since the weights are already normalized
+        #       to sum to one, we want a sum reduction here, instead of using the self._reduction
+        neg_loss = (neg_weights * neg_loss).sum(dim=-1)
+        neg_loss = self._reduction_method(neg_loss)
+
+        return self.factor * (pos_loss + neg_loss)
 
     @abstractmethod
     def positive_loss_term(
@@ -1415,44 +1565,6 @@ class AdversarialLoss(SetwiseLoss):
         """
         raise NotImplementedError
 
-    def forward(
-        self,
-        pos_scores: FloatTensor,
-        neg_scores: FloatTensor,
-        neg_weights: FloatTensor,
-        label_smoothing: float | None = None,
-        num_entities: int | None = None,
-    ) -> FloatTensor:
-        """Calculate the loss for the given scores.
-
-        :param pos_scores: shape: s_p
-            a tensor of positive scores
-        :param neg_scores: shape: s_n
-            a tensor of negative scores
-        :param neg_weights: shape: s_n
-            the adversarial weights of the negative scores
-        :param label_smoothing:
-            An optional label smoothing parameter.
-        :param num_entities:
-            The number of entities (required for label-smoothing).
-
-        :returns:
-            a scalar loss value
-        """
-        neg_loss = self.negative_loss_term_unreduced(
-            neg_scores=neg_scores, label_smoothing=label_smoothing, num_entities=num_entities
-        )
-        # note: this is a reduction along the softmax dim; since the weights are already normalized
-        #       to sum to one, we want a sum reduction here, instead of using the self._reduction
-        neg_loss = (neg_weights * neg_loss).sum(dim=-1)
-        neg_loss = self._reduction_method(neg_loss)
-
-        pos_loss = self.positive_loss_term(
-            pos_scores=pos_scores, label_smoothing=label_smoothing, num_entities=num_entities
-        )
-
-        return self.factor * (pos_loss + neg_loss)
-
 
 @parse_docdata
 class NSSALoss(AdversarialLoss):
@@ -1471,7 +1583,9 @@ class NSSALoss(AdversarialLoss):
         adversarial_temperature=dict(type=float, low=0.5, high=1.0),
     )
 
-    def __init__(self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: str = "mean") -> None:
+    def __init__(
+        self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: Reduction = "mean"
+    ) -> None:
         """Initialize the NSSA loss.
 
         :param margin: The loss's margin (also written as gamma in the reference paper)
@@ -1617,21 +1731,19 @@ class FocalLoss(PointwiseLoss):
         self.gamma = gamma
 
     # docstr-coverage: inherited
-    def forward(
-        self,
-        prediction: FloatTensor,
-        labels: FloatTensor,
-    ) -> FloatTensor:  # noqa: D102
-        p = prediction.sigmoid()
-        ce_loss = functional.binary_cross_entropy_with_logits(prediction, labels, reduction="none")
-        p_t = p * labels + (1 - p) * (1 - labels)
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
+        p = x.sigmoid()
+        ce_loss = functional.binary_cross_entropy_with_logits(x, target, reduction="none")
+        p_t = p * target + (1 - p) * (1 - target)
         loss = ce_loss * ((1 - p_t) ** self.gamma)
 
         if self.alpha is not None:
-            alpha_t = self.alpha * labels + (1 - self.alpha) * (1 - labels)
+            alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
             loss = alpha_t * loss
 
-        return self._reduction_method(loss)
+        if weight is None:
+            return self._reduction_method(loss)
+        return weighted_reduction(x=loss, weight=weight, reduction=self.reduction)
 
 
 #: A resolver for loss modules

@@ -43,21 +43,15 @@ class NegativeSampler(nn.Module):
     ) -> None:
         """Initialize the negative sampler with the given entities.
 
-        :param mapped_triples:
-            the positive training triples
-        :param num_entities:
-            the number of entities. If None, will be inferred from the triples.
-        :param num_relations:
-            the number of relations. If None, will be inferred from the triples.
-        :param num_negs_per_pos:
-            number of negative samples to make per positive triple. Defaults to 1.
-        :param filtered: Whether proposed corrupted triples that are in the training data should be filtered.
-            Defaults to False. See explanation in :func:`filter_negative_triples` for why this is
-            a reasonable default.
+        :param mapped_triples: the positive training triples
+        :param num_entities: the number of entities. If None, will be inferred from the triples.
+        :param num_relations: the number of relations. If None, will be inferred from the triples.
+        :param num_negs_per_pos: number of negative samples to make per positive triple. Defaults to 1.
+        :param filtered: Whether proposed corrupted triples that are in the training data should be filtered. Defaults
+            to False. See explanation in :func:`filter_negative_triples` for why this is a reasonable default.
         :param filterer: If filtered is set to True, this can be used to choose which filter module from
             :mod:`pykeen.sampling.filtering` is used.
-        :param filterer_kwargs:
-            Additional keyword-based arguments passed to the filterer upon construction.
+        :param filterer_kwargs: Additional keyword-based arguments passed to the filterer upon construction.
         """
         super().__init__()
         self.num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
@@ -79,20 +73,16 @@ class NegativeSampler(nn.Module):
         return normalize_string(cls.__name__, suffix=NegativeSampler.__name__)
 
     def sample(self, positive_batch: LongTensor) -> tuple[LongTensor, BoolTensor | None]:
-        """
-        Generate negative samples from the positive batch.
+        """Generate negative samples from the positive batch.
 
-        :param positive_batch: shape: (batch_size, 3)
-            The positive triples.
+        :param positive_batch: shape: (batch_size, 3) The positive triples.
 
-        :return:
-            A pair `(negative_batch, filter_mask)` where
+        :returns: A pair `(negative_batch, filter_mask)` where
 
-            1. `negative_batch`: shape: (batch_size, num_negatives, 3)
-               The negative batch. ``negative_batch[i, :, :]`` contains the negative examples generated from
-               ``positive_batch[i, :]``.
-            2. filter_mask: shape: (batch_size, num_negatives)
-               An optional filter mask. True where negative samples are valid.
+            1. `negative_batch`: shape: (batch_size, num_negatives, 3) The negative batch. ``negative_batch[i, :, :]``
+               contains the negative examples generated from ``positive_batch[i, :]``.
+            2. filter_mask: shape: (batch_size, num_negatives) An optional filter mask. True where negative samples are
+               valid.
         """
         # create unfiltered negative batch by corruption
         negative_batch = self.corrupt_batch(positive_batch=positive_batch)
@@ -105,14 +95,11 @@ class NegativeSampler(nn.Module):
 
     @abstractmethod
     def corrupt_batch(self, positive_batch: LongTensor) -> LongTensor:
-        """
-        Generate negative samples from the positive batch without application of any filter.
+        """Generate negative samples from the positive batch without application of any filter.
 
-        :param positive_batch: shape: `(*batch_dims, 3)`
-            The positive triples.
+        :param positive_batch: shape: `(*batch_dims, 3)` The positive triples.
 
-        :return: shape: `(*batch_dims, num_negs_per_pos, 3)`
-            The negative triples. ``result[*bi, :, :]`` contains the negative examples generated from
-            ``positive_batch[*bi, :]``.
+        :returns: shape: `(*batch_dims, num_negs_per_pos, 3)` The negative triples. ``result[*bi, :, :]`` contains the
+            negative examples generated from ``positive_batch[*bi, :]``.
         """
         raise NotImplementedError

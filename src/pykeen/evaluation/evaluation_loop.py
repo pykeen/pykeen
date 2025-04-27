@@ -39,16 +39,13 @@ AdditionalFilterTriplesHint: TypeAlias = OneOrSequence[MappedTriples | CoreTripl
 
 
 def _hasher(d: Mapping[str, Any]) -> int:
-    """
-    Calculate hash based on ID of dataset.
+    """Calculate hash based on ID of dataset.
 
     This means that we can have separate batch sizes for different evaluation datasets.
 
-    :param d:
-        the dictionary of keyword-based parameters
+    :param d: the dictionary of keyword-based parameters
 
-    :return:
-        the dataset's ID
+    :returns: the dataset's ID
     """
     obj = d["loop"]
     assert isinstance(obj, EvaluationLoop)
@@ -64,25 +61,19 @@ def _evaluate(
     tqdm_kwargs: OptionalKwargs,
     **kwargs,
 ) -> MetricResults:
-    """
-    Run the evaluation loop for a given batch size.
+    """Run the evaluation loop for a given batch size.
 
     .. note::
+
         This method is wrapped into a `MemoryUtilizationMaximizer` instance to automatically tune the `batch_size`.
 
-    :param loop:
-        the evaluation loop instance.
-    :param batch_size:
-        the batch size
-    :param use_tqdm:
-        whether to use tqdm progress bar
-    :param tqdm_kwargs:
-        additional keyword-based parameters for the progress bar
-    :param kwargs:
-        additional keyword-based parameters passed to :meth:`EvaluationLoop.get_loader`
+    :param loop: the evaluation loop instance.
+    :param batch_size: the batch size
+    :param use_tqdm: whether to use tqdm progress bar
+    :param tqdm_kwargs: additional keyword-based parameters for the progress bar
+    :param kwargs: additional keyword-based parameters passed to :meth:`EvaluationLoop.get_loader`
 
-    :return:
-        the evaluation results
+    :returns: the evaluation results
     """
     loop.model.eval()
     loader = loop.get_loader(batch_size=batch_size, **kwargs)
@@ -110,15 +101,11 @@ class EvaluationLoop(Generic[BatchType]):
         dataset: Dataset[BatchType],
         evaluator: Evaluator,
     ) -> None:
-        """
-        Initialize the evaluation loop.
+        """Initialize the evaluation loop.
 
-        :param model:
-            the model to evaluate.
-        :param dataset:
-            the evaluation dataset
-        :param evaluator:
-            the evaluator instance
+        :param model: the model to evaluate.
+        :param dataset: the evaluation dataset
+        :param evaluator: the evaluator instance
         """
         self.model = model
         self.evaluator = evaluator
@@ -126,11 +113,9 @@ class EvaluationLoop(Generic[BatchType]):
 
     @abstractmethod
     def process_batch(self, batch: BatchType) -> None:
-        """
-        Process a single batch.
+        """Process a single batch.
 
-        :param batch:
-            one batch of evaluation samples from the dataset.
+        :param batch: one batch of evaluation samples from the dataset.
         """
         raise NotImplementedError
 
@@ -139,18 +124,13 @@ class EvaluationLoop(Generic[BatchType]):
         return None
 
     def get_loader(self, batch_size: int, pin_memory: bool = True, **kwargs) -> DataLoader:
-        """
-        Create a data loader for a single evaluation round.
+        """Create a data loader for a single evaluation round.
 
-        :param batch_size:
-            the batch size
-        :param pin_memory:
-            whether to pin memory, cf. :meth:`DataLoader.__init__`
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`DataLoader.__init__`
+        :param batch_size: the batch size
+        :param pin_memory: whether to pin memory, cf. :meth:`DataLoader.__init__`
+        :param kwargs: additional keyword-based parameters passed to :meth:`DataLoader.__init__`
 
-        :return:
-            a dataloader for the evaluation dataset of the given batch size
+        :returns: a dataloader for the evaluation dataset of the given batch size
         """
         return DataLoader(
             dataset=self.dataset,
@@ -172,23 +152,18 @@ class EvaluationLoop(Generic[BatchType]):
         # data loader
         **kwargs,
     ) -> MetricResults:
-        """
-        Evaluate the loop's model on the loop's dataset.
+        """Evaluate the loop's model on the loop's dataset.
 
         .. note::
+
             the contained model will be set to evaluation mode.
 
-        :param batch_size:
-            the batch size. If None, enable automatic memory optimization to maximize memory utilization.
-        :param use_tqdm:
-            whether to use tqdm progress bar
-        :param tqdm_kwargs:
-            additional keyword-based parameters passed to tqdm
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`get_loader`
+        :param batch_size: the batch size. If None, enable automatic memory optimization to maximize memory utilization.
+        :param use_tqdm: whether to use tqdm progress bar
+        :param tqdm_kwargs: additional keyword-based parameters passed to tqdm
+        :param kwargs: additional keyword-based parameters passed to :meth:`get_loader`
 
-        :return:
-            the evaluation results.
+        :returns: the evaluation results.
         """
         # set upper limit of batch size for automatic memory optimization
         batch_size = determine_maximum_batch_size(
@@ -221,19 +196,14 @@ class FilterIndex:
 
     @classmethod
     def from_df(cls, df: pandas.DataFrame, target: Target) -> "FilterIndex":
-        """
-        Create index from dataframe.
+        """Create index from dataframe.
 
-        :param df:
-            the dataframe, comprising columns [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
-        :param target:
-            the prediction target
+        :param df: the dataframe, comprising columns [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
+        :param target: the prediction target
 
-        :raises ValueError:
-            if some of the expected columns are missing
+        :returns: a filter index object
 
-        :return:
-            a filter index object
+        :raises ValueError: if some of the expected columns are missing
         """
         # input verification
         expected_columns = set(COLUMN_LABELS)
@@ -254,9 +224,8 @@ class FilterIndex:
             bounds.append(len(indices))
         # convert lists to arrays
         indices = torch.as_tensor(indices)
-        bounds = numpy.asarray(bounds)
         # instantiate
-        return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=bounds, indices=indices)
+        return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=numpy.asarray(bounds), indices=indices)
 
     def __getitem__(self, item: int) -> numpy.ndarray:  # noqa: D105
         # return indices corresponding to the `item`-th triple
@@ -279,19 +248,13 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, torch.T
         filtered: bool = True,
         additional_filter_triples: AdditionalFilterTriplesHint = None,
     ) -> None:
-        """
-        Create a PyTorch dataset for link prediction evaluation.
+        """Create a PyTorch dataset for link prediction evaluation.
 
-        :param mapped_triples: shape: (n, 3)
-            the ID-based triples
-        :param factory:
-            the triples factory. Only used of `mapped_triples` is None
-        :param targets:
-            the prediction targets. Defaults to head and tail prediction
-        :param filtered:
-            whether to use filtered evaluation, i.e., prepare filter indices
-        :param additional_filter_triples:
-            additional filter triples to use for creating the filter
+        :param mapped_triples: shape: (n, 3) the ID-based triples
+        :param factory: the triples factory. Only used of `mapped_triples` is None
+        :param targets: the prediction targets. Defaults to head and tail prediction
+        :param filtered: whether to use filtered evaluation, i.e., prepare filter indices
+        :param additional_filter_triples: additional filter triples to use for creating the filter
         """
         super().__init__()
 
@@ -372,8 +335,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, torch.T
 
 
 class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
-    r"""
-    Evaluation loop using 1:n scoring.
+    r"""Evaluation loop using 1:n scoring.
 
     For brevity, we only describe evaluation for tail prediction. Let $(h, r, t) \in \mathcal{T}_{eval}$ denote an
     evaluation triple. Then, we calculate scores for all triples $(h, r, t')$ with $t' \in \mathcal{E}$, i.e., for
@@ -390,24 +352,16 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         additional_filter_triples: AdditionalFilterTriplesHint = None,
         **kwargs,
     ) -> None:
-        """
-        Initialize the evaluation loop.
+        """Initialize the evaluation loop.
 
-        :param triples_factory:
-            the evaluation triples factory
-        :param evaluator:
-            the evaluator, or a hint thereof
-        :param evaluator_kwargs:
-            additional keyword-based parameters for instantiating the evaluator
-        :param targets:
-            the prediction targets.
-        :param mode:
-            the inductive mode, or None for transductive evaluation
-        :param additional_filter_triples:
-            additional filter triples to use for creating the filter
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`EvaluationLoop.__init__`. Should not contain the keys
-            `dataset` or `evaluator`.
+        :param triples_factory: the evaluation triples factory
+        :param evaluator: the evaluator, or a hint thereof
+        :param evaluator_kwargs: additional keyword-based parameters for instantiating the evaluator
+        :param targets: the prediction targets.
+        :param mode: the inductive mode, or None for transductive evaluation
+        :param additional_filter_triples: additional filter triples to use for creating the filter
+        :param kwargs: additional keyword-based parameters passed to :meth:`EvaluationLoop.__init__`. Should not contain
+            the keys `dataset` or `evaluator`.
         """
         # avoid cyclic imports
         from . import evaluator_resolver

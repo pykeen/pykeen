@@ -55,27 +55,20 @@ def plot_early_stopping(pipeline_result, *, ax=None, lineplot_kwargs=None):
 
 
 def build_representation_getter(relation: bool = False, index: int = 0) -> Callable[[ERModel], Representation]:
-    """
-    Build a representation getter.
+    """Build a representation getter.
 
-    :param relation:
-        whether to get relation representations, or entity representations.
-    :param index:
-        the index of the representation to get
+    :param relation: whether to get relation representations, or entity representations.
+    :param index: the index of the representation to get
 
-    :return:
-        a function to get the representation.
+    :returns: a function to get the representation.
     """
 
     def getter(model: ERModel) -> Representation:
-        """
-        Get a specific representation from model.
+        """Get a specific representation from model.
 
-        :param model:
-            the model
+        :param model: the model
 
-        :return:
-            the representation
+        :returns: the representation
         """
         # cf. also https://github.com/pykeen/pykeen/issues/1071
         representations = model.relation_representations if relation else model.entity_representations
@@ -105,35 +98,35 @@ def plot_er(  # noqa: C901
     """Plot the reduced entities and relation vectors in 2D.
 
     :param pipeline_result: The result returned by :func:`pykeen.pipeline.pipeline`.
-    :param model: The dimensionality reduction model from :mod:`sklearn`. Defaults to PCA.
-        Can also use KPCA, GRP, SRP, TSNE, LLE, ISOMAP, MDS, or SE.
+    :param model: The dimensionality reduction model from :mod:`sklearn`. Defaults to PCA. Can also use KPCA, GRP, SRP,
+        TSNE, LLE, ISOMAP, MDS, or SE.
     :param entities: A subset of entities to plot
     :param relations: A subset of relations to plot
     :param apply_limits: Should the x and y limits be applied?
     :param margin: The margin size around the minimum/maximum x and y values
     :param plot_entities: If true, plot the entities based on their reduced embeddings
-    :param plot_relations: By default, this is only enabled on translational distance models
-        like :class:`pykeen.models.TransE`.
+    :param plot_relations: By default, this is only enabled on translational distance models like
+        :class:`pykeen.models.TransE`.
     :param annotation_x_offset: X offset of label from entity position
     :param annotation_y_offset: Y offset of label from entity position
-    :param entity_embedding_getter: A function that takes a model and returns its entity embeddings. If none,
-        defaults to :func:`_default_entity_embedding_getter`, which just gets ``model.entity_embeddings``. Note,
-        the default only works with old-style PyKEEN models.
+    :param entity_embedding_getter: A function that takes a model and returns its entity embeddings. If none, defaults
+        to :func:`_default_entity_embedding_getter`, which just gets ``model.entity_embeddings``. Note, the default only
+        works with old-style PyKEEN models.
     :param relation_embedding_getter: A function that takes a model and returns its relation embeddings. If none,
-        defaults to :func:`_default_relation_embedding_getter`, which just gets ``model.relation_embeddings``. Note,
-        the default only works with old-style PyKEEN models.
+        defaults to :func:`_default_relation_embedding_getter`, which just gets ``model.relation_embeddings``. Note, the
+        default only works with old-style PyKEEN models.
     :param ax: The matplotlib axis, if pre-defined
     :param subtitle: A user-defined subtitle. Is inferred if not given. Pass an empty string to not use a subtitle.
-    :param kwargs: The keyword arguments passed to `__init__()` of
-        the reducer class (e.g., PCA, TSNE)
+    :param kwargs: The keyword arguments passed to `__init__()` of the reducer class (e.g., PCA, TSNE)
+
     :returns: The axis
 
     :raises ValueError: if entity plotting and relation plotting are both turned off
 
     .. warning::
 
-        Plotting relations and entities on the same plot is only
-        meaningful for translational distance models like TransE.
+        Plotting relations and entities on the same plot is only meaningful for translational distance models like
+        TransE.
     """
     import seaborn as sns
 
@@ -261,10 +254,10 @@ def _reduce_embeddings(embedding: Representation, reducer, fit: bool = False):
 def _get_reducer_cls(model: str, **kwargs):
     """Get the model class by name and default kwargs.
 
-    :param model: The name of the model. Can choose from: PCA, KPCA, GRP,
-        SRP, TSNE, LLE, ISOMAP, MDS, or SE.
+    :param model: The name of the model. Can choose from: PCA, KPCA, GRP, SRP, TSNE, LLE, ISOMAP, MDS, or SE.
     :param kwargs: Keyword arguments that will get passed through and modified based on the chosen model.
-    :return: A pair of a reducer class from :mod:`sklearn` and the modified kwargs.
+
+    :returns: A pair of a reducer class from :mod:`sklearn` and the modified kwargs.
 
     :raises ValueError: if invalid model name is passed
     """

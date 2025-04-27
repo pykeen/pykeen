@@ -168,7 +168,7 @@ class Model(nn.Module, ABC):
         """Reset all parameters of the model in-place."""
 
     @abstractmethod
-    def _get_entity_len(self, *, mode: InductiveMode | None) -> int | None:
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int:
         """Get the number of entities depending on the mode parameters."""
 
     def post_parameter_update(self) -> None:

@@ -4,11 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
-from typing import (
-    Any,
-    ClassVar,
-    NamedTuple,
-)
+from typing import Any, ClassVar, Generic, NamedTuple, TypeVar
 
 import numpy
 import pandas
@@ -17,6 +13,7 @@ from class_resolver import ClassResolver
 from pandas.api.types import is_numeric_dtype, is_string_dtype
 
 from ...triples import CoreTriplesFactory, TriplesFactory
+from ...triples.utils import get_num_ids
 from ...typing import (
     COLUMN_HEAD,
     COLUMN_TAIL,
@@ -68,8 +65,8 @@ def cat_shift_triples(*triples: CoreTriplesFactory | MappedTriples) -> tuple[Map
             r_offset = x.num_relations
             x = x.mapped_triples
         else:
-            e_offset = x[:, [0, 2]].max().item() + 1
-            r_offset = x[:, 1].max().item() + 1
+            e_offset = get_num_ids(x[:, [0, 2]])
+            r_offset = get_num_ids(x[:, 1])
         # append shifted mapped triples
         res.append(x + offsets[None, i, [0, 1, 0]])
         # update offsets
@@ -267,16 +264,19 @@ class ProcessedTuple(NamedTuple):
     translation_kwargs: Mapping[str, Any]
 
 
-class GraphPairCombinator(ABC):
+FactoryType = TypeVar("FactoryType", CoreTriplesFactory, TriplesFactory)
+
+
+class GraphPairCombinator(Generic[FactoryType], ABC):
     """A base class for combination of a graph pair into a single graph."""
 
     def __call__(
         self,
-        left: TriplesFactory,
-        right: TriplesFactory,
+        left: FactoryType,
+        right: FactoryType,
         alignment: pandas.DataFrame,
         **kwargs,
-    ) -> tuple[TriplesFactory, LongTensor]:
+    ) -> tuple[FactoryType, LongTensor]:
         """
         Combine two graphs using the alignment information.
 
@@ -300,6 +300,7 @@ class GraphPairCombinator(ABC):
         # process
         # TODO: restrict to only using training alignments?
         mapped_triples, alignment, translation_kwargs = self.process(mapped_triples, alignment, offsets)
+        combined_factory: FactoryType
         if isinstance(left, TriplesFactory) and isinstance(right, TriplesFactory):
             # merge mappings
             entity_to_id, relation_to_id = merge_label_to_id_mappings(
@@ -307,23 +308,16 @@ class GraphPairCombinator(ABC):
                 right=right,
                 **translation_kwargs,
             )
-            triples_factory = TriplesFactory(
+            combined_factory = TriplesFactory(
                 mapped_triples=mapped_triples,
                 entity_to_id=entity_to_id,
                 relation_to_id=relation_to_id,
                 **kwargs,
             )
         else:
-            # TODO: unreachable code
-            max_ids = mapped_triples.max(axis=0).values
-            triples_factory = CoreTriplesFactory(
-                mapped_triples=mapped_triples,
-                num_entities=max_ids[0::2].max().item(),
-                num_relations=max_ids[1].item(),
-                **kwargs,
-            )
+            combined_factory = CoreTriplesFactory.create(mapped_triples=mapped_triples, **kwargs)
 
-        return triples_factory, alignment
+        return combined_factory, alignment
 
     @abstractmethod
     def process(
@@ -348,7 +342,7 @@ class GraphPairCombinator(ABC):
         raise NotImplementedError
 
 
-class DisjointGraphPairCombinator(GraphPairCombinator):
+class DisjointGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """This combinator keeps both graphs as disconnected components."""
 
     # docstr-coverage: inherited
@@ -365,7 +359,7 @@ class DisjointGraphPairCombinator(GraphPairCombinator):
         )
 
 
-class SwapGraphPairCombinator(GraphPairCombinator):
+class SwapGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """Add extra triples by swapping aligned entities."""
 
     # docstr-coverage: inherited
@@ -378,7 +372,8 @@ class SwapGraphPairCombinator(GraphPairCombinator):
         # add swap triples
         # e1 ~ e2 => (e1, r, t) ~> (e2, r, t), or (h, r, e1) ~> (h, r, e2)
         # create dense entity remapping for swap
-        dense_map = torch.full(size=(mapped_triples[:, 0::2].max().item() + 1,), fill_value=-1)
+
+        dense_map = torch.full(size=(get_num_ids(mapped_triples[:, 0::2]),), fill_value=-1)
         left_id, right_id = alignment
         dense_map[left_id] = right_id
         dense_map[right_id] = left_id
@@ -400,7 +395,7 @@ class SwapGraphPairCombinator(GraphPairCombinator):
         )
 
 
-class ExtraRelationGraphPairCombinator(GraphPairCombinator):
+class ExtraRelationGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """This combinator keeps all entities, but introduces a novel alignment relation."""
 
     #: the name of the additional alignment relation
@@ -415,7 +410,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator):
     ) -> ProcessedTuple:  # noqa: D102
         # add alignment triples with extra relation
         left_id, right_id = alignment
-        alignment_relation_id = mapped_triples[:, 1].max().item() + 1
+        alignment_relation_id = get_num_ids(mapped_triples[:, 1])
         mapped_triples = torch.cat(
             [
                 mapped_triples,
@@ -455,7 +450,7 @@ def iter_entity_mappings(
     :yields: explicit id remappings
     """
     old, new = (torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs, strict=False))
-    offsets = offsets.tolist() + [old.max().item() + 1]
+    offsets = offsets.tolist() + [get_num_ids(old)]
     for low, high in zip(offsets, offsets[1:], strict=False):
         mask = (low <= old) & (old < high)
         this_old = old[mask] - low
@@ -463,7 +458,7 @@ def iter_entity_mappings(
         yield dict(zip(this_old.tolist(), this_new.tolist(), strict=False))
 
 
-class CollapseGraphPairCombinator(GraphPairCombinator):
+class CollapseGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """This combinator merges all matching entity pairs into a single ID."""
 
     # docstr-coverage: inherited
@@ -474,7 +469,7 @@ class CollapseGraphPairCombinator(GraphPairCombinator):
         offsets: LongTensor,
     ) -> ProcessedTuple:  # noqa: D102
         # determine connected components regarding the same-as relation (i.e., applies transitivity)
-        entity_id_mapping = torch.arange(mapped_triples[:, 0::2].max().item() + 1)
+        entity_id_mapping = torch.arange(get_num_ids(mapped_triples[:, 0::2]))
         for cc in get_connected_components(pairs=alignment.t().tolist()):
             cc = list(cc)
             entity_id_mapping[cc] = min(cc)

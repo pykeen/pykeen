@@ -51,10 +51,9 @@ class FileResultTracker(ResultTracker):
     ):
         """Initialize the tracker.
 
-        :param path:
-            The path of the log file.
-        :param name: The default file name for a file if no path is given. If no default is given,
-            the current time is used.
+        :param path: The path of the log file.
+        :param name: The default file name for a file if no path is given. If no default is given, the current time is
+            used.
         """
         if name is None:
             name = datetime.datetime.now().isoformat()
@@ -90,12 +89,10 @@ class CSVResultTracker(FileResultTracker):
     ):
         """Initialize the tracker.
 
-        :param path:
-            The path of the log file.
-        :param name: The default file name for a file if no path is given. If no default is given,
-            the current time is used.
-        :param kwargs:
-            Additional keyword based arguments forwarded to csv.writer.
+        :param path: The path of the log file.
+        :param name: The default file name for a file if no path is given. If no default is given, the current time is
+            used.
+        :param kwargs: Additional keyword based arguments forwarded to csv.writer.
         """
         super().__init__(path=path, name=name)
         self.csv_writer = csv.writer(self.file, **kwargs)

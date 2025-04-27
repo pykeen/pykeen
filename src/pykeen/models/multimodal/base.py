@@ -37,23 +37,16 @@ class LiteralModel(
         combination_kwargs: OptionalKwargs = None,
         **kwargs,
     ):
-        """
-        Initialize the model.
+        """Initialize the model.
 
-        :param triples_factory:
-            the (training) triples factory
-        :param interaction:
-            the interaction function
-        :param entity_representations:
-            the entity representations (excluding the ones from literals)
-        :param entity_representations_kwargs:
-            the entity representations keyword-based parameters (excluding the ones from literals)
-        :param combination:
-            the combination for entity and literal representations
-        :param combination_kwargs:
-            keyword-based parameters for instantiating the combination
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`ERModel.__init__`
+        :param triples_factory: the (training) triples factory
+        :param interaction: the interaction function
+        :param entity_representations: the entity representations (excluding the ones from literals)
+        :param entity_representations_kwargs: the entity representations keyword-based parameters (excluding the ones
+            from literals)
+        :param combination: the combination for entity and literal representations
+        :param combination_kwargs: keyword-based parameters for instantiating the combination
+        :param kwargs: additional keyword-based parameters passed to :meth:`ERModel.__init__`
         """
         literals = triples_factory.get_numeric_literals_tensor()
         _max_id, *shape = literals.shape

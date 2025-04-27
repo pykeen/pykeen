@@ -40,10 +40,13 @@ class TextCache(ABC):
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str | None]:
         """Get text for the given identifiers for the cache."""
 
+    def get_texts_dict(self, identifiers: Sequence[str]) -> dict[str, str | None]:
+        """Get a dictionary from identifiers to their associated text."""
+        return dict(zip(identifiers, self.get_texts(identifiers), strict=False))
+
 
 class IdentityCache(TextCache):
-    """
-    A cache without functionality.
+    """A cache without functionality.
 
     Mostly used for testing.
     """
@@ -72,12 +75,10 @@ class PyOBOTextCache(TextCache):
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str | None]:
         """Get text for the given CURIEs.
 
-        :param identifiers:
-            The compact URIs for each entity (e.g., ``['doid:1234', ...]``)
+        :param identifiers: The compact URIs for each entity (e.g., ``['doid:1234', ...]``)
 
-        :return:
-            the label for each entity, looked up via :func:`pyobo.get_name`.
-            Might be none if no label is available.
+        :returns: the label for each entity, looked up via :func:`pyobo.get_name`. Might be none if no label is
+            available.
         """
         # This import doesn't need a wrapper since it's a transitive
         # requirement of PyOBO
@@ -134,16 +135,13 @@ class WikidataTextCache(TextCache):
 
     @staticmethod
     def verify_ids(ids: Sequence[str]):
-        """
-        Raise error if invalid IDs are encountered.
+        """Raise error if invalid IDs are encountered.
 
-        :param ids:
-            the ids to verify
+        :param ids: the ids to verify
 
-        :raises ValueError:
-            if any invalid ID is encountered
+        :raises ValueError: if any invalid ID is encountered
         """
-        pattern = re.compile(r"Q(\d+)")
+        pattern = re.compile(r"[QP](\d+)")
         invalid_ids = [one_id for one_id in ids if not pattern.match(one_id)]
         if invalid_ids:
             raise ValueError(f"Invalid IDs encountered: {invalid_ids}")
@@ -156,21 +154,15 @@ class WikidataTextCache(TextCache):
         batch_size: int = 256,
         timeout=None,
     ) -> Iterable[Mapping[str, Any]]:
-        """
-        Batched SPARQL query execution for the given IDS.
+        """Batched SPARQL query execution for the given IDS.
 
-        :param sparql:
-            the SPARQL query with a placeholder `ids`
-        :param wikidata_ids:
-            the Wikidata IDs
-        :param batch_size:
-            the batch size, i.e., maximum number of IDs per query
-        :param timeout:
-            the timeout for the GET request to the SPARQL endpoint
+        :param sparql: the SPARQL query with a placeholder `ids`
+        :param wikidata_ids: the Wikidata IDs
+        :param batch_size: the batch size, i.e., maximum number of IDs per query
+        :param timeout: the timeout for the GET request to the SPARQL endpoint
 
-        :return:
-            an iterable over JSON results, where the keys correspond to query variables,
-            and the values to the corresponding binding
+        :returns: an iterable over JSON results, where the keys correspond to query variables, and the values to the
+            corresponding binding
         """
         if not wikidata_ids:
             return {}
@@ -203,27 +195,22 @@ class WikidataTextCache(TextCache):
     def query_text(
         cls, wikidata_ids: Sequence[str], language: str = "en", batch_size: int = 256
     ) -> Mapping[str, Mapping[str, str]]:
-        """
-        Query the SPARQL endpoints about information for the given IDs.
+        """Query the SPARQL endpoints about information for the given IDs.
 
-        :param wikidata_ids:
-            the Wikidata IDs
-        :param language:
-            the label language
-        :param batch_size:
-            the batch size; if more ids are provided, break the big request into multiple smaller ones
+        :param wikidata_ids: the Wikidata IDs
+        :param language: the label language
+        :param batch_size: the batch size; if more ids are provided, break the big request into multiple smaller ones
 
-        :return:
-            a mapping from Wikidata Ids to dictionaries with the label and description of the entities
+        :returns: a mapping from Wikidata Ids to dictionaries with the label and description of the entities
         """
         res_json = cls.query(
             sparql=functools.partial(
                 dedent(
-                    """
-                        SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
-                            VALUES ?item {{ {ids} }}
-                            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language}". }}
-                        }}}}
+                    """\
+                    SELECT ?item ?itemLabel ?itemDescription WHERE {{{{
+                        VALUES ?item {{ {ids} }}
+                        SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{language},[AUTO_LANGUAGE],mul". }}
+                    }}}}
                     """
                 ).format,
                 language=language,
@@ -258,19 +245,16 @@ class WikidataTextCache(TextCache):
             self.module.dump_json(name=name, obj=entry)
 
     def _get(self, ids: Sequence[str], component: Literal["label", "description"]) -> Sequence[str]:
-        """
-        Get the requested component for the given IDs.
+        """Get the requested component for the given IDs.
 
-        .. note ::
+        .. note::
+
             this method uses file-based caching to avoid excessive requests to the Wikidata API.
 
-        :param ids:
-            the Wikidata IDs
-        :param component:
-            the selected component
+        :param ids: the Wikidata IDs
+        :param component: the selected component
 
-        :return:
-            the selected component for each Wikidata ID
+        :returns: the selected component for each Wikidata ID
         """
         self.verify_ids(ids=ids)
         # try to load cached first
@@ -295,11 +279,9 @@ class WikidataTextCache(TextCache):
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str]:
         """Get a concatenation of the title and description for each Wikidata identifier.
 
-        :param identifiers:
-            the Wikidata identifiers, each starting with Q (e.g., ``['Q42']``)
+        :param identifiers: the Wikidata identifiers, each starting with Q (e.g., ``['Q42']``)
 
-        :return:
-            the label and description for each Wikidata entity concatenated
+        :returns: the label and description for each Wikidata entity concatenated
         """
         # get labels & descriptions
         titles = self.get_labels(wikidata_identifiers=identifiers)
@@ -308,26 +290,24 @@ class WikidataTextCache(TextCache):
         return [f"{title}: {description}" for title, description in zip(titles, descriptions, strict=False)]
 
     def get_labels(self, wikidata_identifiers: Sequence[str]) -> Sequence[str]:
-        """
-        Get entity labels for the given IDs.
+        """Get entity labels for the given IDs.
 
-        :param wikidata_identifiers:
-            the Wikidata identifiers, each starting with Q (e.g., ``['Q42']``)
+        :param wikidata_identifiers: the Wikidata identifiers, each starting with Q (e.g., ``['Q42']``)
 
-        :return:
-            the label for each Wikidata entity
+        :returns: the label for each Wikidata entity
         """
         return self._get(ids=wikidata_identifiers, component="label")
 
+    def get_labels_dict(self, wikidata_identifiers: Sequence[str]) -> dict[str, str | None]:
+        """Get a dictionary from identifiers to their associated labels."""
+        return dict(zip(wikidata_identifiers, self.get_labels(wikidata_identifiers), strict=False))
+
     def get_descriptions(self, wikidata_identifiers: Sequence[str]) -> Sequence[str]:
-        """
-        Get entity descriptions for the given IDs.
+        """Get entity descriptions for the given IDs.
 
-        :param wikidata_identifiers:
-            the Wikidata identifiers, each starting with Q (e.g., ``['Q42']``)
+        :param wikidata_identifiers: the Wikidata identifiers, each starting with Q (e.g., ``['Q42']``)
 
-        :return:
-            the description for each Wikidata entity
+        :returns: the description for each Wikidata entity
         """
         return self._get(ids=wikidata_identifiers, component="description")
 

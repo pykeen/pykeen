@@ -33,28 +33,25 @@ class NeptuneResultTracker(ResultTracker):
     ):
         """Initialize the Neptune result tracker.
 
-        :param project_qualified_name:
-            Qualified name of a project in a form of ``namespace/project_name``.
-            If ``None``, the value of ``NEPTUNE_PROJECT`` environment variable will be taken. For testing,
-            should be `<your username>/sandbox`
-        :param api_token:
-            User's API token. If ``None``, the value of ``NEPTUNE_API_TOKEN`` environment variable will be taken.
+        :param project_qualified_name: Qualified name of a project in a form of ``namespace/project_name``. If ``None``,
+            the value of ``NEPTUNE_PROJECT`` environment variable will be taken. For testing, should be `<your
+            username>/sandbox`
+        :param api_token: User's API token. If ``None``, the value of ``NEPTUNE_API_TOKEN`` environment variable will be
+            taken.
 
             .. note::
 
-                It is strongly recommended to use ``NEPTUNE_API_TOKEN`` environment variable rather than
-                placing your API token in plain text in your source code.
-        :param offline:
-            Run neptune in offline mode (uses :class:`neptune.OfflineBackend` as the backend)
-        :param experiment_id:
-            The identifier of a pre-existing experiment to use. If not given, will rely
-            on the ``experiment_name``.
-        :param experiment_name:
-            The name of the experiment. If no ``experiment_id`` is given, one will be created based
+                It is strongly recommended to use ``NEPTUNE_API_TOKEN`` environment variable rather than placing your
+                API token in plain text in your source code.
+
+        :param offline: Run neptune in offline mode (uses :class:`neptune.OfflineBackend` as the backend)
+        :param experiment_id: The identifier of a pre-existing experiment to use. If not given, will rely on the
+            ``experiment_name``.
+        :param experiment_name: The name of the experiment. If no ``experiment_id`` is given, one will be created based
             on the name.
         :param tags: A collection of tags to add to the experiment
-        :raises ValueError:
-            If neither an experiment name nor experiment ID is given
+
+        :raises ValueError: If neither an experiment name nor experiment ID is given
         """
         import neptune
 
