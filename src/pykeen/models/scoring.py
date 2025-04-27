@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
-from collections.abc import Iterable
+from collections.abc import Iterator
 from typing import Any
 
 import torch
@@ -127,19 +127,44 @@ class Batch:
             use_inverse_relation=True,
         )
 
-    def slice(self, slice_size: int, num: int) -> Iterable[Batch]:
-        """Iterate over slices."""
-        kwargs = dict(
-            head=self.head,
-            relation=self.relation,
-            tail=self.tail,
-            use_inverse_relation=self.use_inverse_relation,
-        )
-        if self.all_target is None:
-            raise ValueError("Cannot slice, because there are only batch dimensions. Look into subbatching instead.")
+    @staticmethod
+    def _iter_slice_indices(slice_size: int, num: int) -> Iterator[LongTensor]:
+        """Iterate over indices for slices."""
         for start in range(0, num, slice_size):
-            kwargs[self.all_target] = torch.arange(start=start, end=min(start + slice_size, num))
-            yield Batch(**kwargs)
+            yield torch.arange(start=start, end=min(start + slice_size, num))
+
+    def slice(self, slice_size: int, num: int) -> Iterator[Batch]:
+        """Iterate over slices."""
+        match self.all_target:
+            case None:
+                raise ValueError(
+                    "Cannot slice, because there are only batch dimensions. Look into subbatching instead."
+                )
+            case pykeen_typing.LABEL_HEAD:
+                for indices in self._iter_slice_indices(slice_size=slice_size, num=num):
+                    yield Batch(
+                        head=indices,
+                        relation=self.relation,
+                        tail=self.tail,
+                        use_inverse_relation=self.use_inverse_relation,
+                    )
+            case pykeen_typing.LABEL_RELATION:
+                for indices in self._iter_slice_indices(slice_size=slice_size, num=num):
+                    yield Batch(
+                        head=self.head,
+                        relation=indices,
+                        tail=self.tail,
+                        use_inverse_relation=self.use_inverse_relation,
+                    )
+            case pykeen_typing.LABEL_TAIL:
+                for indices in self._iter_slice_indices(slice_size=slice_size, num=num):
+                    yield Batch(
+                        head=self.head,
+                        relation=self.relation,
+                        tail=indices,
+                        use_inverse_relation=self.use_inverse_relation,
+                    )
+        raise AssertionError
 
 
 def parallel_prefix_unsqueeze(x: OneOrSequence[FloatTensor], ndim: int) -> OneOrSequence[FloatTensor]:
