@@ -8,10 +8,14 @@ from collections.abc import Iterable
 from typing import Any
 
 import torch
+from typing_extensions import Self
 
+from pykeen import typing as pykeen_typing
 from pykeen.inverse import RelationInverter
 from pykeen.models import ERModel
 from pykeen.nn.modules import parallel_unsqueeze
+from pykeen.training.lcwa import LCWABatch
+from pykeen.training.slcwa import SLCWABatch
 from pykeen.typing import (
     LABEL_HEAD,
     LABEL_RELATION,
@@ -50,6 +54,29 @@ class Batch:
         if not missing:
             return x
         return x.view(*x.shape, *itertools.repeat(1, times=missing))
+
+    @classmethod
+    def from_lcwa(cls, x: LCWABatch, target: Target) -> Self:
+        pairs = x["pairs"]
+        a, b = pairs.unbind(dim=-1)
+        match target:
+            case pykeen_typing.LABEL_HEAD:
+                return cls(head=None, relation=a, tail=b, all_target=target)
+            case pykeen_typing.LABEL_RELATION:
+                return cls(head=a, relation=None, tail=b, all_target=target)
+            case pykeen_typing.LABEL_TAIL:
+                return cls(head=a, relation=b, tail=None, all_target=target)
+        raise NotImplementedError(target)
+
+    @classmethod
+    def from_slcwa(cls, x: SLCWABatch) -> Self:
+        # TODO: we cannot easily exploit structure in the negative samples, e.g., shared head/tail
+        #: the positive triples, shape: (batch_size, 3)
+        pos = x["positives"]
+        #: the negative triples, shape: (batch_size, num_negatives_per_positive, 3)
+        neg = x["negatives"]
+        combined = torch.cat([pos[:, None, :], neg], dim=1)
+        return cls(head=combined[:, 0], relation=combined[:, 1], tail=combined[:, 2])
 
     def __post_init__(self) -> None:
         max_ndim = 0
