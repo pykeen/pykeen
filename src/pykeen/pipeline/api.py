@@ -1209,7 +1209,6 @@ def _handle_evaluation(
     filter_validation_when_testing: bool = True,
     use_tqdm: bool | None = None,
 ) -> tuple[MetricResults, float]:
-    # TODO: use LCWAEvaluationLoop
     if use_testing_data:
         evaluation_factory = testing
     elif validation is None:
