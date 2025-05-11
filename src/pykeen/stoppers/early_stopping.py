@@ -14,6 +14,7 @@ import torch
 from .stopper import Stopper
 from ..constants import PYKEEN_CHECKPOINTS
 from ..evaluation import Evaluator
+from ..evaluation.evaluation_loop import LCWAEvaluationLoop
 from ..models import Model
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
@@ -185,6 +186,13 @@ class EarlyStopper(Stopper):
             logger.warning(
                 f"Checkpoint path for best weights does already exist ({self.best_model_path}). It will be overwritten."
             )
+        self.evaluation_loop = LCWAEvaluationLoop(
+            model=self.model,
+            triples_factory=self.evaluation_triples_factory,
+            evaluator=self.evaluator,
+            # TODO: targets, mode?
+            additional_filter_triples=[self.training_triples_factory.mapped_triples],
+        )
 
     @property
     def remaining_patience(self) -> int:
@@ -214,18 +222,12 @@ class EarlyStopper(Stopper):
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
         # for mypy
         assert self.best_model_path is not None
-        # TODO: re-use LCWAEvaluationLoop instantiated once
         # Evaluate
-        metric_results = self.evaluator.evaluate(
-            model=self.model,
-            additional_filter_triples=self.training_triples_factory.mapped_triples,
-            mapped_triples=self.evaluation_triples_factory.mapped_triples,
+        metric_results = self.evaluation_loop.evaluate(
             use_tqdm=self.use_tqdm,
             tqdm_kwargs=self.tqdm_kwargs,
             batch_size=self.evaluation_batch_size,
             slice_size=self.evaluation_slice_size,
-            # Only perform time-consuming checks for the first call.
-            do_time_consuming_checks=self.evaluation_batch_size is None,
         )
         # After the first evaluation pass the optimal batch and slice size is obtained and saved for re-use
         self.evaluation_batch_size = self.evaluator.batch_size
