@@ -1285,6 +1285,7 @@ def _handle_evaluation(
     if "targets" in evaluation_kwargs:
         evaluation_loop_kwargs["targets"] = evaluation_kwargs.pop("targets")
     evaluate_start_time = time.time()
+    # TODO: what about SampledEvaluator?
     evaluation_loop = LCWAEvaluationLoop(
         triples_factory=evaluation_factory,
         evaluator=evaluator_instance,
