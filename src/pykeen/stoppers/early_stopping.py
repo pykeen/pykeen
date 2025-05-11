@@ -214,6 +214,7 @@ class EarlyStopper(Stopper):
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
         # for mypy
         assert self.best_model_path is not None
+        # TODO: re-use LCWAEvaluationLoop instantiated once
         # Evaluate
         metric_results = self.evaluator.evaluate(
             model=self.model,
