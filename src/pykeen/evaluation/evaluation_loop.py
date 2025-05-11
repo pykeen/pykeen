@@ -393,6 +393,7 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
             # TODO: in theory, we could make a single score calculation for e.g.,
             # {(h, r, t1), (h, r, t1), ..., (h, r, tk)}
             # predict scores for all candidates
+            # TODO: slice_size
             scores = self.model.predict(hrt_batch=hrt_batch, target=target, mode=self.mode)
             true_scores = dense_positive_mask = None
 
