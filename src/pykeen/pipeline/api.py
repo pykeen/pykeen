@@ -209,6 +209,7 @@ from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
+from ..evaluation.evaluation_loop import LCWAEvaluationLoop
 from ..evaluation.evaluator import normalize_flattened_metric_results
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
@@ -1221,7 +1222,6 @@ def _handle_evaluation(
             f"The model itself determines whether inverse relations are used in head prediction. "
             f"Here, the model was created with {training.create_inverse_triples=}",
         )
-    mapped_triples = evaluation_factory.mapped_triples
 
     # Build up a list of triples if we want to be in the filtered setting
     additional_filter_triples_names = dict()
@@ -1281,10 +1281,18 @@ def _handle_evaluation(
             }
         )
     )
+    evaluation_loop_kwargs = {}
+    if "targets" in evaluation_kwargs:
+        evaluation_loop_kwargs["targets"] = evaluation_kwargs.pop("targets")
     evaluate_start_time = time.time()
-    metric_results = evaluator_instance.evaluate(
-        model=model_instance, mapped_triples=mapped_triples, **evaluation_kwargs
+    evaluation_loop = LCWAEvaluationLoop(
+        triples_factory=evaluation_factory,
+        evaluator=evaluator_instance,
+        # TODO: mode support?
+        additional_filter_triples=additional_filter_triples,
+        **evaluation_loop_kwargs,
     )
+    metric_results = evaluation_loop.evaluate(**evaluation_kwargs)
     evaluate_end_time = time.time() - evaluate_start_time
     step = training_kwargs.get("num_epochs")
     _result_tracker.log_metrics(metrics=dict(final_evaluation=evaluate_end_time), step=step, prefix="times")
