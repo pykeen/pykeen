@@ -1287,6 +1287,7 @@ def _handle_evaluation(
     evaluate_start_time = time.time()
     # TODO: what about SampledEvaluator?
     evaluation_loop = LCWAEvaluationLoop(
+        model=model_instance,
         triples_factory=evaluation_factory,
         evaluator=evaluator_instance,
         # TODO: mode support?
