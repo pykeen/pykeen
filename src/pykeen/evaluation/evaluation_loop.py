@@ -53,10 +53,11 @@ def _hasher(d: Mapping[str, Any]) -> int:
     return id(obj)
 
 
-@maximize_memory_utilization(hasher=_hasher)
+@maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
 def _evaluate(
     loop: "EvaluationLoop",
     batch_size: int,
+    slice_size: int,
     use_tqdm: bool,
     tqdm_kwargs: OptionalKwargs,
     **kwargs,
@@ -88,7 +89,7 @@ def _evaluate(
             **(tqdm_kwargs or {}),
         )
     for batch in loader:
-        loop.process_batch(batch=batch)
+        loop.process_batch(batch=batch, slice_size=slice_size)
     return loop.evaluator.finalize()
 
 
@@ -112,10 +113,11 @@ class EvaluationLoop(Generic[BatchType]):
         self.dataset = dataset
 
     @abstractmethod
-    def process_batch(self, batch: BatchType) -> None:
+    def process_batch(self, batch: BatchType, slice_size: int | None = None) -> None:
         """Process a single batch.
 
         :param batch: one batch of evaluation samples from the dataset.
+        :param slice_size: The optional slice size.
         """
         raise NotImplementedError
 
@@ -169,12 +171,16 @@ class EvaluationLoop(Generic[BatchType]):
         batch_size = determine_maximum_batch_size(
             batch_size=batch_size, device=self.model.device, maximum_batch_size=len(self.dataset)
         )
+        # set upper limit for slice size
+        # TODO: if we knew the targets here, we could guess this better
+        slice_size = max(self.model.num_entities, self.model.num_relations)
         # set model to evaluation mode
         self.model.eval()
         # delegate to AMO wrapper
         return _evaluate(
             loop=self,
             batch_size=batch_size,
+            slice_size=slice_size,
             use_tqdm=use_tqdm,
             tqdm_kwargs=tqdm_kwargs,
             **kwargs,
@@ -386,15 +392,14 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         return LCWAEvaluationDataset.collate
 
     # docstr-coverage: inherited
-    def process_batch(self, batch: Mapping[Target, MappedTriples]) -> None:  # noqa: D102
+    def process_batch(self, batch: Mapping[Target, MappedTriples], slice_size: int | None = None) -> None:  # noqa: D102
         # note: most of the time, this loop will only make a single iteration, since the evaluation dataset typically is
         #       not shuffled, and contains evaluation ranking tasks sorted by target
         for target, (hrt_batch, filter_batch) in batch.items():
             # TODO: in theory, we could make a single score calculation for e.g.,
             # {(h, r, t1), (h, r, t1), ..., (h, r, tk)}
             # predict scores for all candidates
-            # TODO: slice_size
-            scores = self.model.predict(hrt_batch=hrt_batch, target=target, mode=self.mode)
+            scores = self.model.predict(hrt_batch=hrt_batch, target=target, mode=self.mode, slice_size=slice_size)
             true_scores = dense_positive_mask = None
 
             # filter scores
