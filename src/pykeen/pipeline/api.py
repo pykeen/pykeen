@@ -1281,8 +1281,10 @@ def _handle_evaluation(
         )
     )
     evaluation_loop_kwargs = {}
-    if "targets" in evaluation_kwargs:
-        evaluation_loop_kwargs["targets"] = evaluation_kwargs.pop("targets")
+    # patch dictionary
+    for key in ("targets", "additional_filter_triples"):
+        if key in evaluation_kwargs:
+            evaluation_loop_kwargs[key] = evaluation_kwargs.pop(key)
     evaluate_start_time = time.time()
     # TODO: what about SampledEvaluator?
     evaluation_loop = LCWAEvaluationLoop(
@@ -1290,7 +1292,6 @@ def _handle_evaluation(
         triples_factory=evaluation_factory,
         evaluator=evaluator_instance,
         # TODO: mode support?
-        additional_filter_triples=additional_filter_triples,
         **evaluation_loop_kwargs,
     )
     metric_results = evaluation_loop.evaluate(**evaluation_kwargs)
