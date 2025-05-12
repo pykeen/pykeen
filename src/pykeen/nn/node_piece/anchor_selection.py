@@ -8,6 +8,7 @@ entities. Most of these methods rely on some form of `(graph) centrality measure
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
+from typing import Any
 
 import numpy
 import torch
@@ -149,7 +150,7 @@ class PageRankAnchorSelection(SingleSelection):
     def __init__(
         self,
         num_anchors: int = 32,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Initialize the selection strategy.
 
@@ -201,7 +202,7 @@ class MixtureAnchorSelection(AnchorSelection):
         selections: Sequence[HintOrType[AnchorSelection]],
         ratios: None | float | Sequence[float] = None,
         selections_kwargs: OneOrSequence[OptionalKwargs] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Initialize the selection strategy.
 
@@ -257,7 +258,7 @@ class MixtureAnchorSelection(AnchorSelection):
 
 #: A resolver for NodePiece anchor selectors
 anchor_selection_resolver: ClassResolver[AnchorSelection] = ClassResolver.from_subclasses(
-    base=AnchorSelection,
+    base=AnchorSelection,  # type:ignore[type-abstract]
     default=DegreeAnchorSelection,
     skip={SingleSelection},
 )

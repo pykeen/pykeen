@@ -3440,8 +3440,8 @@ class TransformerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor])
         num_heads: int = 8,
         dropout: float = 0.1,
         dim_feedforward: int = 2048,
-        position_initializer: HintOrType[Initializer] = xavier_normal_,
-    ):
+        position_initializer: HintOrType[Initializer] = None,
+    ) -> None:
         """
         Initialize the module.
 
@@ -3470,6 +3470,8 @@ class TransformerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor])
             ),
             num_layers=num_layers,
         )
+        if position_initializer is None:
+            position_initializer = xavier_normal_
         self.position_embeddings = nn.Parameter(position_initializer(torch.empty(2, input_dim)))
         self.final = nn.Linear(input_dim, input_dim, bias=True)
 

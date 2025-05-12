@@ -5,6 +5,7 @@ import pathlib
 from abc import abstractmethod
 from collections import defaultdict
 from collections.abc import Collection, Mapping
+from typing import Any
 
 import more_itertools
 import numpy
@@ -126,15 +127,15 @@ class AnchorTokenizer(Tokenizer):
         num_tokens: int,
         num_entities: int,
     ) -> tuple[int, LongTensor]:
-        edge_index = edge_index.numpy()
+        edge_index_np = edge_index.numpy()
         # select anchors
         logger.info(f"Selecting anchors according to {self.anchor_selection}")
-        anchors = self.anchor_selection(edge_index=edge_index)
+        anchors = self.anchor_selection(edge_index=edge_index_np)
         if len(numpy.unique(anchors)) < len(anchors):
             logger.warning(f"Only {len(numpy.unique(anchors))} out of {len(anchors)} anchors are unique")
         # find closest anchors
         logger.info(f"Searching closest anchors with {self.searcher}")
-        tokens = self.searcher(edge_index=edge_index, anchors=anchors, k=num_tokens, num_entities=num_entities)
+        tokens = self.searcher(edge_index=edge_index_np, anchors=anchors, k=num_tokens, num_entities=num_entities)
         num_empty = (tokens < 0).all(axis=1).sum()
         if num_empty > 0:
             logger.warning(
@@ -165,7 +166,7 @@ class MetisAnchorTokenizer(AnchorTokenizer):
     http://glaros.dtc.umn.edu/gkhome/metis/metis/overview
     """
 
-    def __init__(self, num_partitions: int = 2, device: DeviceHint = None, **kwargs):
+    def __init__(self, num_partitions: int = 2, device: DeviceHint = None, **kwargs: Any) -> None:
         """Initialize the tokenizer.
 
         :param num_partitions: the number of partitions obtained through Metis.
@@ -280,7 +281,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
         pool: Mapping[int, Collection[int]] | None = None,
         randomize_selection: bool = False,
         loader: HintOrType[PrecomputedTokenizerLoader] = None,
-    ):
+    ) -> None:
         r"""Initialize the tokenizer.
 
         .. note::
