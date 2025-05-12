@@ -70,6 +70,7 @@ def _evaluate(
 
     :param loop: the evaluation loop instance.
     :param batch_size: the batch size
+    :param slice_size: The optional slice size.
     :param use_tqdm: whether to use tqdm progress bar
     :param tqdm_kwargs: additional keyword-based parameters for the progress bar
     :param kwargs: additional keyword-based parameters passed to :meth:`EvaluationLoop.get_loader`
@@ -101,16 +102,21 @@ class EvaluationLoop(Generic[BatchType]):
         model: Model,
         dataset: Dataset[BatchType],
         evaluator: Evaluator,
+        mode: InductiveMode | None = None,
     ) -> None:
         """Initialize the evaluation loop.
 
         :param model: the model to evaluate.
         :param dataset: the evaluation dataset
         :param evaluator: the evaluator instance
+        :param mode: the inductive mode for evaluation. Defaults to None, meaning transductive setting
         """
         self.model = model
         self.evaluator = evaluator
         self.dataset = dataset
+        if mode is not None:
+            raise NotImplementedError(f"non-transductive evaluation mode is not yet implemented: {mode}")
+        self.mode = mode
 
     @abstractmethod
     def process_batch(self, batch: BatchType, slice_size: int | None = None) -> None:
