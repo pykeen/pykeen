@@ -18,6 +18,7 @@ from ..evaluation.evaluation_loop import LCWAEvaluationLoop
 from ..models import Model
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
+from ..typing import InductiveMode
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
@@ -166,6 +167,8 @@ class EarlyStopper(Stopper):
     use_tqdm: bool = False
     #: Keyword arguments for the tqdm progress bar
     tqdm_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
+    #: The inductive mode
+    mode: InductiveMode | None = None
 
     _stopper: EarlyStoppingLogic = dataclasses.field(init=False, repr=False)
 
@@ -190,7 +193,8 @@ class EarlyStopper(Stopper):
             model=self.model,
             triples_factory=self.evaluation_triples_factory,
             evaluator=self.evaluator,
-            # TODO: targets, mode?
+            mode=self.mode,
+            # TODO: targets?
             additional_filter_triples=[self.training_triples_factory.mapped_triples],
         )
 
