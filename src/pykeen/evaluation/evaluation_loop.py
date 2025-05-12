@@ -109,13 +109,11 @@ class EvaluationLoop(Generic[BatchType]):
         :param model: the model to evaluate.
         :param dataset: the evaluation dataset
         :param evaluator: the evaluator instance
-        :param mode: the inductive mode for evaluation. Defaults to None, meaning transductive setting
+        :param mode: the inductive mode, or None for transductive evaluation
         """
         self.model = model
         self.evaluator = evaluator
         self.dataset = dataset
-        if mode is not None:
-            raise NotImplementedError(f"non-transductive evaluation mode is not yet implemented: {mode}")
         self.mode = mode
 
     @abstractmethod
@@ -388,10 +386,10 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
                 additional_filter_triples=additional_filter_triples,
             ),
             evaluator=evaluator,
+            mode=mode,
             **kwargs,
         )
         self.targets = targets
-        self.mode = mode
 
     # docstr-coverage: inherited
     def get_collator(self):  # noqa: D102
