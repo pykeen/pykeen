@@ -89,4 +89,7 @@ class UnionCheckpointSchedule(CheckpointSchedule):
 
 
 #: a resolver for checkpoint schedules
-schedule_resolver = ClassResolver.from_subclasses(base=CheckpointSchedule, default=EveryCheckpointSchedule)
+schedule_resolver = ClassResolver.from_subclasses(
+    base=CheckpointSchedule,  # type:ignore[type-abstract]
+    default=EveryCheckpointSchedule,
+)

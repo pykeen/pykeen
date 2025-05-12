@@ -71,6 +71,6 @@ class DefaultRelationInverter(RelationInverter):
 
 #: A resolver for relation inverter protocols
 relation_inverter_resolver: Resolver[RelationInverter] = Resolver.from_subclasses(
-    RelationInverter,
+    RelationInverter,  # type:ignore[type-abstract]
     default=DefaultRelationInverter,
 )

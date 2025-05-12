@@ -2,7 +2,7 @@
 
 import logging
 import pathlib
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from typing import NamedTuple
 
 import torch
@@ -257,6 +257,8 @@ class NodePieceRepresentation(CombinedRepresentation):
         github: https://github.com/migalkin/NodePiece
     """
 
+    base: Sequence[TokenizationRepresentation]
+
     @update_docstring_with_resolver_keys(
         ResolverKey("token_representations", resolver="pykeen.nn.representation_resolver"),
         ResolverKey("tokenizers", resolver="pykeen.nn.node_piece.tokenizer_resolver"),
@@ -275,7 +277,7 @@ class NodePieceRepresentation(CombinedRepresentation):
         aggregation_kwargs: OptionalKwargs = None,
         max_id: int | None = None,
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize the representation.
 
@@ -322,12 +324,12 @@ class NodePieceRepresentation(CombinedRepresentation):
             # inverse triples are created afterwards implicitly
             mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
-        token_representations, token_representations_kwargs, num_tokens = broadcast_upgrade_to_sequences(
+        token_representations_, token_representations_kwargs_, num_tokens = broadcast_upgrade_to_sequences(
             token_representations, token_representations_kwargs, num_tokens
         )
 
         # tokenize
-        token_representations = [
+        base = [
             TokenizationRepresentation.from_tokenizer(
                 tokenizer=tokenizer_inst,
                 num_tokens=num_tokens_,
@@ -339,8 +341,8 @@ class NodePieceRepresentation(CombinedRepresentation):
             )
             for tokenizer_inst, token_representation, token_representation_kwargs, num_tokens_ in zip(
                 tokenizer_resolver.make_many(queries=tokenizers, kwargs=tokenizers_kwargs),
-                token_representations,
-                token_representations_kwargs,
+                token_representations_,
+                token_representations_kwargs_,
                 num_tokens,
                 strict=False,
             )
@@ -349,7 +351,7 @@ class NodePieceRepresentation(CombinedRepresentation):
         # Create an MLP for string aggregation
         if aggregation == "mlp":
             # note: the token representations' shape includes the number of tokens as leading dim
-            embedding_dim = token_representations[0].shape[1]
+            embedding_dim = base[0].shape[1]
             aggregation = ConcatMLP(
                 input_dim=embedding_dim * sum(num_tokens),
                 output_dim=embedding_dim,
@@ -357,10 +359,10 @@ class NodePieceRepresentation(CombinedRepresentation):
 
         super().__init__(
             max_id=triples_factory.num_entities,
-            base=token_representations,
+            base=base,
             combination=ConcatAggregationCombination,
             combination_kwargs=dict(
-                aggregation=aggregation, aggregation_kwargs=aggregation_kwargs, dim=-len(token_representations[0].shape)
+                aggregation=aggregation, aggregation_kwargs=aggregation_kwargs, dim=-len(base[0].shape)
             ),
             **kwargs,
         )

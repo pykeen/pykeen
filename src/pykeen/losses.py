@@ -1748,15 +1748,15 @@ class FocalLoss(PointwiseLoss):
 
 #: A resolver for loss modules
 loss_resolver: ClassResolver[Loss] = ClassResolver.from_subclasses(
-    Loss,
+    Loss,  # type:ignore[type-abstract]
     default=MarginRankingLoss,
     skip={
-        PairwiseLoss,
-        PointwiseLoss,
-        SetwiseLoss,
+        PairwiseLoss,  # type:ignore[type-abstract]
+        PointwiseLoss,  # type:ignore[type-abstract]
+        SetwiseLoss,  # type:ignore[type-abstract]
         DeltaPointwiseLoss,
         MarginPairwiseLoss,
-        AdversarialLoss,
+        AdversarialLoss,  # type:ignore[type-abstract]
     },
 )
 for _name, _cls in loss_resolver.lookup_dict.items():

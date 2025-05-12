@@ -235,6 +235,6 @@ class TransformerTextEncoder(TextEncoder):
 #: for :class:`CharacterEmbeddingTextEncoder` or 'transformer' for
 #: :class:`TransformerTextEncoder`.
 text_encoder_resolver: ClassResolver[TextEncoder] = ClassResolver.from_subclasses(
-    base=TextEncoder,
+    base=TextEncoder,  # type:ignore[type-abstract]
     default=CharacterEmbeddingTextEncoder,
 )

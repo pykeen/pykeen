@@ -152,16 +152,16 @@ __all__ = [
 
 #: A resolver for knowledge graph embedding models
 model_resolver: ClassResolver[Model] = ClassResolver.from_subclasses(
-    base=Model,
+    base=Model,  # type:ignore[type-abstract]
     skip={
         # Abstract Models
-        _NewAbstractModel,
+        _NewAbstractModel,  # type:ignore[type-abstract]
         # We might be able to relax this later
         ERModel,
         InductiveERModel,
         LiteralModel,
         # baseline models behave differently
-        EvaluationOnlyModel,
-        *get_subclasses(EvaluationOnlyModel),
+        EvaluationOnlyModel,  # type:ignore[type-abstract]
+        *get_subclasses(EvaluationOnlyModel),  # type:ignore[type-abstract]
     },
 )

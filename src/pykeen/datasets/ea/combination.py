@@ -36,6 +36,7 @@ __all__ = [
     "CollapseGraphPairCombinator",
     # Data Structures
     "ProcessedTuple",
+    "graph_combinator_resolver",
 ]
 
 logger = logging.getLogger(__name__)
@@ -491,7 +492,8 @@ class CollapseGraphPairCombinator(GraphPairCombinator[FactoryType]):
         )
 
 
+#: A resolver for graph combinatiors
 graph_combinator_resolver: ClassResolver[GraphPairCombinator] = ClassResolver.from_subclasses(
-    base=GraphPairCombinator,
+    base=GraphPairCombinator,  # type:ignore[type-abstract]
     default=ExtraRelationGraphPairCombinator,
 )
