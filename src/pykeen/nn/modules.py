@@ -3877,9 +3877,9 @@ class LineaREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Fl
 
 #: A resolver for stateful interaction functions
 interaction_resolver: ClassResolver[Interaction] = ClassResolver.from_subclasses(
-    Interaction,
+    Interaction,  # type:ignore[type-abstract]
     skip={
-        NormBasedInteraction,
+        NormBasedInteraction,  # type:ignore[type-abstract]
         MonotonicAffineTransformationInteraction,
         ClampedInteraction,
         DirectionAverageInteraction,

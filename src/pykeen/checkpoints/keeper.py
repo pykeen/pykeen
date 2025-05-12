@@ -120,5 +120,6 @@ class UnionCheckpointKeeper(CheckpointKeeper):
 
 #: a resolver for checkpoint keepers
 keeper_resolver: ClassResolver[CheckpointKeeper] = ClassResolver.from_subclasses(
-    CheckpointKeeper, default=CheckpointKeeper
+    CheckpointKeeper,  # type:ignore[type-abstract]
+    default=CheckpointKeeper,
 )

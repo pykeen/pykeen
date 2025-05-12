@@ -39,6 +39,6 @@ __all__ = [
 
 #: A resolver for stoppers
 stopper_resolver: ClassResolver[Stopper] = ClassResolver.from_subclasses(
-    Stopper,
+    Stopper,  # type:ignore[type-abstract]
     default=NopStopper,
 )

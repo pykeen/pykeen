@@ -507,7 +507,8 @@ class RGCNLayer(nn.Module):
 
 
 decomposition_resolver: ClassResolver[Decomposition] = ClassResolver.from_subclasses(
-    base=Decomposition, default=BasesDecomposition
+    base=Decomposition,  # type:ignore[type-abstract]
+    default=BasesDecomposition,
 )
 
 

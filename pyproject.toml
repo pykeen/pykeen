@@ -74,7 +74,6 @@ dependencies = [
     "more_itertools",
     "pystow>=0.4.3",
     "docdata>=0.0.5",
-    "class-resolver>=0.6.0",
     "class_resolver>=0.6.0",
     "pyyaml",
     "torch_max_mem>=0.1.4",

@@ -30,9 +30,11 @@ __all__ = [
 
 #: A resolver for evaluators
 evaluator_resolver: ClassResolver[Evaluator] = ClassResolver.from_subclasses(
-    base=Evaluator,
+    base=Evaluator,  # type:ignore[type-abstract]
     default=RankBasedEvaluator,
 )
 
 #: A resolver for metric results
-metric_resolver: ClassResolver[MetricResults] = ClassResolver.from_subclasses(MetricResults)
+metric_resolver: ClassResolver[MetricResults] = ClassResolver.from_subclasses(
+    MetricResults,  # type:ignore[type-abstract]
+)

@@ -331,6 +331,6 @@ class PrecomputedPoolTokenizer(Tokenizer):
 
 #: A resolver for NodePiece tokenizers
 tokenizer_resolver: ClassResolver[Tokenizer] = ClassResolver.from_subclasses(
-    base=Tokenizer,
+    base=Tokenizer,  # type:ignore[type-abstract]
     default=RelationTokenizer,
 )
