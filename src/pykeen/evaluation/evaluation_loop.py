@@ -152,6 +152,7 @@ class EvaluationLoop(Generic[BatchType]):
         self,
         # batch
         batch_size: int | None = None,
+        slice_size: int | None = None,
         # tqdm
         use_tqdm: bool = True,
         tqdm_kwargs: OptionalKwargs = None,
@@ -177,7 +178,8 @@ class EvaluationLoop(Generic[BatchType]):
         )
         # set upper limit for slice size
         # TODO: if we knew the targets here, we could guess this better
-        slice_size = max(self.model.num_entities, self.model.num_relations)
+        if slice_size is None:
+            slice_size = max(self.model.num_entities, self.model.num_relations)
         # set model to evaluation mode
         self.model.eval()
         # delegate to AMO wrapper
