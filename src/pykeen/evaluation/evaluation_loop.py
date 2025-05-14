@@ -166,6 +166,7 @@ class EvaluationLoop(Generic[BatchType]):
             the contained model will be set to evaluation mode.
 
         :param batch_size: the batch size. If None, enable automatic memory optimization to maximize memory utilization.
+        :param slice_size: the slice size. If None, enable automatic slicing.
         :param use_tqdm: whether to use tqdm progress bar
         :param tqdm_kwargs: additional keyword-based parameters passed to tqdm
         :param kwargs: additional keyword-based parameters passed to :meth:`get_loader`
