@@ -1287,11 +1287,12 @@ def _handle_evaluation(
             evaluation_loop_kwargs[key] = evaluation_kwargs.pop(key)
     evaluate_start_time = time.time()
     # TODO: what about SampledEvaluator?
+    # Note: if you want to set the inductive mode during evaluation,
+    # then it is done via the construction of the evaluator instance.
     evaluation_loop = LCWAEvaluationLoop(
         model=model_instance,
         triples_factory=evaluation_factory,
         evaluator=evaluator_instance,
-        # TODO: mode support?
         **evaluation_loop_kwargs,
     )
     metric_results = evaluation_loop.evaluate(**evaluation_kwargs)
