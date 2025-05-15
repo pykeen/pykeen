@@ -18,7 +18,6 @@ from ..evaluation.evaluation_loop import LCWAEvaluationLoop
 from ..models import Model
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
-from ..typing import InductiveMode
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
