@@ -102,7 +102,6 @@ class EvaluationLoop(Generic[BatchType]):
         model: Model,
         dataset: Dataset[BatchType],
         evaluator: Evaluator,
-        mode: InductiveMode | None = None,
     ) -> None:
         """Initialize the evaluation loop.
 
@@ -114,7 +113,10 @@ class EvaluationLoop(Generic[BatchType]):
         self.model = model
         self.evaluator = evaluator
         self.dataset = dataset
-        self.mode = mode
+
+    def mode(self) -> InductiveMode | None:
+        """Get the mode from the evaluator."""
+        return self.evaluator.mode
 
     @abstractmethod
     def process_batch(self, batch: BatchType, slice_size: int | None = None) -> None:
@@ -361,7 +363,6 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
-        mode: InductiveMode | None = None,
         additional_filter_triples: AdditionalFilterTriplesHint = None,
         **kwargs,
     ) -> None:
@@ -371,7 +372,6 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         :param evaluator: the evaluator, or a hint thereof
         :param evaluator_kwargs: additional keyword-based parameters for instantiating the evaluator
         :param targets: the prediction targets.
-        :param mode: the inductive mode, or None for transductive evaluation
         :param additional_filter_triples: additional filter triples to use for creating the filter
         :param kwargs: additional keyword-based parameters passed to :meth:`EvaluationLoop.__init__`. Should not contain
             the keys `dataset` or `evaluator`.
@@ -389,7 +389,6 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
                 additional_filter_triples=additional_filter_triples,
             ),
             evaluator=evaluator,
-            mode=mode,
             **kwargs,
         )
         self.targets = targets
