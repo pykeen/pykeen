@@ -108,7 +108,6 @@ class EvaluationLoop(Generic[BatchType]):
         :param model: the model to evaluate.
         :param dataset: the evaluation dataset
         :param evaluator: the evaluator instance
-        :param mode: the inductive mode, or None for transductive evaluation
         """
         self.model = model
         self.evaluator = evaluator
