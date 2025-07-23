@@ -46,7 +46,7 @@ _SKIP_ANNOTATIONS = {
     type[Model],
     Optional[type[Model]],  # noqa:UP007
     Union[str, Callable[[FloatTensor], FloatTensor]],  # noqa:UP007
-    Hint[nn.Module],
+    Hint[nn.Module],  # type:ignore
 }
 _SKIP_EXTRANEOUS = {
     "predict_with_sigmoid",

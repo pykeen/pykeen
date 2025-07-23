@@ -130,6 +130,6 @@ __all__ = [
 
 #: A resolver for negative samplers
 negative_sampler_resolver: ClassResolver[NegativeSampler] = ClassResolver.from_subclasses(
-    NegativeSampler,
+    NegativeSampler,  # type:ignore[type-abstract]
     default=BasicNegativeSampler,
 )

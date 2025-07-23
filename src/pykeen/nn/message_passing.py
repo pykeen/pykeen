@@ -507,7 +507,8 @@ class RGCNLayer(nn.Module):
 
 
 decomposition_resolver: ClassResolver[Decomposition] = ClassResolver.from_subclasses(
-    base=Decomposition, default=BasesDecomposition
+    base=Decomposition,  # type:ignore[type-abstract]
+    default=BasesDecomposition,
 )
 
 
@@ -544,6 +545,10 @@ class RGCNRepresentation(Representation):
         link: https://arxiv.org/pdf/1703.06103
         github: https://github.com/MichSchli/RelationPrediction
     """
+
+    sources: LongTensor
+    targets: LongTensor
+    edge_types: LongTensor
 
     @update_docstring_with_resolver_keys(
         ResolverKey("entity_representations", resolver="pykeen.nn.representation_resolver"),

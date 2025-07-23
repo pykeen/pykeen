@@ -250,7 +250,7 @@ class LCWALitModule(LitModule):
 
 #: A resolver for PyTorch Lightning training modules
 lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
-    base=LitModule,
+    base=LitModule,  # type:ignore[type-abstract]
     default=SLCWALitModule,
     # note: since this file is executed via __main__, its module name is replaced by __name__
     #       hence, the two classes' fully qualified names start with "_" and are considered private

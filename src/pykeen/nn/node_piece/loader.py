@@ -93,6 +93,6 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
 
 #: A resolver for NodePiece precomputed tokenizer loaders
 precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
-    base=PrecomputedTokenizerLoader,
+    base=PrecomputedTokenizerLoader,  # type:ignore[type-abstract]
     default=GalkinPrecomputedTokenizerLoader,
 )

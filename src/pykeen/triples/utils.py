@@ -123,8 +123,8 @@ def tensor_to_df(
         )
 
     # convert to numpy
-    tensor = tensor.cpu().numpy()
-    data = dict(zip(["head_id", "relation_id", "tail_id"], tensor.T, strict=False))
+    np_tensor = tensor.cpu().numpy()
+    data = dict(zip(["head_id", "relation_id", "tail_id"], np_tensor.T, strict=False))
 
     # Additional columns
     for key, values in kwargs.items():
@@ -164,7 +164,8 @@ def compute_compressed_adjacency_list(
 
             adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
     """
-    num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
+    if num_entities is None:
+        num_entities = mapped_triples[:, [0, 2]].max().item() + 1
     num_triples = mapped_triples.shape[0]
     adj_lists: list[list[tuple[int, float]]] = [[] for _ in range(num_entities)]
     for i, (s, _, o) in enumerate(mapped_triples):
