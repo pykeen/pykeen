@@ -27,6 +27,7 @@ from ..constants import COLUMN_LABELS, TARGET_TO_KEY_LABELS, TARGET_TO_KEYS
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
+from ..triples.utils import get_num_ids
 from ..typing import (
     LABEL_HEAD,
     LABEL_TAIL,
@@ -519,7 +520,7 @@ def sample_negatives(
         mapped_triples=evaluation_triples,
         additional_filter_triples=additional_filter_triples,
     )
-    num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
+    num_entities = num_entities or get_num_ids(additional_filter_triples[:, [0, 2]])
     num_triples = evaluation_triples.shape[0]
     df = pd.DataFrame(data=evaluation_triples.numpy(), columns=COLUMN_LABELS)
     all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=COLUMN_LABELS)
