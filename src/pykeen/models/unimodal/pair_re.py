@@ -44,7 +44,9 @@ class PairRE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
     loss_default: ClassVar[type[Loss]] = NSSALoss
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any] | None] = {
-        "margin": 12.0, "adversarial_temperature": 1.0, "reduction": "mean"
+        "margin": 12.0,
+        "adversarial_temperature": 1.0,
+        "reduction": "mean",
     }
 
     #: The default entity normalizer parameters

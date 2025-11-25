@@ -120,9 +120,7 @@ class TestTriplesFactory(unittest.TestCase):
         tensor = self.factory.mapped_triples
         scores = torch.rand(tensor.shape[0])
         df = self.factory.tensor_to_df(tensor=tensor, scores=scores)
-        re_labeled_triples = {
-            tuple(row) for row in df[["head_label", "relation_label", "tail_label"]].values.tolist()
-        }
+        re_labeled_triples = {tuple(row) for row in df[["head_label", "relation_label", "tail_label"]].values.tolist()}
         assert labeled_triples == re_labeled_triples
 
         # check column order

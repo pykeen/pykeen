@@ -47,13 +47,20 @@ class TransH(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
     # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
     # Therefore, apply_only_once is always set to True.
     regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = {
-        "weight": 0.05, "apply_only_once": True, "dim": -1, "p": 2, "power_norm": True, "max_norm": 1.0
+        "weight": 0.05,
+        "apply_only_once": True,
+        "dim": -1,
+        "p": 2,
+        "power_norm": True,
+        "max_norm": 1.0,
     }
     #: The custom regularizer used by [wang2014]_ for TransH
     relation_regularizer_default: ClassVar[type[Regularizer]] = OrthogonalityRegularizer
     #: The settings used by [wang2014]_ for TransH
     relation_regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = {
-        "weight": 0.05, "apply_only_once": True, "epsilon": 1e-5
+        "weight": 0.05,
+        "apply_only_once": True,
+        "epsilon": 1e-5,
     }
 
     def __init__(
