@@ -214,6 +214,7 @@ extend-select = [
     # "ERA",   # eradicate commented out code; false positives for "mathy" comments
     # "RUF",   # ruff rules
     # "DOC",   # pydoclint (DOC), requires preview; supersedes darglint
+    "PERF",
 ]
 ignore = [
     "D105", # Missing docstring in magic method
