@@ -224,38 +224,62 @@ extend-include = ["*.ipynb"]
 [tool.ruff.lint]
 # See https://docs.astral.sh/ruff/rules
 extend-select = [
-    "F", # pyflakes
-    "E", # pycodestyle errors
-    "W", # pycodestyle warnings
-    "C90", # mccabe
-    "I", # isort
-    "UP", # pyupgrade
-    "D", # pydocstyle
-    "B", # bugbear
-    "S", # bandit
-    "T20", # print
-    "N", # pep8 naming
-    # "ERA", # eradicate commented out code
-    # "NPY", # numpy checks
-    # "RUF", # ruff rules
-	# "DOC", # pydoclint (DOC), requires preview; supersedes darglint
+    "F",     # pyflakes
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "C90",   # mccabe
+    "I",     # isort
+    "UP",    # pyupgrade
+    "D",     # pydocstyle
+    "B",     # bugbear
+    "S",     # bandit
+    "T20",   # print
+    "N",     # pep8 naming
+    "EXE",   # flake8-executable
+    "FA",    # flake8-future-annotations
+    "FLY",   # flynt
+    "FURB",  # refurb
+    "INP",   # flake8-no-pep420
+    "ISC",   # flake8-implicit-str-concat
+    "PIE",   # flake8-pie
+    "Q",     # flake8-quotes
+    "SLOT",  # flake8-slots
+    "T10",   # flake8-debugger
+    # Framework-specific rules (not used in this project):
+    # "AIR",   # Airflow
+    # "ASYNC", # flake8-async
+    # "DJ",    # flake8-django
+    # "FAST",  # FastAPI
+    # "INT",   # flake8-gettext
+    # "YTT",   # flake8-2020 (not needed for Python >=3.10)
+    # Rules with violations:
+    # "ERA",   # eradicate commented out code; false positives for "mathy" comments
+    # "NPY",   # numpy checks
+    # "RUF",   # ruff rules
+    # "DOC",   # pydoclint (DOC), requires preview; supersedes darglint
 ]
 ignore = [
     "D105", # Missing docstring in magic method
-    "E203", # Black conflicts with the following
-    "S101", # Asserts, TODO remove
-    "D102", # Missing docstring in init TODO remove
+    "S101", # Use of assert detected, TODO remove
+    "D102", # Missing docstring in public method, TODO remove
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores
 [tool.ruff.lint.per-file-ignores]
-# Ignore commented out code in Sphinx configuration file
-"docs/source/conf.py" = ["ERA001"]
-"docs/source/examples/**/*.py" = [
-    "E402",  # allow imports not at top for narrative purposes
-    "T201",  # allow prints
+"docs/**/*.py" = [
+    "INP001",  # docs are not a package
+    "E402",    # allow imports not at top for narrative purposes
+    "T201",    # allow prints
 ]
-"notebooks/**/*.ipynb" = ["T201"]
+"notebooks/**" = [
+    "INP001",  # notebooks are not a package
+    "T201",    # allow prints
+]
+"benchmarking/**/*.py" = ["INP001"]  # benchmarking scripts are not a package
+"tests/**/*.py" = [
+    "INP001",   # tests are not a package
+    "PIE790",   # allow pass in test stubs/abstract methods
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
