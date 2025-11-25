@@ -539,7 +539,7 @@ def split(
     """
     # backwards compatibility
     splitter_cls: type[Splitter] = splitter_resolver.lookup(method)
-    kwargs = dict()
+    kwargs = {}
     if splitter_cls is CleanupSplitter and randomize_cleanup:
         kwargs["cleaner"] = cleaner_resolver.normalize_cls(RandomizedCleaner)
     return splitter_resolver.make(splitter_cls, pos_kwargs=kwargs).split(

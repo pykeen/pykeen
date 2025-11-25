@@ -28,9 +28,9 @@ __all__ = [
     # Utils
     "regularizer_resolver",
 ]
-DEFAULT_REGULARIZER_WEIGHT_HPO_RANGE = dict(
-    weight=dict(type=float, low=0.01, high=1.0, scale="log"),
-)
+DEFAULT_REGULARIZER_WEIGHT_HPO_RANGE = {
+    "weight": {"type": float, "low": 0.01, "high": 1.0, "scale": "log"},
+}
 
 _REGULARIZER_SUFFIX = "Regularizer"
 
@@ -341,7 +341,7 @@ class CombinedRegularizer(Regularizer):
     # The normalization factor to balance individual regularizers' contribution.
     normalization_factor: FloatTensor
 
-    hpo_default = dict(total_weight=dict(type=float, low=0.01, high=1.0, scale="log"), regularizers=tuple())
+    hpo_default = {"total_weight": {"type": float, "low": 0.01, "high": 1.0, "scale": "log"}, "regularizers": ()}
 
     def __init__(
         self,

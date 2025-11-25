@@ -44,9 +44,9 @@ class SimplE(
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
     #: The default loss function class
     loss_default: ClassVar[type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
@@ -56,11 +56,11 @@ class SimplE(
     #: regularization term by the number of elements, which is 200.
     regularizer_default: ClassVar[type[Regularizer]] = PowerSumRegularizer
     #: The power sum settings used by [trouillon2016]_ for SimplE
-    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=20,
-        p=2.0,
-        normalize=True,
-    )
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = {
+        "weight": 20,
+        "p": 2.0,
+        "normalize": True,
+    }
 
     def __init__(
         self,
@@ -98,34 +98,34 @@ class SimplE(
         #       That is not mentioned in the paper, so it is made optional here.
         super().__init__(
             interaction=ClampedInteraction,
-            interaction_kwargs=dict(base=SimplEInteraction, clamp_score=clamp_score),
+            interaction_kwargs={"base": SimplEInteraction, "clamp_score": clamp_score},
             entity_representations_kwargs=[
                 # (head) entity
-                dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                    regularizer=regularizer,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": entity_initializer,
+                    "regularizer": regularizer,
+                },
                 # tail entity
-                dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                    regularizer=regularizer,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": entity_initializer,
+                    "regularizer": regularizer,
+                },
             ],
             relation_representations_kwargs=[
                 # relations
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
-                    regularizer=regularizer,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
+                    "regularizer": regularizer,
+                },
                 # inverse relations
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
-                    regularizer=regularizer,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
+                    "regularizer": regularizer,
+                },
             ],
             **kwargs,
         )

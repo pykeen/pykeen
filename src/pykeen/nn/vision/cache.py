@@ -95,7 +95,7 @@ class WikidataImageCache(WikidataTextCache):
             # image URL
             image_url = nested_get(entry, "image", "value", default=None)
             assert image_url is not None
-            images.setdefault(wikidata_id, dict()).setdefault(relation_id, []).append(image_url)
+            images.setdefault(wikidata_id, {}).setdefault(relation_id, []).append(image_url)
 
         # check whether images are still missing
         missing = sorted(set(missing).difference(images.keys()))
@@ -117,7 +117,7 @@ class WikidataImageCache(WikidataTextCache):
                     "images",
                     url=image_url,
                     name=f"{wikidata_id}.{ext}",
-                    download_kwargs=dict(backend="requests", headers=self.HEADERS),
+                    download_kwargs={"backend": "requests", "headers": self.HEADERS},
                 )
             else:
                 # did not break -> no image

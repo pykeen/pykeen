@@ -33,10 +33,10 @@ class AttentionWeightingTests(cases.EdgeWeightingTestCase):
     cls = pykeen.nn.weighting.AttentionEdgeWeighting
     # message_dim must be divisible by num_heads
     message_dim = 4
-    kwargs = dict(
-        message_dim=4,
-        num_heads=2,
-    )
+    kwargs = {
+        "message_dim": 4,
+        "num_heads": 2,
+    }
 
 
 class WeightingMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.weighting.EdgeWeighting]):

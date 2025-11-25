@@ -37,24 +37,24 @@ class TransH(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        scoring_fct_norm=dict(type=int, low=1, high=2),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "scoring_fct_norm": {"type": int, "low": 1, "high": 2},
+    }
     #: The custom regularizer used by [wang2014]_ for TransH
     regularizer_default: ClassVar[type[Regularizer]] = NormLimitRegularizer
     #: The settings used by [wang2014]_ for TransH
     # The regularization in TransH enforces the defined soft constraints that should computed only for every batch.
     # Therefore, apply_only_once is always set to True.
-    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.05, apply_only_once=True, dim=-1, p=2, power_norm=True, max_norm=1.0
-    )
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = {
+        "weight": 0.05, "apply_only_once": True, "dim": -1, "p": 2, "power_norm": True, "max_norm": 1.0
+    }
     #: The custom regularizer used by [wang2014]_ for TransH
     relation_regularizer_default: ClassVar[type[Regularizer]] = OrthogonalityRegularizer
     #: The settings used by [wang2014]_ for TransH
-    relation_regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.05, apply_only_once=True, epsilon=1e-5
-    )
+    relation_regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = {
+        "weight": 0.05, "apply_only_once": True, "epsilon": 1e-5
+    }
 
     def __init__(
         self,
@@ -103,24 +103,24 @@ class TransH(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         """
         super().__init__(
             interaction=TransHInteraction,
-            interaction_kwargs=dict(p=scoring_fct_norm, power_norm=power_norm),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-            ),
+            interaction_kwargs={"p": scoring_fct_norm, "power_norm": power_norm},
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+            },
             relation_representations_kwargs=[
                 # translation vector in hyperplane
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
+                },
                 # normal vector of hyperplane
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
                     # normalise the normal vectors to unit l2 length
-                    constrainer=functional.normalize,
-                ),
+                    "constrainer": functional.normalize,
+                },
             ],
             **kwargs,
         )

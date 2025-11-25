@@ -24,10 +24,10 @@ class EmbeddingTests(cases.RepresentationTestCase):
     """Tests for embeddings."""
 
     cls = pykeen.nn.representation.Embedding
-    kwargs = dict(
-        num_embeddings=7,
-        embedding_dim=13,
-    )
+    kwargs = {
+        "num_embeddings": 7,
+        "embedding_dim": 13,
+    }
 
     def test_backwards_compatibility(self):
         """Test shape and num_embeddings."""
@@ -40,9 +40,9 @@ class LowRankEmbeddingRepresentationTests(cases.RepresentationTestCase):
     """Tests for low-rank embedding representations."""
 
     cls = pykeen.nn.representation.LowRankRepresentation
-    kwargs = dict(
-        shape=(3, 7),
-    )
+    kwargs = {
+        "shape": (3, 7),
+    }
 
     def test_approximate(self):
         """Test approximation of other representations."""
@@ -54,9 +54,9 @@ class TensorEmbeddingTests(cases.RepresentationTestCase):
     """Tests for Embedding with 2-dimensional shape."""
 
     cls = pykeen.nn.representation.Embedding
-    kwargs = dict(
-        shape=(3, 7),
-    )
+    kwargs = {
+        "shape": (3, 7),
+    }
 
 
 class RGCNRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
@@ -67,7 +67,7 @@ class RGCNRepresentationTests(cases.TriplesFactoryRepresentationTestCase):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["entity_representations_kwargs"] = dict(shape=self.num_entities)
+        kwargs["entity_representations_kwargs"] = {"shape": self.num_entities}
         return kwargs
 
 
@@ -82,8 +82,8 @@ class TestSingleCompGCNRepresentationTests(cases.TriplesFactoryRepresentationTes
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["combined"] = pykeen.nn.representation.CombinedCompGCNRepresentations(
             triples_factory=kwargs.pop("triples_factory"),
-            entity_representations_kwargs=dict(embedding_dim=self.dim),
-            relation_representations_kwargs=dict(embedding_dim=self.dim),
+            entity_representations_kwargs={"embedding_dim": self.dim},
+            relation_representations_kwargs={"embedding_dim": self.dim},
             dims=self.dim,
         )
         # inferred from triples factory
@@ -94,48 +94,48 @@ class TestSingleCompGCNRepresentationTests(cases.TriplesFactoryRepresentationTes
 class NodePieceRelationTests(cases.NodePieceTestCase):
     """Tests for node piece representation."""
 
-    kwargs = dict(
-        token_representations_kwargs=dict(
-            shape=(3,),
-        )
-    )
+    kwargs = {
+        "token_representations_kwargs": {
+            "shape": (3,),
+        }
+    }
 
 
 class NodePieceAnchorTests(cases.NodePieceTestCase):
     """Tests for node piece representation with anchor nodes."""
 
-    kwargs = dict(
-        token_representations_kwargs=dict(
-            shape=(3,),
-        ),
-        tokenizers="anchor",
-        tokenizers_kwargs=dict(
-            selection="degree",
-        ),
-    )
+    kwargs = {
+        "token_representations_kwargs": {
+            "shape": (3,),
+        },
+        "tokenizers": "anchor",
+        "tokenizers_kwargs": {
+            "selection": "degree",
+        },
+    }
 
 
 class NodePieceMixedTests(cases.NodePieceTestCase):
     """Tests for node piece representation with mixed tokenizers."""
 
-    kwargs = dict(
-        token_representations_kwargs=(
-            dict(
-                shape=(3,),
-            ),
-            dict(
-                shape=(3,),
-            ),
+    kwargs = {
+        "token_representations_kwargs": (
+            {
+                "shape": (3,),
+            },
+            {
+                "shape": (3,),
+            },
         ),
-        tokenizers=("relation", "anchor"),
-        num_tokens=(2, 3),
-        tokenizers_kwargs=(
-            dict(),
-            dict(
-                selection="degree",
-            ),
+        "tokenizers": ("relation", "anchor"),
+        "num_tokens": (2, 3),
+        "tokenizers_kwargs": (
+            {},
+            {
+                "selection": "degree",
+            },
         ),
-    )
+    }
 
     def test_token_representations(self):
         """Verify that the number of token representations is correct."""
@@ -152,7 +152,7 @@ class TokenizationTests(cases.RepresentationTestCase):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["assignment"] = torch.randint(self.vocabulary_size, size=(self.max_id, self.num_tokens))
-        kwargs["token_representation_kwargs"] = dict(shape=(self.vocabulary_size,))
+        kwargs["token_representation_kwargs"] = {"shape": (self.vocabulary_size,)}
         # inferred from assignment
         kwargs.pop("max_id")
         return kwargs
@@ -162,9 +162,9 @@ class SubsetRepresentationTests(cases.RepresentationTestCase):
     """Tests for subset representations."""
 
     cls = pykeen.nn.representation.SubsetRepresentation
-    kwargs = dict(
-        max_id=7,
-    )
+    kwargs = {
+        "max_id": 7,
+    }
     shape: tuple[int, ...] = (13,)
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
@@ -180,7 +180,7 @@ class TextRepresentationTests(cases.RepresentationTestCase):
     """Test the label based representations."""
 
     cls = pykeen.nn.representation.TextRepresentation
-    kwargs = dict(encoder="character-embedding")
+    kwargs = {"encoder": "character-embedding"}
     key_labels: str = "labels"
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
@@ -204,7 +204,7 @@ class CachedTextRepresentationTests(TextRepresentationTests):
     """Tests for cached text representations."""
 
     cls = pykeen.nn.representation.CachedTextRepresentation
-    kwargs = dict(encoder="character-embedding", cache=pykeen.nn.text.IdentityCache())
+    kwargs = {"encoder": "character-embedding", "cache": pykeen.nn.text.IdentityCache()}
     key_labels: str = "identifiers"
 
 
@@ -213,11 +213,11 @@ class SimpleMessagePassingRepresentationTests(cases.MessagePassingRepresentation
 
     cls = pykeen.nn.pyg.SimpleMessagePassingRepresentation
     embedding_dim: int = 3
-    kwargs = dict(
-        base_kwargs=dict(shape=(embedding_dim,)),
-        layers=["gcn"] * 2,
-        layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
-    )
+    kwargs = {
+        "base_kwargs": {"shape": (embedding_dim,)},
+        "layers": ["gcn"] * 2,
+        "layers_kwargs": {"in_channels": embedding_dim, "out_channels": embedding_dim},
+    }
 
 
 class TypedMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
@@ -225,16 +225,16 @@ class TypedMessagePassingRepresentationTests(cases.MessagePassingRepresentationT
 
     cls = pykeen.nn.pyg.TypedMessagePassingRepresentation
     embedding_dim: int = 3
-    kwargs = dict(
-        base_kwargs=dict(shape=(embedding_dim,)),
-        layers=["rgcn"],
-        layers_kwargs=dict(
-            in_channels=embedding_dim,
-            out_channels=embedding_dim,
-            num_bases=2,
-            num_relations=cases.TriplesFactoryRepresentationTestCase.num_relations,
-        ),
-    )
+    kwargs = {
+        "base_kwargs": {"shape": (embedding_dim,)},
+        "layers": ["rgcn"],
+        "layers_kwargs": {
+            "in_channels": embedding_dim,
+            "out_channels": embedding_dim,
+            "num_bases": 2,
+            "num_relations": cases.TriplesFactoryRepresentationTestCase.num_relations,
+        },
+    }
 
 
 class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresentationTests):
@@ -242,18 +242,18 @@ class FeaturizedMessagePassingRepresentationTests(cases.MessagePassingRepresenta
 
     cls = pykeen.nn.pyg.FeaturizedMessagePassingRepresentation
     embedding_dim: int = 3
-    kwargs = dict(
-        base_kwargs=dict(shape=(embedding_dim,)),
-        layers=["gat"],
-        layers_kwargs=dict(
-            in_channels=embedding_dim,
-            out_channels=embedding_dim,
-            edge_dim=embedding_dim,  # should match relation dim
-        ),
-        relation_representation_kwargs=dict(
-            shape=embedding_dim,
-        ),
-    )
+    kwargs = {
+        "base_kwargs": {"shape": (embedding_dim,)},
+        "layers": ["gat"],
+        "layers_kwargs": {
+            "in_channels": embedding_dim,
+            "out_channels": embedding_dim,
+            "edge_dim": embedding_dim,  # should match relation dim
+        },
+        "relation_representation_kwargs": {
+            "shape": embedding_dim,
+        },
+    }
 
 
 @constants.skip_if_windows
@@ -262,12 +262,12 @@ class VisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for VisualRepresentation."""
 
     cls = pykeen.nn.vision.VisualRepresentation
-    kwargs = dict(
-        encoder="resnet18",
-        layer_name="avgpool",
-        transforms=[],
-        trainable=False,
-    )
+    kwargs = {
+        "encoder": "resnet18",
+        "layer_name": "avgpool",
+        "transforms": [],
+        "trainable": False,
+    }
     max_id = 7
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
@@ -282,17 +282,17 @@ class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for Wikidata visual representations."""
 
     cls = pykeen.nn.vision.WikidataVisualRepresentation
-    kwargs = dict(
-        encoder="resnet18",
-        layer_name="avgpool",
-        trainable=False,
-        wikidata_ids=[
+    kwargs = {
+        "encoder": "resnet18",
+        "layer_name": "avgpool",
+        "trainable": False,
+        "wikidata_ids": [
             "Q1",
             "Q42",
             # the following entity does not have an image -> will have to use backfill
             "Q676",
         ],
-    )
+    }
 
     # docstr-coverage: inherited
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
@@ -306,22 +306,22 @@ class CombinedRepresentationTestCase(cases.RepresentationTestCase):
     """Test for combined representations."""
 
     cls = pykeen.nn.representation.CombinedRepresentation
-    kwargs = dict(
-        base_kwargs=[
-            dict(shape=(3,)),
-            dict(shape=(4,)),
+    kwargs = {
+        "base_kwargs": [
+            {"shape": (3,)},
+            {"shape": (4,)},
         ]
-    )
+    }
 
 
 class WikidataTextRepresentationTests(cases.RepresentationTestCase):
     """Tests for Wikidata text representations."""
 
     cls = pykeen.nn.representation.WikidataTextRepresentation
-    kwargs = dict(
-        identifiers=["Q100", "Q1000"],
-        encoder="character-embedding",
-    )
+    kwargs = {
+        "identifiers": ["Q100", "Q1000"],
+        "encoder": "character-embedding",
+    }
 
     # docstr-coverage: inherited
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
@@ -337,13 +337,13 @@ class BiomedicalCURIERepresentationTests(cases.RepresentationTestCase):
     """Tests for biomedical CURIE representations."""
 
     cls = pykeen.nn.representation.BiomedicalCURIERepresentation
-    kwargs = dict(
-        identifiers=[
+    kwargs = {
+        "identifiers": [
             "hgnc:12929",  # PCGF2
             "hgnc:391",  # AKT1
         ],
-        encoder="character-embedding",
-    )
+        "encoder": "character-embedding",
+    }
 
     # docstr-coverage: inherited
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
@@ -377,11 +377,11 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
 
         # update kwargs
         kwargs.update(
-            dict(
-                assignment=assignment,
-                bases=[None] * len(self.max_ids),
-                bases_kwargs=[dict(max_id=max_id, shape=self.shape) for max_id in self.max_ids],
-            )
+            {
+                "assignment": assignment,
+                "bases": [None] * len(self.max_ids),
+                "bases_kwargs": [{"max_id": max_id, "shape": self.shape} for max_id in self.max_ids],
+            }
         )
         return kwargs
 
@@ -400,44 +400,44 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
 
         # inconsistent base shapes
         shapes = range(2, len(self.max_ids) + 2)
-        bases_kwargs = [dict(max_id=max_id, shape=(dim,)) for max_id, dim in zip(self.max_ids, shapes, strict=False)]
+        bases_kwargs = [{"max_id": max_id, "shape": (dim,)} for max_id, dim in zip(self.max_ids, shapes, strict=False)]
         with self.assertRaises(ValueError):
-            self.cls(**ChainMap(dict(bases_kwargs=bases_kwargs), self.instance_kwargs))
+            self.cls(**ChainMap({"bases_kwargs": bases_kwargs}, self.instance_kwargs))
 
         # invalid base id
         assignment = self.instance.assignment.clone()
-        assignment[torch.randint(assignment.shape[0], size=tuple()), 0] = len(self.instance.bases)
+        assignment[torch.randint(assignment.shape[0], size=()), 0] = len(self.instance.bases)
         with self.assertRaises(ValueError):
-            self.cls(**ChainMap(dict(assignment=assignment), self.instance_kwargs))
+            self.cls(**ChainMap({"assignment": assignment}, self.instance_kwargs))
 
         # invalid local index
         assignment = self.instance.assignment.clone()
-        assignment[torch.randint(assignment.shape[0], size=tuple()), 1] = max(self.max_ids)
+        assignment[torch.randint(assignment.shape[0], size=()), 1] = max(self.max_ids)
         with self.assertRaises(ValueError):
-            self.cls(**ChainMap(dict(assignment=assignment), self.instance_kwargs))
+            self.cls(**ChainMap({"assignment": assignment}, self.instance_kwargs))
 
 
 class MultiBackfillRepresentationTests(cases.RepresentationTestCase):
     """Tests for multi-backfill representation, based on the partition representation."""
 
     cls = pykeen.nn.representation.MultiBackfillRepresentation
-    kwargs = dict(
-        partitions=[
+    kwargs = {
+        "partitions": [
             pykeen.nn.Partition(
                 ids=[i for i in range(cases.RepresentationTestCase.max_id) if i % 2],
                 base=None,
-                kwargs=dict(shape=(3,)),
+                kwargs={"shape": (3,)},
             )
         ],
-    )
+    }
 
     def test_perfect_assignment(self) -> None:
         """Test that perfect assignment results in no backfill."""
         x = pykeen.nn.representation.MultiBackfillRepresentation(
             max_id=4,
             partitions=[
-                pykeen.nn.Partition(ids=[0, 1], base=None, kwargs=dict(shape=(2,))),
-                pykeen.nn.Partition(ids=[2, 3], base=None, kwargs=dict(shape=(2,))),
+                pykeen.nn.Partition(ids=[0, 1], base=None, kwargs={"shape": (2,)}),
+                pykeen.nn.Partition(ids=[2, 3], base=None, kwargs={"shape": (2,)}),
             ],
         )
         self.assertEqual(2, len(x.bases))
@@ -447,10 +447,10 @@ class BackfillRepresentationTests(cases.RepresentationTestCase):
     """Tests for backfill representation, based on the partition representation."""
 
     cls = pykeen.nn.representation.BackfillRepresentation
-    kwargs = dict(
-        base_kwargs=dict(shape=(3,)),
-        base_ids=[i for i in range(cases.RepresentationTestCase.max_id) if i % 2],
-    )
+    kwargs = {
+        "base_kwargs": {"shape": (3,)},
+        "base_ids": [i for i in range(cases.RepresentationTestCase.max_id) if i % 2],
+    }
 
     def test_max_id_verification_raises_value_error(self):
         """Test that an invalid max_id raises a ValueError."""
@@ -487,9 +487,9 @@ class TransformedRepresentationTest(cases.RepresentationTestCase):
     """Tests for transformed representations."""
 
     cls = pykeen.nn.representation.TransformedRepresentation
-    kwargs = dict(
-        base_kwargs=dict(shape=(5,)),
-    )
+    kwargs = {
+        "base_kwargs": {"shape": (5,)},
+    }
 
     # docstr-coverage: inherited
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
@@ -508,7 +508,7 @@ class EmbeddingBagRepresentation(cases.RepresentationTestCase):
     """Tests for embedding bag representations."""
 
     cls = pykeen.nn.representation.EmbeddingBagRepresentation
-    kwargs = dict(shape=(5,))
+    kwargs = {"shape": (5,)}
 
     # docstr-coverage: inherited
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
@@ -523,9 +523,9 @@ class MLPTransformedRepresentationTest(cases.RepresentationTestCase):
     """Tests for MLP transformed representations."""
 
     cls = pykeen.nn.meta.MLPTransformedRepresentation
-    kwargs = dict(
-        base_kwargs=dict(shape=(5,)),
-    )
+    kwargs = {
+        "base_kwargs": {"shape": (5,)},
+    }
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs)

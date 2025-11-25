@@ -23,7 +23,7 @@ class TestDatasetCaching(unittest.TestCase):
 
     def test_caching(self):
         """Test dataset caching."""
-        digest = _digest_kwargs(dict())
+        digest = _digest_kwargs({})
         directory = PYKEEN_DATASETS.joinpath(UMLS().get_normalized_name(), "cache", digest)
         # clear
         if directory.exists():

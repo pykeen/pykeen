@@ -45,12 +45,12 @@ class HolE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
 
     #: The default settings for the entity constrainer
-    entity_constrainer_default_kwargs = dict(maxnorm=1.0, p=2, dim=-1)
+    entity_constrainer_default_kwargs = {"maxnorm": 1.0, "p": 2, "dim": -1}
 
     def __init__(
         self,

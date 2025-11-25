@@ -68,8 +68,8 @@ def _iter_scores(
     all_positives: Mapping[Target, Mapping[tuple[int, int], numpy.ndarray]],
 ) -> Iterable[ScorePack]:
     sides = sorted(all_scores.keys())
-    y_score_for_side = dict()
-    y_true_for_side = dict()
+    y_score_for_side = {}
+    y_true_for_side = {}
 
     # individual side
     for side in sides:

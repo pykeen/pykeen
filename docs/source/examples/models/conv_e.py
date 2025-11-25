@@ -3,7 +3,7 @@
 # Step 1: Get triples
 from pykeen.datasets import get_dataset
 
-dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=True))
+dataset = get_dataset(dataset="nations", dataset_kwargs={"create_inverse_triples": True})
 
 # Step 2: Configure the model
 from pykeen.models import ConvE

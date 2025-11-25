@@ -96,7 +96,7 @@ class Metric(ExtraReprMixin):
     value_range: ClassVar[ValueRange]
 
     #: synonyms for this metric
-    synonyms: ClassVar[Collection[str]] = tuple()
+    synonyms: ClassVar[Collection[str]] = ()
 
     #: whether the metric supports weights
     supports_weights: ClassVar[bool] = False

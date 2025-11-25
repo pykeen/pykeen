@@ -359,9 +359,9 @@ class NodePieceRepresentation(CombinedRepresentation):
             max_id=triples_factory.num_entities,
             base=token_representations,
             combination=ConcatAggregationCombination,
-            combination_kwargs=dict(
-                aggregation=aggregation, aggregation_kwargs=aggregation_kwargs, dim=-len(token_representations[0].shape)
-            ),
+            combination_kwargs={
+                "aggregation": aggregation, "aggregation_kwargs": aggregation_kwargs, "dim": -len(token_representations[0].shape)
+            },
             **kwargs,
         )
 

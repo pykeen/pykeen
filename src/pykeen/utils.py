@@ -196,7 +196,7 @@ def flatten_dictionary(
     sep: str = ".",
 ) -> dict[str, Any]:
     """Flatten a nested dictionary."""
-    real_prefix = tuple() if prefix is None else (prefix,)
+    real_prefix = () if prefix is None else (prefix,)
     partial_result = _flatten_dictionary(dictionary=dictionary, prefix=real_prefix)
     return {sep.join(map(str, k)): v for k, v in partial_result.items()}
 
@@ -577,7 +577,7 @@ def _reorder(
         return tensors
     # determine optimal processing order
     shapes = tuple(tuple(t.shape) for t in tensors)
-    if len(set(s[0] for s in shapes if s)) < 2:
+    if len({s[0] for s in shapes if s}) < 2:
         # heuristic
         return tensors
     order = get_optimal_sequence(*shapes)[1]
@@ -838,7 +838,7 @@ def check_shapes(
     >>> check_shapes(((10, 20), "bd"), ((10, 30, 20), "bdd"), raise_on_errors=False)
     False
     """
-    dims: dict[str, tuple[int, ...]] = dict()
+    dims: dict[str, tuple[int, ...]] = {}
     errors = []
     for actual_shape, shape in x:
         if isinstance(actual_shape, torch.Tensor):
@@ -1102,7 +1102,7 @@ def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collect
     :return:
         a collection of connected components, i.e., a collection of disjoint collections of node ids.
     """
-    parent: dict[X, X] = dict()
+    parent: dict[X, X] = {}
     for x, y in pairs:
         parent.setdefault(x, x)
         parent.setdefault(y, y)

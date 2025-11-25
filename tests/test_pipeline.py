@@ -46,8 +46,8 @@ class TestPipelineTriples(unittest.TestCase):
             testing=self.testing,
             validation=self.validation,
             model="TransE",
-            training_kwargs=dict(num_epochs=1, use_tqdm=False),
-            evaluation_kwargs=dict(use_tqdm=False),
+            training_kwargs={"num_epochs": 1, "use_tqdm": False},
+            evaluation_kwargs={"use_tqdm": False},
         )
 
     def test_eager_unlabeled_dataset(self):
@@ -60,8 +60,8 @@ class TestPipelineTriples(unittest.TestCase):
         _ = pipeline(
             dataset=dataset,
             model="TransE",
-            training_kwargs=dict(num_epochs=1, use_tqdm=False),
-            evaluation_kwargs=dict(use_tqdm=False),
+            training_kwargs={"num_epochs": 1, "use_tqdm": False},
+            evaluation_kwargs={"use_tqdm": False},
         )
 
     def test_interaction_instance_missing_dimensions(self):
@@ -81,7 +81,7 @@ class TestPipelineTriples(unittest.TestCase):
         model = make_model(
             dimensions={"d": 3},
             interaction=TransEInteraction,
-            interaction_kwargs=dict(p=2),
+            interaction_kwargs={"p": 2},
             triples_factory=self.training,
         )
         self.assertIsInstance(model, ERModel)
@@ -92,8 +92,8 @@ class TestPipelineTriples(unittest.TestCase):
             testing=self.testing,
             validation=self.validation,
             model=model,
-            training_kwargs=dict(num_epochs=1, use_tqdm=False),
-            evaluation_kwargs=dict(use_tqdm=False),
+            training_kwargs={"num_epochs": 1, "use_tqdm": False},
+            evaluation_kwargs={"use_tqdm": False},
             random_seed=0,
         )
 
@@ -121,8 +121,8 @@ class TestPipelineTriples(unittest.TestCase):
             testing=self.testing,
             validation=self.validation,
             model=model_cls,
-            training_kwargs=dict(num_epochs=1, use_tqdm=False),
-            evaluation_kwargs=dict(use_tqdm=False),
+            training_kwargs={"num_epochs": 1, "use_tqdm": False},
+            evaluation_kwargs={"use_tqdm": False},
             random_seed=0,
         )
 
@@ -144,8 +144,8 @@ class TestPipelineTriples(unittest.TestCase):
             validation=self.validation,
             training_loop=ModifiedTrainingLoop,
             model="TransE",
-            training_kwargs=dict(num_epochs=1, use_tqdm=False),
-            evaluation_kwargs=dict(use_tqdm=False),
+            training_kwargs={"num_epochs": 1, "use_tqdm": False},
+            evaluation_kwargs={"use_tqdm": False},
             random_seed=0,
         )
 
@@ -155,7 +155,7 @@ class TestPipelineTriples(unittest.TestCase):
     @needs_packages("matplotlib", "seaborn")
     def test_plot(self):
         """Test plotting."""
-        result = pipeline(dataset="nations", model="transe", training_kwargs=dict(num_epochs=0))
+        result = pipeline(dataset="nations", model="transe", training_kwargs={"num_epochs": 0})
         fig, axes = result.plot()
         assert fig is not None and axes is not None
 
@@ -165,16 +165,16 @@ class TestPipelineTriples(unittest.TestCase):
         result = pipeline(
             dataset=dataset,
             model="mure",
-            training_kwargs=dict(
-                num_epochs=2,
-                callbacks="evaluation-loop",
-                callbacks_kwargs=dict(
-                    frequency=1,
-                    prefix="validation",
-                    factory=dataset.validation,
-                    additional_filter_triples=dataset.training,
-                ),
-            ),
+            training_kwargs={
+                "num_epochs": 2,
+                "callbacks": "evaluation-loop",
+                "callbacks_kwargs": {
+                    "frequency": 1,
+                    "prefix": "validation",
+                    "factory": dataset.validation,
+                    "additional_filter_triples": dataset.training,
+                },
+            },
         )
         assert result is not None
 
@@ -192,16 +192,16 @@ class TestPipelineReplicate(unittest.TestCase):
     def test_replicate_pipeline_from_config(self):
         """Test replication from config."""
         replicate_pipeline_from_config(
-            config=dict(
-                metadata=dict(),
-                pipeline=dict(
-                    dataset="nations",
-                    model="transe",
-                ),
-                results={
+            config={
+                "metadata": {},
+                "pipeline": {
+                    "dataset": "nations",
+                    "model": "transe",
+                },
+                "results": {
                     "best": {"hits_at_k": {"10": 0.538}, "mean_rank": 163},
                 },
-            ),
+            },
             directory=self.tmp_dir_path,
             replicates=1,
         )
@@ -240,7 +240,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
             model=self.model,
             dataset=self.dataset,
             training_loop=training_loop_type,
-            training_kwargs=dict(num_epochs=10, use_tqdm=False, use_tqdm_batch=False),
+            training_kwargs={"num_epochs": 10, "use_tqdm": False, "use_tqdm_batch": False},
             random_seed=self.random_seed,
         )
 
@@ -249,14 +249,14 @@ class TestPipelineCheckpoints(unittest.TestCase):
             model=self.model,
             dataset=self.dataset,
             training_loop=training_loop_type,
-            training_kwargs=dict(
-                num_epochs=5,
-                use_tqdm=False,
-                use_tqdm_batch=False,
-                checkpoint_name=self.checkpoint_name,
-                checkpoint_directory=self.temporary_directory.name,
-                checkpoint_frequency=0,
-            ),
+            training_kwargs={
+                "num_epochs": 5,
+                "use_tqdm": False,
+                "use_tqdm_batch": False,
+                "checkpoint_name": self.checkpoint_name,
+                "checkpoint_directory": self.temporary_directory.name,
+                "checkpoint_frequency": 0,
+            },
             random_seed=self.random_seed,
         )
 
@@ -265,14 +265,14 @@ class TestPipelineCheckpoints(unittest.TestCase):
             model=self.model,
             dataset=self.dataset,
             training_loop=training_loop_type,
-            training_kwargs=dict(
-                num_epochs=10,
-                use_tqdm=False,
-                use_tqdm_batch=False,
-                checkpoint_name=self.checkpoint_name,
-                checkpoint_directory=self.temporary_directory.name,
-                checkpoint_frequency=0,
-            ),
+            training_kwargs={
+                "num_epochs": 10,
+                "use_tqdm": False,
+                "use_tqdm_batch": False,
+                "checkpoint_name": self.checkpoint_name,
+                "checkpoint_directory": self.temporary_directory.name,
+                "checkpoint_frequency": 0,
+            },
         )
         self.assertEqual(result_standard.losses, result_split.losses)
 
@@ -294,7 +294,7 @@ class TestAttributes(unittest.TestCase):
                     model="TransE",
                     dataset="Nations",
                     regularizer=regularizer,
-                    training_kwargs=dict(num_epochs=1),
+                    training_kwargs={"num_epochs": 1},
                 )
                 self.assertIsInstance(pipeline_result, PipelineResult)
                 self.assertIsInstance(pipeline_result.model, Model)
@@ -349,10 +349,10 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
         results = pipeline(
             model=self.model,
             dataset=self.dataset,
-            training_loop_kwargs=dict(automatic_memory_optimization=False),
-            training_kwargs=dict(num_epochs=0, use_tqdm=False),
-            evaluator_kwargs=dict(filtered=True),
-            evaluation_kwargs=dict(use_tqdm=False),
+            training_loop_kwargs={"automatic_memory_optimization": False},
+            training_kwargs={"num_epochs": 0, "use_tqdm": False},
+            evaluator_kwargs={"filtered": True},
+            evaluation_kwargs={"use_tqdm": False},
             device=self.device,
             random_seed=42,
             filter_validation_when_testing=False,
@@ -364,10 +364,10 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
         results = pipeline(
             model=self.model,
             dataset=self.dataset,
-            training_loop_kwargs=dict(automatic_memory_optimization=False),
-            training_kwargs=dict(num_epochs=0, use_tqdm=False),
-            evaluator_kwargs=dict(filtered=True),
-            evaluation_kwargs=dict(use_tqdm=False),
+            training_loop_kwargs={"automatic_memory_optimization": False},
+            training_kwargs={"num_epochs": 0, "use_tqdm": False},
+            evaluator_kwargs={"filtered": True},
+            evaluation_kwargs={"use_tqdm": False},
             device=self.device,
             random_seed=42,
             filter_validation_when_testing=True,
@@ -397,7 +397,7 @@ def test_negative_sampler_kwargs():
             # ... without explicitly selecting a negative sampler ...
             negative_sampler=None,
             # ... but providing custom kwargs
-            negative_sampler_kwargs=dict(num_negs_per_pos=_num_neg_per_pos),
+            negative_sampler_kwargs={"num_negs_per_pos": _num_neg_per_pos},
             # other parameters for fast test
             dataset="nations",
             model="distmult",
@@ -408,7 +408,7 @@ def test_negative_sampler_kwargs():
 @pytest.mark.parametrize("tf_cls", [CoreTriplesFactory, TriplesFactory])
 def test_loading_training_triples_factory(tf_cls: type[CoreTriplesFactory]):
     """Test re-loading the training triples factory."""
-    result = pipeline(model="rescal", dataset="nations", training_kwargs=dict(num_epochs=0))
+    result = pipeline(model="rescal", dataset="nations", training_kwargs={"num_epochs": 0})
     with tempfile.TemporaryDirectory() as directory:
         result.save_to_directory(directory)
         tf_cls.from_path_binary(pathlib.Path(directory, "training_triples"))

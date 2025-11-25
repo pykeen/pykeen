@@ -49,11 +49,11 @@ def main(
         click.echo(f"Outputing {subset_name} to {output_path.as_uri()}")
         np.savetxt(output_path, subset_tf.triples, delimiter="\t", fmt="%s")
 
-    metadata = dict(
-        source=str(path),
-        ratios=dict(zip(LABELS, ratios, strict=False)),
-        seed=seed,
-    )
+    metadata = {
+        "source": str(path),
+        "ratios": dict(zip(LABELS, ratios, strict=False)),
+        "seed": seed,
+    }
     with directory.joinpath("metadata.json").open("w") as file:
         json.dump(metadata, file, indent=2)
 

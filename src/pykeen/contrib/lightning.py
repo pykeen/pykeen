@@ -305,24 +305,24 @@ def _main(
     """Run PyTorch lightning model."""
     lit_pipeline(
         training_loop=training_loop,
-        training_loop_kwargs=dict(
-            dataset=dataset,
-            dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
-            model=model,
-            model_kwargs=dict(embedding_dim=embedding_dim, loss=loss),
-            batch_size=batch_size,
-        ),
-        trainer_kwargs=dict(
+        training_loop_kwargs={
+            "dataset": dataset,
+            "dataset_kwargs": {"create_inverse_triples": create_inverse_triples},
+            "model": model,
+            "model_kwargs": {"embedding_dim": embedding_dim, "loss": loss},
+            "batch_size": batch_size,
+        },
+        trainer_kwargs={
             # automatically choose accelerator
-            accelerator="auto",
+            "accelerator": "auto",
             # defaults to TensorBoard; explicitly disabled here
-            logger=False,
+            "logger": False,
             # disable checkpointing
-            enable_checkpointing=False,
+            "enable_checkpointing": False,
             # mixed precision training
-            precision=16 if mixed_precision else 32,
-            max_epochs=number_epochs,
-        ),
+            "precision": 16 if mixed_precision else 32,
+            "max_epochs": number_epochs,
+        },
     )
 
 

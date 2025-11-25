@@ -51,7 +51,7 @@ class TestInvalidConfigurations(unittest.TestCase):
                 dataset="kinships",
                 model="transe",
                 stopper="early",
-                training_kwargs_ranges=dict(epochs=...),
+                training_kwargs_ranges={"epochs": ...},
             )
 
 
@@ -96,7 +96,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
         hpo_pipeline_result = hpo_pipeline(
             dataset="nations",
             model="TransE",
-            training_kwargs=dict(num_epochs=5, use_tqdm=False),
+            training_kwargs={"num_epochs": 5, "use_tqdm": False},
             n_trials=2,
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
@@ -114,10 +114,10 @@ class TestHyperparameterOptimization(unittest.TestCase):
                 model="TransE",
                 n_trials=1,
                 training_loop="sLCWA",
-                training_kwargs=dict(num_epochs=5, use_tqdm=False),
-                negative_sampler_kwargs_ranges=dict(
-                    garbage_key=dict(type=int, low=1, high=100),
-                ),
+                training_kwargs={"num_epochs": 5, "use_tqdm": False},
+                negative_sampler_kwargs_ranges={
+                    "garbage_key": {"type": int, "low": 1, "high": 100},
+                },
             )
             self.assertEqual(["garbage_key"], e.exception.args[0])
 
@@ -127,8 +127,8 @@ class TestHyperparameterOptimization(unittest.TestCase):
         hpo_pipeline_result = hpo_pipeline(
             dataset="nations",
             model="TransE",
-            model_kwargs=dict(embedding_dim=target_embedding_dim),
-            training_kwargs=dict(num_epochs=5, use_tqdm=False),
+            model_kwargs={"embedding_dim": target_embedding_dim},
+            training_kwargs={"num_epochs": 5, "use_tqdm": False},
             n_trials=2,
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
@@ -142,8 +142,8 @@ class TestHyperparameterOptimization(unittest.TestCase):
         hpo_pipeline_result = hpo_pipeline(
             dataset="nations",
             model="TransE",
-            loss_kwargs=dict(margin=1.0),
-            training_kwargs=dict(num_epochs=5, use_tqdm=False),
+            loss_kwargs={"margin": 1.0},
+            training_kwargs={"num_epochs": 5, "use_tqdm": False},
             n_trials=2,
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
@@ -158,10 +158,10 @@ class TestHyperparameterOptimization(unittest.TestCase):
         hpo_pipeline_result = hpo_pipeline(
             dataset="nations",
             model="TransE",
-            model_kwargs=dict(embedding_dim=target_embedding_dim),
+            model_kwargs={"embedding_dim": target_embedding_dim},
             loss="MarginRankingLoss",
-            loss_kwargs=dict(margin=1.0),
-            training_kwargs=dict(num_epochs=5, use_tqdm=False),
+            loss_kwargs={"margin": 1.0},
+            training_kwargs={"num_epochs": 5, "use_tqdm": False},
             n_trials=2,
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
@@ -175,13 +175,13 @@ class TestHyperparameterOptimization(unittest.TestCase):
         hpo_pipeline_result = hpo_pipeline(
             dataset="nations",
             model="TransE",
-            model_kwargs_ranges=dict(
-                embedding_dim=dict(type=int, low=60, high=80, q=10),
-            ),
-            loss_kwargs_ranges=dict(
-                margin=dict(type=int, low=1, high=2),
-            ),
-            training_kwargs=dict(num_epochs=5, use_tqdm=False),
+            model_kwargs_ranges={
+                "embedding_dim": {"type": int, "low": 60, "high": 80, "q": 10},
+            },
+            loss_kwargs_ranges={
+                "margin": {"type": int, "low": 1, "high": 2},
+            },
+            training_kwargs={"num_epochs": 5, "use_tqdm": False},
             n_trials=2,
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
@@ -193,9 +193,9 @@ class TestHyperparameterOptimization(unittest.TestCase):
 
     def test_sampling_values_from_2_power_x(self):
         """Test making a study that has a range defined by f(x) = 2^x."""
-        model_kwargs_ranges = dict(
-            embedding_dim=dict(type=int, low=0, high=4, scale="power_two"),
-        )
+        model_kwargs_ranges = {
+            "embedding_dim": {"type": int, "low": 0, "high": 4, "scale": "power_two"},
+        }
         objective = _test_suggest(model_kwargs_ranges)
         study = optuna.create_study()
         study.optimize(objective, n_trials=2)
@@ -212,9 +212,9 @@ class TestHyperparameterOptimization(unittest.TestCase):
 
     def test_sampling_values_from_power_x(self):
         """Test making a study that has a range defined by f(x) = base^x."""
-        kwargs_ranges = dict(
-            embedding_dim=dict(type=int, low=0, high=2, scale="power", base=10),
-        )
+        kwargs_ranges = {
+            "embedding_dim": {"type": int, "low": 0, "high": 2, "scale": "power", "base": 10},
+        }
         objective = _test_suggest(kwargs_ranges)
         study = optuna.create_study()
         study.optimize(objective, n_trials=2)
@@ -237,13 +237,13 @@ class TestHyperparameterOptimization(unittest.TestCase):
         result = hpo_pipeline(
             dataset="nations",
             model="distmult",
-            model_kwargs_ranges=dict(
-                embedding_dim=dict(
-                    type=int,
-                    low=-10,
-                    high=-1,  # will fail
-                ),
-            ),
+            model_kwargs_ranges={
+                "embedding_dim": {
+                    "type": int,
+                    "low": -10,
+                    "high": -1,  # will fail
+                },
+            },
             n_trials=1,
             result_tracker=mock_result_tracker,
         )
@@ -348,8 +348,8 @@ class TestHPODatasets(unittest.TestCase):
             **kwargs,
             model="TransE",
             n_trials=1,
-            training_kwargs=dict(num_epochs=1, use_tqdm=False),
-            evaluation_kwargs=dict(use_tqdm=False),
+            training_kwargs={"num_epochs": 1, "use_tqdm": False},
+            evaluation_kwargs={"use_tqdm": False},
         )
         with tempfile.TemporaryDirectory() as directory:
             hpo_pipeline_result.save_to_directory(directory)
@@ -365,7 +365,7 @@ class TestHyperparameterOptimizationLiterals(unittest.TestCase):
         hpo_pipeline_result = hpo_pipeline(
             dataset=NationsLiteral,
             model="DistMultLiteral",
-            training_kwargs=dict(num_epochs=5, use_tqdm=False),
+            training_kwargs={"num_epochs": 5, "use_tqdm": False},
             n_trials=2,
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)

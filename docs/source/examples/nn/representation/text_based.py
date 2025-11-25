@@ -12,17 +12,17 @@ entity_representations = TextRepresentation.from_dataset(dataset=dataset, encode
 result = pipeline(
     dataset=dataset,
     model=ERModel,
-    model_kwargs=dict(
-        interaction="ermlpe",
-        interaction_kwargs=dict(
-            embedding_dim=entity_representations.shape[0],
-        ),
-        entity_representations=entity_representations,
-        relation_representations_kwargs=dict(
-            shape=entity_representations.shape,
-        ),
-    ),
-    training_kwargs=dict(num_epochs=1),
+    model_kwargs={
+        "interaction": "ermlpe",
+        "interaction_kwargs": {
+            "embedding_dim": entity_representations.shape[0],
+        },
+        "entity_representations": entity_representations,
+        "relation_representations_kwargs": {
+            "shape": entity_representations.shape,
+        },
+    },
+    training_kwargs={"num_epochs": 1},
 )
 model = result.model
 

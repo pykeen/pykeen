@@ -45,11 +45,11 @@ class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLog
     """Tests for early stopping logic."""
 
     cls = EarlyStoppingLogic
-    kwargs = dict(
-        patience=2,
-        relative_delta=0.1,
-        larger_is_better=False,
-    )
+    kwargs = {
+        "patience": 2,
+        "relative_delta": 0.1,
+        "larger_is_better": False,
+    }
 
     def test_report_result(self):
         """Test report_result API."""

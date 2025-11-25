@@ -355,7 +355,7 @@ class DisjointGraphPairCombinator(GraphPairCombinator[FactoryType]):
         return ProcessedTuple(
             mapped_triples,
             alignment,
-            dict(entity_offsets=offsets[:, 0], relation_offsets=offsets[:, 1]),
+            {"entity_offsets": offsets[:, 0], "relation_offsets": offsets[:, 1]},
         )
 
 
@@ -391,7 +391,7 @@ class SwapGraphPairCombinator(GraphPairCombinator[FactoryType]):
         return ProcessedTuple(
             mapped_triples,
             alignment,
-            dict(entity_offsets=offsets[:, 0], relation_offsets=offsets[:, 1]),
+            {"entity_offsets": offsets[:, 0], "relation_offsets": offsets[:, 1]},
         )
 
 
@@ -428,11 +428,11 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator[FactoryType]):
         return ProcessedTuple(
             mapped_triples,
             alignment,
-            dict(
-                entity_offsets=offsets[:, 0],
-                relation_offsets=offsets[:, 1],
-                extra_relations={self.ALIGNMENT_RELATION_NAME: alignment_relation_id},
-            ),
+            {
+                "entity_offsets": offsets[:, 0],
+                "relation_offsets": offsets[:, 1],
+                "extra_relations": {self.ALIGNMENT_RELATION_NAME: alignment_relation_id},
+            },
         )
 
 
@@ -484,10 +484,10 @@ class CollapseGraphPairCombinator(GraphPairCombinator[FactoryType]):
         return ProcessedTuple(
             mapped_triples,
             torch.empty(size=(2, 0), dtype=torch.long),
-            dict(
-                entity_mappings=list(iter_entity_mappings((h, h_new), (t, t_new), offsets=offsets[:, 0])),
-                relation_offsets=offsets[:, 1],
-            ),
+            {
+                "entity_mappings": list(iter_entity_mappings((h, h_new), (t, t_new), offsets=offsets[:, 0])),
+                "relation_offsets": offsets[:, 1],
+            },
         )
 
 

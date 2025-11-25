@@ -34,10 +34,10 @@ class SE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        scoring_fct_norm=dict(type=int, low=1, high=2),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "scoring_fct_norm": {"type": int, "low": 1, "high": 2},
+    }
 
     def __init__(
         self,
@@ -73,22 +73,22 @@ class SE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
         """
         super().__init__(
             interaction=SEInteraction,
-            interaction_kwargs=dict(p=scoring_fct_norm, power_norm=power_norm),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-                constrainer=entity_constrainer,
-                constrainer_kwargs=entity_constrainer_kwargs,
-            ),
+            interaction_kwargs={"p": scoring_fct_norm, "power_norm": power_norm},
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+                "constrainer": entity_constrainer,
+                "constrainer_kwargs": entity_constrainer_kwargs,
+            },
             relation_representations_kwargs=[
-                dict(
-                    shape=(embedding_dim, embedding_dim),
-                    initializer=relation_initializer,
-                ),
-                dict(
-                    shape=(embedding_dim, embedding_dim),
-                    initializer=relation_initializer,
-                ),
+                {
+                    "shape": (embedding_dim, embedding_dim),
+                    "initializer": relation_initializer,
+                },
+                {
+                    "shape": (embedding_dim, embedding_dim),
+                    "initializer": relation_initializer,
+                },
             ],
             **kwargs,
         )

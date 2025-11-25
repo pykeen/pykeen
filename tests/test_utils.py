@@ -271,7 +271,7 @@ class TestUtils(unittest.TestCase):
         for shapes in _generate_shapes(generator=generator):
             arrays = [torch.empty(*shape) for shape in shapes]
             cost = estimate_cost_of_sequence(*(a.shape for a in arrays))
-            n_samples, time = timeit.Timer(stmt="sum(arrays)", globals=dict(arrays=arrays)).autorange()
+            n_samples, time = timeit.Timer(stmt="sum(arrays)", globals={"arrays": arrays}).autorange()
             consumption = time / n_samples
             data.append((cost, consumption))
         a = numpy.asarray(data)
@@ -292,10 +292,10 @@ class TestUtils(unittest.TestCase):
             # check caching
             samples, second_time = timeit.Timer(
                 stmt="get_optimal_sequence(*shapes)",
-                globals=dict(
-                    get_optimal_sequence=get_optimal_sequence,
-                    shapes=shapes,
-                ),
+                globals={
+                    "get_optimal_sequence": get_optimal_sequence,
+                    "shapes": shapes,
+                },
             ).autorange()
             second_time /= samples
 

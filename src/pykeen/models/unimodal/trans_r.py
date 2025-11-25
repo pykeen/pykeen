@@ -54,11 +54,11 @@ class TransR(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        scoring_fct_norm=dict(type=int, low=1, high=2),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "relation_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "scoring_fct_norm": {"type": int, "low": 1, "high": 2},
+    }
 
     def __init__(
         self,
@@ -114,29 +114,29 @@ class TransR(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         # TODO: Initialize from TransE
         super().__init__(
             interaction=TransRInteraction,
-            interaction_kwargs=dict(p=scoring_fct_norm, power_norm=power_norm),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-                initializer_kwargs=entity_initializer_kwargs,
-                constrainer=entity_constrainer,
-                constrainer_kwargs=dict(maxnorm=max_projection_norm, p=scoring_fct_norm, dim=-1),
-            ),
+            interaction_kwargs={"p": scoring_fct_norm, "power_norm": power_norm},
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+                "initializer_kwargs": entity_initializer_kwargs,
+                "constrainer": entity_constrainer,
+                "constrainer_kwargs": {"maxnorm": max_projection_norm, "p": scoring_fct_norm, "dim": -1},
+            },
             relation_representations_kwargs=[
                 # relation embedding
-                dict(
-                    shape=(relation_dim,),
-                    initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs,
-                    constrainer=relation_constrainer,
-                    constrainer_kwargs=dict(maxnorm=max_projection_norm, p=scoring_fct_norm, dim=-1),
-                ),
+                {
+                    "shape": (relation_dim,),
+                    "initializer": relation_initializer,
+                    "initializer_kwargs": relation_initializer_kwargs,
+                    "constrainer": relation_constrainer,
+                    "constrainer_kwargs": {"maxnorm": max_projection_norm, "p": scoring_fct_norm, "dim": -1},
+                },
                 # relation projection
-                dict(
-                    shape=(embedding_dim, relation_dim),
-                    initializer=relation_projection_initializer,
-                    initializer_kwargs=relation_projection_initializer_kwargs,
-                ),
+                {
+                    "shape": (embedding_dim, relation_dim),
+                    "initializer": relation_projection_initializer,
+                    "initializer_kwargs": relation_projection_initializer_kwargs,
+                },
             ],
             **kwargs,
         )

@@ -182,7 +182,7 @@ def update(path: pathlib.Path, digits: int) -> None:
     logger.info(f"Found {len(unique_cases_jsons):_} unique settings at {path!s}")
 
     # create case for full cartesian product between cases & losses
-    records: list[Record] = list()
+    records: list[Record] = []
     for unique_case_json in unique_cases_jsons:
         data = json.loads(unique_case_json)
         data["loss_name_to_value"] = loss_name_to_value = {}

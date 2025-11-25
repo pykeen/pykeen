@@ -116,13 +116,13 @@ class TestTriplesFactory(unittest.TestCase):
     def test_tensor_to_df(self):
         """Test tensor_to_df()."""
         # check correct translation
-        labeled_triples = set(tuple(row) for row in self.factory.triples.tolist())
+        labeled_triples = {tuple(row) for row in self.factory.triples.tolist()}
         tensor = self.factory.mapped_triples
         scores = torch.rand(tensor.shape[0])
         df = self.factory.tensor_to_df(tensor=tensor, scores=scores)
-        re_labeled_triples = set(
+        re_labeled_triples = {
             tuple(row) for row in df[["head_label", "relation_label", "tail_label"]].values.tolist()
-        )
+        }
         assert labeled_triples == re_labeled_triples
 
         # check column order
@@ -436,25 +436,25 @@ class TestLiterals(unittest.TestCase):
     def test_metadata(self):
         """Test metadata passing for triples factories."""
         t = Nations().training
-        self.assertEqual(t.metadata, dict(path=NATIONS_TRAIN_PATH))
+        self.assertEqual(t.metadata, {"path": NATIONS_TRAIN_PATH})
 
         entities = ["poland", "ussr"]
         x = t.new_with_restriction(entities=entities)
         entities_ids = t.entities_to_ids(entities=entities)
-        self.assertEqual(x.metadata, dict(path=NATIONS_TRAIN_PATH, entity_restriction=entities_ids))
+        self.assertEqual(x.metadata, {"path": NATIONS_TRAIN_PATH, "entity_restriction": entities_ids})
 
         relations = ["negativebehavior"]
         v = t.new_with_restriction(relations=relations)
         relations_ids = t.relations_to_ids(relations=relations)
-        self.assertEqual(v.metadata, dict(path=NATIONS_TRAIN_PATH, relation_restriction=relations_ids))
+        self.assertEqual(v.metadata, {"path": NATIONS_TRAIN_PATH, "relation_restriction": relations_ids})
 
         w = t.clone_and_exchange_triples(t.mapped_triples[0:5], keep_metadata=False)
         self.assertIsInstance(w, TriplesFactory)
-        self.assertEqual(w.metadata, dict())
+        self.assertEqual(w.metadata, {})
 
         y, z = t.split()
-        self.assertEqual(y.metadata, dict(path=NATIONS_TRAIN_PATH))
-        self.assertEqual(z.metadata, dict(path=NATIONS_TRAIN_PATH))
+        self.assertEqual(y.metadata, {"path": NATIONS_TRAIN_PATH})
+        self.assertEqual(z.metadata, {"path": NATIONS_TRAIN_PATH})
 
     def test_triples_numeric_literals_factory_split(self):
         """Test splitting a TriplesNumericLiteralsFactory object."""
@@ -606,16 +606,16 @@ def _iter_get_mapped_triples_inputs() -> Iterable[tuple[Any, Mapping[str, Any]]]
     # labeled triples + factory
     labeled = [("brazil", "accusation", "burma"), ("brazil", "accusation", "uk")]
     # single labeled triple
-    yield labeled[0], dict(factory=factory)
+    yield labeled[0], {"factory": factory}
     # multiple labeled triples as list
-    yield labeled, dict(factory=factory)
+    yield labeled, {"factory": factory}
     # multiple labeled triples as array
-    yield np.asarray(labeled), dict(factory=factory)
+    yield np.asarray(labeled), {"factory": factory}
     # >>> keyword only
-    yield None, dict(mapped_triples=factory.mapped_triples)
-    yield None, dict(factory=factory)
-    yield None, dict(triples=labeled, factory=factory)
-    yield None, dict(triples=np.asarray(labeled), factory=factory)
+    yield None, {"mapped_triples": factory.mapped_triples}
+    yield None, {"factory": factory}
+    yield None, {"triples": labeled, "factory": factory}
+    yield None, {"triples": np.asarray(labeled), "factory": factory}
 
 
 @pytest.mark.parametrize(["x", "inputs"], _iter_get_mapped_triples_inputs())

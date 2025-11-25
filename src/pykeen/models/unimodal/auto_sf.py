@@ -41,9 +41,9 @@ class AutoSF(ERModel[Representation, Representation, Representation]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
 
     def __init__(
         self,
@@ -73,7 +73,7 @@ class AutoSF(ERModel[Representation, Representation, Representation]):
         embedding_kwargs = embedding_kwargs or {}
         super().__init__(
             interaction=AutoSFInteraction,
-            interaction_kwargs=dict(num_blocks=num_components, coefficients=coefficients),
+            interaction_kwargs={"num_blocks": num_components, "coefficients": coefficients},
             entity_representations_kwargs=[
                 dict(
                     shape=embedding_dim,

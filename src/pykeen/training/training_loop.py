@@ -125,10 +125,10 @@ class TrainingLoop(Generic[BatchType], ABC):
 
     losses_per_epochs: list[float]
 
-    hpo_default = dict(
-        num_epochs=dict(type=int, low=100, high=1000, q=100),
-        batch_size=dict(type=int, low=4, high=12, scale="power_two"),  # [16, 4096]
-    )
+    hpo_default = {
+        "num_epochs": {"type": int, "low": 100, "high": 1000, "q": 100},
+        "batch_size": {"type": int, "low": 4, "high": 12, "scale": "power_two"},  # [16, 4096]
+    }
 
     supports_slicing: ClassVar[bool] = False
 
@@ -635,7 +635,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         # When size probing, we don't want progress bars
         if _use_outer_tqdm:
             # Create progress bar
-            _tqdm_kwargs = dict(desc=f"Training epochs on {self.device}", unit="epoch")
+            _tqdm_kwargs = {"desc": f"Training epochs on {self.device}", "unit": "epoch"}
             if tqdm_kwargs is not None:
                 _tqdm_kwargs.update(tqdm_kwargs)
             epochs = trange(self._epoch + 1, 1 + num_epochs, **_tqdm_kwargs, initial=self._epoch, total=num_epochs)
@@ -1117,7 +1117,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         logger.debug("=> Saving checkpoint.")
 
         if stopper is None:
-            stopper_dict: Mapping[str, Any] = dict()
+            stopper_dict: Mapping[str, Any] = {}
         else:
             stopper_dict = stopper.get_summary_dict()
 
