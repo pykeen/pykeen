@@ -34,17 +34,17 @@ _SKIP_NAMES = {
 }
 _SKIP_ANNOTATIONS = {
     nn.Embedding,
-    Optional[nn.Embedding],  # noqa:UP007
+    Optional[nn.Embedding],  # noqa:UP045
     type[nn.Embedding],
-    Optional[type[nn.Embedding]],  # noqa:UP007
+    Optional[type[nn.Embedding]],  # noqa:UP045
     nn.Module,
-    Optional[nn.Module],  # noqa:UP007
+    Optional[nn.Module],  # noqa:UP045
     type[nn.Module],
-    Optional[type[nn.Module]],  # noqa:UP007
+    Optional[type[nn.Module]],  # noqa:UP045
     Model,
-    Optional[Model],  # noqa:UP007
+    Optional[Model],  # noqa:UP045
     type[Model],
-    Optional[type[Model]],  # noqa:UP007
+    Optional[type[Model]],  # noqa:UP045
     Union[str, Callable[[FloatTensor], FloatTensor]],  # noqa:UP007
     Hint[nn.Module],
 }
