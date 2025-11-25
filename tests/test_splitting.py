@@ -26,7 +26,8 @@ def test_get_absolute_split_sizes():
         strict=False,
     ):
         # generate random ratios
-        ratios = numpy.random.uniform(size=(num_splits,))
+        rng = numpy.random.default_rng(seed=42)
+        ratios = rng.uniform(size=(num_splits,))
         ratios = ratios / ratios.sum()
         sizes = get_absolute_split_sizes(n_total=n_total, ratios=ratios)
         # check size
