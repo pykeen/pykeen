@@ -32,10 +32,10 @@ class ComplExLiteral(LiteralModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "input_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+    }
     #: The default loss function class
     loss_default: ClassVar[type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
@@ -54,31 +54,31 @@ class ComplExLiteral(LiteralModel):
             triples_factory=triples_factory,
             interaction=self.interaction_cls,
             entity_representations_kwargs=[
-                dict(
-                    shape=embedding_dim,
-                    initializer=nn.init.xavier_normal_,
-                    dtype=torch.complex64,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": nn.init.xavier_normal_,
+                    "dtype": torch.complex64,
+                },
             ],
             relation_representations_kwargs=[
-                dict(
-                    shape=embedding_dim,
-                    initializer=nn.init.xavier_normal_,
-                    dtype=torch.complex64,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": nn.init.xavier_normal_,
+                    "dtype": torch.complex64,
+                },
             ],
             combination=ComplexSeparatedCombination,
-            combination_kwargs=dict(
+            combination_kwargs={
                 # the individual combination for real/complex parts
-                combination=ConcatProjectionCombination,
-                combination_kwargs=dict(
-                    input_dims=[embedding_dim, triples_factory.literal_shape[0]],
-                    output_dim=embedding_dim,
-                    bias=True,
-                    dropout=input_dropout,
-                    activation=nn.Tanh,
-                    activation_kwargs=None,
-                ),
-            ),
+                "combination": ConcatProjectionCombination,
+                "combination_kwargs": {
+                    "input_dims": [embedding_dim, triples_factory.literal_shape[0]],
+                    "output_dim": embedding_dim,
+                    "bias": True,
+                    "dropout": input_dropout,
+                    "activation": nn.Tanh,
+                    "activation_kwargs": None,
+                },
+            },
             **kwargs,
         )

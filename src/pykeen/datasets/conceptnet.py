@@ -50,10 +50,10 @@ class ConceptNet(SingleTabbedDataset):
         super().__init__(
             url=URL,
             random_state=random_state,
-            read_csv_kwargs=dict(
-                usecols=[2, 1, 3],
-                header=None,
-            ),
+            read_csv_kwargs={
+                "usecols": [2, 1, 3],
+                "header": None,
+            },
             **kwargs,
         )
 

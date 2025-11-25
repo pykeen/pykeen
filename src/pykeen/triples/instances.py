@@ -221,7 +221,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
             if torch.sum(weights) == 0:
                 # randomly choose a vertex which has not been chosen yet
                 pool = (~node_picked).nonzero()
-                chosen_vertex = pool[torch.randint(pool.numel(), size=tuple())]
+                chosen_vertex = pool[torch.randint(pool.numel(), size=())]
             else:
                 # normalize to probabilities
                 probabilities = weights.float() / weights.sum().float()

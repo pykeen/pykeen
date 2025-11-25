@@ -271,18 +271,18 @@ class EarlyStopper(Stopper):
 
     def get_summary_dict(self) -> Mapping[str, Any]:
         """Get a summary dict."""
-        return dict(
-            frequency=self.frequency,
-            patience=self.patience,
-            remaining_patience=self.remaining_patience,
-            relative_delta=self.relative_delta,
-            metric=self.metric,
-            larger_is_better=self.larger_is_better,
-            results=self.results,
-            stopped=self.stopped,
-            best_epoch=self.best_epoch,
-            best_metric=self.best_metric,
-        )
+        return {
+            "frequency": self.frequency,
+            "patience": self.patience,
+            "remaining_patience": self.remaining_patience,
+            "relative_delta": self.relative_delta,
+            "metric": self.metric,
+            "larger_is_better": self.larger_is_better,
+            "results": self.results,
+            "stopped": self.stopped,
+            "best_epoch": self.best_epoch,
+            "best_metric": self.best_metric,
+        }
 
     def _write_from_summary_dict(
         self,

@@ -24,4 +24,4 @@ class RelationPredictionLinkPredictionEvaluationLoopTestCase(LinkPredictionEvalu
     """Test the link prediction evaluation loop for relation prediction."""
 
     cls = pykeen.evaluation.evaluation_loop.LCWAEvaluationLoop
-    kwargs = dict(targets=(LABEL_RELATION,))
+    kwargs = {"targets": (LABEL_RELATION,)}

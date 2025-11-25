@@ -30,9 +30,9 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
-        embedding_dim=dict(type=int, low=32, high=512, q=32),
-    )
+    hpo_default = {
+        "embedding_dim": {"type": int, "low": 32, "high": 512, "q": 32},
+    }
 
     def __init__(
         self,
@@ -62,7 +62,7 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
             Additional keyword based arguments passed to :class:`pykeen.models.ERModel`.
         """
         encoder_kwargs = {} if encoder_kwargs is None else dict(encoder_kwargs)
-        encoder_kwargs.setdefault("entity_representations_kwargs", dict(embedding_dim=embedding_dim))
+        encoder_kwargs.setdefault("entity_representations_kwargs", {"embedding_dim": embedding_dim})
         encoder_kwargs.setdefault("relation_representations_kwargs", encoder_kwargs["entity_representations_kwargs"])
 
         # combined representation

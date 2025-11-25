@@ -129,7 +129,7 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the SampledRankBasedEvaluator."""
 
     cls = SampledRankBasedEvaluator
-    kwargs = dict(num_negatives=3)
+    kwargs = {"num_negatives": 3}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -143,7 +143,7 @@ class OGBEvaluatorTests(RankBasedEvaluatorTests):
     """Unit test for OGB evaluator."""
 
     cls = OGBEvaluator
-    kwargs = dict(num_negatives=3)
+    kwargs = {"num_negatives": 3}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -694,7 +694,7 @@ class ExpectedMetricsTests(unittest.TestCase):
         generator: numpy.random.Generator = numpy.random.default_rng(seed=42)
         # test different shapes
         for shape, total in (
-            (tuple(), 20),
+            ((), 20),
             ((10, 2), 275),
             ((10_000,), 1237),
         ):

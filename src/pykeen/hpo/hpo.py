@@ -135,7 +135,7 @@ class Objective:
             trial.report(result, step=epoch)
             if trial.should_prune():
                 # log pruning
-                result_tracker.log_metrics(metrics=dict(pruned=1), step=epoch)
+                result_tracker.log_metrics(metrics={"pruned": 1}, step=epoch)
                 # trial was successful, but has to be ended
                 result_tracker.end_run(success=True)
                 # also show info
@@ -345,7 +345,7 @@ class HpoPipelineResult(Result):
             "best_trial_evaluation": self.study.best_value,
         }
 
-        pipeline_config = dict()
+        pipeline_config = {}
         for k, v in self.study.user_attrs.items():
             if k.startswith("pykeen_"):
                 metadata[k[len("pykeen_") :]] = v
@@ -393,7 +393,7 @@ class HpoPipelineResult(Result):
                 f" early stopping will now switch it to {int(stopped_epoch)}"
             )
             pipeline_config["training_kwargs"]["num_epochs"] = int(stopped_epoch)
-        return dict(metadata=metadata, pipeline=pipeline_config)
+        return {"metadata": metadata, "pipeline": pipeline_config}
 
     def save_to_directory(self, directory: str | pathlib.Path, **kwargs) -> None:
         """Dump the results of a study to the given directory."""

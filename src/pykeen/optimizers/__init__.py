@@ -19,19 +19,19 @@ __all__ = [
 
 #: The default strategy for optimizing the optimizers' hyper-parameters (yo dawg)
 optimizers_hpo_defaults: Mapping[type[Optimizer], Mapping[str, Any]] = {
-    Adagrad: dict(
-        lr=dict(type=float, low=0.001, high=0.1, scale="log"),
-    ),
-    Adam: dict(
-        lr=dict(type=float, low=0.001, high=0.1, scale="log"),
-    ),
-    Adamax: dict(
-        lr=dict(type=float, low=0.001, high=0.1, scale="log"),
-    ),
-    AdamW: dict(
-        lr=dict(type=float, low=0.001, high=0.1, scale="log"),
-    ),
-    SGD: dict(
-        lr=dict(type=float, low=0.001, high=0.1, scale="log"),
-    ),
+    Adagrad: {
+        "lr": {"type": float, "low": 0.001, "high": 0.1, "scale": "log"},
+    },
+    Adam: {
+        "lr": {"type": float, "low": 0.001, "high": 0.1, "scale": "log"},
+    },
+    Adamax: {
+        "lr": {"type": float, "low": 0.001, "high": 0.1, "scale": "log"},
+    },
+    AdamW: {
+        "lr": {"type": float, "low": 0.001, "high": 0.1, "scale": "log"},
+    },
+    SGD: {
+        "lr": {"type": float, "low": 0.001, "high": 0.1, "scale": "log"},
+    },
 }

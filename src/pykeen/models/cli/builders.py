@@ -181,31 +181,31 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
             model=model,
             model_kwargs=model_kwargs,
             dataset=dataset,
-            dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
+            dataset_kwargs={"create_inverse_triples": create_inverse_triples},
             training=training,
             testing=testing or training,
             validation=validation,
             optimizer=optimizer,
-            optimizer_kwargs=dict(
-                lr=learning_rate,
-            ),
+            optimizer_kwargs={
+                "lr": learning_rate,
+            },
             training_loop=training_loop,
-            training_loop_kwargs=dict(
-                automatic_memory_optimization=automatic_memory_optimization,
-            ),
+            training_loop_kwargs={
+                "automatic_memory_optimization": automatic_memory_optimization,
+            },
             evaluator=evaluator,
-            evaluator_kwargs=dict(),
-            training_kwargs=dict(
-                num_epochs=number_epochs,
-                batch_size=batch_size,
-                num_workers=num_workers,
-            ),
+            evaluator_kwargs={},
+            training_kwargs={
+                "num_epochs": number_epochs,
+                "batch_size": batch_size,
+                "num_workers": num_workers,
+            },
             stopper=stopper,
             result_tracker=result_tracker,
             result_tracker_kwargs=result_tracker_kwargs,
-            metadata=dict(
-                title=title,
-            ),
+            metadata={
+                "title": title,
+            },
             random_seed=random_seed,
         )
         if output_directory:

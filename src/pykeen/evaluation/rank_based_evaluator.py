@@ -100,7 +100,7 @@ def _iter_ranks(
     num_candidates_flat = _flatten(num_candidates)
     weights_flat: Mapping[Target, np.ndarray]
     if weights is None:
-        weights_flat = dict()
+        weights_flat = {}
     else:
         weights_flat = _flatten(weights)
     for rank_type in RANK_TYPES:
@@ -338,7 +338,7 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
             metrics_kwargs = [None] * len(metrics)
             for hits_at_k_key in hits_at_k_keys:
                 metrics += [hits_at_k_key] * len(ks)
-                metrics_kwargs += [dict(k=k) for k in ks]
+                metrics_kwargs += [{"k": k} for k in ks]
             self.metrics.extend(rank_based_metric_resolver.make_many(metrics, metrics_kwargs))
         self.ranks = defaultdict(list)
         self.num_candidates = defaultdict(list)

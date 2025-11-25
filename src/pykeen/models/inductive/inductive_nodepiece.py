@@ -42,9 +42,9 @@ class InductiveNodePiece(InductiveERModel):
         github: https://github.com/migalkin/NodePiece
     """
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
 
     def __init__(
         self,
@@ -120,13 +120,13 @@ class InductiveNodePiece(InductiveERModel):
             triples_factory=triples_factory,
             interaction=interaction,
             entity_representations=NodePieceRepresentation,
-            entity_representations_kwargs=dict(
-                triples_factory=triples_factory,
-                tokenizers=RelationTokenizer,
-                token_representations=relation_representations,
-                aggregation=aggregation,
-                num_tokens=num_tokens,
-            ),
+            entity_representations_kwargs={
+                "triples_factory": triples_factory,
+                "tokenizers": RelationTokenizer,
+                "token_representations": relation_representations,
+                "aggregation": aggregation,
+                "num_tokens": num_tokens,
+            },
             relation_representations=SubsetRepresentation(  # hide padding relation
                 max_id=triples_factory.num_relations,
                 base=relation_representations,

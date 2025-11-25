@@ -479,7 +479,7 @@ class CoreTriplesFactory(KGInfo):
                 f"and {mapped_triples.max(dim=0).values=} while {self.num_entities=} and {self.num_relations=}"
             )
         if metadata is None:
-            metadata = dict()
+            metadata = {}
         self.metadata = metadata
         self.relation_inverter = relation_inverter_resolver.make(query=None)
 
@@ -1064,13 +1064,13 @@ class CoreTriplesFactory(KGInfo):
         return path
 
     def _get_binary_state(self):
-        return dict(
-            num_entities=self.num_entities,
+        return {
+            "num_entities": self.num_entities,
             # note: num_relations will be doubled again when instantiating with create_inverse_triples=True
-            num_relations=self.real_num_relations,
-            create_inverse_triples=self.create_inverse_triples,
-            metadata=self.metadata,
-        )
+            "num_relations": self.real_num_relations,
+            "create_inverse_triples": self.create_inverse_triples,
+            "metadata": self.metadata,
+        }
 
 
 class TriplesFactory(CoreTriplesFactory):
@@ -1530,11 +1530,11 @@ class TriplesFactory(CoreTriplesFactory):
         old_col = list(data.columns)
 
         # vectorized label lookup
-        for column, labeling in dict(
-            head=self.entity_labeling,
-            relation=self.relation_labeling,
-            tail=self.entity_labeling,
-        ).items():
+        for column, labeling in {
+            "head": self.entity_labeling,
+            "relation": self.relation_labeling,
+            "tail": self.entity_labeling,
+        }.items():
             assert labeling is not None
             data[f"{column}_label"] = labeling.label(
                 ids=data[f"{column}_id"],

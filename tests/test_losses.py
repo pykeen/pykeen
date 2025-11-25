@@ -82,7 +82,7 @@ class TestCustomLossFunctions(unittest.TestCase):
             dataset="nations",
             loss=loss,
             loss_kwargs=loss_kwargs,
-            training_kwargs=dict(use_tqdm=False),
+            training_kwargs={"use_tqdm": False},
         )
         self.assertIsInstance(pipeline_results, PipelineResult)
         self.assertIsInstance(pipeline_results.model.loss, loss)

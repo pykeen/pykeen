@@ -73,7 +73,7 @@ class MTransEDataset(EADataset, ABC):
         self.graph_pair = graph_pair
         # ensure zip file is present
         self.zip_path = WK3L_MODULE.ensure_from_google(
-            name="data.zip", file_id=GOOGLE_DRIVE_ID, download_kwargs=dict(hexdigests=dict(sha512=self.SHA512))
+            name="data.zip", file_id=GOOGLE_DRIVE_ID, download_kwargs={"hexdigests": {"sha512": self.SHA512}}
         )
         super().__init__(**kwargs)
 
@@ -110,7 +110,7 @@ class MTransEDataset(EADataset, ABC):
         df = self._load_df(key=side, names=COLUMN_LABELS)
         # create triples factory
         return TriplesFactory.from_labeled_triples(
-            triples=df.values, metadata=dict(graph_pair=self.graph_pair, side=side)
+            triples=df.values, metadata={"graph_pair": self.graph_pair, "side": side}
         )
 
     # docstr-coverage: inherited

@@ -21,43 +21,43 @@ except ImportError:
 EMBEDDING_DIM = 8
 # TODO: this could be shared with the model tests
 MODEL_CONFIGURATIONS = {
-    models.AutoSF: dict(embedding_dim=EMBEDDING_DIM),
-    models.BoxE: dict(embedding_dim=EMBEDDING_DIM),
+    models.AutoSF: {"embedding_dim": EMBEDDING_DIM},
+    models.BoxE: {"embedding_dim": EMBEDDING_DIM},
     # fixme: CompGCN leads to an autograd runtime error...
     # models.CompGCN: dict(embedding_dim=EMBEDDING_DIM),
-    models.ComplEx: dict(embedding_dim=EMBEDDING_DIM),
-    models.ConvE: dict(embedding_dim=EMBEDDING_DIM),
-    models.ConvKB: dict(embedding_dim=EMBEDDING_DIM, num_filters=2),
-    models.CP: dict(embedding_dim=EMBEDDING_DIM, rank=3),
-    models.CrossE: dict(embedding_dim=EMBEDDING_DIM),
-    models.DistMA: dict(embedding_dim=EMBEDDING_DIM),
-    models.DistMult: dict(embedding_dim=EMBEDDING_DIM),
-    models.ERMLP: dict(embedding_dim=EMBEDDING_DIM),
-    models.ERMLPE: dict(embedding_dim=EMBEDDING_DIM),
+    models.ComplEx: {"embedding_dim": EMBEDDING_DIM},
+    models.ConvE: {"embedding_dim": EMBEDDING_DIM},
+    models.ConvKB: {"embedding_dim": EMBEDDING_DIM, "num_filters": 2},
+    models.CP: {"embedding_dim": EMBEDDING_DIM, "rank": 3},
+    models.CrossE: {"embedding_dim": EMBEDDING_DIM},
+    models.DistMA: {"embedding_dim": EMBEDDING_DIM},
+    models.DistMult: {"embedding_dim": EMBEDDING_DIM},
+    models.ERMLP: {"embedding_dim": EMBEDDING_DIM},
+    models.ERMLPE: {"embedding_dim": EMBEDDING_DIM},
     # FixedModel: dict(embedding_dim=EMBEDDING_DIM),
-    models.HolE: dict(embedding_dim=EMBEDDING_DIM),
-    models.InductiveNodePiece: dict(embedding_dim=EMBEDDING_DIM),
-    models.InductiveNodePieceGNN: dict(embedding_dim=EMBEDDING_DIM),
-    models.KG2E: dict(embedding_dim=EMBEDDING_DIM),
-    models.MuRE: dict(embedding_dim=EMBEDDING_DIM),
-    models.NodePiece: dict(embedding_dim=EMBEDDING_DIM),
-    models.NTN: dict(embedding_dim=EMBEDDING_DIM),
-    models.PairRE: dict(embedding_dim=EMBEDDING_DIM),
-    models.ProjE: dict(embedding_dim=EMBEDDING_DIM),
-    models.QuatE: dict(embedding_dim=EMBEDDING_DIM),
-    models.RESCAL: dict(embedding_dim=EMBEDDING_DIM),
-    models.RGCN: dict(embedding_dim=EMBEDDING_DIM),
-    models.RotatE: dict(embedding_dim=EMBEDDING_DIM),
-    models.SE: dict(embedding_dim=EMBEDDING_DIM),
-    models.SimplE: dict(embedding_dim=EMBEDDING_DIM),
-    models.TorusE: dict(embedding_dim=EMBEDDING_DIM),
-    models.TransD: dict(embedding_dim=EMBEDDING_DIM),
-    models.TransE: dict(embedding_dim=EMBEDDING_DIM),
-    models.TransF: dict(embedding_dim=EMBEDDING_DIM),
-    models.TransH: dict(embedding_dim=EMBEDDING_DIM),
-    models.TransR: dict(embedding_dim=EMBEDDING_DIM, relation_dim=3),
-    models.TuckER: dict(embedding_dim=EMBEDDING_DIM),
-    models.UM: dict(embedding_dim=EMBEDDING_DIM),
+    models.HolE: {"embedding_dim": EMBEDDING_DIM},
+    models.InductiveNodePiece: {"embedding_dim": EMBEDDING_DIM},
+    models.InductiveNodePieceGNN: {"embedding_dim": EMBEDDING_DIM},
+    models.KG2E: {"embedding_dim": EMBEDDING_DIM},
+    models.MuRE: {"embedding_dim": EMBEDDING_DIM},
+    models.NodePiece: {"embedding_dim": EMBEDDING_DIM},
+    models.NTN: {"embedding_dim": EMBEDDING_DIM},
+    models.PairRE: {"embedding_dim": EMBEDDING_DIM},
+    models.ProjE: {"embedding_dim": EMBEDDING_DIM},
+    models.QuatE: {"embedding_dim": EMBEDDING_DIM},
+    models.RESCAL: {"embedding_dim": EMBEDDING_DIM},
+    models.RGCN: {"embedding_dim": EMBEDDING_DIM},
+    models.RotatE: {"embedding_dim": EMBEDDING_DIM},
+    models.SE: {"embedding_dim": EMBEDDING_DIM},
+    models.SimplE: {"embedding_dim": EMBEDDING_DIM},
+    models.TorusE: {"embedding_dim": EMBEDDING_DIM},
+    models.TransD: {"embedding_dim": EMBEDDING_DIM},
+    models.TransE: {"embedding_dim": EMBEDDING_DIM},
+    models.TransF: {"embedding_dim": EMBEDDING_DIM},
+    models.TransH: {"embedding_dim": EMBEDDING_DIM},
+    models.TransR: {"embedding_dim": EMBEDDING_DIM, "relation_dim": 3},
+    models.TuckER: {"embedding_dim": EMBEDDING_DIM},
+    models.UM: {"embedding_dim": EMBEDDING_DIM},
 }
 TEST_CONFIGURATIONS = (
     (model, model_config, lit)
@@ -72,7 +72,7 @@ def test_lit_training(model, model_kwargs, training_loop):
     """Test training models with PyTorch Lightning."""
     # some models require inverse relations
     create_inverse_triples = model is not models.RGCN
-    dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=create_inverse_triples))
+    dataset = get_dataset(dataset="nations", dataset_kwargs={"create_inverse_triples": create_inverse_triples})
 
     # some model require access to the training triples
     if "triples_factory" in model_kwargs:
@@ -88,23 +88,23 @@ def test_lit_training(model, model_kwargs, training_loop):
 
     lit_pipeline(
         training_loop=training_loop,
-        training_loop_kwargs=dict(
-            model=model,
-            dataset=dataset,
-            model_kwargs=model_kwargs,
-            batch_size=8,
-            mode=mode,
-        ),
-        trainer_kwargs=dict(
+        training_loop_kwargs={
+            "model": model,
+            "dataset": dataset,
+            "model_kwargs": model_kwargs,
+            "batch_size": 8,
+            "mode": mode,
+        },
+        trainer_kwargs={
             # automatically choose accelerator
-            accelerator="auto",
+            "accelerator": "auto",
             # defaults to TensorBoard; explicitly disabled here
-            logger=False,
+            "logger": False,
             # disable checkpointing
-            enable_checkpointing=False,
+            "enable_checkpointing": False,
             # fast run
-            max_epochs=2,
-        ),
+            "max_epochs": 2,
+        },
     )
 
 
@@ -115,18 +115,18 @@ def test_lit_pipeline_with_dataset_without_validation():
     dataset = EagerDataset(training=dataset.training, testing=dataset.testing, metadata=dataset.metadata)
     lit_pipeline(
         training_loop="slcwa",
-        training_loop_kwargs=dict(
-            model="transe",
-            dataset=dataset,
-        ),
-        trainer_kwargs=dict(
+        training_loop_kwargs={
+            "model": "transe",
+            "dataset": dataset,
+        },
+        trainer_kwargs={
             # automatically choose accelerator
-            accelerator="auto",
+            "accelerator": "auto",
             # defaults to TensorBoard; explicitly disabled here
-            logger=False,
+            "logger": False,
             # disable checkpointing
-            enable_checkpointing=False,
+            "enable_checkpointing": False,
             # fast run
-            max_epochs=2,
-        ),
+            "max_epochs": 2,
+        },
     )

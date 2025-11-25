@@ -511,7 +511,7 @@ def prepare_ablation(  # noqa:C901
             save_model_directory.mkdir(exist_ok=True, parents=True)
             _experiment_optuna_config["save_model_directory"] = save_model_directory.as_posix()
 
-        hpo_config: dict[str, Any] = dict()
+        hpo_config: dict[str, Any] = {}
         hpo_config["stopper"] = stopper
 
         if stopper_kwargs is not None:
@@ -543,7 +543,7 @@ def prepare_ablation(  # noqa:C901
                 "the paths to the training, testing, and validation data.",
             )
         logger.info(f"Dataset: {dataset}")
-        hpo_config["dataset_kwargs"] = dict(create_inverse_triples=this_create_inverse_triples)
+        hpo_config["dataset_kwargs"] = {"create_inverse_triples": this_create_inverse_triples}
         logger.info(f"Add inverse triples: {this_create_inverse_triples}")
 
         hpo_config["model"] = model
@@ -621,12 +621,12 @@ def prepare_ablation(  # noqa:C901
         if epochs is not None:
             hpo_config.setdefault("training_kwargs", {}).setdefault("num_epochs", epochs)
 
-        rv_config = dict(
-            type="hpo",
-            metadata=metadata or {},
-            pipeline=hpo_config,
-            optuna=_experiment_optuna_config,
-        )
+        rv_config = {
+            "type": "hpo",
+            "metadata": metadata or {},
+            "pipeline": hpo_config,
+            "optuna": _experiment_optuna_config,
+        }
 
         rv_config_path = output_directory.joinpath("hpo_config.json")
         with rv_config_path.open("w") as file:

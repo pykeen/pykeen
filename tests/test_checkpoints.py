@@ -29,14 +29,14 @@ class ExplicitCheckpointScheduleTests(CheckpointScheduleTests):
     """Test for explicit."""
 
     cls = schedule.ExplicitCheckpointSchedule
-    kwargs = dict(steps=(4, 6))
+    kwargs = {"steps": (4, 6)}
 
 
 class BestCheckpointScheduleTests(CheckpointScheduleTests):
     """Test for best."""
 
     cls = schedule.BestCheckpointSchedule
-    kwargs = dict(metric_selection=MetricSelection(metric="loss", prefix="validation"))
+    kwargs = {"metric_selection": MetricSelection(metric="loss", prefix="validation")}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
@@ -46,7 +46,7 @@ class BestCheckpointScheduleTests(CheckpointScheduleTests):
     def iter_steps(self) -> Iterator[int]:
         for step in super().iter_steps():
             loss = torch.rand(1, generator=self.generator)
-            self.result_tracker.log_metrics(metrics=dict(loss=loss), step=step, prefix="validation")
+            self.result_tracker.log_metrics(metrics={"loss": loss}, step=step, prefix="validation")
             yield step
 
 
@@ -54,7 +54,7 @@ class UnionCheckpointScheduleTests(CheckpointScheduleTests):
     """Test for union."""
 
     cls = schedule.UnionCheckpointSchedule
-    kwargs = dict(bases=["every", "explicit"], bases_kwargs=[None, dict(steps=(3,))])
+    kwargs = {"bases": ["every", "explicit"], "bases_kwargs": [None, {"steps": (3,)}]}
 
 
 class CheckpointKeeperMetaTestCase(unittest_templates.MetaTestCase[keeper.CheckpointKeeper]):
@@ -68,7 +68,7 @@ class ExplicitCheckpointKeeperTests(CheckpointKeeperTests):
     """Tests for explicit."""
 
     cls = keeper.ExplicitCheckpointKeeper
-    kwargs = dict(keep=(3, 6))
+    kwargs = {"keep": (3, 6)}
 
 
 class LastCheckpointKeeperTests(CheckpointKeeperTests):
@@ -81,7 +81,7 @@ class BestCheckpointKeeperTests(CheckpointKeeperTests):
     """Tests for best."""
 
     cls = keeper.BestCheckpointKeeper
-    kwargs = dict(metric_selection=MetricSelection(metric="loss", prefix="validation"))
+    kwargs = {"metric_selection": MetricSelection(metric="loss", prefix="validation")}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
@@ -92,7 +92,7 @@ class BestCheckpointKeeperTests(CheckpointKeeperTests):
         for steps in super().iter_steps():
             losses = torch.rand(len(steps), generator=self.generator)
             for step, loss in zip(steps, losses.tolist(), strict=False):
-                self.result_tracker.log_metrics(metrics=dict(loss=loss), step=step, prefix="validation")
+                self.result_tracker.log_metrics(metrics={"loss": loss}, step=step, prefix="validation")
             yield steps
 
 
@@ -106,10 +106,10 @@ class UnionCheckpointKeeperTests(CheckpointKeeperTests):
     """Tests for union."""
 
     cls = keeper.UnionCheckpointKeeper
-    kwargs = dict(
-        bases=["last", "explicit"],
-        bases_kwargs=[
-            dict(keep=1),
-            dict(keep=(3, 7)),
+    kwargs = {
+        "bases": ["last", "explicit"],
+        "bases_kwargs": [
+            {"keep": 1},
+            {"keep": (3, 7)},
         ],
-    )
+    }

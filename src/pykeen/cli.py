@@ -194,7 +194,7 @@ def _help_interactions(tablefmt: str = "github", *, link_fmt: str | None = None)
 
 
 def _help_representations(tablefmt: str = "github", *, link_fmt: str | None = None) -> tuple[str, int]:
-    lines = list(
+    lines = [
         line[:2]
         for line in _get_resolver_lines2(
             resolver=representation_resolver,
@@ -202,7 +202,7 @@ def _help_representations(tablefmt: str = "github", *, link_fmt: str | None = No
             # cf. https://github.com/python/mypy/issues/5374
             skip={MessagePassingRepresentation},  # type: ignore
         )
-    )
+    ]
     headers = ["Name", "Reference"]
     return (
         tabulate(

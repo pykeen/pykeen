@@ -59,7 +59,7 @@ class InductiveERModel(ERModel):
         _mode_to_representations = {TRAINING: self.entity_representations}
         if "triples_factory" in entity_representations_kwargs:
             entity_representations_kwargs = ChainMap(
-                dict(triples_factory=validation_factory), entity_representations_kwargs
+                {"triples_factory": validation_factory}, entity_representations_kwargs
             )
         _mode_to_representations[VALIDATION] = validation_entity_representations = self._build_representations(
             triples_factory=validation_factory,
@@ -75,7 +75,7 @@ class InductiveERModel(ERModel):
             # non-shared
             if "triples_factory" in entity_representations_kwargs:
                 entity_representations_kwargs = ChainMap(
-                    dict(triples_factory=testing_factory), entity_representations_kwargs
+                    {"triples_factory": testing_factory}, entity_representations_kwargs
                 )
             testing_entity_representations = self._build_representations(
                 triples_factory=testing_factory,

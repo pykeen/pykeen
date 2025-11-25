@@ -32,10 +32,10 @@ class MuRE(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        p=dict(type=int, low=1, high=2),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "p": {"type": int, "low": 1, "high": 2},
+    }
 
     def __init__(
         self,
@@ -82,40 +82,40 @@ class MuRE(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
         # uses float64
         super().__init__(
             interaction=MuREInteraction,
-            interaction_kwargs=dict(p=p, power_norm=power_norm),
+            interaction_kwargs={"p": p, "power_norm": power_norm},
             entity_representations_kwargs=[
-                dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                    initializer_kwargs=entity_initializer_kwargs or dict(std=1.0e-03),
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": entity_initializer,
+                    "initializer_kwargs": entity_initializer_kwargs or {"std": 1.0e-03},
+                },
                 # entity bias for head
-                dict(
-                    shape=tuple(),  # scalar
-                    initializer=entity_bias_initializer,
-                ),
+                {
+                    "shape": (),  # scalar
+                    "initializer": entity_bias_initializer,
+                },
                 # entity bias for tail
-                dict(
-                    shape=tuple(),  # scalar
-                    initializer=entity_bias_initializer,
-                ),
+                {
+                    "shape": (),  # scalar
+                    "initializer": entity_bias_initializer,
+                },
             ],
             relation_representations_kwargs=[
                 # relation offset
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs
-                    or dict(
-                        std=1.0e-03,
-                    ),
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
+                    "initializer_kwargs": relation_initializer_kwargs
+                    or {
+                        "std": 1.0e-03,
+                    },
+                },
                 # diagonal relation transformation matrix
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_matrix_initializer,
-                    initializer_kwargs=relation_matrix_initializer_kwargs or dict(a=-1, b=1),
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_matrix_initializer,
+                    "initializer_kwargs": relation_matrix_initializer_kwargs or {"a": -1, "b": 1},
+                },
             ],
             **kwargs,
         )

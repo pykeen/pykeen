@@ -39,10 +39,10 @@ class TransD(
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "relation_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
 
     def __init__(
         self,
@@ -84,28 +84,28 @@ class TransD(
             interaction=TransDInteraction,
             interaction_kwargs=interaction_kwargs,
             entity_representations_kwargs=[
-                dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                    constrainer=entity_constrainer,
-                    constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
-                ),
-                dict(
-                    shape=embedding_dim,
-                    initializer=xavier_normal_,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": entity_initializer,
+                    "constrainer": entity_constrainer,
+                    "constrainer_kwargs": {"maxnorm": 1.0, "p": 2, "dim": -1},
+                },
+                {
+                    "shape": embedding_dim,
+                    "initializer": xavier_normal_,
+                },
             ],
             relation_representations_kwargs=[
-                dict(
-                    shape=(relation_dim,),
-                    initializer=relation_initializer,
-                    constrainer=relation_constrainer,
-                    constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
-                ),
-                dict(
-                    shape=(relation_dim,),
-                    initializer=xavier_normal_,
-                ),
+                {
+                    "shape": (relation_dim,),
+                    "initializer": relation_initializer,
+                    "constrainer": relation_constrainer,
+                    "constrainer_kwargs": {"maxnorm": 1.0, "p": 2, "dim": -1},
+                },
+                {
+                    "shape": (relation_dim,),
+                    "initializer": xavier_normal_,
+                },
             ],
             **kwargs,
         )

@@ -37,12 +37,12 @@ class ERMLPE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        hidden_dim=dict(type=int, low=5, high=9, scale="power_two"),
-        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-        hidden_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "hidden_dim": {"type": int, "low": 5, "high": 9, "scale": "power_two"},
+        "input_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+        "hidden_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+    }
     #: The default loss function class
     loss_default: ClassVar[type[Loss]] = BCEAfterSigmoidLoss  # type: ignore[type-abstract]
     #: The default parameters for the default loss function class
@@ -79,19 +79,19 @@ class ERMLPE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         """
         super().__init__(
             interaction=ERMLPEInteraction,
-            interaction_kwargs=dict(
-                embedding_dim=embedding_dim,
-                hidden_dim=hidden_dim,
-                input_dropout=input_dropout,
-                hidden_dropout=hidden_dropout,
-            ),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer or entity_initializer,
-            ),
+            interaction_kwargs={
+                "embedding_dim": embedding_dim,
+                "hidden_dim": hidden_dim,
+                "input_dropout": input_dropout,
+                "hidden_dropout": hidden_dropout,
+            },
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+            },
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer or entity_initializer,
+            },
             **kwargs,
         )

@@ -51,10 +51,10 @@ PYKEEN_LOGS: Path = PYKEEN_MODULE.join("logs")
 
 PYKEEN_DEFAULT_CHECKPOINT = "PyKEEN_just_saved_my_day.pt"
 
-DEFAULT_DROPOUT_HPO_RANGE = dict(type=float, low=0.0, high=0.5, q=0.1)
+DEFAULT_DROPOUT_HPO_RANGE = {"type": float, "low": 0.0, "high": 0.5, "q": 0.1}
 #: We define the embedding dimensions as a multiple of 16 because it is computational beneficial (on a GPU)
 #: see: https://docs.nvidia.com/deeplearning/performance/index.html#optimizing-performance
-DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE = dict(type=int, low=16, high=256, q=16)
+DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE = {"type": int, "low": 16, "high": 256, "q": 16}
 
 USER_DEFINED_CODE = "<user defined>"
 

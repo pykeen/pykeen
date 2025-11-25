@@ -34,19 +34,19 @@ class ComplEx(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
     #: The default loss function class
     loss_default: ClassVar[type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction="mean")
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {"reduction": "mean"}
     #: The LP settings used by [trouillon2016]_ for ComplEx.
-    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.01,
-        p=2.0,
-        normalize=True,
-    )
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = {
+        "weight": 0.01,
+        "p": 2.0,
+        "normalize": True,
+    }
 
     def __init__(
         self,
@@ -79,21 +79,21 @@ class ComplEx(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         regularizer_kwargs = regularizer_kwargs or ComplEx.regularizer_default_kwargs
         super().__init__(
             interaction=ComplExInteraction,
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
                 # use torch's native complex data type
-                dtype=torch.cfloat,
-                regularizer=regularizer,
-                regularizer_kwargs=regularizer_kwargs,
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
+                "dtype": torch.cfloat,
+                "regularizer": regularizer,
+                "regularizer_kwargs": regularizer_kwargs,
+            },
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
                 # use torch's native complex data type
-                dtype=torch.cfloat,
-                regularizer=regularizer,
-                regularizer_kwargs=regularizer_kwargs,
-            ),
+                "dtype": torch.cfloat,
+                "regularizer": regularizer,
+                "regularizer_kwargs": regularizer_kwargs,
+            },
             **kwargs,
         )

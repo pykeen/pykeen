@@ -44,19 +44,19 @@ class QuatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
     #: The default loss function class
     loss_default: ClassVar[type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction="mean")
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {"reduction": "mean"}
     #: The LP settings used by [zhang2019]_ for QuatE.
-    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.3 / get_expected_norm(p=2, d=100),
-        p=2.0,
-        normalize=True,
-    )
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = {
+        "weight": 0.3 / get_expected_norm(p=2, d=100),
+        "p": 2.0,
+        "normalize": True,
+    }
 
     def __init__(
         self,
@@ -104,20 +104,20 @@ class QuatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         """
         super().__init__(
             interaction=QuatEInteraction,
-            entity_representations_kwargs=dict(
-                shape=(embedding_dim, 4),  # quaternions
-                initializer=entity_initializer,
-                dtype=torch.float,
-                regularizer=entity_regularizer,
-                regularizer_kwargs=entity_regularizer_kwargs or self.regularizer_default_kwargs,
-            ),
-            relation_representations_kwargs=dict(
-                shape=(embedding_dim, 4),  # quaternions
-                initializer=relation_initializer,
-                normalizer=relation_normalizer,
-                dtype=torch.float,
-                regularizer=relation_regularizer,
-                regularizer_kwargs=relation_regularizer_kwargs or self.regularizer_default_kwargs,
-            ),
+            entity_representations_kwargs={
+                "shape": (embedding_dim, 4),  # quaternions
+                "initializer": entity_initializer,
+                "dtype": torch.float,
+                "regularizer": entity_regularizer,
+                "regularizer_kwargs": entity_regularizer_kwargs or self.regularizer_default_kwargs,
+            },
+            relation_representations_kwargs={
+                "shape": (embedding_dim, 4),  # quaternions
+                "initializer": relation_initializer,
+                "normalizer": relation_normalizer,
+                "dtype": torch.float,
+                "regularizer": relation_regularizer,
+                "regularizer_kwargs": relation_regularizer_kwargs or self.regularizer_default_kwargs,
+            },
             **kwargs,
         )
