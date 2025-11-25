@@ -183,7 +183,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
                     slice_size=slice_size,
                     only_size_probing=True,
                 )
-            except RuntimeError as runtime_error:
+            except RuntimeError as runtime_error:  # noqa: PERF203
                 self._free_graph_and_cache()
                 if not is_oom_error(runtime_error):
                     raise runtime_error

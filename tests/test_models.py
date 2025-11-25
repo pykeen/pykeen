@@ -726,7 +726,7 @@ def _remove_non_models(elements: Iterable[str | type[Model]]) -> set[type[Model]
     for element in elements:
         try:
             model_cls = model_resolver.lookup(element)
-        except KeyError:  # invalid model name - aka not actually a model
+        except KeyError:  # invalid model name - aka not actually a model  # noqa: PERF203
             continue
         else:
             rv.add(model_cls)
