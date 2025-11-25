@@ -50,9 +50,9 @@ class CSKG(SingleTabbedDataset):
         super().__init__(
             url=URL,
             random_state=random_state,
-            read_csv_kwargs=dict(
-                usecols=["node1", "relation", "node2"],
-            ),
+            read_csv_kwargs={
+                "usecols": ["node1", "relation", "node2"],
+            },
             **kwargs,
         )
 

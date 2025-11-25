@@ -338,7 +338,7 @@ class Predictions(ABC):
 
     def exchange_df(self, df: pandas.DataFrame) -> "Predictions":
         """Create a copy of the object with its dataframe exchanged."""
-        return self.__class__(**collections.ChainMap(dict(df=df), dataclasses.asdict(self)))
+        return self.__class__(**collections.ChainMap({"df": df}, dataclasses.asdict(self)))
 
     @abstractmethod
     def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
@@ -389,7 +389,7 @@ class TriplePredictions(Predictions):
     # docstr-coverage: inherited
     def __post_init__(self):  # noqa: D105
         super().__post_init__()
-        columns = set(f"{column}_id" for column in COLUMN_LABELS)
+        columns = {f"{column}_id" for column in COLUMN_LABELS}
         if not columns.issubset(self.df.columns):
             raise ValueError(f"df must have a columns named {columns}, but df.columns={self.df.columns}")
 

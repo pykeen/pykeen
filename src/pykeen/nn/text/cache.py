@@ -227,7 +227,7 @@ class WikidataTextCache(TextCache):
             assert isinstance(label, str)  # for mypy
             description = nested_get(entry, "itemDescription", "value", default="")
             assert isinstance(description, str)  # for mypy
-            result[wikidata_id] = dict(label=label, description=description)
+            result[wikidata_id] = {"label": label, "description": description}
         return result
 
     def _load(self, wikidata_id: str, component: str) -> str | None:

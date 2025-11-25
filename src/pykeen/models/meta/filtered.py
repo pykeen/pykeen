@@ -42,10 +42,10 @@ class CooccurrenceFilteredModel(Model):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        base=dict(type="categorical", choices=["distmult", "mure", "rescal", "rotate", "transe"]),
-        conjunctive=dict(type=bool),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "base": {"type": "categorical", "choices": ["distmult", "mure", "rescal", "rotate", "transe"]},
+        "conjunctive": {"type": bool},
+    }
 
     #: the indexed filter triples, i.e., sparse masks
     indexes: Mapping[Target, Mapping[Target, scipy.sparse.csr_matrix]]

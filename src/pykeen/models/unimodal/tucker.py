@@ -40,13 +40,13 @@ class TuckER(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        dropout_0=DEFAULT_DROPOUT_HPO_RANGE,
-        dropout_1=DEFAULT_DROPOUT_HPO_RANGE,
-        dropout_2=DEFAULT_DROPOUT_HPO_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "relation_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "dropout_0": DEFAULT_DROPOUT_HPO_RANGE,
+        "dropout_1": DEFAULT_DROPOUT_HPO_RANGE,
+        "dropout_2": DEFAULT_DROPOUT_HPO_RANGE,
+    }
     #: The default loss function class
     loss_default: ClassVar[type[Loss]] = BCEAfterSigmoidLoss  # type: ignore[type-abstract]
     #: The default parameters for the default loss function class
@@ -96,23 +96,23 @@ class TuckER(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         relation_dim = relation_dim or embedding_dim
         super().__init__(
             interaction=TuckERInteraction,
-            interaction_kwargs=dict(
-                embedding_dim=embedding_dim,
-                relation_dim=relation_dim,
-                head_dropout=dropout_0,  # TODO: rename
-                relation_dropout=dropout_1,
-                head_relation_dropout=dropout_2,
-                apply_batch_normalization=apply_batch_normalization,
-                core_initializer=core_tensor_initializer,
-                core_initializer_kwargs=core_tensor_initializer_kwargs,
-            ),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-            ),
-            relation_representations_kwargs=dict(
-                shape=relation_dim,
-                initializer=relation_initializer,
-            ),
+            interaction_kwargs={
+                "embedding_dim": embedding_dim,
+                "relation_dim": relation_dim,
+                "head_dropout": dropout_0,  # TODO: rename
+                "relation_dropout": dropout_1,
+                "head_relation_dropout": dropout_2,
+                "apply_batch_normalization": apply_batch_normalization,
+                "core_initializer": core_tensor_initializer,
+                "core_initializer_kwargs": core_tensor_initializer_kwargs,
+            },
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+            },
+            relation_representations_kwargs={
+                "shape": relation_dim,
+                "initializer": relation_initializer,
+            },
             **kwargs,
         )

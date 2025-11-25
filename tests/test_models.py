@@ -56,14 +56,14 @@ class TestCompGCN(cases.ModelTestCase):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         dim = kwargs.pop("embedding_dim")
-        kwargs["encoder_kwargs"] = dict(
-            entity_representations_kwargs=dict(
-                shape=(dim,),
-            ),
-            relation_representations_kwargs=dict(
-                shape=(dim,),
-            ),
-        )
+        kwargs["encoder_kwargs"] = {
+            "entity_representations_kwargs": {
+                "shape": (dim,),
+            },
+            "relation_representations_kwargs": {
+                "shape": (dim,),
+            },
+        }
         return kwargs
 
 
@@ -199,7 +199,7 @@ class TestNodePiece(cases.BaseNodePieceTest):
 class TestNodePieceMLP(cases.BaseNodePieceTest):
     """Test the NodePiece model with MLP aggregation."""
 
-    kwargs = dict(aggregation="mlp")
+    kwargs = {"aggregation": "mlp"}
 
     def test_aggregation(self):
         """Test that the MLP gets registered properly and is trainable."""
@@ -224,13 +224,13 @@ class TestNodePieceMLP(cases.BaseNodePieceTest):
 class TestNodePieceAnchors(cases.BaseNodePieceTest):
     """Test the NodePiece model with anchors."""
 
-    kwargs = dict(
-        tokenizers="anchor",
-    )
+    kwargs = {
+        "tokenizers": "anchor",
+    }
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["tokenizers_kwargs"] = dict(selection_kwargs=dict(num_anchors=self.factory.num_entities // 3))
+        kwargs["tokenizers_kwargs"] = {"selection_kwargs": {"num_anchors": self.factory.num_entities // 3}}
         return kwargs
 
 
@@ -239,21 +239,21 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
 
     num_anchors = 5
     num_tokens = [3, 2]
-    kwargs = dict(
-        tokenizers=["anchor", "relation"],
-        tokenizers_kwargs=[
-            dict(
-                selection="degree",
-                searcher="scipy-sparse",
-            ),
-            dict(),
+    kwargs = {
+        "tokenizers": ["anchor", "relation"],
+        "tokenizers_kwargs": [
+            {
+                "selection": "degree",
+                "searcher": "scipy-sparse",
+            },
+            {},
         ],
-    )
+    }
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["num_tokens"] = self.num_tokens
-        kwargs["tokenizers_kwargs"][0]["selection_kwargs"] = dict(num_anchors=self.num_anchors)
+        kwargs["tokenizers_kwargs"][0]["selection_kwargs"] = {"num_anchors": self.num_anchors}
         return kwargs
 
     def test_vocabulary_size(self):
@@ -346,11 +346,11 @@ class TestRGCNBasis(cases.BaseRGCNTest):
 
     kwargs = {
         "interaction": "transe",
-        "interaction_kwargs": dict(p=1),
+        "interaction_kwargs": {"p": 1},
         "decomposition": "bases",
-        "decomposition_kwargs": dict(
-            num_bases=3,
-        ),
+        "decomposition_kwargs": {
+            "num_bases": 3,
+        },
     }
 
 
@@ -361,9 +361,9 @@ class TestRGCNBlock(cases.BaseRGCNTest):
     kwargs = {
         "interaction": "distmult",
         "decomposition": "block",
-        "decomposition_kwargs": dict(
-            num_blocks=3,
-        ),
+        "decomposition_kwargs": {
+            "num_blocks": 3,
+        },
         "edge_weighting": "symmetric",
     }
 
@@ -751,7 +751,7 @@ class TestModelUtilities(unittest.TestCase):
             assert h_ext_batch.shape == (batch_size * num_choices, 3)
 
             # check content
-            actual_content = set(tuple(map(int, hrt)) for hrt in h_ext_batch)
+            actual_content = {tuple(map(int, hrt)) for hrt in h_ext_batch}
             exp_content = set()
             for i in range(max_id):
                 for b in batch:
@@ -766,15 +766,15 @@ class ERModelTests(cases.ModelTestCase):
     """Tests for the general ER-Model."""
 
     cls = pykeen.models.ERModel
-    kwargs = dict(
-        interaction="distmult",  # use name to test interaction resolution
-    )
+    kwargs = {
+        "interaction": "distmult",  # use name to test interaction resolution
+    }
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         shape = (kwargs.pop("embedding_dim"),)
-        kwargs["entity_representations_kwargs"] = dict(shape=shape)
-        kwargs["relation_representations_kwargs"] = dict(shape=shape)
+        kwargs["entity_representations_kwargs"] = {"shape": shape}
+        kwargs["relation_representations_kwargs"] = {"shape": shape}
         return kwargs
 
     def test_has_hpo_defaults(self):  # noqa: D102

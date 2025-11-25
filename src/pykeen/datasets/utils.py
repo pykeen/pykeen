@@ -173,7 +173,7 @@ def get_dataset(
     )
 
 
-def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = tuple()) -> str:
+def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = ()) -> str:
     digester = hashlib.sha256()
     for key in sorted(dataset_kwargs.keys()):
         if key in ignore:

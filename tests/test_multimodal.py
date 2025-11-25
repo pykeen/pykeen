@@ -15,8 +15,8 @@ class TestLiteralModel(unittest.TestCase):
         rv = pipeline(
             dataset=NationsLiteral,
             model=model,
-            training_kwargs=dict(num_epochs=5, use_tqdm=False),
-            evaluation_kwargs=dict(use_tqdm=False),
+            training_kwargs={"num_epochs": 5, "use_tqdm": False},
+            evaluation_kwargs={"use_tqdm": False},
             training_loop="lcwa",
         )
         self.assertIsNotNone(rv)

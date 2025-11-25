@@ -169,13 +169,13 @@ def _normalize_representation_kwargs(
         raise DimensionError(set(dimensions), interaction.dimensions)
     if entity_representations_kwargs is None:
         entity_representations_kwargs = [
-            dict(shape=tuple(dimensions[d] for d in shape)) for shape in interaction.entity_shape
+            {"shape": tuple(dimensions[d] for d in shape)} for shape in interaction.entity_shape
         ]
     elif not isinstance(entity_representations_kwargs, Sequence):
         entity_representations_kwargs = [entity_representations_kwargs]
     if relation_representations_kwargs is None:
         relation_representations_kwargs = [
-            dict(shape=tuple(dimensions[d] for d in shape)) for shape in interaction.relation_shape
+            {"shape": tuple(dimensions[d] for d in shape)} for shape in interaction.relation_shape
         ]
     elif not isinstance(relation_representations_kwargs, Sequence):
         relation_representations_kwargs = [relation_representations_kwargs]

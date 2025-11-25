@@ -1691,7 +1691,7 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         self.b_c = nn.Parameter(torch.empty(embedding_dim), requires_grad=True)
 
         # Global combination bias
-        self.b_p = nn.Parameter(torch.empty(tuple()), requires_grad=True)
+        self.b_p = nn.Parameter(torch.empty(()), requires_grad=True)
 
         self.projection_initializer = init.initializer_resolver.make(
             projection_initializer, projection_initializer_kwargs
@@ -2013,7 +2013,7 @@ class UMInteraction(NormBasedInteraction[FloatTensor, tuple[()], FloatTensor]):
     """
 
     # shapes
-    relation_shape: Sequence[str] = tuple()
+    relation_shape: Sequence[str] = ()
 
     def __init__(self, p: int, power_norm: bool = True):
         """Initialize the norm-based interaction function.
@@ -2857,11 +2857,11 @@ class MonotonicAffineTransformationInteraction(
         self._tail_indices = base._tail_indices
 
         # The parameters of the affine transformation: bias
-        self.bias = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_bias)
+        self.bias = nn.Parameter(torch.empty(size=()), requires_grad=trainable_bias)
         self.initial_bias = torch.as_tensor(data=[initial_bias], dtype=torch.get_default_dtype()).squeeze()
 
         # scale. We model this as log(scale) to ensure scale > 0, and thus monotonicity
-        self.log_scale = nn.Parameter(torch.empty(size=tuple()), requires_grad=trainable_scale)
+        self.log_scale = nn.Parameter(torch.empty(size=()), requires_grad=trainable_scale)
         self.initial_log_scale = torch.as_tensor(
             data=[math.log(initial_scale)],
             dtype=torch.get_default_dtype(),

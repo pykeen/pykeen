@@ -198,7 +198,7 @@ def evaluate_ogb(
     rank_type = RANK_REALISTIC
     for ext_target, y_pred_pos_side, y_pred_neg_side in iter_preds():
         # combine to input dictionary
-        input_dict = dict(y_pred_pos=y_pred_pos_side, y_pred_neg=y_pred_neg_side)
+        input_dict = {"y_pred_pos": y_pred_pos_side, "y_pred_neg": y_pred_neg_side}
         # delegate to OGB evaluator
         ogb_result = ogb_evaluator.eval(input_dict=input_dict)
         # post-processing

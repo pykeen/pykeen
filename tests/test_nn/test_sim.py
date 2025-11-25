@@ -70,7 +70,7 @@ class KullbackLeiblerDivergenceKG2ESimilarityTests(GenericTestCase[NegativeKullb
     d: int = 11
 
     cls = NegativeKullbackLeiblerDivergence
-    kwargs = dict(exact=True)
+    kwargs = {"exact": True}
 
     def _get(self, name: Literal["h", "r", "t"]):
         if name == "h":

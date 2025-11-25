@@ -35,19 +35,19 @@ class RESCAL(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
     #: The regularizer used by [nickel2011]_ for for RESCAL
     #: According to https://github.com/mnick/rescal.py/blob/master/examples/kinships.py
     #: a normalized weight of 10 is used.
     regularizer_default: ClassVar[type[Regularizer]] = LpRegularizer
     #: The LP settings used by [nickel2011]_ for for RESCAL
-    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=10,
-        p=2.0,
-        normalize=True,
-    )
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = {
+        "weight": 10,
+        "p": 2.0,
+        "normalize": True,
+    }
 
     def __init__(
         self,
@@ -81,15 +81,15 @@ class RESCAL(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         regularizer = self._instantiate_regularizer(regularizer=regularizer, regularizer_kwargs=regularizer_kwargs)
         super().__init__(
             interaction=RESCALInteraction,
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-                regularizer=regularizer,
-            ),
-            relation_representations_kwargs=dict(
-                shape=(embedding_dim, embedding_dim),  # d x d matrices
-                initializer=relation_initializer,
-                regularizer=regularizer,
-            ),
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+                "regularizer": regularizer,
+            },
+            relation_representations_kwargs={
+                "shape": (embedding_dim, embedding_dim),  # d x d matrices
+                "initializer": relation_initializer,
+                "regularizer": regularizer,
+            },
             **kwargs,
         )

@@ -280,7 +280,7 @@ def expected_metrics(
         if expected_metrics_path.is_file() and not force:
             expected_metrics_dict = json.loads(expected_metrics_path.read_text())
         else:
-            expected_metrics_dict = dict()
+            expected_metrics_dict = {}
             for key, factory in dataset_instance.factory_dict.items():
                 additional_filter_triples: list[torch.Tensor] | None
                 if key == "training":
@@ -321,7 +321,7 @@ def expected_metrics(
                     MedianRank(),
                     InverseMedianRank(),
                 ]
-                this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
+                this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = {}
                 for label, sides in SIDE_MAPPING.items():
                     num_candidates = df[[f"{side}_candidates" for side in sides]].values.ravel()
                     this_metrics[label] = {
@@ -452,10 +452,10 @@ def degree(
         col="statistic",
         row="target",
         y="value",
-        facet_kws=dict(
-            margin_titles=True,
-            sharey="col",
-        ),
+        facet_kws={
+            "margin_titles": True,
+            "sharey": "col",
+        },
         height=2.5,
         hue_order=sorted(df["dataset"].unique()),
     )

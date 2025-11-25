@@ -112,7 +112,7 @@ class OpenEA(EADataset):
         self.zip_path = OPEN_EA_MODULE.ensure(
             url=OpenEA.FIGSHARE_LINK,
             name="OpenEA_dataset_v2.0.zip",
-            download_kwargs=dict(hexdigests=dict(sha512=OpenEA.SHA512)),
+            download_kwargs={"hexdigests": {"sha512": OpenEA.SHA512}},
         )
         # save relative paths beforehand so they are present for loading
         self.inner_path = pathlib.PurePosixPath("OpenEA_dataset_v2.0", f"{graph_pair}_{size}_{version}")

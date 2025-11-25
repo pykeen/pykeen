@@ -215,8 +215,8 @@ class BasesDecomposition(Decomposition):
             max_id=self.num_relations,
             shape=(self.input_dim, self.output_dim),
             num_bases=num_bases,
-            weight_kwargs=dict(initializer=uniform_norm_p1_),
-            base_kwargs=dict(initializer=nn.init.xavier_normal_),
+            weight_kwargs={"initializer": uniform_norm_p1_},
+            base_kwargs={"initializer": nn.init.xavier_normal_},
         )
 
     # docstr-coverage: inherited

@@ -35,25 +35,27 @@ class PairRE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        p=dict(type=int, low=1, high=2),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "p": {"type": int, "low": 1, "high": 2},
+    }
 
     #: the default loss function is the self-adversarial negative sampling loss
     loss_default: ClassVar[type[Loss]] = NSSALoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Mapping[str, Any] | None] = dict(
-        margin=12.0, adversarial_temperature=1.0, reduction="mean"
-    )
+    loss_default_kwargs: ClassVar[Mapping[str, Any] | None] = {
+        "margin": 12.0,
+        "adversarial_temperature": 1.0,
+        "reduction": "mean",
+    }
 
     #: The default entity normalizer parameters
     #: The entity representations are normalized to L2 unit length
     #: cf. https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L232-L240  # noqa: E501
-    default_entity_normalizer_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        p=2,
-        dim=-1,
-    )
+    default_entity_normalizer_kwargs: ClassVar[Mapping[str, Any]] = {
+        "p": 2,
+        "dim": -1,
+    }
 
     def __init__(
         self,
@@ -107,25 +109,25 @@ class PairRE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         )
         super().__init__(
             interaction=PairREInteraction,
-            interaction_kwargs=dict(p=p, power_norm=power_norm),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-                initializer_kwargs=entity_initializer_kwargs,
-                normalizer=entity_normalizer,
-                normalizer_kwargs=entity_normalizer_kwargs,
-            ),
+            interaction_kwargs={"p": p, "power_norm": power_norm},
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+                "initializer_kwargs": entity_initializer_kwargs,
+                "normalizer": entity_normalizer,
+                "normalizer_kwargs": entity_normalizer_kwargs,
+            },
             relation_representations_kwargs=[
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs,
-                ),
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
+                    "initializer_kwargs": relation_initializer_kwargs,
+                },
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
+                    "initializer_kwargs": relation_initializer_kwargs,
+                },
             ],
             **kwargs,
         )

@@ -28,12 +28,12 @@ class DistMultLiteral(LiteralModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "input_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+    }
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(margin=0.0)
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {"margin": 0.0}
     interaction_cls: ClassVar[type[Interaction]] = DistMultInteraction
 
     def __init__(
@@ -59,26 +59,26 @@ class DistMultLiteral(LiteralModel):
             triples_factory=triples_factory,
             interaction=self.interaction_cls,
             combination=ConcatProjectionCombination,
-            combination_kwargs=dict(
-                input_dims=[embedding_dim, triples_factory.literal_shape[0]],
-                output_dim=embedding_dim,
-                bias=True,
-                dropout=input_dropout,
+            combination_kwargs={
+                "input_dims": [embedding_dim, triples_factory.literal_shape[0]],
+                "output_dim": embedding_dim,
+                "bias": True,
+                "dropout": input_dropout,
                 # no activation
-                activation=nn.Identity,
-                activation_kwargs=None,
-            ),
+                "activation": nn.Identity,
+                "activation_kwargs": None,
+            },
             entity_representations_kwargs=[
-                dict(
-                    shape=embedding_dim,
-                    initializer=nn.init.xavier_normal_,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": nn.init.xavier_normal_,
+                },
             ],
             relation_representations_kwargs=[
-                dict(
-                    shape=embedding_dim,
-                    initializer=nn.init.xavier_normal_,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": nn.init.xavier_normal_,
+                },
             ],
             **kwargs,
         )

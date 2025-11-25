@@ -17,13 +17,13 @@ result_tracker = PythonResultTracker()
 result = pipeline(
     dataset=dataset,
     model="mure",
-    model_kwargs=dict(embedding_dim=16),
-    training_kwargs=dict(
-        num_epochs=100,
+    model_kwargs={"embedding_dim": 16},
+    training_kwargs={
+        "num_epochs": 100,
         # this will log a metric with name "validation.loss" to the configured result tracker
-        callbacks="evaluation-loss",
-        callback_kwargs=dict(triples_factory=dataset.validation, prefix="validation"),
-    ),
+        "callbacks": "evaluation-loss",
+        "callback_kwargs": {"triples_factory": dataset.validation, "prefix": "validation"},
+    },
     result_tracker=result_tracker,
 )
 # %% [markdown]

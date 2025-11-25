@@ -359,12 +359,12 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         with tqdm(
             **ChainMap(
                 dict(tqdm_kwargs),
-                dict(
-                    desc=f"Evaluating on {model.device}",
-                    total=num_triples,
-                    unit="triple",
-                    unit_scale=True,
-                ),
+                {
+                    "desc": f"Evaluating on {model.device}",
+                    "total": num_triples,
+                    "unit": "triple",
+                    "unit_scale": True,
+                },
             )
         ) as progress_bar:
             return evaluate(

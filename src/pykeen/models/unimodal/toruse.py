@@ -26,10 +26,10 @@ class TorusE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        p=dict(type=int, low=1, high=2),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "p": {"type": int, "low": 1, "high": 2},
+    }
 
     def __init__(
         self,
@@ -64,18 +64,18 @@ class TorusE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         """
         super().__init__(
             interaction=TorusEInteraction,
-            interaction_kwargs=dict(p=p, power_norm=power_norm),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-                initializer_kwargs=entity_initializer_kwargs,
-                normalizer=entity_normalizer,
-                normalizer_kwargs=entity_normalizer_kwargs,
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-                initializer_kwargs=relation_initializer_kwargs,
-            ),
+            interaction_kwargs={"p": p, "power_norm": power_norm},
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+                "initializer_kwargs": entity_initializer_kwargs,
+                "normalizer": entity_normalizer,
+                "normalizer_kwargs": entity_normalizer_kwargs,
+            },
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
+                "initializer_kwargs": relation_initializer_kwargs,
+            },
             **kwargs,
         )

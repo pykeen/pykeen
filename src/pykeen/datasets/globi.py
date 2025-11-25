@@ -50,9 +50,9 @@ class Globi(SingleTabbedDataset):
         super().__init__(
             url=URL,
             random_state=random_state,
-            read_csv_kwargs=dict(
-                usecols=["sourceTaxonId", "interactionTypeName", "targetTaxonId"],
-            ),
+            read_csv_kwargs={
+                "usecols": ["sourceTaxonId", "interactionTypeName", "targetTaxonId"],
+            },
             **kwargs,
         )
 

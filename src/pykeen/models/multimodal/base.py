@@ -52,23 +52,23 @@ class LiteralModel(
         _max_id, *shape = literals.shape
         entity_representations = tuple(upgrade_to_sequence(entity_representations)) + (Embedding,)
         entity_representations_kwargs = tuple(upgrade_to_sequence(entity_representations_kwargs)) + (
-            dict(
-                shape=shape,
-                initializer=PretrainedInitializer(tensor=literals),
-                trainable=False,
-            ),
+            {
+                "shape": shape,
+                "initializer": PretrainedInitializer(tensor=literals),
+                "trainable": False,
+            },
         )
         super().__init__(
             triples_factory=triples_factory,
             interaction=interaction,
             entity_representations=CombinedRepresentation,
-            entity_representations_kwargs=dict(
+            entity_representations_kwargs={
                 # added by ERModel
                 # max_id=triples_factory.num_entities,
-                base=entity_representations,
-                base_kwargs=entity_representations_kwargs,
-                combination=combination,
-                combination_kwargs=combination_kwargs,
-            ),
+                "base": entity_representations,
+                "base_kwargs": entity_representations_kwargs,
+                "combination": combination,
+                "combination_kwargs": combination_kwargs,
+            },
             **kwargs,
         )

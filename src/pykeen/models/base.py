@@ -54,7 +54,7 @@ class Model(nn.Module, ABC):
     #: The default loss function class
     loss_default: ClassVar[type[Loss]] = MarginRankingLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Mapping[str, Any] | None] = dict(margin=1.0, reduction="mean")
+    loss_default_kwargs: ClassVar[Mapping[str, Any] | None] = {"margin": 1.0, "reduction": "mean"}
     #: The instance of the loss
     loss: Loss
 
