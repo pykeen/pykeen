@@ -202,6 +202,7 @@ extend-select = [
     "Q",    # flake8-quotes
     "SLOT", # flake8-slots
     "T10",  # flake8-debugger
+    "NPY",  # numpy checks
     "C4",   # flake8-comprehensions
     # Framework-specific rules (not used in this project):
     # "AIR",   # Airflow
@@ -212,7 +213,6 @@ extend-select = [
     # "YTT",   # flake8-2020 (not needed for Python >=3.10)
     # Rules with violations:
     # "ERA",   # eradicate commented out code; false positives for "mathy" comments
-    # "NPY",   # numpy checks
     # "RUF",   # ruff rules
     # "DOC",   # pydoclint (DOC), requires preview; supersedes darglint
 ]

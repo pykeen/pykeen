@@ -272,7 +272,7 @@ def set_random_seed(seed: int) -> tuple[None, torch.Generator, None]:
         and :func:`random.seed`.
     :returns: A three tuple with None, the torch generator, and None.
     """
-    np.random.seed(seed=seed)
+    np.random.seed(seed=seed)  # noqa: NPY002
     generator = torch.manual_seed(seed=seed)
     random.seed(seed)
     return None, generator, None
