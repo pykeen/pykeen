@@ -405,4 +405,4 @@ def test_hpo_defaults(base_cls: type, ignore: Collection[type]):
     for cls in classes:
         signature = inspect.signature(cls.__init__)
         assert hasattr(cls, "hpo_default")
-        signature.bind_partial({key: None for key in cls.hpo_default})
+        signature.bind_partial(dict.fromkeys(cls.hpo_default))
