@@ -27,7 +27,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-_OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}  # noqa:UP007
+_OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}  # noqa:UP045
 _SKIP_ARGS = {
     "return",
     "triples_factory",
@@ -41,10 +41,10 @@ _SKIP_ARGS = {
     "coefficients",  # from AutoSF
 }
 _SKIP_ANNOTATIONS = {
-    Optional[nn.Embedding],  # noqa:UP007
-    Optional[nn.Parameter],  # noqa:UP007
-    Optional[nn.Module],  # noqa:UP007
-    Optional[Mapping[str, Any]],  # noqa:UP007
+    Optional[nn.Embedding],  # noqa:UP045
+    Optional[nn.Parameter],  # noqa:UP045
+    Optional[nn.Module],  # noqa:UP045
+    Optional[Mapping[str, Any]],  # noqa:UP045
     Union[None, str, nn.Module],  # noqa:UP007
     Union[None, str, Decomposition],  # noqa:UP007
 }
@@ -77,7 +77,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
             elif name in CLI_OPTIONS:
                 option = CLI_OPTIONS[name]
 
-            elif annotation in {t.Optional[int], t.Optional[str]}:  # noqa:UP007
+            elif annotation in {t.Optional[int], t.Optional[str]}:  # noqa:UP045
                 option = click.option(f"--{name.replace('_', '-')}", type=_OPTIONAL_MAP[annotation])
 
             else:

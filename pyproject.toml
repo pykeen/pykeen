@@ -252,6 +252,7 @@ extend-select = [
     # "ERA", # eradicate commented out code
     # "NPY", # numpy checks
     # "RUF", # ruff rules
+	# "DOC", # pydoclint (DOC), requires preview; supersedes darglint
 ]
 ignore = [
     "D105", # Missing docstring in magic method
