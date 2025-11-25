@@ -516,14 +516,14 @@ def sample_negatives(
     :return:
         A mapping of sides to negative samples
     """
-    additional_filter_triples = prepare_filter_triples(
+    additional_filter_triples_t = prepare_filter_triples(
         mapped_triples=evaluation_triples,
         additional_filter_triples=additional_filter_triples,
     )
-    num_entities = num_entities or get_num_ids(additional_filter_triples[:, [0, 2]])
+    num_entities = num_entities or get_num_ids(additional_filter_triples_t[:, [0, 2]])
     num_triples = evaluation_triples.shape[0]
     df = pd.DataFrame(data=evaluation_triples.numpy(), columns=COLUMN_LABELS)
-    all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=COLUMN_LABELS)
+    all_df = pd.DataFrame(data=additional_filter_triples_t.numpy(), columns=COLUMN_LABELS)
     id_df = df.reset_index()
     all_ids = set(range(num_entities))
     negatives = {}
