@@ -30,13 +30,13 @@ class NoRegularizerTest(cases.RegularizerTestCase):
 class L1RegularizerTest(cases.LpRegularizerTest):
     """Test an L_1 normed regularizer."""
 
-    kwargs = dict(p=1)
+    kwargs = {"p": 1}
 
 
 class NormedL2RegularizerTest(cases.LpRegularizerTest):
     """Test an L_2 normed regularizer."""
 
-    kwargs = dict(p=2, normalize=True)
+    kwargs = {"p": 2, "normalize": True}
 
     @pytest.mark.slow
     def test_expected_norm(self):
@@ -60,12 +60,12 @@ class CombinedRegularizerTest(cases.RegularizerTestCase):
     """Test the combined regularizer."""
 
     cls = pykeen.regularizers.CombinedRegularizer
-    kwargs = dict(
-        regularizers=[
+    kwargs = {
+        "regularizers": [
             pykeen.regularizers.LpRegularizer(weight=0.1, p=1),
             pykeen.regularizers.LpRegularizer(weight=0.7, p=2),
         ]
-    )
+    }
 
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         assert isinstance(self.instance, pykeen.regularizers.CombinedRegularizer)
@@ -77,9 +77,9 @@ class PowerSumRegularizerTest(cases.RegularizerTestCase):
     """Test the power sum regularizer."""
 
     cls = pykeen.regularizers.PowerSumRegularizer
-    kwargs = dict(
-        apply_only_once=True,
-    )
+    kwargs = {
+        "apply_only_once": True,
+    }
 
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         kwargs = self.instance_kwargs
@@ -111,12 +111,12 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
     """Test the orthogonaliy regularizer."""
 
     cls = pykeen.regularizers.OrthogonalityRegularizer
-    kwargs = dict(
-        weight=0.5,
-        epsilon=1.0e-05,
+    kwargs = {
+        "weight": 0.5,
+        "epsilon": 1.0e-05,
         # there is an extra test for this case
-        apply_only_once=False,
-    )
+        "apply_only_once": False,
+    }
 
     # docstr-coverage: inherited
     def _generate_update_input(self, requires_grad: bool = False) -> Sequence[torch.FloatTensor]:  # noqa: D102

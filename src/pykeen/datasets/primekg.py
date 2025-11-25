@@ -52,13 +52,13 @@ class PrimeKG(SingleTabbedDataset):
             url=URL,
             name="primekg.csv",
             random_state=random_state,
-            download_kwargs=dict(
-                backend="requests",
-            ),
-            read_csv_kwargs=dict(
-                usecols=["x_name", "relation", "y_name"],
-                sep=",",
-            ),
+            download_kwargs={
+                "backend": "requests",
+            },
+            read_csv_kwargs={
+                "usecols": ["x_name", "relation", "y_name"],
+                "sep": ",",
+            },
             **kwargs,
         )
 

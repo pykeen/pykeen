@@ -251,7 +251,7 @@ logger = logging.getLogger(__name__)
 
 def triple_hash(*triples: MappedTriples) -> Mapping[str, str]:
     """Slow triple hash using sha512 and conversion to Python."""
-    return dict(sha512=hashlib.sha512(str(sorted(sum((t.tolist() for t in triples), []))).encode("utf8")).hexdigest())
+    return {"sha512": hashlib.sha512(str(sorted(sum((t.tolist() for t in triples), []))).encode("utf8")).hexdigest()}
 
 
 @fix_dataclass_init_docs
@@ -371,14 +371,14 @@ class PipelineResult(Result):
         return self.metric_results.get_metric(key)
 
     def _get_results(self) -> Mapping[str, Any]:
-        results = dict(
-            times=dict(
-                training=self.train_seconds,
-                evaluation=self.evaluate_seconds,
-            ),
-            metrics=self.metric_results.to_dict(),
-            losses=self.losses,
-        )
+        results = {
+            "times": {
+                "training": self.train_seconds,
+                "evaluation": self.evaluate_seconds,
+            },
+            "metrics": self.metric_results.to_dict(),
+            "losses": self.losses,
+        }
         if self.stopper is not None and isinstance(self.stopper, EarlyStopper):
             results["stopper"] = self.stopper.get_summary_dict()
         return results
@@ -657,16 +657,16 @@ def compare_results(df: pd.DataFrame, significance_level: float = 0.01) -> pd.Da
         # multiple values => assume they correspond to individual trials
         test = scipy.stats.ttest_ind
         original = df.loc[original_mask]
-        kwargs = dict(
-            equal_var=False,
-        )
+        kwargs = {
+            "equal_var": False,
+        }
     p_values = [test(df.loc[~original_mask, metric], original[metric], **kwargs).pvalue for metric in metrics]
     return pd.DataFrame(
-        data=dict(
-            difference=difference,
-            p=p_values,
-            significant=[p < significance_level for p in p_values],
-        )
+        data={
+            "difference": difference,
+            "p": p_values,
+            "significant": [p < significance_level for p in p_values],
+        }
     )
 
 
@@ -896,19 +896,19 @@ def _handle_dataset(
     )
     if dataset is not None:
         _result_tracker.log_params(
-            dict(
-                dataset=dataset_instance.get_normalized_name(),
-                dataset_kwargs=dataset_kwargs,
-            )
+            {
+                "dataset": dataset_instance.get_normalized_name(),
+                "dataset_kwargs": dataset_kwargs,
+            }
         )
     else:  # means that dataset was defined by triples factories
         _result_tracker.log_params(
-            dict(
-                dataset=USER_DEFINED_CODE,
-                training=training if isinstance(training, str) else USER_DEFINED_CODE,
-                testing=testing if isinstance(training, str) else USER_DEFINED_CODE,
-                validation=validation if isinstance(training, str) else USER_DEFINED_CODE,
-            )
+            {
+                "dataset": USER_DEFINED_CODE,
+                "training": training if isinstance(training, str) else USER_DEFINED_CODE,
+                "testing": testing if isinstance(training, str) else USER_DEFINED_CODE,
+                "validation": validation if isinstance(training, str) else USER_DEFINED_CODE,
+            }
         )
 
     training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
@@ -983,24 +983,24 @@ def _handle_model(
 
     # Log model parameters
     _result_tracker.log_params(
-        params=dict(
-            model=model_instance.__class__.__name__,
-            model_kwargs=model_kwargs,
-        ),
+        params={
+            "model": model_instance.__class__.__name__,
+            "model_kwargs": model_kwargs,
+        },
     )
 
     # Log loss parameters
     _result_tracker.log_params(
-        params=dict(
+        params={
             # the loss was already logged as part of the model kwargs
             # loss=loss_resolver.normalize_inst(model_instance.loss),
-            loss_kwargs=loss_kwargs
-        ),
+            "loss_kwargs": loss_kwargs
+        },
     )
 
     # Log regularizer parameters
     _result_tracker.log_params(
-        params=dict(regularizer_kwargs=regularizer_kwargs),
+        params={"regularizer_kwargs": regularizer_kwargs},
     )
     return model_instance
 
@@ -1031,10 +1031,10 @@ def _handle_training_loop(
     for key, value in optimizer_instance.defaults.items():
         optimizer_kwargs.setdefault(key, value)
     _result_tracker.log_params(
-        params=dict(
-            optimizer=optimizer_instance.__class__.__name__,
-            optimizer_kwargs=optimizer_kwargs,
-        ),
+        params={
+            "optimizer": optimizer_instance.__class__.__name__,
+            "optimizer_kwargs": optimizer_kwargs,
+        },
     )
 
     lr_scheduler_instance: LRScheduler | None
@@ -1047,10 +1047,10 @@ def _handle_training_loop(
             optimizer=optimizer_instance,
         )
         _result_tracker.log_params(
-            params=dict(
-                lr_scheduler=lr_scheduler_instance.__class__.__name__,
-                lr_scheduler_kwargs=lr_scheduler_kwargs,
-            ),
+            params={
+                "lr_scheduler": lr_scheduler_instance.__class__.__name__,
+                "lr_scheduler_kwargs": lr_scheduler_kwargs,
+            },
         )
 
     training_loop_cls = training_loop_resolver.lookup(training_loop)
@@ -1074,10 +1074,10 @@ def _handle_training_loop(
             negative_sampler_kwargs=negative_sampler_kwargs,
         )
         _result_tracker.log_params(
-            params=dict(
-                negative_sampler=negative_sampler_cls.__name__,
-                negative_sampler_kwargs=negative_sampler_kwargs,
-            ),
+            params={
+                "negative_sampler": negative_sampler_cls.__name__,
+                "negative_sampler_kwargs": negative_sampler_kwargs,
+            },
         )
     training_loop_instance = training_loop_cls(
         model=model_instance,
@@ -1088,10 +1088,10 @@ def _handle_training_loop(
         **training_loop_kwargs,
     )
     _result_tracker.log_params(
-        params=dict(
-            training_loop=training_loop_instance.__class__.__name__,
-            training_loop_kwargs=training_loop_kwargs,
-        ),
+        params={
+            "training_loop": training_loop_instance.__class__.__name__,
+            "training_loop_kwargs": training_loop_kwargs,
+        },
     )
     return training_loop_instance
 
@@ -1108,10 +1108,10 @@ def _handle_evaluator(
     evaluator_kwargs = dict(evaluator_kwargs)
     evaluator_instance: Evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
     _result_tracker.log_params(
-        params=dict(
-            evaluator=evaluator_instance.__class__.__name__,
-            evaluator_kwargs=evaluator_kwargs,
-        ),
+        params={
+            "evaluator": evaluator_instance.__class__.__name__,
+            "evaluator_kwargs": evaluator_kwargs,
+        },
     )
 
     if evaluation_kwargs is None:
@@ -1187,7 +1187,7 @@ def _handle_training(
     assert losses is not None  # losses is only none if it's doing search mode
     training_end_time = time.time() - training_start_time
     step = training_kwargs.get("num_epochs")
-    _result_tracker.log_metrics(metrics=dict(total_training=training_end_time), step=step, prefix="times")
+    _result_tracker.log_metrics(metrics={"total_training": training_end_time}, step=step, prefix="times")
     return stopper_instance, configuration, losses, training_end_time
 
 
@@ -1223,7 +1223,7 @@ def _handle_evaluation(
     mapped_triples = evaluation_factory.mapped_triples
 
     # Build up a list of triples if we want to be in the filtered setting
-    additional_filter_triples_names = dict()
+    additional_filter_triples_names = {}
     if evaluator_instance.filtered:
         additional_filter_triples: list[MappedTriples] = [
             training.mapped_triples,
@@ -1273,12 +1273,12 @@ def _handle_evaluation(
         evaluation_kwargs["use_tqdm"] = use_tqdm
     # Add logging about evaluator for debugging
     _result_tracker.log_params(
-        params=dict(
-            evaluation_kwargs={
+        params={
+            "evaluation_kwargs": {
                 k: (additional_filter_triples_names if k == "additional_filter_triples" else v)
                 for k, v in evaluation_kwargs.items()
             }
-        )
+        }
     )
     evaluate_start_time = time.time()
     metric_results = evaluator_instance.evaluate(
@@ -1286,7 +1286,7 @@ def _handle_evaluation(
     )
     evaluate_end_time = time.time() - evaluate_start_time
     step = training_kwargs.get("num_epochs")
-    _result_tracker.log_metrics(metrics=dict(final_evaluation=evaluate_end_time), step=step, prefix="times")
+    _result_tracker.log_metrics(metrics={"final_evaluation": evaluate_end_time}, step=step, prefix="times")
     _result_tracker.log_metrics(
         metrics=metric_results.to_dict(),
         step=step,

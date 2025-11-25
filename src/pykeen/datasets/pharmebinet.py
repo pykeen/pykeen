@@ -52,11 +52,11 @@ class PharMeBINet(TarFileSingleDataset):
             url=RAW_URL,
             relative_path="edges.tsv",
             random_state=random_state,
-            read_csv_kwargs=dict(
-                usecols=["start_id", "type", "end_id"],
-                sep="\t",
-                dtype={"start_id": str, "end_id": str},
-            ),
+            read_csv_kwargs={
+                "usecols": ["start_id", "type", "end_id"],
+                "sep": "\t",
+                "dtype": {"start_id": str, "end_id": str},
+            },
             **kwargs,
         )
 

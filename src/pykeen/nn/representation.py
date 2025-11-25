@@ -1357,7 +1357,7 @@ class CombinedRepresentation(Representation):
         base = representation_resolver.make_many(base, kwargs=merge_kwargs(base_kwargs, max_id=max_id))
 
         # verify same ID range
-        max_ids = sorted(set(b.max_id for b in base))
+        max_ids = sorted({b.max_id for b in base})
         if len(max_ids) != 1:
             # note: we could also relax the requirement, and set max_id = min(max_ids)
             raise ValueError(

@@ -533,7 +533,7 @@ class EvaluationLossTrainingCallback(TrainingCallback):
         self.prefix = prefix
         self.label_smoothing = label_smoothing
         if data_loader_kwargs is None:
-            data_loader_kwargs = dict(sampler=None)
+            data_loader_kwargs = {"sampler": None}
         self.data_loader_kwargs = data_loader_kwargs
         self.maximum_batch_size = maximum_batch_size
         self.callback = MultiTrainingCallback(callbacks=callbacks, callbacks_kwargs=callbacks_kwargs)
@@ -569,7 +569,7 @@ class EvaluationLossTrainingCallback(TrainingCallback):
             epoch=epoch,
             **self.data_loader_kwargs,
         )
-        self.result_tracker.log_metrics(metrics=dict(loss=loss), step=epoch, prefix=self.prefix)
+        self.result_tracker.log_metrics(metrics={"loss": loss}, step=epoch, prefix=self.prefix)
 
 
 #: A hint for constructing a :class:`MultiTrainingCallback`
@@ -684,7 +684,7 @@ class CheckpointTrainingCallback(TrainingCallback):
         super().__init__()
         self.schedule = schedule_resolver.make(schedule, schedule_kwargs)
         self.keeper = keeper_resolver.make_safe(keeper, keeper_kwargs)
-        self.checkpoint_store: dict[int, pathlib.Path] = dict()
+        self.checkpoint_store: dict[int, pathlib.Path] = {}
         if root is None:
             while (path := PYKEEN_CHECKPOINTS.joinpath(str(uuid.uuid4()))).exists():
                 continue

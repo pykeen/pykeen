@@ -10,6 +10,6 @@ result = pipeline(
     dataset=dataset,
     model="MuRE",
     loss="BCEWithLogits",
-    training_loop_kwargs=dict(loss_weighter=loss_weighter),
+    training_loop_kwargs={"loss_weighter": loss_weighter},
     training_loop="lcwa",
 )

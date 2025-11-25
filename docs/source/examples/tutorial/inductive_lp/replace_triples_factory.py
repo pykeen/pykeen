@@ -25,12 +25,12 @@ tf_training.create_inverse_triples = True
 result = pipeline(
     training=tf_training,
     testing=tf_testing,
-    dataset_kwargs=dict(create_inverse_triples=True),
+    dataset_kwargs={"create_inverse_triples": True},
     model="InductiveNodePiece",
-    model_kwargs=dict(inference_factory=tf_inference),
-    training_kwargs=dict(num_epochs=0),
-    training_loop_kwargs=dict(mode="training"),
-    evaluator_kwargs=dict(mode="validation"),
+    model_kwargs={"inference_factory": tf_inference},
+    training_kwargs={"num_epochs": 0},
+    training_loop_kwargs={"mode": "training"},
+    evaluator_kwargs={"mode": "validation"},
 )
 
 # inference some validation triples

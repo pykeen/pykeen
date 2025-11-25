@@ -43,13 +43,13 @@ class ConvETests(cases.InteractionTestCase):
     """Tests for ConvE interaction function."""
 
     cls = pykeen.nn.modules.ConvEInteraction
-    kwargs = dict(
-        embedding_height=1,
-        embedding_width=2,
-        kernel_height=2,
-        kernel_width=1,
-        embedding_dim=cases.InteractionTestCase.dim,
-    )
+    kwargs = {
+        "embedding_height": 1,
+        "embedding_width": 2,
+        "kernel_height": 2,
+        "kernel_width": 1,
+        "embedding_dim": cases.InteractionTestCase.dim,
+    }
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         t, t_bias = t
@@ -80,10 +80,10 @@ class ConvKBTests(cases.InteractionTestCase):
     """Tests for ConvKB interaction function."""
 
     cls = pykeen.nn.modules.ConvKBInteraction
-    kwargs = dict(
-        embedding_dim=cases.InteractionTestCase.dim,
-        num_filters=2 * cases.InteractionTestCase.dim - 1,
-    )
+    kwargs = {
+        "embedding_dim": cases.InteractionTestCase.dim,
+        "num_filters": 2 * cases.InteractionTestCase.dim - 1,
+    }
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
         # W_L drop(act(W_C \ast ([h; r; t]) + b_C)) + b_L
@@ -98,9 +98,9 @@ class CPInteractionTests(cases.InteractionTestCase):
     """Test for the canonical tensor decomposition interaction."""
 
     cls = pykeen.nn.modules.CPInteraction
-    shape_kwargs = dict(
-        k=3,
-    )
+    shape_kwargs = {
+        "k": 3,
+    }
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
         return (h * r * t).sum(dim=(-2, -1))
@@ -110,9 +110,9 @@ class CrossETests(cases.InteractionTestCase):
     """Tests for CrossE interaction function."""
 
     cls = pykeen.nn.modules.CrossEInteraction
-    kwargs = dict(
-        embedding_dim=cases.InteractionTestCase.dim,
-    )
+    kwargs = {
+        "embedding_dim": cases.InteractionTestCase.dim,
+    }
 
     def _exp_score(self, **kwargs) -> torch.FloatTensor:  # noqa: D102
         h, r, t = (kwargs[key] for key in ("h", "r", "t"))
@@ -147,10 +147,10 @@ class ERMLPTests(cases.InteractionTestCase):
     """Tests for ERMLP interaction function."""
 
     cls = pykeen.nn.modules.ERMLPInteraction
-    kwargs = dict(
-        embedding_dim=cases.InteractionTestCase.dim,
-        hidden_dim=2 * cases.InteractionTestCase.dim - 1,
-    )
+    kwargs = {
+        "embedding_dim": cases.InteractionTestCase.dim,
+        "hidden_dim": 2 * cases.InteractionTestCase.dim - 1,
+    }
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         instance = self.instance
@@ -163,10 +163,10 @@ class ERMLPETests(cases.InteractionTestCase):
     """Tests for ERMLP-E interaction function."""
 
     cls = pykeen.nn.modules.ERMLPEInteraction
-    kwargs = dict(
-        embedding_dim=cases.InteractionTestCase.dim,
-        hidden_dim=2 * cases.InteractionTestCase.dim - 1,
-    )
+    kwargs = {
+        "embedding_dim": cases.InteractionTestCase.dim,
+        "hidden_dim": 2 * cases.InteractionTestCase.dim - 1,
+    }
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
         mlp = self.instance.mlp
@@ -192,9 +192,9 @@ class NTNTests(cases.InteractionTestCase):
     cls = pykeen.nn.modules.NTNInteraction
 
     num_slices: int = 11
-    shape_kwargs = dict(
-        k=11,
-    )
+    shape_kwargs = {
+        "k": 11,
+    }
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         w, vh, vt, b, u = r
@@ -217,9 +217,9 @@ class ProjETests(cases.InteractionTestCase):
     """Tests for ProjE interaction function."""
 
     cls = pykeen.nn.modules.ProjEInteraction
-    kwargs = dict(
-        embedding_dim=cases.InteractionTestCase.dim,
-    )
+    kwargs = {
+        "embedding_dim": cases.InteractionTestCase.dim,
+    }
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         # f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)
@@ -236,7 +236,7 @@ class QuatETests(cases.InteractionTestCase):
     """Tests for QuatE interaction."""
 
     cls = pykeen.nn.modules.QuatEInteraction
-    shape_kwargs = dict(k=4)  # quaternions
+    shape_kwargs = {"k": 4}  # quaternions
     atol = 1.0e-06
 
     def _exp_score(self, h: torch.Tensor, r: torch.Tensor, t: torch.Tensor) -> torch.FloatTensor:  # noqa: D102
@@ -280,9 +280,9 @@ class TuckerTests(cases.InteractionTestCase):
     """Tests for Tucker interaction function."""
 
     cls = pykeen.nn.modules.TuckERInteraction
-    kwargs = dict(
-        embedding_dim=cases.InteractionTestCase.dim,
-    )
+    kwargs = {
+        "embedding_dim": cases.InteractionTestCase.dim,
+    }
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         # DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
@@ -320,9 +320,9 @@ class TransDTests(cases.TranslationalInteractionTests):
     """Tests for TransD interaction function."""
 
     cls = pykeen.nn.modules.TransDInteraction
-    shape_kwargs = dict(
-        e=3,
-    )
+    shape_kwargs = {
+        "e": 3,
+    }
 
     def test_manual_small_relation_dim(self):
         """Manually test the value of the interaction function."""
@@ -391,9 +391,9 @@ class TransRTests(cases.TranslationalInteractionTests):
     """Tests for TransR interaction function."""
 
     cls = pykeen.nn.modules.TransRInteraction
-    shape_kwargs = dict(
-        e=3,
-    )
+    shape_kwargs = {
+        "e": 3,
+    }
 
     def test_manual(self):
         """Manually test the value of the interaction function."""
@@ -527,9 +527,9 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
     """Tests for monotonic affine transformation interaction adapter."""
 
     cls = pykeen.nn.modules.MonotonicAffineTransformationInteraction
-    kwargs = dict(
-        base=pykeen.nn.modules.TransEInteraction(p=2),
-    )
+    kwargs = {
+        "base": pykeen.nn.modules.TransEInteraction(p=2),
+    }
 
     def test_scores(self):  # noqa: D102
         raise SkipTest("Not a functional interaction.")
@@ -556,10 +556,10 @@ class TransformerTests(cases.InteractionTestCase):
     cls = pykeen.nn.modules.TransformerInteraction
     # dimension needs to be divisible by num_heads
     dim = 8
-    kwargs = dict(
-        num_heads=2,
-        dim_feedforward=7,
-    )
+    kwargs = {
+        "num_heads": 2,
+        "dim_feedforward": 7,
+    }
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -579,7 +579,7 @@ class MultiLinearTuckerInteractionTests(cases.InteractionTestCase):
     """Tests for multi-linear TuckER."""
 
     cls = pykeen.nn.modules.MultiLinearTuckerInteraction
-    shape_kwargs = dict(e=3, f=5)
+    shape_kwargs = {"e": 3, "f": 5}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
@@ -699,12 +699,12 @@ class AutoSFTests(cases.InteractionTestCase):
     """Tests for the AutoSF interaction function."""
 
     cls = pykeen.nn.modules.AutoSFInteraction
-    kwargs = dict(
-        coefficients=(
+    kwargs = {
+        "coefficients": (
             (0, 0, 0, 1),
             (1, 1, 1, -1),
         ),
-    )
+    }
 
     def _exp_score(
         self, h: Sequence[torch.FloatTensor], r: Sequence[torch.FloatTensor], t: Sequence[torch.FloatTensor]

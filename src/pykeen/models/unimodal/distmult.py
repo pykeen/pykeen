@@ -46,20 +46,20 @@ class DistMult(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
     #: The regularizer used by [yang2014]_ for DistMult
     #: In the paper, they use weight of 0.0001, mini-batch-size of 10, and dimensionality of vector 100
     #: Thus, when we use normalized regularization weight, the normalization factor is 10*sqrt(100) = 100, which is
     #: why the weight has to be increased by a factor of 100 to have the same configuration as in the paper.
     regularizer_default: ClassVar[type[Regularizer]] = LpRegularizer
     #: The LP settings used by [yang2014]_ for DistMult
-    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.1,
-        p=2.0,
-        normalize=True,
-    )
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = {
+        "weight": 0.1,
+        "p": 2.0,
+        "normalize": True,
+    }
 
     @update_docstring_with_resolver_keys(
         ResolverKey(name="regularizer", resolver="pykeen.regularizers.regularizer_resolver")
@@ -107,20 +107,20 @@ class DistMult(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         """
         if regularizer is LpRegularizer and regularizer_kwargs is None:
             regularizer_kwargs = DistMult.regularizer_default_kwargs
-        resolved_entity_representations_kwargs = dict(
-            shape=embedding_dim,
-            initializer=entity_initializer,
-            constrainer=entity_constrainer,
+        resolved_entity_representations_kwargs = {
+            "shape": embedding_dim,
+            "initializer": entity_initializer,
+            "constrainer": entity_constrainer,
             # note: DistMult only regularizes the relation embeddings;
             #       entity embeddings are hard constrained instead
-        )
+        }
         resolved_entity_representations_kwargs.update(entity_representations_kwargs or {})
-        resolved_relation_representations_kwargs = dict(
-            shape=embedding_dim,
-            initializer=relation_initializer,
-            regularizer=regularizer,
-            regularizer_kwargs=regularizer_kwargs,
-        )
+        resolved_relation_representations_kwargs = {
+            "shape": embedding_dim,
+            "initializer": relation_initializer,
+            "regularizer": regularizer,
+            "regularizer_kwargs": regularizer_kwargs,
+        }
         resolved_relation_representations_kwargs.update(relation_representations_kwargs or {})
         super().__init__(
             interaction=DistMultInteraction,

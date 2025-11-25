@@ -30,10 +30,10 @@ class UM(ERModel[FloatTensor, tuple[()], FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        scoring_fct_norm=dict(type=int, low=1, high=2),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "scoring_fct_norm": {"type": int, "low": 1, "high": 2},
+    }
 
     def __init__(
         self,
@@ -61,11 +61,11 @@ class UM(ERModel[FloatTensor, tuple[()], FloatTensor]):
         """
         super().__init__(
             interaction=UMInteraction,
-            interaction_kwargs=dict(p=scoring_fct_norm, power_norm=power_norm),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-            ),
+            interaction_kwargs={"p": scoring_fct_norm, "power_norm": power_norm},
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+            },
             relation_representations=[],
             **kwargs,
         )

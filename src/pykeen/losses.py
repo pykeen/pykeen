@@ -209,7 +209,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MARGIN_HPO_STRATEGY = dict(type=float, low=0, high=3)
+DEFAULT_MARGIN_HPO_STRATEGY = {"type": float, "low": 0, "high": 3}
 DEFAULT_HPO_STRATEGY_REDUCTION = {"type": "categorical", "choices": ["mean", "sum"]}
 DEFAULT_HPO_STRATEGY_POS_WEIGHT = {"type": float, "low": 2**-2, "high": 2**10, "log": True}
 
@@ -275,10 +275,10 @@ class NoSampleWeightSupportError(RuntimeError):
 Reduction: TypeAlias = Literal["mean", "sum"]
 ReductionMethod: TypeAlias = Callable
 
-_REDUCTION_METHODS: dict[Reduction, ReductionMethod] = dict(
-    mean=torch.mean,
-    sum=torch.sum,
-)
+_REDUCTION_METHODS: dict[Reduction, ReductionMethod] = {
+    "mean": torch.mean,
+    "sum": torch.sum,
+}
 
 
 def weighted_reduction(x: FloatTensor, weight: FloatTensor, reduction: Reduction) -> FloatTensor:
@@ -597,13 +597,13 @@ class MarginPairwiseLoss(PairwiseLoss):
     function like the ReLU or softmax, and $\lambda$ is the margin.
     """
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=DEFAULT_MARGIN_HPO_STRATEGY,
-        margin_activation=dict(
-            type="categorical",
-            choices=margin_activation_resolver.options,
-        ),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "margin": DEFAULT_MARGIN_HPO_STRATEGY,
+        "margin_activation": {
+            "type": "categorical",
+            "choices": margin_activation_resolver.options,
+        },
+    }
 
     def __init__(
         self,
@@ -730,9 +730,9 @@ class MarginRankingLoss(MarginPairwiseLoss):
 
     synonyms = {"Pairwise Hinge Loss"}
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=DEFAULT_MARGIN_HPO_STRATEGY,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "margin": DEFAULT_MARGIN_HPO_STRATEGY,
+    }
 
     def __init__(self, margin: float = 1.0, reduction: Reduction = "mean"):
         r"""Initialize the margin loss instance.
@@ -766,9 +766,9 @@ class SoftMarginRankingLoss(MarginPairwiseLoss):
     name: Soft margin ranking
     """
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=DEFAULT_MARGIN_HPO_STRATEGY,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "margin": DEFAULT_MARGIN_HPO_STRATEGY,
+    }
 
     def __init__(self, margin: float = 1.0, reduction: Reduction = "mean"):
         """
@@ -803,7 +803,7 @@ class PairwiseLogisticLoss(SoftMarginRankingLoss):
 
     # Ensures that for this class incompatible hyper-parameter "margin" of superclass is not used
     # within the ablation pipeline.
-    hpo_default: ClassVar[Mapping[str, Any]] = dict()
+    hpo_default: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(self, reduction: Reduction = "mean"):
         """
@@ -833,15 +833,15 @@ class DoubleMarginLoss(PointwiseLoss):
     name: Double Margin
     """
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        positive_margin=dict(type=float, low=-1, high=1),
-        offset=dict(type=float, low=0, high=1),
-        positive_negative_balance=dict(type=float, low=1.0e-03, high=1.0 - 1.0e-03),
-        margin_activation=dict(
-            type="categorical",
-            choices=margin_activation_resolver.options,
-        ),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "positive_margin": {"type": float, "low": -1, "high": 1},
+        "offset": {"type": float, "low": 0, "high": 1},
+        "positive_negative_balance": {"type": float, "low": 1.0e-03, "high": 1.0 - 1.0e-03},
+        "margin_activation": {
+            "type": "categorical",
+            "choices": margin_activation_resolver.options,
+        },
+    }
 
     @staticmethod
     def resolve_margin(
@@ -1047,13 +1047,13 @@ class DeltaPointwiseLoss(PointwiseLoss):
     =============================  ==========  ======================  ========================================================  =============================================
     """  # noqa:E501
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=DEFAULT_MARGIN_HPO_STRATEGY,
-        margin_activation=dict(
-            type="categorical",
-            choices=margin_activation_resolver.options,
-        ),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "margin": DEFAULT_MARGIN_HPO_STRATEGY,
+        "margin_activation": {
+            "type": "categorical",
+            "choices": margin_activation_resolver.options,
+        },
+    }
 
     def __init__(
         self,
@@ -1098,9 +1098,9 @@ class PointwiseHingeLoss(DeltaPointwiseLoss):
     name: Pointwise Hinge
     """
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=DEFAULT_MARGIN_HPO_STRATEGY,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "margin": DEFAULT_MARGIN_HPO_STRATEGY,
+    }
 
     def __init__(self, margin: float = 1.0, reduction: Reduction = "mean") -> None:
         """
@@ -1130,9 +1130,9 @@ class SoftPointwiseHingeLoss(DeltaPointwiseLoss):
     name: Soft Pointwise Hinge
     """
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=DEFAULT_MARGIN_HPO_STRATEGY,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "margin": DEFAULT_MARGIN_HPO_STRATEGY,
+    }
 
     def __init__(self, margin: float = 1.0, reduction: Reduction = "mean") -> None:
         """
@@ -1165,7 +1165,7 @@ class SoftplusLoss(SoftPointwiseHingeLoss):
 
     # Ensures that for this class incompatible hyper-parameter "margin" of superclass is not used
     # within the ablation pipeline.
-    hpo_default: ClassVar[Mapping[str, Any]] = dict()
+    hpo_default: ClassVar[Mapping[str, Any]] = {}
 
     def __init__(self, reduction: Reduction = "mean") -> None:
         """
@@ -1325,10 +1325,10 @@ class InfoNCELoss(CrossEntropyLoss):
     name: InfoNCE loss with additive margin
     """
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=dict(type=float, low=0.01, high=0.10),
-        log_adversarial_temperature=dict(type=float, low=-3.0, high=3.0),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "margin": {"type": float, "low": 0.01, "high": 0.10},
+        "log_adversarial_temperature": {"type": float, "low": -3.0, "high": 3.0},
+    }
     DEFAULT_LOG_ADVERSARIAL_TEMPERATURE: ClassVar[float] = math.log(0.05)
 
     def __init__(
@@ -1578,10 +1578,10 @@ class NSSALoss(AdversarialLoss):
 
     synonyms = {"Self-Adversarial Negative Sampling Loss", "Negative Sampling Self-Adversarial Loss"}
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        margin=dict(type=int, low=3, high=30, q=3),
-        adversarial_temperature=dict(type=float, low=0.5, high=1.0),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "margin": {"type": int, "low": 3, "high": 30, "q": 3},
+        "adversarial_temperature": {"type": float, "low": 0.5, "high": 1.0},
+    }
 
     def __init__(
         self, margin: float = 9.0, adversarial_temperature: float = 1.0, reduction: Reduction = "mean"
@@ -1759,6 +1759,6 @@ loss_resolver: ClassResolver[Loss] = ClassResolver.from_subclasses(
         AdversarialLoss,
     },
 )
-for _name, _cls in loss_resolver.lookup_dict.items():
+for _cls in loss_resolver.lookup_dict.values():
     for _synonym in _cls.synonyms or []:
         loss_resolver.synonyms[_synonym] = _cls

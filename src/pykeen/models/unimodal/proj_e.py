@@ -37,13 +37,13 @@ class ProjE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
     #: The default loss function class
     loss_default: ClassVar[type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = dict(reduction="mean")
+    loss_default_kwargs = {"reduction": "mean"}
 
     @update_docstring_with_resolver_keys(
         ResolverKey(name="inner_non_linearity", resolver="class_resolver.contrib.torch.activation_resolver")
@@ -76,18 +76,18 @@ class ProjE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         """
         super().__init__(
             interaction=ProjEInteraction,
-            interaction_kwargs=dict(
-                embedding_dim=embedding_dim,
-                inner_activation=inner_non_linearity,
-                inner_activation_kwargs=inner_non_linearity_kwargs,
-            ),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-            ),
+            interaction_kwargs={
+                "embedding_dim": embedding_dim,
+                "inner_activation": inner_non_linearity,
+                "inner_activation_kwargs": inner_non_linearity_kwargs,
+            },
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+            },
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
+            },
             **kwargs,
         )

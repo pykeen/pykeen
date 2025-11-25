@@ -156,7 +156,7 @@ EPSILON = 1.0e-12
 
 def generate_ranks(
     num_candidates: np.ndarray,
-    prefix_shape: tuple[int, ...] = tuple(),
+    prefix_shape: tuple[int, ...] = (),
     seed: None | int | np.random.Generator = None,
     dtype: type[np.number] | None = None,
 ) -> np.ndarray:

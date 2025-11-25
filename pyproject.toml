@@ -204,6 +204,7 @@ extend-select = [
     "T10",  # flake8-debugger
     "NPY",  # numpy checks
     "LOG",  # flake8-logging
+    "C4",   # flake8-comprehensions
     # Framework-specific rules (not used in this project):
     # "AIR",   # Airflow
     # "ASYNC", # flake8-async
@@ -215,6 +216,7 @@ extend-select = [
     # "ERA",   # eradicate commented out code; false positives for "mathy" comments
     # "RUF",   # ruff rules
     # "DOC",   # pydoclint (DOC), requires preview; supersedes darglint
+    "PERF",
 ]
 ignore = [
     "D105", # Missing docstring in magic method

@@ -572,7 +572,7 @@ class InteractionTestCase(
     # the absolute tolerance for checking close results, cf. torch.allclose
     atol: float = 1.0e-8
 
-    shape_kwargs = dict()
+    shape_kwargs = {}
 
     def post_instantiation_hook(self) -> None:
         """Initialize parameters."""
@@ -716,9 +716,9 @@ class InteractionTestCase(
         """Return a set of test shapes for (h, r, t)."""
         return (
             (  # single score
-                tuple(),
-                tuple(),
-                tuple(),
+                (),
+                (),
+                (),
             ),
             (  # score_r with multi-t
                 (self.batch_size, 1, 1),
@@ -770,7 +770,7 @@ class InteractionTestCase(
         for _ in range(10):
             # test multiple different initializations
             self.instance.reset_parameters()
-            h, r, t = self._get_hrt(tuple(), tuple(), tuple())
+            h, r, t = self._get_hrt((), (), ())
             scores_f = self.instance(h=h, r=r, t=t)
 
             # calculate manually
@@ -792,9 +792,9 @@ class InteractionTestCase(
 class TranslationalInteractionTests(InteractionTestCase, ABC):
     """Common tests for translational interaction."""
 
-    kwargs = dict(
-        p=2,
-    )
+    kwargs = {
+        "p": 2,
+    }
 
     def _additional_score_checks(self, scores):
         assert (scores <= 0).all()
@@ -991,7 +991,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
     def test_apply_only_once(self):
         """Test apply-only-once support."""
         # create another instance with apply_only_once enabled
-        instance = self.cls(**ChainMap(dict(apply_only_once=True), self.instance_kwargs)).to(self.device)
+        instance = self.cls(**ChainMap({"apply_only_once": True}, self.instance_kwargs)).to(self.device)
 
         # test initial state
         self._check_reset(instance=instance)
@@ -1068,7 +1068,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     num_constant_init: int = 0
 
     #: Static extras to append to the CLI
-    cli_extras: Sequence[str] = tuple()
+    cli_extras: Sequence[str] = ()
 
     #: the model's device
     device: torch.device
@@ -1119,7 +1119,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
         # check that the operation works in-place
         new_params = list(self.instance.parameters())
-        assert set(id(np) for np in new_params) == set(id(p) for p in params)
+        assert {id(np) for np in new_params} == {id(p) for p in params}
 
         # check that the parameters where modified
         num_equal_weights_after_re_init = sum(
@@ -1339,14 +1339,14 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             model=self.cls,
             model_kwargs=model_kwargs,
             dataset="nations",
-            dataset_kwargs=dict(create_inverse_triples=self.create_inverse_triples),
+            dataset_kwargs={"create_inverse_triples": self.create_inverse_triples},
             stopper="early",
             training_loop_kwargs=self.training_loop_kwargs,
-            stopper_kwargs=dict(frequency=1),
-            training_kwargs=dict(
-                batch_size=self.train_batch_size,
-                num_epochs=self.train_num_epochs,
-            ),
+            stopper_kwargs={"frequency": 1},
+            training_kwargs={
+                "batch_size": self.train_batch_size,
+                "num_epochs": self.train_num_epochs,
+            },
         )
 
     @pytest.mark.slow
@@ -1531,7 +1531,7 @@ class InductiveModelTestCase(ModelTestCase):
             num_triples_testing=self.num_triples_testing,
             create_inverse_triples=self.create_inverse_triples,
         )
-        training_loop_kwargs = dict(self.training_loop_kwargs or dict())
+        training_loop_kwargs = dict(self.training_loop_kwargs or {})
         training_loop_kwargs["mode"] = self.mode
         InductiveModelTestCase.training_loop_kwargs = training_loop_kwargs
         # dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
@@ -1555,7 +1555,7 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
-        kwargs.update(dict(max_id=self.max_id))
+        kwargs.update({"max_id": self.max_id})
         return kwargs
 
     def _check_result(self, x: torch.FloatTensor, prefix_shape: tuple[int, ...]):
@@ -1805,8 +1805,8 @@ class InitializerTestCase(unittest.TestCase):
         model = pykeen.models.ERModel(
             triples_factory=triples_factory,
             interaction=self.interaction,
-            entity_representations_kwargs=dict(shape=self.shape, initializer=self.initializer, dtype=self.dtype),
-            relation_representations_kwargs=dict(shape=self.shape),
+            entity_representations_kwargs={"shape": self.shape, "initializer": self.initializer, "dtype": self.dtype},
+            relation_representations_kwargs={"shape": self.shape},
             random_seed=0,
         ).to(resolve_device())
         model.reset_parameters_()
@@ -2030,9 +2030,9 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
             model="distmult",
             evaluator=evaluator_resolver.normalize_cls(self.cls),
             evaluator_kwargs=self.instance_kwargs,
-            training_kwargs=dict(
-                num_epochs=1,
-            ),
+            training_kwargs={
+                "num_epochs": 1,
+            },
         )
 
 
@@ -2432,12 +2432,12 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
 
     batch_size: int = 2
     num_negatives_per_positive: int = 3
-    kwargs = dict(
-        batch_size=batch_size,
-        negative_sampler_kwargs=dict(
-            num_negs_per_pos=num_negatives_per_positive,
-        ),
-    )
+    kwargs = {
+        "batch_size": batch_size,
+        "negative_sampler_kwargs": {
+            "num_negs_per_pos": num_negatives_per_positive,
+        },
+    }
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         self.factory = Nations().training
@@ -2483,9 +2483,9 @@ class TrainingCallbackTestCase(unittest_templates.GenericTestCase[TrainingCallba
         pipeline(
             dataset=self.dataset,
             model="distmult",
-            training_kwargs=dict(
-                callbacks=self.instance,
-            ),
+            training_kwargs={
+                "callbacks": self.instance,
+            },
         )
 
 
@@ -2594,16 +2594,16 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
         kwargs = super()._pre_instantiation_hook(kwargs)
         nations = Nations()
         kwargs.update(
-            dict(
-                evaluator=MockEvaluator(key=("hits_at_10", SIDE_BOTH, RANK_REALISTIC), values=self.mock_losses),
-                model=FixedModel(triples_factory=nations.training),
-                training_triples_factory=nations.training,
-                evaluation_triples_factory=nations.validation,
-                patience=self.patience,
-                relative_delta=self.delta,
-                larger_is_better=False,
-                best_model_path=pathlib.Path(tempfile.gettempdir(), "test-best-model-weights.pt"),
-            )
+            {
+                "evaluator": MockEvaluator(key=("hits_at_10", SIDE_BOTH, RANK_REALISTIC), values=self.mock_losses),
+                "model": FixedModel(triples_factory=nations.training),
+                "training_triples_factory": nations.training,
+                "evaluation_triples_factory": nations.validation,
+                "patience": self.patience,
+                "relative_delta": self.delta,
+                "larger_is_better": False,
+                "best_model_path": pathlib.Path(tempfile.gettempdir(), "test-best-model-weights.pt"),
+            }
         )
         return kwargs
 
@@ -2667,7 +2667,7 @@ class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combinati
 
     def _iter_input_shapes(self) -> Iterable[Sequence[tuple[int, ...]]]:
         """Iterate over test input shapes."""
-        for prefix_shape in [tuple(), (2,), (2, 3)]:
+        for prefix_shape in [(), (2,), (2, 3)]:
             for input_dims in self.input_dims:
                 yield [prefix_shape + (input_dim,) for input_dim in input_dims]
 
@@ -2783,7 +2783,7 @@ class CheckpointKeeperTests(GenericTestCase[CheckpointKeeper]):
     def test_call(self) -> None:
         """Test calling."""
         for steps in self.iter_steps():
-            steps_copy = [s for s in steps]
+            steps_copy = list(steps)
             kept = list(self.instance(steps=steps))
             # check for unique values
             assert len(kept) == len(set(kept))

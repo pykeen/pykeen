@@ -165,10 +165,10 @@ class Dataset(ExtraReprMixin):
     @property
     def factory_dict(self) -> Mapping[str, CoreTriplesFactory]:
         """Return a dictionary of the three factories."""
-        rv = dict(
-            training=self.training,
-            testing=self.testing,
-        )
+        rv = {
+            "training": self.training,
+            "testing": self.testing,
+        }
         if self.validation:
             rv["validation"] = self.validation
         return rv
@@ -269,7 +269,7 @@ class Dataset(ExtraReprMixin):
         if not path.is_dir():
             raise NotADirectoryError(path)
 
-        tfs = dict()
+        tfs = {}
         # TODO: Make a constant for the names
         for key in ("training", "testing", "validation"):
             tf_path = path.joinpath(key)
@@ -1074,7 +1074,7 @@ class TabbedDataset(LazyDataset):
         tf = TriplesFactory.from_labeled_triples(
             triples=df.values,
             create_inverse_triples=self._create_inverse_triples,
-            metadata=dict(path=path) if path else None,
+            metadata={"path": path} if path else None,
         )
         self._training, self._testing, self._validation = cast(
             tuple[TriplesFactory, TriplesFactory, TriplesFactory],

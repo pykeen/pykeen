@@ -87,7 +87,7 @@ class PythonResultTracker(ResultTracker):
         """Initialize the tracker."""
         super().__init__()
         self.store_metrics = store_metrics
-        self.configuration = dict()
+        self.configuration = {}
         self.metrics = defaultdict(dict)
         self.run_name = None
 

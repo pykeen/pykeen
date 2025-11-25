@@ -45,13 +45,13 @@ class BoxE(
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        p=dict(type=int, low=1, high=2),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "p": {"type": int, "low": 1, "high": 2},
+    }
 
     loss_default = NSSALoss
-    loss_default_kwargs = dict(margin=3, adversarial_temperature=2.0, reduction="sum")
+    loss_default_kwargs = {"margin": 3, "adversarial_temperature": 2.0, "reduction": "sum"}
 
     def __init__(
         self,
@@ -103,61 +103,61 @@ class BoxE(
         """
         super().__init__(
             interaction=BoxEInteraction,
-            interaction_kwargs=dict(
-                p=p,
-                power_norm=power_norm,
-                tanh_map=tanh_map,
-            ),
+            interaction_kwargs={
+                "p": p,
+                "power_norm": power_norm,
+                "tanh_map": tanh_map,
+            },
             entity_representations_kwargs=[  # Base position
-                dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                    initializer_kwargs=entity_initializer_kwargs,
-                ),  # Bump
+                {
+                    "shape": embedding_dim,
+                    "initializer": entity_initializer,
+                    "initializer_kwargs": entity_initializer_kwargs,
+                },  # Bump
                 # entity bias for head
-                dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                    initializer_kwargs=entity_initializer_kwargs,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": entity_initializer,
+                    "initializer_kwargs": entity_initializer_kwargs,
+                },
             ],
             relation_representations_kwargs=[
                 # relation position head
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
+                    "initializer_kwargs": relation_initializer_kwargs,
+                },
                 # relation shape head
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
+                    "initializer_kwargs": relation_initializer_kwargs,
+                },
                 # relation size head
-                dict(
-                    shape=(1,),
-                    initializer=relation_size_initializer,
-                    initializer_kwargs=relation_size_initializer_kwargs,
-                ),
+                {
+                    "shape": (1,),
+                    "initializer": relation_size_initializer,
+                    "initializer_kwargs": relation_size_initializer_kwargs,
+                },
                 # relation position tail
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
+                    "initializer_kwargs": relation_initializer_kwargs,
+                },
                 # relation shape tail
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
+                    "initializer_kwargs": relation_initializer_kwargs,
+                },
                 # relation size tail
-                dict(
-                    shape=(1,),
-                    initializer=relation_size_initializer,
-                    initializer_kwargs=relation_size_initializer_kwargs,
-                ),
+                {
+                    "shape": (1,),
+                    "initializer": relation_size_initializer,
+                    "initializer_kwargs": relation_size_initializer_kwargs,
+                },
             ],
             **kwargs,
         )
