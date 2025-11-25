@@ -1759,6 +1759,6 @@ loss_resolver: ClassResolver[Loss] = ClassResolver.from_subclasses(
         AdversarialLoss,
     },
 )
-for _name, _cls in loss_resolver.lookup_dict.items():
+for _cls in loss_resolver.lookup_dict.values():
     for _synonym in _cls.synonyms or []:
         loss_resolver.synonyms[_synonym] = _cls
