@@ -32,12 +32,11 @@ def create_matrix_of_literals(
 
     # TODO vectorize code
     for h, r, lit in numeric_triples:
-        try:
-            # row define entity, and column the literal. Set the corresponding literal for the entity
-            num_literals[entity_to_id[h], data_rel_to_id[r]] = lit
-        except KeyError:
+        if h not in entity_to_id or r not in data_rel_to_id:
             logger.info("Either entity or relation to literal doesn't exist.")
             continue
+        # row define entity, and column the literal. Set the corresponding literal for the entity
+        num_literals[entity_to_id[h], data_rel_to_id[r]] = lit
 
     return num_literals, data_rel_to_id
 
