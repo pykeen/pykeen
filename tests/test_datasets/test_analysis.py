@@ -24,10 +24,11 @@ class TestUtils(unittest.TestCase):
     def test_skyline(self):
         """Test the skyline function."""
         n = 500
+        rng = np.random.default_rng(seed=42)
         pairs = list(
             zip(
-                np.random.randint(low=0, high=200, size=n, dtype=int),
-                np.random.uniform(0, 6, size=n),
+                rng.integers(low=0, high=200, size=n, dtype=int),
+                rng.uniform(0, 6, size=n),
                 strict=False,
             )
         )

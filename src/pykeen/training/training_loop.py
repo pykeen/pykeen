@@ -1154,7 +1154,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                 "random_seed": self.model._random_seed,
                 "stopper_dict": stopper_dict,
                 "random_state": random.getstate(),
-                "np_random_state": np.random.get_state(),
+                "np_random_state": np.random.get_state(),  # noqa: NPY002
                 "torch_random_state": torch.random.get_rng_state(),
                 "torch_cuda_random_state": torch_cuda_random_state,
                 # This is an entire checkpoint for the optional best model when using early stopping
@@ -1257,7 +1257,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         if self.lr_scheduler is not None:
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
         random.setstate(checkpoint["random_state"])
-        np.random.set_state(checkpoint["np_random_state"])
+        np.random.set_state(checkpoint["np_random_state"])  # noqa: NPY002
         torch.random.set_rng_state(checkpoint["torch_random_state"])
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
 

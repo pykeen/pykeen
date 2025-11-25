@@ -110,7 +110,7 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
         """Set up the real world early stopping test."""
         # Fix seed for reproducibility
         torch.manual_seed(seed=self.seed)
-        numpy.random.seed(seed=self.seed)
+        numpy.random.seed(seed=self.seed)  # noqa: NPY002
 
     @pytest.mark.slow
     def test_early_stopping(self):
