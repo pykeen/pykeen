@@ -967,7 +967,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # check value
         expected_penalty = self._expected_penalty(x=x)
         if expected_penalty is None:
-            logging.warning(f"{self.__class__.__name__} did not override `_expected_penalty`.")
+            print(f"{self.__class__.__name__} did not override `_expected_penalty`.")  # noqa: T201
         else:
             assert (expected_penalty == penalty).all()
 

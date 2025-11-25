@@ -1172,9 +1172,9 @@ def _handle_training(
 
     # Add logging for debugging
     configuration = _result_tracker.get_configuration()
-    logging.debug("Run Pipeline based on following config:")
+    logger.debug("Run Pipeline based on following config:")
     for key, value in configuration.items():
-        logging.debug(f"{key}: {value}")
+        logger.debug(f"{key}: {value}")
 
     # Train like Cristiano Ronaldo
     training_start_time = time.time()
@@ -1247,13 +1247,13 @@ def _handle_evaluation(
         # Determine whether the validation triples should also be filtered while performing test evaluation
         if use_testing_data and filter_validation_when_testing and validation is not None:
             if isinstance(stopper_instance, EarlyStopper):
-                logging.info(
+                logger.info(
                     "When evaluating the test dataset after running the pipeline with early stopping, the validation"
                     " triples are added to the set of known positive triples which are filtered out when performing"
                     " filtered evaluation following the approach described by (Bordes et al., 2013).",
                 )
             else:
-                logging.info(
+                logger.info(
                     "When evaluating the test dataset, validation triples are added to the set of known positive"
                     " triples which are filtered out when performing filtered evaluation following the approach"
                     " described by (Bordes et al., 2013).",
