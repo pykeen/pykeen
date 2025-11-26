@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typing
 from collections.abc import Callable, Collection, Mapping, Sequence
-from typing import Literal, NamedTuple, TypeAlias, TypeVar, cast
+from typing import Literal, NamedTuple, TypeAlias, TypeVar
 
 import numpy as np
 import torch
@@ -29,7 +29,6 @@ __all__ = [
     "Initializer",
     "Normalizer",
     "Constrainer",
-    "cast_constrainer",
     # Tensors
     "HeadRepresentation",
     "RelationRepresentation",
@@ -84,11 +83,6 @@ Initializer: TypeAlias = Mutation[FloatTensor]
 Normalizer: TypeAlias = Mutation[FloatTensor]
 #: A function that can be applied to a tensor to constrain it
 Constrainer: TypeAlias = Mutation[FloatTensor]
-
-
-def cast_constrainer(f) -> Constrainer:
-    """Cast a constrainer function with :func:`typing.cast`."""
-    return cast(Constrainer, f)
 
 
 #: A hint for a :class:`torch.device`
@@ -160,7 +154,7 @@ def normalize_rank_type(rank: str | None) -> RankType:
     rank = RANK_TYPE_SYNONYMS.get(rank, rank)
     if rank not in RANK_TYPES:
         raise ValueError(f"Invalid target={rank}. Possible values: {RANK_TYPES}")
-    return cast(RankType, rank)
+    return rank  # type: ignore[return-value]
 
 
 TargetBoth = Literal["both"]
@@ -176,7 +170,7 @@ def normalize_target(target: str | None) -> ExtendedTarget:
         return SIDE_BOTH
     if target not in SIDES:
         raise ValueError(f"Invalid target={target}. Possible values: {SIDES}")
-    return cast(ExtendedTarget, target)
+    return target  # type: ignore[return-value]
 
 
 # entity alignment

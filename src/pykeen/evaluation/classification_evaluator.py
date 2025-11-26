@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import itertools
 from collections import defaultdict
-from collections.abc import Iterable, Mapping, MutableMapping
-from typing import NamedTuple, cast
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy
 import numpy as np
@@ -14,6 +13,9 @@ from .evaluator import Evaluator, MetricResults
 from ..constants import TARGET_TO_INDEX
 from ..metrics.classification import ClassificationMetric, classification_metric_resolver
 from ..typing import SIDE_BOTH, ExtendedTarget, FloatTensor, MappedTriples, Target, normalize_target
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping, MutableMapping
 
 __all__ = [
     "ClassificationEvaluator",
@@ -137,7 +139,6 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
         for i in range(keys.shape[0]):
             key = tuple(map(int, keys[i]))
             assert len(key) == 2
-            key = cast(tuple[int, int], key)
             self.all_scores[target][key] = scores_np[i]
             self.all_positives[target][key] = dense_positive_mask_np[i]
 

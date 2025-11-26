@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import functools
 import logging
-import pathlib
-from collections.abc import Collection, Mapping, Sequence
 from textwrap import dedent
+from typing import TYPE_CHECKING
 
 from tqdm.auto import tqdm
 
 from ..text.cache import WikidataTextCache
 from ...utils import nested_get, rate_limited
+
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Collection, Mapping, Sequence
 
 __all__ = [
     "WikidataImageCache",

@@ -4,7 +4,7 @@ import functools
 import logging
 import math
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 import torch
@@ -157,13 +157,10 @@ normal_norm_ = compose(
     functional.normalize,
     name="normal_norm_",
 )
-uniform_norm_p1_: Initializer = cast(
-    Initializer,
-    compose(
-        torch.nn.init.uniform_,
-        functools.partial(functional.normalize, p=1),
-        name="uniform_norm_p1_",
-    ),
+uniform_norm_p1_: Initializer = compose(
+    torch.nn.init.uniform_,
+    functools.partial(functional.normalize, p=1),
+    name="uniform_norm_p1_",
 )
 
 
