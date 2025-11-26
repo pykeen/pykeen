@@ -1415,7 +1415,12 @@ class MedianAbsoluteDeviation(RankBasedMetric):
         if weights is None:
             return stats.median_abs_deviation(ranks, scale="normal").item()
 
-        return weighted_median(a=np.abs(ranks - weighted_median(a=ranks, weights=weights)), weights=weights).item()
+        median = weighted_median(a=ranks, weights=weights)
+        abs_diff_from_median = np.abs(ranks - median)
+        # note: scale="normal", means that we divide by inverse of the standard normal
+        # quantile function at 0.75, which is approximately 0.67449.
+        scale = 0.67449
+        return weighted_median(a=abs_diff_from_median, weights=weights).item() / scale
 
 
 @parse_docdata
