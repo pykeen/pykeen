@@ -25,7 +25,7 @@ from pykeen.triples.triples_factory import (
     get_mapped_triples,
     valid_triple_id_range,
 )
-from pykeen.triples.utils import TRIPLES_DF_COLUMNS, load_triples
+from pykeen.triples.utils import TRIPLES_DF_COLUMNS, InvalidRemappingLengthError, load_triples
 from tests.constants import RESOURCES
 from tests.utils import needs_packages
 
@@ -482,7 +482,7 @@ class TestUtils(unittest.TestCase):
         """Test loading a triples file where the columns must be remapped."""
         path = os.path.join(RESOURCES, "test_remap.tsv")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(InvalidRemappingLengthError):
             load_triples(path, column_remapping=[1, 2])
 
         _triples = load_triples(path, column_remapping=[0, 2, 1])
