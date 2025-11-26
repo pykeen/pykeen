@@ -2369,7 +2369,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         value_weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
 
         # TODO: abs=2 recovers the previous value passed to assertAlmostEqual, but is a wild tolerance...
-        assert value_repeat == pytest.approx(value_weighted, abs=2), (value_repeat, value_weighted)
+        assert value_repeat == pytest.approx(value_weighted), (value_repeat, value_weighted)
 
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
