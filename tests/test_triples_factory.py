@@ -252,7 +252,7 @@ class TestSplit(unittest.TestCase):
     def _test_invariants_shared(self, *factories: TriplesFactory, lossy: bool = False) -> None:
         # verify that the type got correctly promoted
         for factory in factories:
-            assert type(factory) == type(self.triples_factory)
+            assert type(factory) is type(self.triples_factory)
             # we only support inductive *entity* splits for now
             assert factory.num_relations == self.triples_factory.num_relations
             # verify that triple have been compacted
@@ -534,7 +534,7 @@ class TestUtils(unittest.TestCase):
     def assert_tf_equal(self, tf1, tf2) -> None:
         """Check two triples factories have all of the same stuff."""
         # TODO: this could be (Core)TriplesFactory.__equal__
-        assert type(tf1) == type(tf2)
+        assert type(tf1) is type(tf2)
         if isinstance(tf1, TriplesFactory):
             assert tf1.entity_labeling == tf2.entity_labeling
             assert tf1.relation_labeling == tf2.relation_labeling
