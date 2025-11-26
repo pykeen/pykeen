@@ -626,7 +626,7 @@ def test_get_mapped_triples(x, inputs: Mapping[str, Any]):
     assert mapped_triples.shape[-1] == 3
 
 
-@pytest.fixture()
+@pytest.fixture
 def tf_one_hole() -> CoreTriplesFactory:
     """Create a condensable triples factory."""
     # create (already condensed) triples factory
