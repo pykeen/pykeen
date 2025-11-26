@@ -967,7 +967,7 @@ def _handle_model(
         )
 
     if isinstance(model, Model):
-        model_instance = model
+        model_instance = model  # type: ignore[assignment]
         # TODO should training be reset?
         # TODO should kwargs for loss and regularizer be checked and raised for?
     else:

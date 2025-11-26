@@ -683,4 +683,4 @@ class ERModel(
             )
         )
         # normalization
-        return tuple(x[0] if len(x) == 1 else x for x in (hr, rr, tr))
+        return tuple(x[0] if len(x) == 1 else x for x in (hr, rr, tr))  # type: ignore[return-value]
