@@ -36,6 +36,18 @@ EXTENSION_IMPORTER_RESOLVER: FunctionResolver[[str], LabeledTriples] = FunctionR
 )
 
 
+class InvalidRemappingLengthError(ValueError):
+    """An error in the length of a remapping."""
+
+    def __init__(self, length: int) -> None:
+        """Instantiate the error.
+
+        :param length:
+            The actual length of the remapping.
+        """
+        super().__init__(f"Remapping must have length of three, but has {length}")
+
+
 def load_triples(
     path: str | pathlib.Path | TextIO,
     delimiter: str = "\t",
@@ -75,7 +87,7 @@ def load_triples(
         encoding = "utf-8"
     if column_remapping is not None:
         if len(column_remapping) != 3:
-            raise ValueError("remapping must have length of three")
+            raise InvalidRemappingLengthError(len(column_remapping))
     df = pandas.read_csv(
         path,
         sep=delimiter,

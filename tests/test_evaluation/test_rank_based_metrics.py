@@ -5,6 +5,7 @@ from collections.abc import Callable
 
 import numpy
 import numpy as np
+import pytest
 import unittest_templates
 from scipy.stats import bootstrap
 
@@ -208,7 +209,7 @@ class WeightedTests(unittest.TestCase):
     def _test_equal_weights(self, func: Callable[[numpy.ndarray, numpy.ndarray | None], numpy.ndarray]):
         """Verify that equal weights lead to unweighted results."""
         weights = np.full_like(self.array, fill_value=2.0)
-        self.assertAlmostEqual(func(self.array, None).item(), func(self.array, weights).item())
+        assert func(self.array, None).item() == pytest.approx(func(self.array, weights).item())
 
     def test_weighted_harmonic_mean(self):
         """Test weighted harmonic mean."""
@@ -238,8 +239,8 @@ class WeightedTests(unittest.TestCase):
             result = numpy.average(samples, weights=weights, axis=-1)
             low, high = bootstrap((result,), statistic=statistic).confidence_interval
             # check that closed-form is in confidence interval of sampled
-            self.assertLessEqual(low, closed)
-            self.assertLessEqual(closed, high)
+            assert low <= closed
+            assert closed <= high
 
     def test_weighted_mean_expectation(self):
         """Test weighted mean expectation."""

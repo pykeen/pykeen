@@ -64,7 +64,7 @@ if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Mapping, MutableMapping
 
 
-@pytest.mark.parametrize(["estimator", "ci"], [(numpy.mean, 60), ("mean", "std"), (numpy.mean, numpy.var)])
+@pytest.mark.parametrize(("estimator", "ci"), [(numpy.mean, 60), ("mean", "std"), (numpy.mean, numpy.var)])
 def test_summarize_values(estimator, ci):
     """Test value summarization."""
     gen = numpy.random.default_rng(seed=42)
@@ -94,10 +94,10 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         result: RankBasedMetricResults
 
         for (side, rank_type, metric), value in result.data.items():
-            self.assertIn(side, SIDES)
-            self.assertIn(rank_type, RANK_TYPES)
-            self.assertIsInstance(metric, str)
-            self.assertIsInstance(value, (float, int))
+            assert side in SIDES
+            assert rank_type in RANK_TYPES
+            assert isinstance(metric, str)
+            assert isinstance(value, (float, int))
 
     def test_finalize_multi(self) -> None:
         """Test multi finalize."""
@@ -182,9 +182,9 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
         result: ClassificationMetricResults
 
         for (side, metric_name), value in result.data.items():
-            self.assertIn(side, SIDES)
-            self.assertIsInstance(metric_name, str)
-            self.assertIsInstance(value, (float, int))
+            assert side in SIDES
+            assert isinstance(metric_name, str)
+            assert isinstance(value, (float, int))
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
@@ -431,7 +431,7 @@ class TestEvaluationStructure(unittest.TestCase):
             batch_size=1,
             use_tqdm=False,
         )
-        self.assertIsInstance(eval_results, DummyMetricResults)
+        assert isinstance(eval_results, DummyMetricResults)
         assert eval_results.get_metric(name=LABEL_HEAD) == eval_results.get_metric(name=LABEL_TAIL), (
             "Should be evaluated on the same number of batches per side"
         )
@@ -498,7 +498,7 @@ class TestEvaluationFiltering(unittest.TestCase):
 
 
 @pytest.mark.parametrize(
-    "string,expected",
+    ("string", "expected"),
     [
         (None, RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=InverseHarmonicMeanRank().key)),
         ("mrr", RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=InverseHarmonicMeanRank().key)),
@@ -724,12 +724,12 @@ class ExpectedMetricsTests(unittest.TestCase):
             assert ehk >= 0
             assert ehk <= 1.0
             if total <= k:
-                self.assertAlmostEqual(ehk, 1.0)
+                assert ehk == pytest.approx(1.0)
 
     def test_expected_hits_at_k_manual(self):
         """Test expected Hits@k, where some candidate set sizes are smaller than k, but not all."""
         metric = HitsAtK(k=10)
-        self.assertAlmostEqual(metric.expected_value(num_candidates=[5, 20]), (1 + 0.5) / 2)
+        assert metric.expected_value(num_candidates=[5, 20]) == pytest.approx((1 + 0.5) / 2)
 
 
 def test_prepare_filter_triples():
@@ -769,7 +769,7 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
             metric_name = metric.key
-            self.assertTrue(any(metric_name in key for key in flat_dict.keys()), metric_name)
+            assert any(metric_name in key for key in flat_dict.keys()), metric_name
 
     def test_monotonicity_in_rank_type(self):
         """Test monotonicity for different rank-types."""

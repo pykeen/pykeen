@@ -75,8 +75,8 @@ def test_normalize_invalid_ratio():
         [0.8, 0.1, 0.2],
     ]
     for ratios in cases:
-        with pytest.raises(ValueError):
-            _ = normalize_ratios(ratios=ratios)
+        with pytest.raises(ValueError, match="ratios sum to more than 1.0"):
+            normalize_ratios(ratios=ratios)
 
 
 class DeterministicCleanerTests(CleanerTestCase):
@@ -172,9 +172,9 @@ class RandomizedCleanerTests(CleanerTestCase):
         )
 
         if expected_training_1 == new_training:
-            self.assertEqual(expected_testing_1, new_testing)
+            assert expected_testing_1 == new_testing
         elif expected_training_2 == new_training:
-            self.assertEqual(expected_testing_2, new_testing)
+            assert expected_testing_2 == new_testing
         else:
             self.fail("training was not correct")
 
@@ -202,13 +202,9 @@ class CoverageSplitterTest(SplitterTestCase):
         assert cover.shape == (self.mapped_triples.shape[0],)
 
         # check coverage
-        self.assertEqual(
-            get_entities(self.mapped_triples),
-            get_entities(self.mapped_triples[cover]),
-            msg="entity coverage is not full",
+        assert get_entities(self.mapped_triples) == get_entities(self.mapped_triples[cover]), (
+            "entity coverage is not full"
         )
-        self.assertEqual(
-            get_relations(self.mapped_triples),
-            get_relations(self.mapped_triples[cover]),
-            msg="relation coverage is not full",
+        assert get_relations(self.mapped_triples) == get_relations(self.mapped_triples[cover]), (
+            "relation coverage is not full"
         )

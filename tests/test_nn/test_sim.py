@@ -97,7 +97,7 @@ class KullbackLeiblerDivergenceKG2ESimilarityTests(GenericTestCase[NegativeKullb
         h, r, t = (self._get(name=name) for name in "hrt")
         sim = self.instance(h=h, r=r, t=t)
         sim2 = _torch_kl_similarity(h=h, r=r, t=t)
-        self.assertTrue(torch.allclose(sim, sim2), msg=f"Difference: {(sim - sim2).abs()}")
+        assert torch.allclose(sim, sim2), f"Difference: {(sim - sim2).abs()}"
 
     def test_self_similarity(self):
         """Check value of similarity to self."""
@@ -109,7 +109,7 @@ class KullbackLeiblerDivergenceKG2ESimilarityTests(GenericTestCase[NegativeKullb
         h = GaussianDistribution(mean=2 * r.mean, diagonal_covariance=0.5 * r.diagonal_covariance)
         t = GaussianDistribution(mean=r.mean, diagonal_covariance=0.5 * r.diagonal_covariance)
         sim = self.instance(h=h, r=r, t=t)
-        self.assertTrue(torch.allclose(sim, torch.zeros_like(sim)), msg=f"Sim: {sim}")
+        assert torch.allclose(sim, torch.zeros_like(sim)), f"Sim: {sim}"
 
     def test_value_range(self):
         """Check the value range."""
@@ -117,4 +117,4 @@ class KullbackLeiblerDivergenceKG2ESimilarityTests(GenericTestCase[NegativeKullb
         # divergence >= 0 => similarity = -divergence <= 0
         h, r, t = (self._get(name=name) for name in "hrt")
         sim = self.instance(h=h, r=r, t=t)
-        self.assertTrue((sim <= 0).all())
+        assert (sim <= 0).all()

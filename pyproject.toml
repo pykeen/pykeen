@@ -218,6 +218,7 @@ extend-select = [
     # "DOC",   # pydoclint (DOC), requires preview; supersedes darglint
     "PERF",
     "TC",   # flake8-type-checking
+    "PT",   # flake8-pytest-style
 ]
 ignore = [
     "D105", # Missing docstring in magic method

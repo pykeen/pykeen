@@ -19,7 +19,7 @@ class TestLiteralModel(unittest.TestCase):
             evaluation_kwargs={"use_tqdm": False},
             training_loop="lcwa",
         )
-        self.assertIsNotNone(rv)
+        assert rv is not None
         with tempfile.TemporaryDirectory() as d:
             rv.save_to_directory(d)
 

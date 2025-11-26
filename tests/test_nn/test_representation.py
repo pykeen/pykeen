@@ -5,6 +5,7 @@ from collections.abc import MutableMapping
 from typing import Any, ClassVar
 
 import numpy
+import pytest
 import torch
 import unittest_templates
 
@@ -395,25 +396,25 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
     def test_input_verification(self):
         """Verify that the input is correctly verified."""
         # empty bases
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="Must provide at least one base representation"):
             self.cls(assignment=..., bases=[], bases_kwargs=[])
 
         # inconsistent base shapes
         shapes = range(2, len(self.max_ids) + 2)
         bases_kwargs = [{"max_id": max_id, "shape": (dim,)} for max_id, dim in zip(self.max_ids, shapes, strict=False)]
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="Inconsistent base shapes:"):
             self.cls(**ChainMap({"bases_kwargs": bases_kwargs}, self.instance_kwargs))
 
         # invalid base id
         assignment = self.instance.assignment.clone()
         assignment[torch.randint(assignment.shape[0], size=()), 0] = len(self.instance.bases)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="Invalid representation Ids in assignment"):
             self.cls(**ChainMap({"assignment": assignment}, self.instance_kwargs))
 
         # invalid local index
         assignment = self.instance.assignment.clone()
         assignment[torch.randint(assignment.shape[0], size=()), 1] = max(self.max_ids)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="cannot provide indices up to"):
             self.cls(**ChainMap({"assignment": assignment}, self.instance_kwargs))
 
 
@@ -440,7 +441,7 @@ class MultiBackfillRepresentationTests(cases.RepresentationTestCase):
                 pykeen.nn.Partition(ids=[2, 3], base=None, kwargs={"shape": (2,)}),
             ],
         )
-        self.assertEqual(2, len(x.bases))
+        assert 2 == len(x.bases)
 
 
 class BackfillRepresentationTests(cases.RepresentationTestCase):
@@ -459,15 +460,15 @@ class BackfillRepresentationTests(cases.RepresentationTestCase):
             ([0, 1, 2, 5], "exceed max_id"),
             ([-1, 1, 2, 5], "not non-negative"),
         ):
-            with self.subTest(message_part), self.assertRaises(pykeen.nn.representation.InvalidBaseIdsError) as info:
+            with self.subTest(message_part), pytest.raises(pykeen.nn.representation.InvalidBaseIdsError) as info:
                 pykeen.nn.representation.BackfillRepresentation(
                     base_ids=base_ids,
                     max_id=2,
                     base=pykeen.nn.representation.Embedding(max_id=4, shape=(4,)),
                 )
-            self.assertIn(message_part, str(info.exception))
+            assert message_part in str(info.value)
 
-        with self.subTest(message_part), self.assertRaises(pykeen.nn.representation.MaxIDMismatchError):
+        with self.subTest(message_part), pytest.raises(pykeen.nn.representation.MaxIDMismatchError):
             pykeen.nn.representation.BackfillRepresentation(
                 base_ids=[0, 1],
                 max_id=2,

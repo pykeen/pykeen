@@ -6,6 +6,7 @@ import unittest
 from collections.abc import Iterable, MutableMapping
 from typing import Any
 
+import pytest
 import torch
 import unittest_templates
 
@@ -203,11 +204,11 @@ class TestNodePieceMLP(cases.BaseNodePieceTest):
 
     def test_aggregation(self):
         """Test that the MLP gets registered properly and is trainable."""
-        self.assertIsInstance(self.instance, pykeen.models.NodePiece)
+        assert isinstance(self.instance, pykeen.models.NodePiece)
         r = self.instance.entity_representations[0]
-        self.assertIsInstance(r, NodePieceRepresentation)
-        self.assertIsInstance(r.combination, ConcatAggregationCombination)
-        self.assertIsInstance(r.combination.aggregation, ConcatMLP)
+        assert isinstance(r, NodePieceRepresentation)
+        assert isinstance(r.combination, ConcatAggregationCombination)
+        assert isinstance(r.combination.aggregation, ConcatMLP)
 
         # Test that the weight in the MLP is trainable (i.e. requires grad)
         for key in [
@@ -215,10 +216,10 @@ class TestNodePieceMLP(cases.BaseNodePieceTest):
             for key in ("0.weight", "0.bias", "3.weight", "3.bias")
         ]:
             params = dict(self.instance.named_parameters())
-            self.assertIn(key, set(params))
+            assert key in set(params)
             tensor = params[key]
-            self.assertIsInstance(tensor, torch.Tensor)
-            self.assertTrue(tensor.requires_grad)
+            assert isinstance(tensor, torch.Tensor)
+            assert tensor.requires_grad
 
 
 class TestNodePieceAnchors(cases.BaseNodePieceTest):
@@ -464,10 +465,10 @@ class TestTransD(cases.DistanceModelTestCase):
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
         scores = self.instance.score_hrt(hrt_batch=batch)
-        self.assertEqual(scores.shape[0], 2)
-        self.assertEqual(scores.shape[1], 1)
+        assert scores.shape[0] == 2
+        assert scores.shape[1] == 1
         first_score = scores[0].item()
-        self.assertAlmostEqual(first_score, -16, delta=0.01)
+        assert first_score == pytest.approx(-16, abs=0.01)
 
         # Use different dimension for relation embedding: relation_dim > entity_dim
         # relation embeddings
@@ -491,16 +492,16 @@ class TestTransD(cases.DistanceModelTestCase):
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0]], dtype=torch.long)
         scores = self.instance.score_hrt(hrt_batch=batch)
-        self.assertAlmostEqual(scores.item(), -27, delta=0.01)
+        assert scores.item() == pytest.approx(-27, abs=0.01)
 
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
         scores = self.instance.score_hrt(hrt_batch=batch)
-        self.assertEqual(scores.shape[0], 2)
-        self.assertEqual(scores.shape[1], 1)
+        assert scores.shape[0] == 2
+        assert scores.shape[1] == 1
         first_score = scores[0].item()
         second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -27, delta=0.01)
-        self.assertAlmostEqual(second_score, -27, delta=0.01)
+        assert first_score == pytest.approx(-27, abs=0.01)
+        assert second_score == pytest.approx(-27, abs=0.01)
 
         # Use different dimension for relation embedding: relation_dim < entity_dim
         # entity embeddings
@@ -540,12 +541,12 @@ class TestTransD(cases.DistanceModelTestCase):
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
         scores = self.instance.score_hrt(hrt_batch=batch)
-        self.assertEqual(scores.shape[0], 2)
-        self.assertEqual(scores.shape[1], 1)
+        assert scores.shape[0] == 2
+        assert scores.shape[1] == 1
         first_score = scores[0].item()
         second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -18, delta=0.01)
-        self.assertAlmostEqual(second_score, -18, delta=0.01)
+        assert first_score == pytest.approx(-18, abs=0.01)
+        assert second_score == pytest.approx(-18, abs=0.01)
 
 
 class TestTransE(cases.DistanceModelTestCase):
@@ -658,10 +659,10 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
                     docdata = cls.__docdata__
                 except AttributeError:
                     self.fail("missing __docdata__")
-                self.assertIn("citation", docdata)
-                self.assertIn("author", docdata["citation"])
-                self.assertIn("link", docdata["citation"])
-                self.assertIn("year", docdata["citation"])
+                assert "citation" in docdata
+                assert "author" in docdata["citation"]
+                assert "link" in docdata["citation"]
+                assert "year" in docdata["citation"]
 
     def test_importing(self):
         """Test that all models are available from :mod:`pykeen.models`."""
@@ -693,7 +694,7 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
         # FIXME definitely a type mismatch going on here
         model_names = _remove_non_models(model_names - SKIP_MODULES)
 
-        self.assertEqual(model_names, star_model_names, msg="Forgot to add some imports")
+        assert model_names == star_model_names, "Forgot to add some imports"
 
     @unittest.skip("no longer necessary?")
     def test_models_have_experiments(self):
@@ -715,9 +716,8 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
         model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist)
         for model in _remove_non_models(model_names):
             with self.subTest(model=model):
-                self.assertTrue(
-                    os.path.exists(os.path.join(experiments_path, model.lower())),
-                    msg=f"Missing experimental configuration for {model}",
+                assert os.path.exists(os.path.join(experiments_path, model.lower())), (
+                    f"Missing experimental configuration for {model}"
                 )
 
 

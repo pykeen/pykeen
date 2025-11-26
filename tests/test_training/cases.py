@@ -4,6 +4,7 @@ import tempfile
 from collections.abc import MutableMapping
 from typing import Any, ClassVar
 
+import pytest
 import torch
 import unittest_templates
 from torch.optim import Adam, Optimizer
@@ -81,7 +82,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
         model = ConvE(triples_factory=self.triples_factory)
         training_loop = self._with_model(model)
 
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             training_loop.train(
                 triples_factory=self.triples_factory,
                 num_epochs=1,
@@ -111,7 +112,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
             triples_factory=self.triples_factory,
             optimizer=self.optimizer_cls(model.get_grad_params()),
         )
-        with self.assertRaises(NonFiniteLossError):
+        with pytest.raises(NonFiniteLossError):
             training_loop.train(
                 triples_factory=self.triples_factory,
                 num_epochs=patience + 1,
@@ -167,7 +168,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
                 checkpoint_frequency=0,
             )
 
-        self.assertEqual(losses, losses_2)
+        assert losses == losses_2
 
     def test_result_tracker(self):
         """Test whether losses are tracked by the result tracker."""
@@ -182,7 +183,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
 
     def test_error_on_no_batch(self):
         """Verify that an error is raised if no training batch is available."""
-        with self.assertRaises(NoTrainingBatchError):
+        with pytest.raises(NoTrainingBatchError):
             self.instance.train(
                 triples_factory=self.triples_factory,
                 num_epochs=self.num_epochs,

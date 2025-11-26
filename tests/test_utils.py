@@ -53,8 +53,8 @@ class TestCompose(unittest.TestCase):
         fog = compose(_f, _g, name="fog")
         for i in range(5):
             with self.subTest(i=i):
-                self.assertEqual(_g(_f(i)), fog(i))
-                self.assertEqual(_g(_f(i**2)), fog(i**2))
+                assert _g(_f(i)) == fog(i)
+                assert _g(_f(i**2)) == fog(i**2)
 
 
 class FlattenDictionaryTest(unittest.TestCase):
@@ -129,7 +129,7 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         """Test the trivial string."""
         s = ""
         r = get_until_first_blank(s)
-        self.assertEqual("", r)
+        assert "" == r
 
     def test_regular(self):
         """Test a regulat case."""
@@ -139,7 +139,7 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         Now I continue.
         """
         r = get_until_first_blank(s)
-        self.assertEqual("Broken line.", r)
+        assert "Broken line." == r
 
 
 def _generate_shapes(
@@ -175,9 +175,9 @@ class TestUtils(unittest.TestCase):
         compacted_mapping, id_remapping = compact_mapping(mapping=mapping)
 
         # check correct value range
-        self.assertEqual(set(compacted_mapping.values()), set(range(len(mapping))))
-        self.assertEqual(set(id_remapping.keys()), set(mapping.values()))
-        self.assertEqual(set(id_remapping.values()), set(compacted_mapping.values()))
+        assert set(compacted_mapping.values()) == set(range(len(mapping)))
+        assert set(id_remapping.keys()) == set(mapping.values())
+        assert set(id_remapping.values()) == set(compacted_mapping.values())
 
     def test_clamp_norm(self):
         """Test clamp_norm() ."""

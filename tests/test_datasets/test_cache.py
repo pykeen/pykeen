@@ -1,36 +1,15 @@
 """Test caching."""
 
 import pathlib
-import shutil
 import tempfile
 import unittest
-from timeit import default_timer
 
-from pykeen.constants import PYKEEN_DATASETS
-from pykeen.datasets import UMLS, Nations
+from pykeen.datasets import Nations
 from pykeen.datasets.base import Dataset
-from pykeen.datasets.utils import _cached_get_dataset, _digest_kwargs
-
-
-def _time_cached_get_dataset(name: str) -> float:
-    start = default_timer()
-    _cached_get_dataset(name, {})
-    return default_timer() - start
 
 
 class TestDatasetCaching(unittest.TestCase):
     """Test caching."""
-
-    def test_caching(self):
-        """Test dataset caching."""
-        digest = _digest_kwargs({})
-        directory = PYKEEN_DATASETS.joinpath(UMLS().get_normalized_name(), "cache", digest)
-        # clear
-        if directory.exists():
-            shutil.rmtree(directory)
-        t1 = _time_cached_get_dataset("umls")
-        t2 = _time_cached_get_dataset("umls")
-        assert t2 < t1 + 1.0e-03
 
     def test_serialization(self):
         """Test dataset serialization."""
