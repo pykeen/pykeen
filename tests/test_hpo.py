@@ -76,13 +76,13 @@ class TestHPOObjective(unittest.TestCase):
 
     @patch("pykeen.pipeline.pipeline", side_effect=MemoryError)
     @patch("optuna.Trial")
-    def test_re_raise_memory_error(self, _mock_pipeline, MockTrial):  # noqa: N803
+    def test_re_raise_memory_error(self, _mock_pipeline, MockTrial):  # noqa: N803, PT019
         """Check that memory errors are re-raised (to be catched by study.optimize)."""
         self._test_re_raise(MockTrial=MockTrial, exception=MemoryError)
 
     @patch("pykeen.pipeline.pipeline", side_effect=RuntimeError)
     @patch("optuna.Trial")
-    def test_re_raise_runtime_error(self, _mock_pipeline, MockTrial):  # noqa: N803
+    def test_re_raise_runtime_error(self, _mock_pipeline, MockTrial):  # noqa: N803, PT019
         """Check that runtime errors are re-raised (to be catched by study.optimize)."""
         self._test_re_raise(MockTrial=MockTrial, exception=RuntimeError)
 

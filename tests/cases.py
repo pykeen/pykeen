@@ -1369,9 +1369,11 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         # TODO: Catch HolE MKL error?
         result: Result = runner.invoke(cli, args)
 
-        assert 0 == result.exit_code, (
-            f"""\nCommand\n=======\n$ pykeen train {self.cls.__name__.lower()} {" ".join(map(str, args))}\n\nOutput\n======\n{result.output}\n\nException\n=========\n{result.exc_info[1]}\n\nTraceback\n=========\n{"".join(traceback.format_tb(result.exc_info[2]))}\n            """
-        )
+        assert (
+            0 == result.exit_code
+        ), f"""\nCommand\n=======\n$ pykeen train {self.cls.__name__.lower()} {" ".join(map(str, args))}\n\n"
+            f"Output\n======\n{result.output}\n\nException\n=========\n{result.exc_info[1]}\n\n"
+            f"Traceback\n=========\n{"".join(traceback.format_tb(result.exc_info[2]))}\n            """
 
     def test_has_hpo_defaults(self):
         """Test that there are defaults for HPO."""
@@ -1422,7 +1424,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             try:
                 self.cls(**self.instance_kwargs)
             except TypeError as error:
-                assert error.args == ("'NoneType' object is not callable",)
+                assert error.args == ("'NoneType' object is not callable",)  # noqa: PT017
             mock_method.assert_called_once()
 
 
