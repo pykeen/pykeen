@@ -270,7 +270,7 @@ class Cleaner:
 def _prepare_cleanup(
     training: MappedTriples,
     testing: MappedTriples,
-    max_ids: tuple[int, int] | None = None,
+    max_ids: tuple[int | None, int | None] | None = None,
 ) -> BoolTensor:
     """
     Calculate a mask for the test triples with triples containing test-only entities or relations.
@@ -294,12 +294,10 @@ def _prepare_cleanup(
     columns = [[0, 2], [1]]
     to_move_mask = torch.zeros(1, dtype=torch.bool)
     if max_ids is None:
-
-        def _get_max(col: Sequence[int]) -> int:
-            return int(max(training[:, col].max().item(), testing[:, col].max().item()))
-
-        max_ids = (_get_max(columns[0]), _get_max(columns[1]))
+        max_ids = (None, None)
     for col, max_id in zip(columns, max_ids, strict=False):
+        if max_id is None:
+            max_id = int(max(training[:, col].max().item(), testing[:, col].max().item())) + 1
         # IDs not in training
         not_in_training_mask = torch.ones(max_id, dtype=torch.bool)
         not_in_training_mask[training[:, col].view(-1)] = False
