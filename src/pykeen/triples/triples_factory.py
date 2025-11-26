@@ -427,6 +427,12 @@ class InvalidMappedTriplesShapeError(ValueError):
     """An invalid shape of mapped triples.."""
 
     def __init__(self, shape: Sequence[int]) -> None:
+        """
+        Instantiate the error.
+
+        :param shape:
+            The actual shape of the triples.
+        """
         super().__init__(f"Invalid shape for mapped_triples: {shape}; must be (n, 3)")
 
 

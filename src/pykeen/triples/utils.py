@@ -40,6 +40,11 @@ class InvalidRemappingLengthError(ValueError):
     """An error in the length of a remapping."""
 
     def __init__(self, length: int) -> None:
+        """Instantiate the error.
+
+        :param length:
+            The actual length of the remapping.
+        """
         super().__init__(f"Remapping must have length of three, but has {length}")
 
 
