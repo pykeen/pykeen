@@ -20,6 +20,7 @@ from pykeen.triples import CoreTriplesFactory, TriplesFactory, TriplesNumericLit
 from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import (
     INVERSE_SUFFIX,
+    InvalidMappedTriplesShapeError,
     _map_triples_elements_to_ids,
     get_mapped_triples,
     valid_triple_id_range,
@@ -255,7 +256,9 @@ class TestSplit(unittest.TestCase):
             # we only support inductive *entity* splits for now
             assert factory.num_relations == self.triples_factory.num_relations
             # verify that triple have been compacted
-            assert valid_triple_id_range(factory.mapped_triples, num_entities=factory.num_entities, num_relations=factory.num_relations)
+            assert valid_triple_id_range(
+                factory.mapped_triples, num_entities=factory.num_entities, num_relations=factory.num_relations
+            )
         # verify that no triple got lost
         total_num_triples = sum(t.num_triples for t in factories)
         if lossy:
@@ -406,8 +409,12 @@ class TestLiterals(unittest.TestCase):
         """Test that the right number of entities and triples exist after inverting them."""
         triples_factory = TriplesFactory.from_labeled_triples(triples=triples, create_inverse_triples=True)
         assert 4 == triples_factory.num_relations
-        assert set(range(triples_factory.num_entities)) == set(triples_factory.entity_to_id.values()), "wrong number entities"
-        assert set(range(triples_factory.real_num_relations)) == set(triples_factory.relation_to_id.values()), "wrong number relations"
+        assert set(range(triples_factory.num_entities)) == set(triples_factory.entity_to_id.values()), (
+            "wrong number entities"
+        )
+        assert set(range(triples_factory.real_num_relations)) == set(triples_factory.relation_to_id.values()), (
+            "wrong number relations"
+        )
 
         relations = set(triples[:, 1])
         entities = set(triples[:, 0]).union(triples[:, 2])
@@ -543,9 +550,9 @@ class TestUtils(unittest.TestCase):
     ("dtype", "size", "expectation"),
     [
         # wrong ndim
-        (torch.long, (3,), pytest.raises(ValueError)),
+        (torch.long, (3,), pytest.raises(InvalidMappedTriplesShapeError)),
         # wrong last dim
-        (torch.long, (3, 11), pytest.raises(ValueError)),
+        (torch.long, (3, 11), pytest.raises(InvalidMappedTriplesShapeError)),
         # wrong dtype: float
         (torch.float, (11, 3), pytest.raises(TypeError)),
         # wrong dtype: complex

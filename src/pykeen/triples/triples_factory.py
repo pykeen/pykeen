@@ -423,6 +423,13 @@ def valid_triple_id_range(mapped_triples: MappedTriples, num_entities: int, num_
     )
 
 
+class InvalidMappedTriplesShapeError(ValueError):
+    """An invalid shape of mapped triples.."""
+
+    def __init__(self, shape: Sequence[int]) -> None:
+        super().__init__(f"Invalid shape for mapped_triples: {shape}; must be (n, 3)")
+
+
 class CoreTriplesFactory(KGInfo):
     """Create instances from ID-based triples."""
 
@@ -465,7 +472,7 @@ class CoreTriplesFactory(KGInfo):
         mapped_triples = torch.as_tensor(mapped_triples)
         # input validation
         if mapped_triples.ndim != 2 or mapped_triples.shape[1] != 3:
-            raise ValueError(f"Invalid shape for mapped_triples: {mapped_triples.shape}; must be (n, 3)")
+            raise InvalidMappedTriplesShapeError(shape=mapped_triples.shape)
         if mapped_triples.is_complex() or mapped_triples.is_floating_point():
             raise TypeError(f"Invalid type: {mapped_triples.dtype}. Must be integer dtype.")
         # always store as torch.long, i.e., torch's default integer dtype
