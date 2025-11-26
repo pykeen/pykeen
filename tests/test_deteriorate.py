@@ -53,5 +53,7 @@ class TestDeterioration(unittest.TestCase):
     def _help_check(self, derived: Dataset):
         assert derived.validation is not None
         assert self.num_training_triples == self.reference.training.num_triples
-        assert self.num_triples == sum((derived.training.num_triples, derived.testing.num_triples, derived.validation.num_triples)), "different number of total triples"
+        assert self.num_triples == sum(
+            (derived.training.num_triples, derived.testing.num_triples, derived.validation.num_triples)
+        ), "different number of total triples"
         assert derived.training.num_triples < self.reference.training.num_triples

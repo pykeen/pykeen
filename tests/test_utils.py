@@ -54,7 +54,7 @@ class TestCompose(unittest.TestCase):
         for i in range(5):
             with self.subTest(i=i):
                 assert _g(_f(i)) == fog(i)
-                assert _g(_f(i ** 2)) == fog(i ** 2)
+                assert _g(_f(i**2)) == fog(i**2)
 
 
 class FlattenDictionaryTest(unittest.TestCase):

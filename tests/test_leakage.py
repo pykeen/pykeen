@@ -74,28 +74,39 @@ class TestLeakage(unittest.TestCase):
         # self.assertLessEqual(min_frequency, expected_frequency)
 
         assert len(forwards_extras) > len(inverse_extras)
-        assert expected_forwards_frequency < expected_inverse_frequency, "Forwards frequency should be higher than inverse frequency"
+        assert expected_forwards_frequency < expected_inverse_frequency, (
+            "Forwards frequency should be higher than inverse frequency"
+        )
 
         sealant = Sealant(train_factory, symmetric=False, minimum_frequency=min_frequency)
         test_relation_id, test_relation_inverse_id = (
             train_factory.relation_to_id[r] for r in (test_relation, test_relation_inverse)
         )
-        assert 0 != len(sealant.candidate_inverse_relations), f"did not find any candidate inverse relations at frequency>={min_frequency}"
-        assert {(test_relation_id, test_relation_inverse_id): expected_forwards_frequency, (test_relation_inverse_id, test_relation_id): expected_inverse_frequency} == dict(sealant.candidate_inverse_relations)
+        assert 0 != len(sealant.candidate_inverse_relations), (
+            f"did not find any candidate inverse relations at frequency>={min_frequency}"
+        )
+        assert {
+            (test_relation_id, test_relation_inverse_id): expected_forwards_frequency,
+            (test_relation_inverse_id, test_relation_id): expected_inverse_frequency,
+        } == dict(sealant.candidate_inverse_relations)
 
         assert test_relation_id in sealant.inverses
         assert test_relation_inverse_id == sealant.inverses[test_relation]
         assert test_relation_inverse_id in sealant.inverses
         assert test_relation == sealant.inverses[test_relation_inverse_id]
 
-        assert test_relation_inverse_id in sealant.inverse_relations_to_delete, "The wrong relation was picked for deletion"
+        assert test_relation_inverse_id in sealant.inverse_relations_to_delete, (
+            "The wrong relation was picked for deletion"
+        )
 
         # Test looking up inverse triples
         test_leaked = test_factory.mapped_triples[
             test_factory.get_mask_for_relations(relations=sealant.inverse_relations_to_delete, invert=False)
         ]
         assert 1 == len(test_leaked)
-        assert (train_factory.entity_to_id["-2"], test_relation_inverse, train_factory.entity_to_id["-1"]) == tuple(test_leaked[0])
+        assert (train_factory.entity_to_id["-2"], test_relation_inverse, train_factory.entity_to_id["-1"]) == tuple(
+            test_leaked[0]
+        )
 
     def test_generate_compact_vectorized_lookup(self):
         """Test :func:`_generate_compact_vectorized_lookup`."""

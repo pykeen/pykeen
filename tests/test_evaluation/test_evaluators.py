@@ -727,7 +727,7 @@ class ExpectedMetricsTests(unittest.TestCase):
     def test_expected_hits_at_k_manual(self):
         """Test expected Hits@k, where some candidate set sizes are smaller than k, but not all."""
         metric = HitsAtK(k=10)
-        assert metric.expected_value(num_candidates=[5, 20]) == pytest.approx((1 + 0.5) / 2))
+        assert metric.expected_value(num_candidates=[5, 20]) == pytest.approx((1 + 0.5) / 2)
 
 
 def test_prepare_filter_triples():

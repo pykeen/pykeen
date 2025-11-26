@@ -202,5 +202,9 @@ class CoverageSplitterTest(SplitterTestCase):
         assert cover.shape == (self.mapped_triples.shape[0],)
 
         # check coverage
-        assert get_entities(self.mapped_triples) == get_entities(self.mapped_triples[cover]), "entity coverage is not full"
-        assert get_relations(self.mapped_triples) == get_relations(self.mapped_triples[cover]), "relation coverage is not full"
+        assert get_entities(self.mapped_triples) == get_entities(self.mapped_triples[cover]), (
+            "entity coverage is not full"
+        )
+        assert get_relations(self.mapped_triples) == get_relations(self.mapped_triples[cover]), (
+            "relation coverage is not full"
+        )
