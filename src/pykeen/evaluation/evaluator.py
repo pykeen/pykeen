@@ -26,10 +26,8 @@ from tqdm.autonotebook import tqdm
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX, TARGET_TO_KEY_LABELS
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, BoolTensor, InductiveMode, MappedTriples, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from ..utils import (
-    FloatTensor,
-    LongTensor,
     determine_maximum_batch_size,
     flatten_dictionary,
     format_relative_comparison,
@@ -40,6 +38,7 @@ from ..utils import (
 if TYPE_CHECKING:
     from ..metrics.utils import Metric
     from ..models import Model
+    from ..typing import BoolTensor, FloatTensor, InductiveMode, LongTensor, MappedTriples, Target
 
 __all__ = [
     "Evaluator",
