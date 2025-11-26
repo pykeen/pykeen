@@ -154,7 +154,7 @@ def normalize_rank_type(rank: str | None) -> RankType:
     rank = RANK_TYPE_SYNONYMS.get(rank, rank)
     if rank not in RANK_TYPES:
         raise ValueError(f"Invalid target={rank}. Possible values: {RANK_TYPES}")
-    return rank  # type: ignore[return-type]
+    return rank  # type: ignore[return-value]
 
 
 TargetBoth = Literal["both"]
@@ -170,7 +170,7 @@ def normalize_target(target: str | None) -> ExtendedTarget:
         return SIDE_BOTH
     if target not in SIDES:
         raise ValueError(f"Invalid target={target}. Possible values: {SIDES}")
-    return target  # type: ignore[return-type]
+    return target  # type: ignore[return-value]
 
 
 # entity alignment
