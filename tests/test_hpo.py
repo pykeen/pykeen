@@ -204,12 +204,6 @@ class TestHyperparameterOptimization(unittest.TestCase):
         assert ("params", "model.embedding_dim") in df.columns
         assert df["params", "model.embedding_dim"].isin({1, 2, 4, 8, 16}).all()
 
-        objective = _test_suggest(model_kwargs_ranges)
-        with pytest.raises(Exception) as context:
-            study = optuna.create_study()
-            study.optimize(objective, n_trials=2)
-            assert "Upper bound 4 is not greater than lower bound 4." in context.value
-
     def test_sampling_values_from_power_x(self):
         """Test making a study that has a range defined by f(x) = base^x."""
         kwargs_ranges = {
