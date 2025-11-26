@@ -199,7 +199,7 @@ def _prepare_representation_module_list(
                 f"representations was chosen wrong.",
             )
 
-    rs = cast(Sequence[Representation], nn.ModuleList(rs))
+    rs = cast("Sequence[Representation]", nn.ModuleList(rs))
     if skip_checks:
         return rs
 
@@ -678,6 +678,6 @@ class ERModel(
         )
         # normalization
         return cast(
-            tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
+            "tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]",
             tuple(x[0] if len(x) == 1 else x for x in (hr, rr, tr)),
         )

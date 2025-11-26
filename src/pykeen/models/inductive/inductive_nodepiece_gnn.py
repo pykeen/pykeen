@@ -137,6 +137,6 @@ class InductiveNodePieceGNN(InductiveNodePiece):
 
         # normalization
         return cast(
-            tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
+            "tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]",
             tuple(x[0] if len(x) == 1 else x for x in (hh, rr, tt)),
         )

@@ -874,7 +874,7 @@ def hpo_pipeline(
 
     # Invoke optimization of the objective function.
     study.optimize(
-        cast(Callable[[Trial], float], objective),
+        cast("Callable[[Trial], float]", objective),
         n_trials=n_trials,
         timeout=timeout,
         gc_after_trial=gc_after_trial,
@@ -990,7 +990,7 @@ def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, bas
     if high <= low:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
     choices = [base**i for i in range(low, high + 1)]
-    return cast(int, trial.suggest_categorical(name=name, choices=choices))
+    return cast("int", trial.suggest_categorical(name=name, choices=choices))
 
 
 def _set_study_dataset(

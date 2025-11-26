@@ -296,7 +296,7 @@ def _prepare_cleanup(
     to_move_mask = torch.zeros(1, dtype=torch.bool)
     if max_ids is None:
         max_ids = typing.cast(
-            tuple[int, int],
+            "tuple[int, int]",
             tuple(max(training[:, col].max().item(), testing[:, col].max().item()) + 1 for col in columns),
         )
     for col, max_id in zip(columns, max_ids, strict=False):

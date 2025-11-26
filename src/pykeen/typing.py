@@ -88,7 +88,7 @@ Constrainer: TypeAlias = Mutation[FloatTensor]
 
 def cast_constrainer(f) -> Constrainer:
     """Cast a constrainer function with :func:`typing.cast`."""
-    return cast(Constrainer, f)
+    return cast("Constrainer", f)
 
 
 #: A hint for a :class:`torch.device`
@@ -160,7 +160,7 @@ def normalize_rank_type(rank: str | None) -> RankType:
     rank = RANK_TYPE_SYNONYMS.get(rank, rank)
     if rank not in RANK_TYPES:
         raise ValueError(f"Invalid target={rank}. Possible values: {RANK_TYPES}")
-    return cast(RankType, rank)
+    return cast("RankType", rank)
 
 
 TargetBoth = Literal["both"]
@@ -176,7 +176,7 @@ def normalize_target(target: str | None) -> ExtendedTarget:
         return SIDE_BOTH
     if target not in SIDES:
         raise ValueError(f"Invalid target={target}. Possible values: {SIDES}")
-    return cast(ExtendedTarget, target)
+    return cast("ExtendedTarget", target)
 
 
 # entity alignment

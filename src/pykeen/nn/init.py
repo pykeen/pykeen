@@ -158,7 +158,7 @@ normal_norm_ = compose(
     name="normal_norm_",
 )
 uniform_norm_p1_: Initializer = cast(
-    Initializer,
+    "Initializer",
     compose(
         torch.nn.init.uniform_,
         functools.partial(functional.normalize, p=1),

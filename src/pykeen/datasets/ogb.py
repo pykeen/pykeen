@@ -188,9 +188,9 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
             weights_only=False,
         )
         if which == "train":
-            data_dict = cast(WikiKG2TrainDict, data_dict)
+            data_dict = cast("WikiKG2TrainDict", data_dict)
         else:
-            data_dict = cast(WikiKG2EvalDict, data_dict)
+            data_dict = cast("WikiKG2EvalDict", data_dict)
         return data_dict
 
     # docstr-coverage: inherited
@@ -298,9 +298,9 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
             weights_only=False,
         )
         if which == "train":
-            data_dict = cast(BioKGTrainDict, data_dict)
+            data_dict = cast("BioKGTrainDict", data_dict)
         else:
-            data_dict = cast(BioKGEvalDict, data_dict)
+            data_dict = cast("BioKGEvalDict", data_dict)
 
         return data_dict
 

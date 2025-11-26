@@ -963,7 +963,7 @@ def _handle_model(
         )
 
     if isinstance(model, Model):
-        model_instance = cast(Model, model)
+        model_instance = cast("Model", model)
         # TODO should training be reset?
         # TODO should kwargs for loss and regularizer be checked and raised for?
     else:

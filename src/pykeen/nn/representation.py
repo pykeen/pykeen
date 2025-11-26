@@ -1138,7 +1138,7 @@ def _clean_labels(labels: Sequence[str | None], missing_action: Literal["error",
             raise ValueError(
                 f"The labels at the following indexes were none. Consider an alternate `missing_action` policy.\n{idx}",
             )
-        return cast(Sequence[str], labels)
+        return cast("Sequence[str]", labels)
     elif missing_action == "blank":
         return [label or "" for label in labels]
     else:

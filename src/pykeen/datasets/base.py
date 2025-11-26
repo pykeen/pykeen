@@ -87,7 +87,7 @@ def _filter_mapped_triples(
 ) -> MappedTriples:
     heads, tails = _map_ids(mapped_triples[:, ::2], kept_old_ids=kept_old_entity_ids_t).unbind(dim=-1)
     relations = _map_ids(mapped_triples[:, 1], kept_old_ids=kept_old_relation_ids_t)
-    mapped_triples = cast(MappedTriples, torch.stack([heads, relations, tails], dim=-1))
+    mapped_triples = cast("MappedTriples", torch.stack([heads, relations, tails], dim=-1))
     # We can only keep triples where none of the IDs have been filtered.
     keep_mask = (mapped_triples >= 0).all(dim=-1)
     logger.info(f"keeping {format_relative_comparison(keep_mask.sum().item(), keep_mask.numel())} triples.")
@@ -297,7 +297,7 @@ class Dataset(ExtraReprMixin):
     def from_tf(tf: TriplesFactory, ratios: list[float] | None = None) -> Dataset:
         """Create a dataset from a single triples factory by splitting it in 3."""
         training, testing, validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            "tuple[TriplesFactory, TriplesFactory, TriplesFactory]",
             tf.split(ratios or [0.8, 0.1, 0.1]),
         )
         return EagerDataset(training=training, testing=testing, validation=validation)
@@ -420,7 +420,7 @@ class Dataset(ExtraReprMixin):
                 id_to_label=training.relation_id_to_label, kept_ids=kept_relation_ids_t.tolist()
             )
             training = TriplesFactory(
-                mapped_triples=cast(MappedTriples, new_training_triples),
+                mapped_triples=cast("MappedTriples", new_training_triples),
                 entity_to_id=entity_to_id,
                 relation_to_id=relation_to_id,
                 create_inverse_triples=training.create_inverse_triples,
@@ -449,7 +449,7 @@ class Dataset(ExtraReprMixin):
             )
         else:
             training = CoreTriplesFactory(
-                mapped_triples=cast(MappedTriples, new_training_triples),
+                mapped_triples=cast("MappedTriples", new_training_triples),
                 create_inverse_triples=training.create_inverse_triples,
                 metadata=training.metadata,
                 num_entities=num_entities,
@@ -969,7 +969,7 @@ class CompressedSingleDataset(LazyDataset):
             metadata={"path": tf_path},
         )
         self._training, self._testing, self._validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            "tuple[TriplesFactory, TriplesFactory, TriplesFactory]",
             tf.split(
                 ratios=self.ratios,
                 random_state=self.random_state,
@@ -1077,7 +1077,7 @@ class TabbedDataset(LazyDataset):
             metadata={"path": path} if path else None,
         )
         self._training, self._testing, self._validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            "tuple[TriplesFactory, TriplesFactory, TriplesFactory]",
             tf.split(
                 ratios=self.ratios,
                 random_state=self.random_state,

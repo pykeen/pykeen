@@ -274,7 +274,7 @@ class WikidataTextCache(TextCache):
         # for mypy
         for item in result:
             assert isinstance(item, str)
-        return cast(Sequence[str], result)
+        return cast("Sequence[str]", result)
 
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str]:
         """Get a concatenation of the title and description for each Wikidata identifier.
