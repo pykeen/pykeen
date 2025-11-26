@@ -185,9 +185,7 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
         return entity_to_id, relation_to_id
 
     # docstr-coverage: inherited
-    def _load_data_dict_for_split(
-        self, dataset: LinkPropPredDataset | LinkPropPredDataset, which: TrainKey | EvalKey
-    ) -> WikiKG2TrainDict | WikiKG2EvalDict:
+    def _load_data_dict_for_split(self, dataset, which):  # noqa: D102
         # noqa: D102
         return torch.load(
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
