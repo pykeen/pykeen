@@ -6,6 +6,7 @@ import unittest
 from collections.abc import Iterable, MutableMapping
 from typing import Any
 
+import pytest
 import torch
 import unittest_templates
 
@@ -467,7 +468,7 @@ class TestTransD(cases.DistanceModelTestCase):
         assert scores.shape[0] == 2
         assert scores.shape[1] == 1
         first_score = scores[0].item()
-        self.assertAlmostEqual(first_score, -16, delta=0.01)
+        assert first_score == pytest.approx(-16, abs=0.01)
 
         # Use different dimension for relation embedding: relation_dim > entity_dim
         # relation embeddings
@@ -491,7 +492,7 @@ class TestTransD(cases.DistanceModelTestCase):
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0]], dtype=torch.long)
         scores = self.instance.score_hrt(hrt_batch=batch)
-        self.assertAlmostEqual(scores.item(), -27, delta=0.01)
+        assert scores.item() == pytest.approx(-27, abs=0.01)
 
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
         scores = self.instance.score_hrt(hrt_batch=batch)
@@ -499,8 +500,8 @@ class TestTransD(cases.DistanceModelTestCase):
         assert scores.shape[1] == 1
         first_score = scores[0].item()
         second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -27, delta=0.01)
-        self.assertAlmostEqual(second_score, -27, delta=0.01)
+        assert first_score == pytest.approx(-27, abs=0.01)
+        assert second_score == pytest.approx(-27, abs=0.01)
 
         # Use different dimension for relation embedding: relation_dim < entity_dim
         # entity embeddings
@@ -544,8 +545,8 @@ class TestTransD(cases.DistanceModelTestCase):
         assert scores.shape[1] == 1
         first_score = scores[0].item()
         second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -18, delta=0.01)
-        self.assertAlmostEqual(second_score, -18, delta=0.01)
+        assert first_score == pytest.approx(-18, abs=0.01)
+        assert second_score == pytest.approx(-18, abs=0.01)
 
 
 class TestTransE(cases.DistanceModelTestCase):
@@ -715,7 +716,9 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
         model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist)
         for model in _remove_non_models(model_names):
             with self.subTest(model=model):
-                assert os.path.exists(os.path.join(experiments_path, model.lower())), f"Missing experimental configuration for {model}"
+                assert os.path.exists(os.path.join(experiments_path, model.lower())), (
+                    f"Missing experimental configuration for {model}"
+                )
 
 
 def _remove_non_models(elements: Iterable[str | type[Model]]) -> set[type[Model]]:

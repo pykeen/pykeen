@@ -277,18 +277,12 @@ class TestSplit(unittest.TestCase):
         self._test_invariants_shared(*all_factories, lossy=lossy)
 
         # verify that the label-to-id mappings match
-        self.assertSetEqual(
-            {id(factory.entity_to_id) for factory in all_factories},
-            {
-                id(self.triples_factory.entity_to_id),
-            },
-        )
-        self.assertSetEqual(
-            {id(factory.relation_to_id) for factory in all_factories},
-            {
-                id(self.triples_factory.relation_to_id),
-            },
-        )
+        assert {id(factory.entity_to_id) for factory in all_factories} == {
+            id(self.triples_factory.entity_to_id),
+        }
+        assert {id(factory.relation_to_id) for factory in all_factories} == {
+            id(self.triples_factory.relation_to_id),
+        }
 
     def test_split_tf(self):
         """Test splitting a factory."""

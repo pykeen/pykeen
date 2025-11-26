@@ -195,14 +195,14 @@ class DatasetTestCase(unittest.TestCase):
         if self.exp_num_triples_tolerance is None:
             assert self.exp_num_triples == num_triples
         else:
-            self.assertAlmostEqual(self.exp_num_triples, num_triples, delta=self.exp_num_triples_tolerance)
+            assert self.exp_num_triples == pytest.approx(num_triples, abs=self.exp_num_triples_tolerance)
 
         # Test caching
         start = timeit.default_timer()
         _ = self.dataset.training
         end = timeit.default_timer()
         # assert (end - start) < 1.0e-02
-        self.assertAlmostEqual(start, end, delta=1.0e-02, msg="Caching should have made this operation fast")
+        assert start == pytest.approx(end, abs=1.0e-02), "Caching should have made this operation fast"
 
         # Test consistency of training / validation / testing mapping
         training = self.dataset.training
@@ -951,7 +951,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
 
         # check result
         expected_term = self._expected_updated_term(inputs=inputs)
-        self.assertAlmostEqual(self.instance.regularization_term.item(), expected_term.item())
+        assert self.instance.regularization_term.item() == pytest.approx(expected_term.item())
 
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
@@ -1156,7 +1156,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             # TODO: look into score_r for inverse relations
             logger.warning("score_r's shape is not clear yet for models with inverse relations")
         else:
-            self.assertTupleEqual(tuple(scores.shape), shape)
+            assert tuple(scores.shape) == shape
         self._check_scores(batch, scores)
         # clear buffers for message passing models
         self.instance.post_parameter_update()
@@ -1369,7 +1369,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         # TODO: Catch HolE MKL error?
         result: Result = runner.invoke(cli, args)
 
-        assert 0 == result.exit_code, f"""\nCommand\n=======\n$ pykeen train {self.cls.__name__.lower()} {" ".join(map(str, args))}\n\nOutput\n======\n{result.output}\n\nException\n=========\n{result.exc_info[1]}\n\nTraceback\n=========\n{"".join(traceback.format_tb(result.exc_info[2]))}\n            """
+        assert 0 == result.exit_code, (
+            f"""\nCommand\n=======\n$ pykeen train {self.cls.__name__.lower()} {" ".join(map(str, args))}\n\nOutput\n======\n{result.output}\n\nException\n=========\n{result.exc_info[1]}\n\nTraceback\n=========\n{"".join(traceback.format_tb(result.exc_info[2]))}\n            """
+        )
 
     def test_has_hpo_defaults(self):
         """Test that there are defaults for HPO."""
@@ -2071,7 +2073,7 @@ class AnchorSearcherTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSearcher
         assert (tokens < len(self.anchors)).all()
         # no duplicates
         for row in tokens.tolist():
-            self.assertDictEqual({k: v for k, v in Counter(row).items() if k >= 0 and v > 1}, {}, msg="duplicate token")
+            assert {k: v for k, v in Counter(row).items() if k >= 0 and v > 1} == {}, "duplicate token"
 
 
 class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
@@ -2101,7 +2103,7 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
         assert (tokens >= -1).all()
         # no repetition, except padding idx
         for row in tokens.tolist():
-            self.assertDictEqual({k: v for k, v in Counter(row).items() if k >= 0 and v > 1}, {}, msg="duplicate token")
+            assert {k: v for k, v in Counter(row).items() if k >= 0 and v > 1} == {}, "duplicate token"
 
 
 class NodePieceTestCase(RepresentationTestCase):
@@ -2326,7 +2328,9 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             self.skipTest("no base metric")
         base_instance = rank_based_metric_resolver.make(self.instance.base_cls)
         base_factor = 1 if base_instance.increasing else -1
-        assert self.instance(ranks=self.ranks, num_candidates=self.num_candidates) != base_factor * base_instance(ranks=self.ranks, num_candidates=self.num_candidates)
+        assert self.instance(ranks=self.ranks, num_candidates=self.num_candidates) != base_factor * base_instance(
+            ranks=self.ranks, num_candidates=self.num_candidates
+        )
 
     def test_weights_direction(self):
         """Test monotonicity of weighting."""
@@ -2366,7 +2370,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         weights = repeats.astype(float)
         value_weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
 
-        self.assertAlmostEqual(value_repeat, value_weighted, delta=2)
+        assert value_repeat == pytest.approx(value_weighted)
 
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
@@ -2434,7 +2438,13 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
 
     def test_data_loader_multiprocessing(self):
         """Test data loader with multiple workers."""
-        assert sum(batch["positives"].shape[0] for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)) == self.factory.num_triples
+        assert (
+            sum(
+                batch["positives"].shape[0]
+                for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
+            )
+            == self.factory.num_triples
+        )
 
 
 class TrainingCallbackTestCase(unittest_templates.GenericTestCase[TrainingCallback]):
@@ -2660,7 +2670,7 @@ class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combinati
 
             # verify shape
             output_shape = self.instance.output_shape(input_shapes)
-            self.assertTupleEqual(x.shape, output_shape)
+            assert x.shape == output_shape
 
 
 class TextEncoderTestCase(unittest_templates.GenericTestCase[pykeen.nn.text.TextEncoder]):
