@@ -396,25 +396,25 @@ class PartitionRepresentationTests(cases.RepresentationTestCase):
     def test_input_verification(self):
         """Verify that the input is correctly verified."""
         # empty bases
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Must provide at least one base representation"):
             self.cls(assignment=..., bases=[], bases_kwargs=[])
 
         # inconsistent base shapes
         shapes = range(2, len(self.max_ids) + 2)
         bases_kwargs = [{"max_id": max_id, "shape": (dim,)} for max_id, dim in zip(self.max_ids, shapes, strict=False)]
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Inconsistent base shapes:"):
             self.cls(**ChainMap({"bases_kwargs": bases_kwargs}, self.instance_kwargs))
 
         # invalid base id
         assignment = self.instance.assignment.clone()
         assignment[torch.randint(assignment.shape[0], size=()), 0] = len(self.instance.bases)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid representation Ids in assignment"):
             self.cls(**ChainMap({"assignment": assignment}, self.instance_kwargs))
 
         # invalid local index
         assignment = self.instance.assignment.clone()
         assignment[torch.randint(assignment.shape[0], size=()), 1] = max(self.max_ids)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="cannot provide indices up to"):
             self.cls(**ChainMap({"assignment": assignment}, self.instance_kwargs))
 
 

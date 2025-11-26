@@ -46,7 +46,7 @@ class TestInvalidConfigurations(unittest.TestCase):
 
     def test_earl_stopping_with_optimize_epochs(self):
         """Assert that the pipeline raises a value error."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="can not use early stopping while optimizing epochs"):
             hpo_pipeline(
                 dataset="kinships",
                 model="transe",
@@ -108,7 +108,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
 
     def test_fail_invalid_kwarg_ranges(self):
         """Test that an exception is thrown if an incorrect argument is passed."""
-        with pytest.raises(ExtraKeysError) as e:
+        with pytest.raises(ExtraKeysError, match="garbage_key"):
             hpo_pipeline(
                 dataset="Nations",
                 model="TransE",
@@ -119,7 +119,6 @@ class TestHyperparameterOptimization(unittest.TestCase):
                     "garbage_key": {"type": int, "low": 1, "high": 100},
                 },
             )
-            assert ["garbage_key"] == e.value.args[0]
 
     def test_specified_model_hyperparameter(self):
         """Test making a study that has a specified model hyper-parameter."""

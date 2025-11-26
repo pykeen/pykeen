@@ -59,7 +59,7 @@ class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLog
         assert isinstance(stop, bool)
 
         # assert that reporting another metric for this epoch raises an error
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Cannot report more than one metric for one epoch"):
             self.instance.report_result(metric=..., epoch=epoch)
 
     def test_early_stopping(self):
