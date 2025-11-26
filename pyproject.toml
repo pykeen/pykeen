@@ -217,7 +217,7 @@ extend-select = [
     # "RUF",   # ruff rules
     # "DOC",   # pydoclint (DOC), requires preview; supersedes darglint
     "PERF",
-    "TCH",  # flake8-type-checking
+    "TC",   # flake8-type-checking
 ]
 ignore = [
     "D105", # Missing docstring in magic method
