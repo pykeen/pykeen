@@ -143,11 +143,11 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
         """Test update function of TransHRegularizer."""
         # Tests that exception will be thrown when more than or less than two tensors are passed
         for num in (1, 3):
-            with self.assertRaises(ValueError) as context:
+            with pytest.raises(ValueError) as context:
                 self.instance.update(
                     *(rand(self.batch_size, 10, generator=self.generator, device=self.device) for _ in range(num)),
                 )
-                self.assertTrue("Expects exactly two tensors" in context.exception)
+                assert "Expects exactly two tensors" in context.value
 
 
 class TestRegularizerTests(unittest_templates.MetaTestCase[pykeen.regularizers.Regularizer]):

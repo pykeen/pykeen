@@ -52,10 +52,10 @@ class LCWAInstancesTestCase(cases.TrainingInstancesTestCase):
 
         # check data loader
         for batch in torch.utils.data.DataLoader(instances, batch_size=2):
-            self.assertIsInstance(batch, dict)  # i.e., a  LCWABatch
-            self.assertEqual({"pairs", "target"}, batch.keys())
-            self.assertTrue(torch.is_tensor(batch["pairs"]))
-            self.assertTrue(torch.is_tensor(batch["target"]))
+            assert isinstance(batch, dict)  # i.e., a  LCWABatch
+            assert {"pairs", "target"} == batch.keys()
+            assert torch.is_tensor(batch["pairs"])
+            assert torch.is_tensor(batch["target"])
 
             x, y = batch["pairs"], batch["target"]
             batch_size = x.shape[0]

@@ -17,7 +17,7 @@ from tests import cases
 
 
 @pytest.mark.parametrize(
-    "best,current,larger_is_better,relative_delta,is_better",
+    ("best", "current", "larger_is_better", "relative_delta", "is_better"),
     [
         # equal value; larger is better
         (1.0, 1.0, True, 0.0, False),
@@ -59,14 +59,14 @@ class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLog
         assert isinstance(stop, bool)
 
         # assert that reporting another metric for this epoch raises an error
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self.instance.report_result(metric=..., epoch=epoch)
 
     def test_early_stopping(self):
         """Test early stopping."""
         for epoch, value in enumerate([10.0, 9.0, 8.0, 7.99, 7.98, 7.97]):
             stop = self.instance.report_result(metric=value, epoch=epoch)
-            self.assertEqual(stop, epoch >= 4)
+            assert stop == (epoch >= 4)
 
 
 class TestEarlyStopper(cases.EarlyStopperTestCase):
@@ -141,6 +141,6 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
             stopper=stopper,
             use_tqdm=False,
         )
-        self.assertEqual(stopper.number_results, len(losses) // stopper.frequency)
-        self.assertEqual(stopper.best_epoch, self.stop_epoch - self.patience * stopper.frequency)
-        self.assertEqual(self.stop_epoch, len(losses), msg="Did not stop early like it should have")
+        assert stopper.number_results == len(losses) // stopper.frequency
+        assert stopper.best_epoch == self.stop_epoch - self.patience * stopper.frequency
+        assert self.stop_epoch == len(losses), "Did not stop early like it should have"

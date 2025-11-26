@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 
+import pytest
 import torch
 
 from pykeen.models import ERMLPE, TransE
@@ -23,7 +24,7 @@ class UncertaintyFailureTest(cases.PredictBaseTestCase):
 
     def test_missing_dropout(self):
         """Test that a value error is run if the model has no dropout."""
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             predict_hrt_uncertain(model=self.model, hrt_batch=self.batch)
 
 

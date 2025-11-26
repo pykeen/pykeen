@@ -59,7 +59,7 @@ class CSGraphAnchorSearcherTests(cases.AnchorSearcherTestCase):
     cls = pykeen.nn.node_piece.CSGraphAnchorSearcher
 
 
-@pytest.mark.parametrize("num_anchors, num_entities, k, seed", [(3, 7, 2, 0)])
+@pytest.mark.parametrize(("num_anchors", "num_entities", "k", "seed"), [(3, 7, 2, 0)])
 def test_top_k_indices(num_anchors: int, num_entities: int, k: int, seed: int) -> None:
     """Test top-k index calculation."""
     # generate test data (with fixed seed for reproducibility)

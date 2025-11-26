@@ -84,10 +84,10 @@ class TestCustomLossFunctions(unittest.TestCase):
             loss_kwargs=loss_kwargs,
             training_kwargs={"use_tqdm": False},
         )
-        self.assertIsInstance(pipeline_results, PipelineResult)
-        self.assertIsInstance(pipeline_results.model.loss, loss)
-        self.assertEqual(pipeline_results.model.loss.margin, 1.0)
-        self.assertEqual(pipeline_results.model.loss.inverse_softmax_temperature, 1.0)
+        assert isinstance(pipeline_results, PipelineResult)
+        assert isinstance(pipeline_results.model.loss, loss)
+        assert pipeline_results.model.loss.margin == 1.0
+        assert pipeline_results.model.loss.inverse_softmax_temperature == 1.0
 
 
 class BCEWithLogitsLossTestCase(cases.PointwiseLossTestCase):

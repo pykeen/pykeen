@@ -32,7 +32,7 @@ class TestUtils(unittest.TestCase):
                 strict=False,
             )
         )
-        self.assertEqual(set(_old_skyline(pairs)), set(triple_analysis._get_skyline(pairs)))
+        assert set(_old_skyline(pairs)) == set(triple_analysis._get_skyline(pairs))
 
 
 def _test_count_dataframe(

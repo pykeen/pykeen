@@ -66,15 +66,15 @@ class TestPipelineTriples(unittest.TestCase):
 
     def test_interaction_instance_missing_dimensions(self):
         """Test when a dimension is missing."""
-        with self.assertRaises(DimensionError) as exc:
+        with pytest.raises(DimensionError) as exc:
             make_model_cls(
                 dimensions={},  # missing "d"
                 interaction=TransEInteraction(p=2),
             )
-        self.assertIsInstance(exc.exception, DimensionError)
-        self.assertEqual({"d"}, exc.exception.expected)
-        self.assertEqual(set(), exc.exception.given)
-        self.assertEqual("Expected dimensions dictionary with keys {'d'} but got keys set()", str(exc.exception))
+        assert isinstance(exc.value, DimensionError)
+        assert {"d"} == exc.value.expected
+        assert set() == exc.value.given
+        assert "Expected dimensions dictionary with keys {'d'} but got keys set()" == str(exc.value)
 
     def test_interaction_instance_builder(self):
         """Test resolving an interaction model instance."""
@@ -84,9 +84,9 @@ class TestPipelineTriples(unittest.TestCase):
             interaction_kwargs={"p": 2},
             triples_factory=self.training,
         )
-        self.assertIsInstance(model, ERModel)
-        self.assertIsInstance(model.interaction, TransEInteraction)
-        self.assertEqual(2, model.interaction.p)
+        assert isinstance(model, ERModel)
+        assert isinstance(model.interaction, TransEInteraction)
+        assert 2 == model.interaction.p
         _ = pipeline(
             training=self.training,
             testing=self.testing,
@@ -113,9 +113,9 @@ class TestPipelineTriples(unittest.TestCase):
         self._help_test_interaction_resolver(model_cls)
 
     def _help_test_interaction_resolver(self, model_cls):
-        self.assertTrue(issubclass(model_cls, ERModel))
-        self.assertIsInstance(model_cls._interaction, TransEInteraction)
-        self.assertEqual(2, model_cls._interaction.p)
+        assert issubclass(model_cls, ERModel)
+        assert isinstance(model_cls._interaction, TransEInteraction)
+        assert 2 == model_cls._interaction.p
         _ = pipeline(
             training=self.training,
             testing=self.testing,
@@ -150,14 +150,15 @@ class TestPipelineTriples(unittest.TestCase):
         )
 
         # empty lists are falsy
-        self.assertTrue(losses)
+        assert losses
 
     @needs_packages("matplotlib", "seaborn")
     def test_plot(self):
         """Test plotting."""
         result = pipeline(dataset="nations", model="transe", training_kwargs={"num_epochs": 0})
         fig, axes = result.plot()
-        assert fig is not None and axes is not None
+        assert fig is not None
+        assert axes is not None
 
     def test_with_evaluation_loop_callback(self):
         """Smoke-Test for running pipeline with evaluation loop callback."""
@@ -274,7 +275,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
                 "checkpoint_frequency": 0,
             },
         )
-        self.assertEqual(result_standard.losses, result_split.losses)
+        assert result_standard.losses == result_split.losses
 
 
 class TestAttributes(unittest.TestCase):
@@ -296,16 +297,16 @@ class TestAttributes(unittest.TestCase):
                     regularizer=regularizer,
                     training_kwargs={"num_epochs": 1},
                 )
-                self.assertIsInstance(pipeline_result, PipelineResult)
-                self.assertIsInstance(pipeline_result.model, Model)
+                assert isinstance(pipeline_result, PipelineResult)
+                assert isinstance(pipeline_result.model, Model)
                 for r in itertools.chain(
                     pipeline_result.model.entity_representations, pipeline_result.model.relation_representations
                 ):
                     if isinstance(r, Embedding):
                         if cls is None:
-                            self.assertIsNone(r.regularizer)
+                            assert r.regularizer is None
                         else:
-                            self.assertIsInstance(r.regularizer, cls)
+                            assert isinstance(r.regularizer, cls)
 
 
 class TestPipelineEvaluationFiltering(unittest.TestCase):

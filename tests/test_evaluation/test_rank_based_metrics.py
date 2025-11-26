@@ -238,8 +238,8 @@ class WeightedTests(unittest.TestCase):
             result = numpy.average(samples, weights=weights, axis=-1)
             low, high = bootstrap((result,), statistic=statistic).confidence_interval
             # check that closed-form is in confidence interval of sampled
-            self.assertLessEqual(low, closed)
-            self.assertLessEqual(closed, high)
+            assert low <= closed
+            assert closed <= high
 
     def test_weighted_mean_expectation(self):
         """Test weighted mean expectation."""

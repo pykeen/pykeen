@@ -114,7 +114,7 @@ class ScoreConsumerMetaTestCase(unittest_templates.MetaTestCase[pykeen.predict.S
     base_test = cases.ScoreConsumerTests
 
 
-@pytest.mark.parametrize(["num_entities", "num_relations"], [(3, 2)])
+@pytest.mark.parametrize(("num_entities", "num_relations"), [(3, 2)])
 def test_consume_scores(num_entities: int, num_relations: int):
     """Test for consume_scores."""
     dataset = pykeen.predict.AllPredictionDataset(num_entities=num_entities, num_relations=num_relations)
@@ -168,7 +168,7 @@ def _check_score_pack(pack: pykeen.predict.ScorePack, model: pykeen.models.Model
     assert pack.result[:, 1].max() < model.num_relations
 
 
-@pytest.mark.parametrize(["model", "k", "target", "batch_size"], _iter_predict_all_inputs())
+@pytest.mark.parametrize(("model", "k", "target", "batch_size"), _iter_predict_all_inputs())
 def test_predict_all(model: pykeen.models.Model, k: int | None, target: pykeen.typing.Target, batch_size: int):
     """Test the predict method."""
     pack = pykeen.predict.predict_all(model=model, k=k, target=target, batch_size=batch_size)
@@ -222,7 +222,7 @@ def _iter_predict_triples_inputs() -> Iterable[
     yield model, factory.mapped_triples[:3], None, None
 
 
-@pytest.mark.parametrize(["model", "triples", "triples_factory", "batch_size"], _iter_predict_triples_inputs())
+@pytest.mark.parametrize(("model", "triples", "triples_factory", "batch_size"), _iter_predict_triples_inputs())
 def test_predict_triples(
     model: pykeen.models.Model,
     triples: AnyTriples,
@@ -267,7 +267,7 @@ def _iter_get_input_batch_inputs() -> Iterable[
     yield factory, None, 1, "uk", pykeen.typing.LABEL_HEAD
 
 
-@pytest.mark.parametrize(["factory", "head", "relation", "tail", "exp_target"], _iter_get_input_batch_inputs())
+@pytest.mark.parametrize(("factory", "head", "relation", "tail", "exp_target"), _iter_get_input_batch_inputs())
 def test_get_input_batch(
     factory: CoreTriplesFactory | None,
     head: None | int | str,
@@ -310,7 +310,7 @@ def _iter_get_targets_inputs() -> Iterable[
 
 
 @pytest.mark.parametrize(
-    ["ids", "factory", "entity", "exp_labels", "exp_ids", "exp_tensor"], _iter_get_targets_inputs()
+    ("ids", "factory", "entity", "exp_labels", "exp_ids", "exp_tensor"), _iter_get_targets_inputs()
 )
 def test_get_targets(
     ids: None | torch.Tensor | Collection[str | int],
@@ -355,7 +355,7 @@ def _iter_predict_target_inputs() -> Iterable[
         yield model, 0, 1, None, factory_, [0, 3, 7]
 
 
-@pytest.mark.parametrize(["model", "head", "relation", "tail", "factory", "targets"], _iter_predict_target_inputs())
+@pytest.mark.parametrize(("model", "head", "relation", "tail", "factory", "targets"), _iter_predict_target_inputs())
 def test_predict_target(
     model: pykeen.models.Model,
     head: None | int | str,
@@ -373,7 +373,7 @@ def test_predict_target(
 
 
 @pytest.mark.parametrize(
-    ["heads", "relations", "tails", "target"],
+    ("heads", "relations", "tails", "target"),
     [
         # tail prediction
         ([1, 2], [3], None, pykeen.typing.LABEL_TAIL),
