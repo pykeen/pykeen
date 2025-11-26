@@ -7,9 +7,8 @@ import pathlib
 import tarfile
 import zipfile
 from abc import abstractmethod
-from collections.abc import Collection, Iterable, Mapping, Sequence
 from io import BytesIO
-from typing import Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import click
 import docdata
@@ -26,8 +25,12 @@ from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
-from ..typing import MappedTriples, TorchRandomHint
 from ..utils import ExtraReprMixin, format_relative_comparison, normalize_path, normalize_string
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Mapping, Sequence
+
+    from ..typing import MappedTriples, TorchRandomHint
 
 __all__ = [
     # Base classes

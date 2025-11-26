@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import random
-from collections.abc import Collection
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import pytest
 
-from pykeen.datasets.base import Dataset
 from pykeen.datasets.utils import get_dataset
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
+
+    from pykeen.datasets.base import Dataset
 
 
 @pytest.fixture(scope="session")

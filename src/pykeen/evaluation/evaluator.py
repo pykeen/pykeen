@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from collections import ChainMap
 from collections.abc import Collection, Hashable, Mapping
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     Generic,
@@ -23,8 +24,6 @@ from torch_max_mem import maximize_memory_utilization
 from tqdm.autonotebook import tqdm
 
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX, TARGET_TO_KEY_LABELS
-from ..metrics.utils import Metric
-from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, BoolTensor, InductiveMode, MappedTriples, Target
@@ -37,6 +36,10 @@ from ..utils import (
     normalize_string,
     prepare_filter_triples,
 )
+
+if TYPE_CHECKING:
+    from ..metrics.utils import Metric
+    from ..models import Model
 
 __all__ = [
     "Evaluator",

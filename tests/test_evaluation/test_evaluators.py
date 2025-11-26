@@ -5,8 +5,7 @@ from __future__ import annotations
 import itertools
 import unittest
 from collections import Counter
-from collections.abc import Collection, Iterable, Mapping, MutableMapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy
 import numpy.random
@@ -60,6 +59,9 @@ from pykeen.typing import (
 )
 from tests import cases, mocks
 from tests.utils import needs_packages
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Mapping, MutableMapping
 
 
 @pytest.mark.parametrize(["estimator", "ci"], [(numpy.mean, 60), ("mean", "std"), (numpy.mean, numpy.var)])

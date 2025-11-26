@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
-from class_resolver import HintOrType, OptionalKwargs
-
-from .init import PretrainedInitializer
 from .perceptron import TwoLayerMLP
 from .representation import CombinedRepresentation, Embedding, Representation, TransformedRepresentation
-from ..typing import FloatTensor
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from class_resolver import HintOrType, OptionalKwargs
+
+    from .init import PretrainedInitializer
+    from ..typing import FloatTensor
 
 __all__ = [
     "MLPTransformedRepresentation",

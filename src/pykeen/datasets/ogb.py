@@ -9,7 +9,6 @@ import abc
 import logging
 import pathlib
 import typing
-from collections.abc import Sequence
 from typing import ClassVar, Generic, Literal, TypedDict, TypeVar, cast, overload
 
 import click
@@ -21,10 +20,13 @@ from more_click import verbose_option
 
 from .base import LazyDataset
 from ..triples import TriplesFactory
-from ..typing import EntityMapping, RelationMapping
 
 if typing.TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ogb.linkproppred import LinkPropPredDataset
+
+    from ..typing import EntityMapping, RelationMapping
 
 __all__ = [
     "OGBLoader",

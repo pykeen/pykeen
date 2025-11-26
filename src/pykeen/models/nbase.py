@@ -5,21 +5,17 @@ from __future__ import annotations
 import logging
 from abc import ABC
 from collections import defaultdict
-from collections.abc import Iterable, Iterator, Mapping, Sequence
 from operator import itemgetter
-from typing import Any, ClassVar, Generic, Literal, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, cast
 
 import torch
-from class_resolver import HintOrType, OptionalKwargs
 from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs, normalize_with_default
 from torch import nn
 
 from .base import Model
 from ..nn import representation_resolver
 from ..nn.modules import Interaction, interaction_resolver, parallel_unsqueeze
-from ..nn.representation import Representation
 from ..regularizers import Regularizer, regularizer_resolver
-from ..triples import KGInfo
 from ..typing import (
     FloatTensor,
     HeadRepresentation,
@@ -29,6 +25,14 @@ from ..typing import (
     TailRepresentation,
 )
 from ..utils import check_shapes, get_batchnorm_modules
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
+
+    from class_resolver import HintOrType, OptionalKwargs
+
+    from ..nn.representation import Representation
+    from ..triples import KGInfo
 
 __all__ = [
     "_NewAbstractModel",

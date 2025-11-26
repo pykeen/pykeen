@@ -7,10 +7,9 @@ import logging
 import re
 import subprocess
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable, Mapping, Sequence
 from itertools import chain
 from textwrap import dedent
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import more_itertools
 import requests
@@ -19,6 +18,9 @@ from class_resolver import ClassResolver
 from ...constants import PYKEEN_MODULE
 from ...utils import nested_get
 from ...version import get_version
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Mapping, Sequence
 
 __all__ = [
     "text_cache_resolver",

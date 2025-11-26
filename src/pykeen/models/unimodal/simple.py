@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, ClassVar
-
-from class_resolver import OptionalKwargs
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from ..nbase import ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
@@ -13,6 +10,11 @@ from ...losses import Loss, SoftplusLoss
 from ...nn.modules import Clamp, ClampedInteraction, SimplEInteraction
 from ...regularizers import PowerSumRegularizer, Regularizer, regularizer_resolver
 from ...typing import FloatTensor, Hint, Initializer
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from class_resolver import OptionalKwargs
 
 __all__ = [
     "SimplE",

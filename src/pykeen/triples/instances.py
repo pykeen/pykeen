@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
-from typing import Generic, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Generic, TypedDict, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -14,21 +13,25 @@ from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docst
 from torch.utils import data
 from typing_extensions import NotRequired, Self
 
-from .triples_factory import CoreTriplesFactory
 from .utils import compute_compressed_adjacency_list
 from .weights import LossWeighter, loss_weighter_resolver
 from .. import typing as pykeen_typing
 from ..constants import get_target_column
 from ..sampling import NegativeSampler, negative_sampler_resolver
-from ..typing import (
-    BoolTensor,
-    FloatTensor,
-    LongTensor,
-    MappedTriples,
-    TargetColumn,
-    TargetHint,
-)
 from ..utils import split_workload
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
+    from .triples_factory import CoreTriplesFactory
+    from ..typing import (
+        BoolTensor,
+        FloatTensor,
+        LongTensor,
+        MappedTriples,
+        TargetColumn,
+        TargetHint,
+    )
 
 __all__ = [
     "Instances",

@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable, Sequence
+from typing import TYPE_CHECKING
 
 import torch
 
-from ..typing import FloatTensor, LongTensor, OneOrSequence
 from ..utils import upgrade_to_sequence
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
+    from ..typing import FloatTensor, LongTensor, OneOrSequence
 
 __all__ = [
     "apply_optional_bn",

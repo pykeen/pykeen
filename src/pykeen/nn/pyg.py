@@ -24,8 +24,7 @@ relation representations and a :class:`~pykeen.nn.modules.DistMultInteraction` f
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Collection, Sequence
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from class_resolver import (
     ClassResolver,
@@ -42,9 +41,13 @@ from torch import nn
 
 from .representation import Representation
 from .utils import ShapeError
-from ..triples.triples_factory import CoreTriplesFactory
-from ..typing import BoolTensor, FloatTensor, LongTensor, OneOrSequence
 from ..utils import get_edge_index, upgrade_to_sequence
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Sequence
+
+    from ..triples.triples_factory import CoreTriplesFactory
+    from ..typing import BoolTensor, FloatTensor, LongTensor, OneOrSequence
 
 __all__ = [
     # abstract

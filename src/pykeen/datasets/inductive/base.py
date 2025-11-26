@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import logging
 import pathlib
-from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
@@ -14,6 +13,9 @@ from tabulate import tabulate
 from ...constants import PYKEEN_DATASETS
 from ...triples import CoreTriplesFactory, TriplesFactory
 from ...utils import normalize_path
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
 
 __all__ = [
     # Base class

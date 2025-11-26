@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pystow
 import torch
@@ -19,6 +18,10 @@ from .typing import (
     TargetColumn,
     TargetHint,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from pathlib import Path
 
 __all__ = [
     "PYKEEN_HOME",
