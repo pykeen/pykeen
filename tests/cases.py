@@ -2360,12 +2360,8 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         repeats = generator.integers(low=1, high=10, size=self.ranks.shape)
 
         # 1. repeat each rank/candidate pair a random number of times
-        repeated_ranks, repeated_num_candidates = [], []
-        for rank, num_candidates, repeat in zip(self.ranks, self.num_candidates, repeats, strict=False):
-            repeated_ranks.append(numpy.full(shape=(repeat,), fill_value=rank))
-            repeated_num_candidates.append(numpy.full(shape=(repeat,), fill_value=num_candidates))
-        repeated_ranks = numpy.concatenate(repeated_ranks)
-        repeated_num_candidates = numpy.concatenate(repeated_num_candidates)
+        repeated_ranks = numpy.repeat(self.ranks, repeats=repeats)
+        repeated_num_candidates = numpy.repeat(self.num_candidates, repeats=repeats)
         value_repeat = self.instance(ranks=repeated_ranks, num_candidates=repeated_num_candidates, weights=None)
 
         # 2. do not repeat, but assign a corresponding weight
