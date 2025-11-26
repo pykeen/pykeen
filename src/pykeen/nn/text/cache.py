@@ -9,7 +9,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from itertools import chain
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal
 
 import more_itertools
 import requests
@@ -276,7 +276,7 @@ class WikidataTextCache(TextCache):
         # for mypy
         for item in result:
             assert isinstance(item, str)
-        return cast("Sequence[str]", result)
+        return result  # type: ignore[return-value]
 
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str]:
         """Get a concatenation of the title and description for each Wikidata identifier.

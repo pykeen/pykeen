@@ -1,7 +1,6 @@
 """Implementation of triples splitting functions."""
 
 import logging
-import typing
 from abc import abstractmethod
 from collections.abc import Collection, Sequence
 
@@ -295,10 +294,11 @@ def _prepare_cleanup(
     columns = [[0, 2], [1]]
     to_move_mask = torch.zeros(1, dtype=torch.bool)
     if max_ids is None:
-        max_ids = typing.cast(
-            "tuple[int, int]",
-            tuple(max(training[:, col].max().item(), testing[:, col].max().item()) + 1 for col in columns),
-        )
+
+        def _get_max(col: Sequence[int]) -> int:
+            return int(max(training[:, col].max().item(), testing[:, col].max().item()))
+
+        max_ids = (_get_max(columns[0]), _get_max(columns[1]))
     for col, max_id in zip(columns, max_ids, strict=False):
         # IDs not in training
         not_in_training_mask = torch.ones(max_id, dtype=torch.bool)

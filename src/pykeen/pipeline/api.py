@@ -195,7 +195,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
-    cast,
 )
 
 import pandas as pd
@@ -968,7 +967,7 @@ def _handle_model(
         )
 
     if isinstance(model, Model):
-        model_instance = cast("Model", model)
+        model_instance = model
         # TODO should training be reset?
         # TODO should kwargs for loss and regularizer be checked and raised for?
     else:

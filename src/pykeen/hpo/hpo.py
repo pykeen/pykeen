@@ -7,9 +7,9 @@ import json
 import logging
 import os
 import pathlib
-from collections.abc import Callable, Collection, Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 import torch
 from class_resolver.contrib.optuna import pruner_resolver, sampler_resolver
@@ -874,7 +874,7 @@ def hpo_pipeline(
 
     # Invoke optimization of the objective function.
     study.optimize(
-        cast("Callable[[Trial], float]", objective),
+        objective,  # type: ignore
         n_trials=n_trials,
         timeout=timeout,
         gc_after_trial=gc_after_trial,
@@ -990,7 +990,7 @@ def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, bas
     if high <= low:
         raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
     choices = [base**i for i in range(low, high + 1)]
-    return cast("int", trial.suggest_categorical(name=name, choices=choices))
+    return trial.suggest_categorical(name=name, choices=choices)  # type: ignore[return-value]
 
 
 def _set_study_dataset(

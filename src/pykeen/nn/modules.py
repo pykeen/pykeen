@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
-from typing import Any, ClassVar, Generic, cast, overload
+from typing import Any, ClassVar, Generic, overload
 
 import more_itertools
 import numpy
@@ -163,7 +163,7 @@ def parallel_unsqueeze(x: FloatTensor | Sequence[FloatTensor], dim: int) -> Floa
     """Unsqueeze all representations along the given dimension."""
     if not isinstance(x, Sequence):
         return x.unsqueeze(dim=dim)
-    return cast("Sequence[FloatTensor]", [xx.unsqueeze(dim=dim) for xx in x])
+    return [xx.unsqueeze(dim=dim) for xx in x]
 
 
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):

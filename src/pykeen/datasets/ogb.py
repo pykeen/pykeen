@@ -9,7 +9,7 @@ import abc
 import logging
 import pathlib
 import typing
-from typing import ClassVar, Generic, Literal, TypedDict, TypeVar, cast, overload
+from typing import ClassVar, Generic, Literal, TypedDict, TypeVar, overload
 
 import click
 import numpy
@@ -183,17 +183,12 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
         return entity_to_id, relation_to_id
 
     # docstr-coverage: inherited
-    def _load_data_dict_for_split(self, dataset, which):
+    def _load_data_dict_for_split(self, dataset, which) -> WikiKG2TrainDict | WikiKG2EvalDict:
         # noqa: D102
-        data_dict = torch.load(
+        return torch.load(
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
             weights_only=False,
         )
-        if which == "train":
-            data_dict = cast("WikiKG2TrainDict", data_dict)
-        else:
-            data_dict = cast("WikiKG2EvalDict", data_dict)
-        return data_dict
 
     # docstr-coverage: inherited
     def _compose_mapped_triples(self, data_dict: WikiKG2TrainDict | WikiKG2EvalDict) -> numpy.ndarray:  # noqa: D102
@@ -295,16 +290,10 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
 
     # docstr-coverage: inherited
     def _load_data_dict_for_split(self, dataset, which):  # noqa: D102
-        data_dict = torch.load(
+        return torch.load(
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
             weights_only=False,
         )
-        if which == "train":
-            data_dict = cast("BioKGTrainDict", data_dict)
-        else:
-            data_dict = cast("BioKGEvalDict", data_dict)
-
-        return data_dict
 
     def _map_entity_column(
         self, local_entity_id: numpy.ndarray, entity_type: Sequence[OGBBioKGNodeType]

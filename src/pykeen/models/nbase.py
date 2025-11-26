@@ -6,7 +6,7 @@ import logging
 from abc import ABC
 from collections import defaultdict
 from operator import itemgetter
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal
 
 import torch
 from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs, normalize_with_default
@@ -188,7 +188,9 @@ def _prepare_representation_module_list(
     """
     # TODO: allow max_id being present in representation_kwargs; if it matches max_id
     # TODO: we could infer some shapes from the given interaction shape information
-    rs = representation_resolver.make_many(representations, kwargs=representations_kwargs, max_id=max_id)
+    rs: Sequence[Representation] = representation_resolver.make_many(
+        representations, kwargs=representations_kwargs, max_id=max_id
+    )
 
     # check max-id
     for r in rs:
@@ -203,7 +205,7 @@ def _prepare_representation_module_list(
                 f"representations was chosen wrong.",
             )
 
-    rs = cast("Sequence[Representation]", nn.ModuleList(rs))
+    rs = nn.ModuleList(rs)  # type: ignore
     if skip_checks:
         return rs
 
@@ -681,7 +683,4 @@ class ERModel(
             )
         )
         # normalization
-        return cast(
-            "tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]",
-            tuple(x[0] if len(x) == 1 else x for x in (hr, rr, tr)),
-        )
+        return tuple(x[0] if len(x) == 1 else x for x in (hr, rr, tr))

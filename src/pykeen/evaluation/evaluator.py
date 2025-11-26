@@ -15,7 +15,6 @@ from typing import (
     Generic,
     NamedTuple,
     TypeVar,
-    cast,
 )
 
 import pandas
@@ -117,7 +116,7 @@ class MetricResults(Generic[MetricKeyType]):
         one_key = next(iter(self.data.keys()))
         # assert isinstance(one_key, NamedTuple)
         # TODO: should we enforce this?
-        one_key_nt = cast("NamedTuple", one_key)
+        one_key_nt: NamedTuple = one_key  # type: ignore
         columns = [field.capitalize() for field in one_key_nt._fields] + ["Value"]
         return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
 
