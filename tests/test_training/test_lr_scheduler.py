@@ -8,7 +8,7 @@ from pykeen.pipeline import pipeline
 
 
 @pytest.mark.parametrize(
-    "cls, kwargs",
+    ("cls", "kwargs"),
     [(None, None), ("CosineAnnealingWarmRestarts", {"T_0": 10})],
 )
 def test_lr_scheduler(cls: HintOrType[lr_scheduler.LRScheduler], kwargs: OptionalKwargs) -> None:

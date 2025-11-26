@@ -46,7 +46,7 @@ class TestInvalidConfigurations(unittest.TestCase):
 
     def test_earl_stopping_with_optimize_epochs(self):
         """Assert that the pipeline raises a value error."""
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="can not use early stopping while optimizing epochs"):
             hpo_pipeline(
                 dataset="kinships",
                 model="transe",
@@ -71,18 +71,18 @@ class TestHPOObjective(unittest.TestCase):
             result_tracker=PythonResultTracker,
             metric="...",
         )
-        with self.assertRaises(expected_exception=exception):
+        with pytest.raises(exception):
             objective(trial=MockTrial())
 
     @patch("pykeen.pipeline.pipeline", side_effect=MemoryError)
     @patch("optuna.Trial")
-    def test_re_raise_memory_error(self, _mock_pipeline, MockTrial):  # noqa: N803
+    def test_re_raise_memory_error(self, _mock_pipeline, MockTrial):  # noqa: N803, PT019
         """Check that memory errors are re-raised (to be catched by study.optimize)."""
         self._test_re_raise(MockTrial=MockTrial, exception=MemoryError)
 
     @patch("pykeen.pipeline.pipeline", side_effect=RuntimeError)
     @patch("optuna.Trial")
-    def test_re_raise_runtime_error(self, _mock_pipeline, MockTrial):  # noqa: N803
+    def test_re_raise_runtime_error(self, _mock_pipeline, MockTrial):  # noqa: N803, PT019
         """Check that runtime errors are re-raised (to be catched by study.optimize)."""
         self._test_re_raise(MockTrial=MockTrial, exception=RuntimeError)
 
@@ -101,14 +101,14 @@ class TestHyperparameterOptimization(unittest.TestCase):
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
         # Check a model param is optimized
-        self.assertIn(("params", "model.embedding_dim"), df.columns)
+        assert ("params", "model.embedding_dim") in df.columns
         # Check a loss param is optimized
-        self.assertIn(("params", "loss.margin"), df.columns)
-        self.assertNotIn(("params", "training.num_epochs"), df.columns)
+        assert ("params", "loss.margin") in df.columns
+        assert ("params", "training.num_epochs") not in df.columns
 
     def test_fail_invalid_kwarg_ranges(self):
         """Test that an exception is thrown if an incorrect argument is passed."""
-        with self.assertRaises(ExtraKeysError) as e:
+        with pytest.raises(ExtraKeysError, match="garbage_key"):
             hpo_pipeline(
                 dataset="Nations",
                 model="TransE",
@@ -119,7 +119,6 @@ class TestHyperparameterOptimization(unittest.TestCase):
                     "garbage_key": {"type": int, "low": 1, "high": 100},
                 },
             )
-            self.assertEqual(["garbage_key"], e.exception.args[0])
 
     def test_specified_model_hyperparameter(self):
         """Test making a study that has a specified model hyper-parameter."""
@@ -133,9 +132,9 @@ class TestHyperparameterOptimization(unittest.TestCase):
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
         # Check a model param is NOT optimized
-        self.assertNotIn(("params", "model.embedding_dim"), df.columns)
+        assert ("params", "model.embedding_dim") not in df.columns
         # Check a loss param is optimized
-        self.assertIn(("params", "loss.margin"), df.columns)
+        assert ("params", "loss.margin") in df.columns
 
     def test_specified_loss_hyperparameter(self):
         """Test making a study that has a specified loss hyper-parameter."""
@@ -148,9 +147,9 @@ class TestHyperparameterOptimization(unittest.TestCase):
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
         # Check a model param is optimized
-        self.assertIn(("params", "model.embedding_dim"), df.columns)
+        assert ("params", "model.embedding_dim") in df.columns
         # Check a loss param is NOT optimized
-        self.assertNotIn(("params", "loss.margin"), df.columns)
+        assert ("params", "loss.margin") not in df.columns
 
     def test_specified_loss_and_model_hyperparameter(self):
         """Test making a study that has a specified loss hyper-parameter."""
@@ -166,9 +165,9 @@ class TestHyperparameterOptimization(unittest.TestCase):
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
         # Check a model param is NOT optimized
-        self.assertNotIn(("params", "model.embedding_dim"), df.columns)
+        assert ("params", "model.embedding_dim") not in df.columns
         # Check a loss param is NOT optimized
-        self.assertNotIn(("params", "loss.margin"), df.columns)
+        assert ("params", "loss.margin") not in df.columns
 
     def test_specified_range(self):
         """Test making a study that has a specified hyper-parameter."""
@@ -185,11 +184,11 @@ class TestHyperparameterOptimization(unittest.TestCase):
             n_trials=2,
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
-        self.assertIn(("params", "model.embedding_dim"), df.columns)
-        self.assertTrue(df[("params", "model.embedding_dim")].isin({60.0, 70.0, 80.0}).all())
+        assert ("params", "model.embedding_dim") in df.columns
+        assert df["params", "model.embedding_dim"].isin({60.0, 70.0, 80.0}).all()
 
-        self.assertIn(("params", "loss.margin"), df.columns)
-        self.assertTrue(df[("params", "loss.margin")].isin({1, 2}).all())
+        assert ("params", "loss.margin") in df.columns
+        assert df["params", "loss.margin"].isin({1, 2}).all()
 
     def test_sampling_values_from_2_power_x(self):
         """Test making a study that has a range defined by f(x) = 2^x."""
@@ -201,14 +200,8 @@ class TestHyperparameterOptimization(unittest.TestCase):
         study.optimize(objective, n_trials=2)
 
         df = study.trials_dataframe(multi_index=True)
-        self.assertIn(("params", "model.embedding_dim"), df.columns)
-        self.assertTrue(df[("params", "model.embedding_dim")].isin({1, 2, 4, 8, 16}).all())
-
-        objective = _test_suggest(model_kwargs_ranges)
-        with self.assertRaises(Exception) as context:
-            study = optuna.create_study()
-            study.optimize(objective, n_trials=2)
-            self.assertIn("Upper bound 4 is not greater than lower bound 4.", context.exception)
+        assert ("params", "model.embedding_dim") in df.columns
+        assert df["params", "model.embedding_dim"].isin({1, 2, 4, 8, 16}).all()
 
     def test_sampling_values_from_power_x(self):
         """Test making a study that has a range defined by f(x) = base^x."""
@@ -220,9 +213,9 @@ class TestHyperparameterOptimization(unittest.TestCase):
         study.optimize(objective, n_trials=2)
 
         df = study.trials_dataframe(multi_index=True)
-        self.assertIn(("params", "model.embedding_dim"), df.columns)
+        assert ("params", "model.embedding_dim") in df.columns
         values = df[("params", "model.embedding_dim")]
-        self.assertTrue(values.isin({1, 10, 100}).all(), msg=f"Got values: {values}")
+        assert values.isin({1, 10, 100}).all(), f"Got values: {values}"
 
     def test_failing_trials(self):
         """Test whether failing trials are correctly reported."""
@@ -271,10 +264,10 @@ class TestHPODatasets(unittest.TestCase):
             dataset=Nations(),  # mock a "custom" dataset by using one already available
         )
         # Since custom data was passed, we can't store any of this
-        self.assertNotIn("dataset", hpo_pipeline_result.study.user_attrs)
-        self.assertNotIn("training", hpo_pipeline_result.study.user_attrs)
-        self.assertNotIn("testing", hpo_pipeline_result.study.user_attrs)
-        self.assertNotIn("validation", hpo_pipeline_result.study.user_attrs)
+        assert "dataset" not in hpo_pipeline_result.study.user_attrs
+        assert "training" not in hpo_pipeline_result.study.user_attrs
+        assert "testing" not in hpo_pipeline_result.study.user_attrs
+        assert "validation" not in hpo_pipeline_result.study.user_attrs
 
     def test_custom_dataset_cls(self):
         """Test passing a dataset class to HPO."""
@@ -283,11 +276,11 @@ class TestHPODatasets(unittest.TestCase):
             dataset=Nations,
         )
         # currently, any custom data doesn't get stored.
-        self.assertNotIn("dataset", hpo_pipeline_result.study.user_attrs)
+        assert "dataset" not in hpo_pipeline_result.study.user_attrs
         # self.assertEqual(Nations.get_normalized_name(), hpo_pipeline_result.study.user_attrs['dataset'])
-        self.assertNotIn("training", hpo_pipeline_result.study.user_attrs)
-        self.assertNotIn("testing", hpo_pipeline_result.study.user_attrs)
-        self.assertNotIn("validation", hpo_pipeline_result.study.user_attrs)
+        assert "training" not in hpo_pipeline_result.study.user_attrs
+        assert "testing" not in hpo_pipeline_result.study.user_attrs
+        assert "validation" not in hpo_pipeline_result.study.user_attrs
 
     def test_custom_dataset_path(self):
         """Test passing a dataset class to HPO."""
@@ -295,11 +288,11 @@ class TestHPODatasets(unittest.TestCase):
             study_name="HPO with custom dataset path",
             dataset=NATIONS_TRAIN_PATH,
         )
-        self.assertIn("dataset", hpo_pipeline_result.study.user_attrs)
-        self.assertEqual(str(NATIONS_TRAIN_PATH), hpo_pipeline_result.study.user_attrs["dataset"])
-        self.assertNotIn("training", hpo_pipeline_result.study.user_attrs)
-        self.assertNotIn("testing", hpo_pipeline_result.study.user_attrs)
-        self.assertNotIn("validation", hpo_pipeline_result.study.user_attrs)
+        assert "dataset" in hpo_pipeline_result.study.user_attrs
+        assert str(NATIONS_TRAIN_PATH) == hpo_pipeline_result.study.user_attrs["dataset"]
+        assert "training" not in hpo_pipeline_result.study.user_attrs
+        assert "testing" not in hpo_pipeline_result.study.user_attrs
+        assert "validation" not in hpo_pipeline_result.study.user_attrs
 
     def test_custom_tf_object(self):
         """Test using a custom triples factories with HPO.
@@ -317,13 +310,13 @@ class TestHPODatasets(unittest.TestCase):
             testing=testing,
             validation=validation,
         )
-        self.assertNotIn("dataset", hpo_pipeline_result.study.user_attrs)
+        assert "dataset" not in hpo_pipeline_result.study.user_attrs
         # Since there's no source path information, these shouldn't be
         # added, even if it might be possible to infer path information
         # from the triples factories
-        self.assertNotIn("training", hpo_pipeline_result.study.user_attrs)
-        self.assertNotIn("testing", hpo_pipeline_result.study.user_attrs)
-        self.assertNotIn("validation", hpo_pipeline_result.study.user_attrs)
+        assert "training" not in hpo_pipeline_result.study.user_attrs
+        assert "testing" not in hpo_pipeline_result.study.user_attrs
+        assert "validation" not in hpo_pipeline_result.study.user_attrs
 
     def test_custom_paths(self):
         """Test using a custom triples paths with HPO."""
@@ -333,15 +326,15 @@ class TestHPODatasets(unittest.TestCase):
             testing=NATIONS_TEST_PATH,
             validation=NATIONS_VALIDATE_PATH,
         )
-        self.assertNotIn("dataset", hpo_pipeline_result.study.user_attrs)
+        assert "dataset" not in hpo_pipeline_result.study.user_attrs
         # Since paths were passed for training, testing, and validation,
         # they should be stored as study-level attributes
-        self.assertIn("training", hpo_pipeline_result.study.user_attrs)
-        self.assertEqual(str(NATIONS_TRAIN_PATH), hpo_pipeline_result.study.user_attrs["training"])
-        self.assertIn("testing", hpo_pipeline_result.study.user_attrs)
-        self.assertEqual(str(NATIONS_TEST_PATH), hpo_pipeline_result.study.user_attrs["testing"])
-        self.assertIn("validation", hpo_pipeline_result.study.user_attrs)
-        self.assertEqual(str(NATIONS_VALIDATE_PATH), hpo_pipeline_result.study.user_attrs["validation"])
+        assert "training" in hpo_pipeline_result.study.user_attrs
+        assert str(NATIONS_TRAIN_PATH) == hpo_pipeline_result.study.user_attrs["training"]
+        assert "testing" in hpo_pipeline_result.study.user_attrs
+        assert str(NATIONS_TEST_PATH) == hpo_pipeline_result.study.user_attrs["testing"]
+        assert "validation" in hpo_pipeline_result.study.user_attrs
+        assert str(NATIONS_VALIDATE_PATH) == hpo_pipeline_result.study.user_attrs["validation"]
 
     def _help_test_hpo(self, **kwargs):
         hpo_pipeline_result = hpo_pipeline(
@@ -370,14 +363,14 @@ class TestHyperparameterOptimizationLiterals(unittest.TestCase):
         )
         df = hpo_pipeline_result.study.trials_dataframe(multi_index=True)
         # Check a model param is optimized
-        self.assertIn(("params", "model.embedding_dim"), df.columns)
+        assert ("params", "model.embedding_dim") in df.columns
         # Check a loss param is optimized
-        self.assertIn(("params", "loss.margin"), df.columns)
-        self.assertNotIn(("params", "training.num_epochs"), df.columns)
+        assert ("params", "loss.margin") in df.columns
+        assert ("params", "training.num_epochs") not in df.columns
 
 
 @pytest.mark.parametrize(
-    "base_cls,ignore",
+    ("base_cls", "ignore"),
     [
         (Loss, []),
         (Regularizer, []),

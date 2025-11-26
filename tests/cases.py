@@ -155,54 +155,54 @@ class DatasetTestCase(unittest.TestCase):
 
     def test_dataset(self):
         """Generic test for datasets."""
-        self.assertIsInstance(self.dataset, LazyDataset)
+        assert isinstance(self.dataset, LazyDataset)
 
         # Not loaded
-        self.assertIsNone(self.dataset._training)
-        self.assertIsNone(self.dataset._testing)
-        self.assertIsNone(self.dataset._validation)
-        self.assertFalse(self.dataset._loaded)
-        self.assertFalse(self.dataset._loaded_validation)
+        assert self.dataset._training is None
+        assert self.dataset._testing is None
+        assert self.dataset._validation is None
+        assert not self.dataset._loaded
+        assert not self.dataset._loaded_validation
 
         # Load
         self.dataset._load()
 
-        self.assertIsInstance(self.dataset.training, TriplesFactory)
-        self.assertIsInstance(self.dataset.testing, TriplesFactory)
-        self.assertTrue(self.dataset._loaded)
+        assert isinstance(self.dataset.training, TriplesFactory)
+        assert isinstance(self.dataset.testing, TriplesFactory)
+        assert self.dataset._loaded
 
         if self.autoloaded_validation:
-            self.assertTrue(self.dataset._loaded_validation)
+            assert self.dataset._loaded_validation
         else:
-            self.assertFalse(self.dataset._loaded_validation)
+            assert not self.dataset._loaded_validation
             self.dataset._load_validation()
 
-        self.assertIsInstance(self.dataset.validation, TriplesFactory)
+        assert isinstance(self.dataset.validation, TriplesFactory)
 
-        self.assertIsNotNone(self.dataset._training)
-        self.assertIsNotNone(self.dataset._testing)
-        self.assertIsNotNone(self.dataset._validation)
-        self.assertTrue(self.dataset._loaded)
-        self.assertTrue(self.dataset._loaded_validation)
+        assert self.dataset._training is not None
+        assert self.dataset._testing is not None
+        assert self.dataset._validation is not None
+        assert self.dataset._loaded
+        assert self.dataset._loaded_validation
 
-        self.assertEqual(self.dataset.num_entities, self.exp_num_entities)
-        self.assertEqual(self.dataset.num_relations, self.exp_num_relations)
+        assert self.dataset.num_entities == self.exp_num_entities
+        assert self.dataset.num_relations == self.exp_num_relations
 
         num_triples = sum(
             triples_factory.num_triples
             for triples_factory in (self.dataset._training, self.dataset._testing, self.dataset._validation)
         )
         if self.exp_num_triples_tolerance is None:
-            self.assertEqual(self.exp_num_triples, num_triples)
+            assert self.exp_num_triples == num_triples
         else:
-            self.assertAlmostEqual(self.exp_num_triples, num_triples, delta=self.exp_num_triples_tolerance)
+            assert self.exp_num_triples == pytest.approx(num_triples, abs=self.exp_num_triples_tolerance)
 
         # Test caching
         start = timeit.default_timer()
         _ = self.dataset.training
         end = timeit.default_timer()
         # assert (end - start) < 1.0e-02
-        self.assertAlmostEqual(start, end, delta=1.0e-02, msg="Caching should have made this operation fast")
+        assert start == pytest.approx(end, abs=1.0e-02), "Caching should have made this operation fast"
 
         # Test consistency of training / validation / testing mapping
         training = self.dataset.training
@@ -334,10 +334,10 @@ class LossTestCase(GenericTestCase[Loss]):
     def _check_loss_value(self, loss_value: FloatTensor) -> None:
         """Check loss value dimensionality, and ability for backward."""
         # test reduction
-        self.assertEqual(0, loss_value.ndim)
+        assert 0 == loss_value.ndim
 
         # test finite loss value
-        self.assertTrue(torch.isfinite(loss_value))
+        assert torch.isfinite(loss_value)
 
         # Test backward
         loss_value.backward()
@@ -500,7 +500,7 @@ class PointwiseLossTestCase(LossTestCase):
 
     def test_type(self):
         """Test the loss is the right type."""
-        self.assertIsInstance(self.instance, PointwiseLoss)
+        assert isinstance(self.instance, PointwiseLoss)
 
     def test_label_loss(self):
         """Test ``forward(logits, labels)``."""
@@ -521,7 +521,7 @@ class PairwiseLossTestCase(LossTestCase):
 
     def test_type(self):
         """Test the loss is the right type."""
-        self.assertIsInstance(self.instance, PairwiseLoss)
+        assert isinstance(self.instance, PairwiseLoss)
 
     def test_pair_loss(self):
         """Test ``forward(pos_scores, neg_scores)``."""
@@ -539,9 +539,9 @@ class GMRLTestCase(PairwiseLossTestCase):
 
     def test_label_smoothing_raise(self):
         """Test errors are raised if label smoothing is given."""
-        with self.assertRaises(UnsupportedLabelSmoothingError):
+        with pytest.raises(UnsupportedLabelSmoothingError):
             self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
-        with self.assertRaises(UnsupportedLabelSmoothingError):
+        with pytest.raises(UnsupportedLabelSmoothingError):
             self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
 
 
@@ -553,7 +553,7 @@ class SetwiseLossTestCase(LossTestCase):
 
     def test_type(self):
         """Test the loss is the right type."""
-        self.assertIsInstance(self.instance, SetwiseLoss)
+        assert isinstance(self.instance, SetwiseLoss)
 
 
 class InteractionTestCase(
@@ -708,9 +708,9 @@ class InteractionTestCase(
         self._check_close_scores(scores=scores, scores_no_slice=scores_no_slice)
 
     def _check_close_scores(self, scores, scores_no_slice):
-        self.assertTrue(torch.isfinite(scores).all(), msg=f"Normal scores had nan:\n\t{scores}")
-        self.assertTrue(torch.isfinite(scores_no_slice).all(), msg=f"Slice scores had nan\n\t{scores}")
-        self.assertTrue(torch.allclose(scores, scores_no_slice), msg=f"Differences: {scores - scores_no_slice}")
+        assert torch.isfinite(scores).all(), f"Normal scores had nan:\n\t{scores}"
+        assert torch.isfinite(scores_no_slice).all(), f"Slice scores had nan\n\t{scores}"
+        assert torch.allclose(scores, scores_no_slice), f"Differences: {scores - scores_no_slice}"
 
     def _get_test_shapes(self) -> Collection[tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...]]]:
         """Return a set of test shapes for (h, r, t)."""
@@ -897,7 +897,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # verify that the regularizer is stored for both, entity and relation representations
         for r in (model.entity_representations, model.relation_representations):
             assert len(r) == 1
-            self.assertEqual(r[0].regularizer, self.instance)
+            assert r[0].regularizer == self.instance
 
         # Forward pass (should update regularizer)
         model.score_hrt(hrt_batch=positive_batch)
@@ -906,16 +906,16 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         model.post_parameter_update()
 
         # Check if regularization term is reset
-        self.assertEqual(0.0, self.instance.term)
+        assert 0.0 == self.instance.term
 
     def _check_reset(self, instance: Regularizer | None = None):
         """Verify that the regularizer is in resetted state."""
         if instance is None:
             instance = self.instance
         # regularization term should be zero
-        self.assertEqual(0.0, instance.regularization_term.item())
+        assert 0.0 == instance.regularization_term.item()
         # updated should be set to false
-        self.assertFalse(instance.updated)
+        assert not instance.updated
 
     def test_reset(self) -> None:
         """Test method `reset`."""
@@ -947,11 +947,11 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         self.instance.update(*inputs)
 
         # check shape
-        self.assertEqual((1,), self.instance.term.shape)
+        assert (1,) == self.instance.term.shape
 
         # check result
         expected_term = self._expected_updated_term(inputs=inputs)
-        self.assertAlmostEqual(self.instance.regularization_term.item(), expected_term.item())
+        assert self.instance.regularization_term.item() == pytest.approx(expected_term.item())
 
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
@@ -983,7 +983,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
 
         # check that the expected term is returned
         exp = (self.instance.weight * self._expected_updated_term(inputs)).item()
-        self.assertEqual(exp, self.instance.pop_regularization_term().item())
+        assert exp == self.instance.pop_regularization_term().item()
 
         # check that the regularizer is now reset
         self._check_reset()
@@ -999,15 +999,15 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # after first update, should change the term
         first_tensors = self._generate_update_input()
         instance.update(*first_tensors)
-        self.assertTrue(instance.updated)
-        self.assertNotEqual(0.0, instance.regularization_term.item())
+        assert instance.updated
+        assert 0.0 != instance.regularization_term.item()
         term = instance.regularization_term.clone()
 
         # after second update, no change should happen
         second_tensors = self._generate_update_input()
         instance.update(*second_tensors)
-        self.assertTrue(instance.updated)
-        self.assertEqual(term, instance.regularization_term)
+        assert instance.updated
+        assert term == instance.regularization_term
 
 
 class LpRegularizerTest(RegularizerTestCase):
@@ -1096,9 +1096,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def test_get_grad_parameters(self):
         """Test the model's ``get_grad_params()`` method."""
-        self.assertLess(
-            0, len(list(self.instance.get_grad_params())), msg="There is not at least one trainable parameter"
-        )
+        assert 0 < len(list(self.instance.get_grad_params())), "There is not at least one trainable parameter"
 
         # Check that all the parameters actually require a gradient
         for parameter in self.instance.get_grad_params():
@@ -1125,12 +1123,12 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         num_equal_weights_after_re_init = sum(
             1 for new_param in new_params if (new_param.data == old_content[id(new_param)]).all()
         )
-        self.assertEqual(num_equal_weights_after_re_init, self.num_constant_init)
+        assert num_equal_weights_after_re_init == self.num_constant_init
 
     def _check_scores(self, batch, scores) -> None:
         """Check the scores produced by a forward function."""
         # check for finite values by default
-        self.assertTrue(torch.all(torch.isfinite(scores)).item(), f"Some scores were not finite:\n{scores}")
+        assert torch.all(torch.isfinite(scores)).item(), f"Some scores were not finite:\n{scores}"
 
         # check whether a gradient can be back-propgated
         scores.mean().backward()
@@ -1158,7 +1156,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             # TODO: look into score_r for inverse relations
             logger.warning("score_r's shape is not clear yet for models with inverse relations")
         else:
-            self.assertTupleEqual(tuple(scores.shape), shape)
+            assert tuple(scores.shape) == shape
         self._check_scores(batch, scores)
         # clear buffers for message passing models
         self.instance.post_parameter_update()
@@ -1230,7 +1228,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             batch_size=self.train_batch_size,
             sampler=self.sampler,
         )
-        self.assertIsInstance(losses, list)
+        assert isinstance(losses, list)
 
     @pytest.mark.slow
     def test_train_lcwa(self) -> None:
@@ -1247,7 +1245,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             batch_size=self.train_batch_size,
             sampler=None,
         )
-        self.assertIsInstance(losses, list)
+        assert isinstance(losses, list)
 
     def _safe_train_loop(self, loop: TrainingLoop, num_epochs, batch_size, sampler):
         try:
@@ -1371,27 +1369,11 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         # TODO: Catch HolE MKL error?
         result: Result = runner.invoke(cli, args)
 
-        self.assertEqual(
-            0,
-            result.exit_code,
-            msg=f"""
-Command
-=======
-$ pykeen train {self.cls.__name__.lower()} {" ".join(map(str, args))}
-
-Output
-======
-{result.output}
-
-Exception
-=========
-{result.exc_info[1]}
-
-Traceback
-=========
-{"".join(traceback.format_tb(result.exc_info[2]))}
-            """,
-        )
+        assert (
+            0 == result.exit_code
+        ), f"""\nCommand\n=======\n$ pykeen train {self.cls.__name__.lower()} {" ".join(map(str, args))}\n\n"
+            f"Output\n======\n{result.output}\n\nException\n=========\n{result.exc_info[1]}\n\n"
+            f"Traceback\n=========\n{"".join(traceback.format_tb(result.exc_info[2]))}\n            """
 
     def test_has_hpo_defaults(self):
         """Test that there are defaults for HPO."""
@@ -1400,7 +1382,7 @@ Traceback
         except AttributeError:
             self.fail(msg=f"{self.cls.__name__} is missing hpo_default class attribute")
         else:
-            self.assertIsInstance(d, dict)
+            assert isinstance(d, dict)
 
     def test_post_parameter_update_regularizer(self):
         """Test whether post_parameter_update resets the regularization term."""
@@ -1442,7 +1424,7 @@ Traceback
             try:
                 self.cls(**self.instance_kwargs)
             except TypeError as error:
-                assert error.args == ("'NoneType' object is not callable",)
+                assert error.args == ("'NoneType' object is not callable",)  # noqa: PT017
             mock_method.assert_called_once()
 
 
@@ -1566,7 +1548,7 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 
         # check shape
         expected_shape = prefix_shape + self.instance.shape
-        self.assertEqual(x.shape, expected_shape)
+        assert x.shape == expected_shape
 
     def _test_forward(self, indices: torch.LongTensor | None):
         """Test forward method."""
@@ -1580,7 +1562,7 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 
     def test_max_id(self):
         """Test maximum id."""
-        self.assertEqual(self.max_id, self.instance.max_id)
+        assert self.max_id == self.instance.max_id
 
     def test_no_indices(self):
         """Test without indices."""
@@ -2093,7 +2075,7 @@ class AnchorSearcherTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSearcher
         assert (tokens < len(self.anchors)).all()
         # no duplicates
         for row in tokens.tolist():
-            self.assertDictEqual({k: v for k, v in Counter(row).items() if k >= 0 and v > 1}, {}, msg="duplicate token")
+            assert {k: v for k, v in Counter(row).items() if k >= 0 and v > 1} == {}, "duplicate token"
 
 
 class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
@@ -2123,7 +2105,7 @@ class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
         assert (tokens >= -1).all()
         # no repetition, except padding idx
         for row in tokens.tolist():
-            self.assertDictEqual({k: v for k, v in Counter(row).items() if k >= 0 and v > 1}, {}, msg="duplicate token")
+            assert {k: v for k, v in Counter(row).items() if k >= 0 and v > 1} == {}, "duplicate token"
 
 
 class NodePieceTestCase(RepresentationTestCase):
@@ -2229,15 +2211,13 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_docdata(self):
         """Test the docdata contents of the metric."""
-        self.assertTrue(hasattr(self.instance, "increasing"))
-        self.assertNotEqual(
-            "", self.cls.__doc__.splitlines()[0].strip(), msg="First line of docstring should not be blank"
-        )
-        self.assertIsNotNone(get_docdata(self.instance), msg="No docdata available")
-        self.assertIsNotNone(getattr_or_docdata(self.cls, "link"))
-        self.assertIsNotNone(getattr_or_docdata(self.cls, "name"))
-        self.assertIsNotNone(getattr_or_docdata(self.cls, "description"))
-        self.assertIsNotNone(self.instance.key)
+        assert hasattr(self.instance, "increasing")
+        assert "" != self.cls.__doc__.splitlines()[0].strip(), "First line of docstring should not be blank"
+        assert get_docdata(self.instance) is not None, "No docdata available"
+        assert getattr_or_docdata(self.cls, "link") is not None
+        assert getattr_or_docdata(self.cls, "name") is not None
+        assert getattr_or_docdata(self.cls, "description") is not None
+        assert self.instance.key is not None
 
     def _test_call(self, ranks: numpy.ndarray, num_candidates: numpy.ndarray | None):
         """Verify call."""
@@ -2245,7 +2225,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         # data type
         assert isinstance(x, float)
         # value range
-        self.assertIn(x, self.instance.value_range.approximate(epsilon=1.0e-08))
+        assert x in self.instance.value_range.approximate(epsilon=1e-08)
 
     def test_call(self):
         """Test __call__."""
@@ -2277,9 +2257,9 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             ]
         )
         if self.instance.increasing:
-            self.assertLessEqual(x, y)
+            assert x <= y
         else:
-            self.assertLessEqual(y, x)
+            assert y <= x
 
     def _test_expectation(self, weights: numpy.ndarray | None):
         """Test the numeric expectation is close to the closed form one."""
@@ -2295,8 +2275,8 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             generator=generator,
             weights=weights,
         )
-        self.assertLessEqual(low, closed)
-        self.assertLessEqual(closed, high)
+        assert low <= closed
+        assert closed <= high
 
     def test_expectation(self):
         """Test the numeric expectation is close to the closed form one."""
@@ -2314,7 +2294,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             raise SkipTest("no implementation of closed-form variance") from error
 
         # variances are non-negative
-        self.assertLessEqual(0, closed)
+        assert 0 <= closed
 
         generator = numpy.random.default_rng(seed=0)
         low, _simulated, high = self.instance.numeric_variance_with_ci(
@@ -2323,8 +2303,8 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             generator=generator,
             weights=weights,
         )
-        self.assertLessEqual(low, closed)
-        self.assertLessEqual(closed, high)
+        assert low <= closed
+        assert closed <= high
 
     def test_variance(self):
         """Test the numeric variance is close to the closed form one."""
@@ -2350,9 +2330,8 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             self.skipTest("no base metric")
         base_instance = rank_based_metric_resolver.make(self.instance.base_cls)
         base_factor = 1 if base_instance.increasing else -1
-        self.assertNotEqual(
-            self.instance(ranks=self.ranks, num_candidates=self.num_candidates),
-            base_factor * base_instance(ranks=self.ranks, num_candidates=self.num_candidates),
+        assert self.instance(ranks=self.ranks, num_candidates=self.num_candidates) != base_factor * base_instance(
+            ranks=self.ranks, num_candidates=self.num_candidates
         )
 
     def test_weights_direction(self):
@@ -2367,9 +2346,9 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
         unweighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=None)
         if self.instance.increasing:  # increasing = larger is better => weighted should be better
-            self.assertLessEqual(unweighted, weighted)
+            assert unweighted <= weighted
         else:
-            self.assertLessEqual(weighted, unweighted)
+            assert weighted <= unweighted
 
     def test_weights_coherence(self):
         """Test coherence for weighted metrics & metric in repeated array."""
@@ -2381,19 +2360,16 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         repeats = generator.integers(low=1, high=10, size=self.ranks.shape)
 
         # 1. repeat each rank/candidate pair a random number of times
-        repeated_ranks, repeated_num_candidates = [], []
-        for rank, num_candidates, repeat in zip(self.ranks, self.num_candidates, repeats, strict=False):
-            repeated_ranks.append(numpy.full(shape=(repeat,), fill_value=rank))
-            repeated_num_candidates.append(numpy.full(shape=(repeat,), fill_value=num_candidates))
-        repeated_ranks = numpy.concatenate(repeated_ranks)
-        repeated_num_candidates = numpy.concatenate(repeated_num_candidates)
+        repeated_ranks = numpy.repeat(self.ranks, repeats=repeats)
+        repeated_num_candidates = numpy.repeat(self.num_candidates, repeats=repeats)
         value_repeat = self.instance(ranks=repeated_ranks, num_candidates=repeated_num_candidates, weights=None)
 
         # 2. do not repeat, but assign a corresponding weight
         weights = repeats.astype(float)
         value_weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
 
-        self.assertAlmostEqual(value_repeat, value_weighted, delta=2)
+        # TODO: abs=2 recovers the previous value passed to assertAlmostEqual, but is a wild tolerance...
+        assert value_repeat == pytest.approx(value_weighted, abs=2), (value_repeat, value_weighted)
 
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
@@ -2403,11 +2379,11 @@ class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
         """Test to_flat_dict."""
         flat_dict = self.instance.to_flat_dict()
         # check flatness
-        self.assertIsInstance(flat_dict, dict)
+        assert isinstance(flat_dict, dict)
         for key, value in flat_dict.items():
-            self.assertIsInstance(key, str)
+            assert isinstance(key, str)
             # TODO: does this suffice, or do we really need float as datatype?
-            self.assertIsInstance(value, (float, int), msg=key)
+            assert isinstance(value, (float, int)), key
         self._verify_flat_dict(flat_dict)
 
     def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):
@@ -2461,12 +2437,12 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
 
     def test_data_loader_multiprocessing(self):
         """Test data loader with multiple workers."""
-        self.assertEqual(
+        assert (
             sum(
                 batch["positives"].shape[0]
                 for batch in torch.utils.data.DataLoader(dataset=self.instance, batch_size=None, num_workers=2)
-            ),
-            self.factory.num_triples,
+            )
+            == self.factory.num_triples
         )
 
 
@@ -2629,21 +2605,21 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
     def test_should_stop(self):
         """Test that the stopper knows when to stop."""
         for epoch in range(self.stop_constant):
-            self.assertFalse(self.instance.should_stop(epoch=epoch))
-        self.assertTrue(self.instance.should_stop(epoch=self.stop_constant))
+            assert not self.instance.should_stop(epoch=epoch)
+        assert self.instance.should_stop(epoch=self.stop_constant)
 
     def test_result_logging(self):
         """Test whether result logger is called properly."""
         self.instance.result_tracker = mock_tracker = Mock()
         self.instance.should_stop(epoch=0)
         log_metrics = mock_tracker.log_metrics
-        self.assertIsInstance(log_metrics, Mock)
+        assert isinstance(log_metrics, Mock)
         log_metrics.assert_called_once()
         _, call_args = log_metrics.call_args_list[0]
-        self.assertIn("step", call_args)
-        self.assertEqual(0, call_args["step"])
-        self.assertIn("prefix", call_args)
-        self.assertEqual("validation", call_args["prefix"])
+        assert "step" in call_args
+        assert 0 == call_args["step"]
+        assert "prefix" in call_args
+        assert "validation" == call_args["prefix"]
 
     def test_serialization(self):
         """Test for serialization."""
@@ -2689,11 +2665,11 @@ class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combinati
 
             # combine
             x = self.instance(xs=xs)
-            self.assertIsInstance(x, torch.Tensor)
+            assert isinstance(x, torch.Tensor)
 
             # verify shape
             output_shape = self.instance.output_shape(input_shapes)
-            self.assertTupleEqual(x.shape, output_shape)
+            assert x.shape == output_shape
 
 
 class TextEncoderTestCase(unittest_templates.GenericTestCase[pykeen.nn.text.TextEncoder]):

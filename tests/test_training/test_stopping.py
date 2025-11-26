@@ -103,4 +103,4 @@ class TestTrainingEarlyStopping(unittest.TestCase):
             stopper=self.stopper,
             use_tqdm=False,
         )
-        self.assertEqual(training_loop._epoch, self.stop_constant + 1)
+        assert training_loop._epoch == self.stop_constant + 1

@@ -28,26 +28,24 @@ class TestAnnotated(unittest.TestCase):
                     docdata = cls.__docdata__
                 except AttributeError:
                     self.fail("missing __docdata__")
-                self.assertIn("name", docdata)
-                self.assertIsInstance(docdata["name"], str)
-                self.assertIn("statistics", docdata)
-                self.assertIn("citation", docdata)
+                assert "name" in docdata
+                assert isinstance(docdata["name"], str)
+                assert "statistics" in docdata
+                assert "citation" in docdata
 
                 # Check minimal statistics
                 for k in ("entities", "relations", "triples", "training", "testing", "validation"):
-                    self.assertIn(k, docdata["statistics"], msg=f"statistics are missing {k}")
-                    self.assertIsInstance(docdata["statistics"][k], int)
+                    assert k in docdata["statistics"], f"statistics are missing {k}"
+                    assert isinstance(docdata["statistics"][k], int)
 
                 # Check either a github link or author/publication information is given
                 citation = docdata["citation"]
-                self.assertTrue(
-                    ("author" in citation and "link" in citation and "year" in citation) or "github" in citation,
-                )
+                assert "author" in citation and "link" in citation and "year" in citation or "github" in citation
 
             signature = dataset_resolver.signature(cls)
             random_state_param = signature.parameters.get("random_state")
             if random_state_param is not None:
-                self.assertEqual(0, random_state_param.default)
+                assert 0 == random_state_param.default
 
 
 class MockSingleTabbedDataset(SingleTabbedDataset):

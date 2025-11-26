@@ -7,6 +7,7 @@ from typing import Any
 from unittest import SkipTest
 
 import numpy
+import pytest
 import torch
 import torch.nn.functional
 import unittest_templates
@@ -337,7 +338,7 @@ class TransDTests(cases.TranslationalInteractionTests):
         # Compute Scores
         scores = self.instance.score_hrt(h=(h, h_p), r=(r, r_p), t=(t, t_p))
         first_score = scores[0].item()
-        self.assertAlmostEqual(first_score, -16, delta=0.01)
+        assert first_score == pytest.approx(-16, abs=0.01)
 
     def test_manual_big_relation_dim(self):
         """Manually test the value of the interaction function."""
@@ -351,7 +352,7 @@ class TransDTests(cases.TranslationalInteractionTests):
 
         # Compute Scores
         scores = self.instance.score_hrt(h=(h, h_p), r=(r, r_p), t=(t, t_p))
-        self.assertAlmostEqual(scores.item(), -27, delta=0.01)
+        assert scores.item() == pytest.approx(-27, abs=0.01)
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:  # noqa: D102
         assert self.instance.power_norm
@@ -404,7 +405,7 @@ class TransRTests(cases.TranslationalInteractionTests):
         t = torch.as_tensor(data=[2, 2], dtype=torch.float32).view(1, 2)
         scores = self.instance.score_hrt(h=h, r=(r, m_r), t=t)
         first_score = scores[0].item()
-        self.assertAlmostEqual(first_score, -32, delta=1.0e-04)
+        assert first_score == pytest.approx(-32, abs=1.0e-04)
 
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         r, m_r = r
