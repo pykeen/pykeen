@@ -251,10 +251,13 @@ def weighted_median(a: np.ndarray, weights: np.ndarray | None = None) -> np.ndar
     s_ranks = a[indices]
     s_weights = weights[indices]
     cdf = np.cumsum(s_weights)
-    cdf /= cdf[-1]
-    # determine value at p=0.5
-    idx = np.searchsorted(cdf, v=0.5)
+    # to avoid loss of precision, we do not normalize, but keep the original data type
+    # but, we have to adjust the 0.5 search value accordingly
+    # cdf = cdf / cdf[-1]
+    # idx = np.searchsorted(cdf, v=0.5)
+    v = 0.5 * cdf[-1]
+    idx = np.searchsorted(cdf, v=v)
     # special case for exactly 0.5
-    if cdf[idx] == 0.5:
+    if cdf[idx] == v:
         return s_ranks[idx : idx + 2].mean()
     return s_ranks[idx]
