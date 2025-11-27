@@ -636,7 +636,7 @@ def get_metric_list() -> list[tuple[str, type[Metric], type[MetricResults]]]:
 @click.option("--check", is_flag=True)
 def readme(check: bool) -> None:
     """Generate the GitHub readme's ## Implementation section."""
-    readme_path = HERE.parents[2].joinpath("README.md").resolve()
+    readme_path = HERE.parents[1].joinpath("README.md").resolve()
     new_readme = get_readme()
 
     if check:
