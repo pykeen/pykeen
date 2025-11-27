@@ -105,7 +105,7 @@ def reproduce(
     paths = {full_path for full_path in map(path.with_suffix, CONFIGURATION_FILE_FORMATS) if full_path.is_file()}
     if len(paths) == 0:
         raise FileNotFoundError("Could not find a configuration file.")
-    elif len(paths) > 1:
+    if len(paths) > 1:
         raise ValueError(f"Found multiple configuration files: {paths}")
     path = next(iter(paths))
     _help_reproduce(
@@ -275,8 +275,8 @@ def _iter_configurations() -> Iterable[pathlib.Path]:
         yield from HERE.rglob(f"*{ext}")
 
 
-@experiments.command()
-def list() -> None:
+@experiments.command(name="list")
+def cmd_list() -> None:
     """List experiment configurations."""
     data = set()
     for path in tqdm(_iter_configurations(), unit="configuration", unit_scale=True, leave=False):

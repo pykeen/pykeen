@@ -321,7 +321,7 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
         # revert change in order
         df = df.sort_values(by="old_index")
         # select global ID
-        return df["index"].values
+        return df["index"].to_numpy()
 
 
 @click.command()

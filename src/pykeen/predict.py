@@ -882,7 +882,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
                 continue
             if restriction is None:
                 raise NotImplementedError("Requires size info")
-            elif isinstance(restriction, int):
+            if isinstance(restriction, int):
                 restriction = [restriction]
             restriction = torch.as_tensor(restriction)
             parts.append(restriction)

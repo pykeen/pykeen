@@ -90,8 +90,7 @@ def _add_labels(
             raise ValueError
         label_to_id = getattr(triples_factory, label_to_id_mapping_name)
     assert label_to_id is not None
-    return pd.merge(
-        left=df,
+    return df.merge(
         right=pd.DataFrame(
             data=list(label_to_id.items()),
             columns=[label_column, id_column],
