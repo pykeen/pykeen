@@ -1212,7 +1212,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         best_epoch_model_file_path = None
         best_epoch = None
         if checkpoint.get("best_epoch_model_checkpoint"):
-            best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
+            with NamedTemporaryFile(delete=False) as ntf:
+                best_epoch_model_file_path = pathlib.Path(ntf.name)
             best_epoch = checkpoint["best_epoch_model_checkpoint"]["epoch"]
             torch.save(
                 checkpoint["best_epoch_model_checkpoint"],
