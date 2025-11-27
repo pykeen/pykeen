@@ -2,6 +2,7 @@
 
 import importlib
 import os
+import pathlib
 import unittest
 from collections.abc import Iterable, MutableMapping
 from typing import Any
@@ -666,20 +667,21 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
 
     def test_importing(self):
         """Test that all models are available from :mod:`pykeen.models`."""
-        models_path = os.path.abspath(os.path.dirname(pykeen.models.__file__))
+        models_path = pathlib.Path(pykeen.models.__file__).parent.absolute()
 
         model_names = set()
-        for directory, _, filenames in os.walk(models_path):
+        for directory_str, _, filenames in os.walk(models_path):
+            directory = pathlib.Path(directory_str)
             for filename in filenames:
                 if not filename.endswith(".py"):
                     continue
 
-                path = os.path.join(directory, filename)
-                relpath = os.path.relpath(path, models_path)
-                if relpath.endswith("__init__.py"):
+                path = directory.joinpath(filename)
+                relpath = path.relative_to(models_path)
+                if relpath.name == "__init__.py":
                     continue
 
-                import_path = "pykeen.models." + relpath[: -len(".py")].replace(os.sep, ".")
+                import_path = "pykeen.models." + relpath.as_posix().removesuffix(".py").replace(os.sep, ".")
                 module = importlib.import_module(import_path)
 
                 for name in dir(module):
@@ -699,7 +701,7 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
     @unittest.skip("no longer necessary?")
     def test_models_have_experiments(self):
         """Test that each model has an experiment folder in :mod:`pykeen.experiments`."""
-        experiments_path = os.path.abspath(os.path.dirname(pykeen.experiments.__file__))
+        experiments_path = pathlib.Path(pykeen.experiments.__file__).parent.absolute()
         experiment_blacklist = {
             "DistMultLiteral",  # FIXME
             "ComplExLiteral",  # FIXME
@@ -715,8 +717,9 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
         }
         model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist)
         for model in _remove_non_models(model_names):
+            model_name = model_resolver.normalize_cls(model)
             with self.subTest(model=model):
-                assert os.path.exists(os.path.join(experiments_path, model.lower())), (
+                assert experiments_path.joinpath(model_name.lower()).exists(), (
                     f"Missing experimental configuration for {model}"
                 )
 

@@ -3,7 +3,6 @@
 import inspect
 import itertools
 import logging
-import os
 import pathlib
 import tempfile
 import timeit
@@ -1136,7 +1135,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     def test_save(self) -> None:
         """Test that the model can be saved properly."""
         with tempfile.TemporaryDirectory() as temp_directory:
-            torch.save(self.instance, os.path.join(temp_directory, "model.pickle"))
+            torch.save(self.instance, pathlib.Path(temp_directory) / "model.pickle")
 
     def _test_score(self, score: Callable, columns: Sequence[int] | slice, shape: tuple[int, ...], **kwargs) -> None:
         """Test score functions."""
@@ -1281,7 +1280,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             return (a(indices=None) == b(indices=None)).all()
 
         with tempfile.TemporaryDirectory() as tmpdirname:
-            file_path = os.path.join(tmpdirname, "test.pt")
+            file_path = pathlib.Path(tmpdirname) / "test.pt"
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
 

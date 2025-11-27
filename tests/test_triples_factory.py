@@ -1,7 +1,6 @@
 """Unit tests for triples factories."""
 
 import itertools as itt
-import os
 import tempfile
 import unittest
 from collections.abc import Collection, Iterable, Mapping
@@ -474,7 +473,7 @@ class TestUtils(unittest.TestCase):
 
     def test_load_triples_remapped(self):
         """Test loading a triples file where the columns must be remapped."""
-        path = os.path.join(RESOURCES, "test_remap.tsv")
+        path = RESOURCES.joinpath("test_remap.tsv")
 
         with pytest.raises(InvalidRemappingLengthError):
             load_triples(path, column_remapping=[1, 2])

@@ -3,7 +3,6 @@
 import gc
 import inspect
 import logging
-import os
 import pathlib
 import pickle
 import random
@@ -757,8 +756,8 @@ class TrainingLoop(Generic[BatchType], ABC):
                         f"used as 'checkpoint_file' argument.",
                     )
                 # Delete temporary best epoch model
-                if best_epoch_model_file_path is not None and best_epoch_model_file_path.is_file():
-                    os.remove(best_epoch_model_file_path)
+                if best_epoch_model_file_path:
+                    best_epoch_model_file_path.unlink(missing_ok=True)
                 raise e
 
             # Includes a call to result_tracker.log_metrics
@@ -788,8 +787,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                 if last_best_epoch is not None and best_epoch_model_file_path is not None:
                     self._load_state(path=best_epoch_model_file_path)
                     # Delete temporary best epoch model
-                    if pathlib.Path.is_file(best_epoch_model_file_path):
-                        os.remove(best_epoch_model_file_path)
+                    best_epoch_model_file_path.unlink(missing_ok=True)
                 return self.losses_per_epochs
 
         callback.post_train(losses=self.losses_per_epochs)
@@ -799,8 +797,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         if stopper is not None and last_best_epoch is not None and best_epoch_model_file_path is not None:
             self._load_state(path=best_epoch_model_file_path)
             # Delete temporary best epoch model
-            if pathlib.Path.is_file(best_epoch_model_file_path):
-                os.remove(best_epoch_model_file_path)
+            best_epoch_model_file_path.unlink(missing_ok=True)
 
         return self.losses_per_epochs
 
