@@ -121,7 +121,7 @@ class EvaluationLoop(Generic[BatchType]):
 
     def get_collator(self):
         """Get the collator to use for the data loader."""
-        return None
+        return
 
     def get_loader(self, batch_size: int, pin_memory: bool = True, **kwargs) -> DataLoader:
         """Create a data loader for a single evaluation round.

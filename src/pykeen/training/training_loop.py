@@ -99,10 +99,9 @@ class SubBatchingNotSupportedError(NotImplementedError):
 
 def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     optimizer_kwargs = optimizer.state_dict()
-    optimizer_kwargs = {
+    return {
         key: value for key, value in optimizer_kwargs["param_groups"][0].items() if key not in ["params", "initial_lr"]
     }
-    return optimizer_kwargs
 
 
 def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:

@@ -620,8 +620,7 @@ def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Itera
 def _link(text: str, link: str, fmt: str) -> str:
     if fmt == "rst":
         return f"`{text} <{link}>`_"
-    else:
-        return f"[{text}]({link})"
+    return f"[{text}]({link})"
 
 
 def get_metric_list() -> list[tuple[str, type[Metric], type[MetricResults]]]:

@@ -2,6 +2,7 @@ name: Lint
 
 on:
   push:
+  merge_group:
   workflow_dispatch:
   pull_request:
     types: [auto_merge_enabled]
