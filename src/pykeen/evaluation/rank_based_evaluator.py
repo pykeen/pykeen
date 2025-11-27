@@ -530,9 +530,7 @@ def sample_negatives(
     for side in [LABEL_HEAD, LABEL_TAIL]:
         this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
         other = TARGET_TO_KEY_LABELS[side]
-        for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
-            by=other,
-        ):
+        for _, group in id_df.merge(all_df, on=other, suffixes=["_eval", "_all"]).groupby(by=other):
             pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
             if len(pool) < num_samples:
                 logger.warning(
