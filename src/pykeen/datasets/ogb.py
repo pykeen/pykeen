@@ -187,10 +187,7 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
             weights_only=False,
         )
-        if which == "train":
-            data_dict = cast(WikiKG2TrainDict, data_dict)
-        else:
-            data_dict = cast(WikiKG2EvalDict, data_dict)
+        data_dict = cast(WikiKG2TrainDict, data_dict) if which == "train" else cast(WikiKG2EvalDict, data_dict)
         return data_dict
 
     # docstr-coverage: inherited
@@ -297,10 +294,7 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
             weights_only=False,
         )
-        if which == "train":
-            data_dict = cast(BioKGTrainDict, data_dict)
-        else:
-            data_dict = cast(BioKGEvalDict, data_dict)
+        data_dict = cast(BioKGTrainDict, data_dict) if which == "train" else cast(BioKGEvalDict, data_dict)
 
         return data_dict
 

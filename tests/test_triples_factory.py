@@ -109,9 +109,9 @@ class TestTriplesFactory(unittest.TestCase):
             (self.factory.entity_to_id, self.factory.entity_id_to_label),
             (self.factory.relation_to_id, self.factory.relation_id_to_label),
         ]:
-            for k in label_to_id.keys():
+            for k in label_to_id:
                 assert id_to_label[label_to_id[k]] == k
-            for k in id_to_label.keys():
+            for k in id_to_label:
                 assert label_to_id[id_to_label[k]] == k
 
     def test_tensor_to_df(self):

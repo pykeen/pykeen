@@ -120,10 +120,7 @@ def merge_label_to_id_mapping(
     # reconstruct label-to-id
     result: dict[str, int] = {}
     for value, keys in value_to_keys.items():
-        if len(keys) == 1:
-            key = list(keys)[0]
-        else:
-            key = str(set(keys))
+        key = list(keys)[0] if len(keys) == 1 else str(set(keys))
         result[key] = value
     return result
 

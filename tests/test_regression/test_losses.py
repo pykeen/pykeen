@@ -48,10 +48,7 @@ class LCWALossCalculator(LossCalculator):
         labels = (
             torch.rand(self.batch_size, self.num_entities, generator=generator).less(0.5).to(dtype=predictions.dtype)
         )
-        if self.weighted:
-            weights = torch.rand(self.batch_size, self.num_entities, generator=generator)
-        else:
-            weights = None
+        weights = torch.rand(self.batch_size, self.num_entities, generator=generator) if self.weighted else None
         return instance.process_lcwa_scores(
             predictions=predictions,
             labels=labels,

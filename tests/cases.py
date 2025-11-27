@@ -662,10 +662,7 @@ class InteractionTestCase(
                 (batch_size,),
             )
             scores = self.instance.score_r(h=h, all_relations=r, t=t)
-            if len(self.cls.relation_shape) == 0:
-                exp_shape = (batch_size, 1)
-            else:
-                exp_shape = (batch_size, self.num_relations)
+            exp_shape = (batch_size, 1) if len(self.cls.relation_shape) == 0 else (batch_size, self.num_relations)
             self._check_scores(scores=scores, exp_shape=exp_shape)
 
     def test_score_r_slicing(self):
@@ -2632,7 +2629,7 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
             evaluation_triples_factory=...,
         )
         new_stopper._write_from_summary_dict(**summary)
-        for key in summary.keys():
+        for key in summary:
             assert getattr(self.instance, key) == getattr(new_stopper, key)
 
 

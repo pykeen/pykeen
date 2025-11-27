@@ -235,10 +235,7 @@ def verify(dataset_regex: str | None, min_triples: int | None, max_triples: int 
     valid = None
     for part, a in itt.product(("validation", "testing"), ("entities", "relations")):
         this_valid = df[f"num_training_{a}"] == df[f"num_{part}_{a}"]
-        if valid is None:
-            valid = this_valid
-        else:
-            valid = valid & this_valid
+        valid = this_valid if valid is None else valid & this_valid
     df["valid"] = valid
     click.echo(df.to_markdown())
 

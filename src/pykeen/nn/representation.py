@@ -1267,10 +1267,7 @@ class TextRepresentation(Representation):
         self,
         indices: LongTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
-        if indices is None:
-            labels = self.labels
-        else:
-            labels = [self.labels[i] for i in indices.tolist()]
+        labels = self.labels if indices is None else [self.labels[i] for i in indices.tolist()]
         return self.encoder(labels=labels)
 
 

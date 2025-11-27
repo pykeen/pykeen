@@ -306,10 +306,7 @@ def all_in_bounds(
         return False
 
     # upper bound
-    if high is not None and (x > high + a_tol).any():
-        return False
-
-    return True
+    return not (high is not None and (x > high + a_tol).any())
 
 
 def is_cudnn_error(runtime_error: RuntimeError) -> bool:

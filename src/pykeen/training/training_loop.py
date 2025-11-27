@@ -1122,20 +1122,14 @@ class TrainingLoop(Generic[BatchType], ABC):
             stopper_dict = stopper.get_summary_dict()
 
         # Only if a cuda device is available, the random state is accessed
-        if torch.cuda.is_available():
-            torch_cuda_random_state = torch.cuda.get_rng_state()
-        else:
-            torch_cuda_random_state = None
+        torch_cuda_random_state = torch.cuda.get_rng_state() if torch.cuda.is_available() else None
 
         if best_epoch_model_checkpoint_file_path is not None:
             best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_file_path, weights_only=False)
         else:
             best_epoch_model_checkpoint = None
 
-        if self.lr_scheduler is None:
-            lr_scheduler_state_dict = None
-        else:
-            lr_scheduler_state_dict = self.lr_scheduler.state_dict()
+        lr_scheduler_state_dict = None if self.lr_scheduler is None else self.lr_scheduler.state_dict()
 
         relation_to_id_dict = None
         entity_to_id_dict = None
