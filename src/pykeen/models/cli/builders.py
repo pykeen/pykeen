@@ -74,7 +74,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
             if name in _SKIP_ARGS or annotation in _SKIP_ANNOTATIONS:
                 continue
 
-            elif name in CLI_OPTIONS:
+            if name in CLI_OPTIONS:
                 option = CLI_OPTIONS[name]
 
             elif annotation in {t.Optional[int], t.Optional[str]}:  # noqa:UP045

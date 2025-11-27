@@ -2597,10 +2597,9 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
 
             if should_stop:
                 break
-            else:
-                # check storing of results
-                assert self.instance.results == self.mock_losses[: epoch + 1]
-                assert self.instance.best_metric == self.best_results[epoch]
+            # check storing of results
+            assert self.instance.results == self.mock_losses[: epoch + 1]
+            assert self.instance.best_metric == self.best_results[epoch]
 
     def test_should_stop(self):
         """Test that the stopper knows when to stop."""

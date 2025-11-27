@@ -895,11 +895,10 @@ def get_expected_norm(
         # mean = scipy.stats.norm.ppf(1 - 1/d)
         # scale = scipy.stats.norm.ppf(1 - 1/d * 1/math.e) - mean
         # return scipy.stats.gumbel_r.mean(loc=mean, scale=scale)
-    elif math.isfinite(p):
+    if math.isfinite(p):
         exp_abs_norm_p = math.pow(2, p / 2) * math.gamma((p + 1) / 2) / math.sqrt(math.pi)
         return math.pow(exp_abs_norm_p * d, 1 / p)
-    else:
-        raise TypeError(f"norm not implemented for {type(p)}: {p}")
+    raise TypeError(f"norm not implemented for {type(p)}: {p}")
 
 
 class Bias(nn.Module):
