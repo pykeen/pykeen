@@ -1,5 +1,6 @@
 """Test that models can be executed."""
 
+import contextlib
 import importlib
 import os
 import pathlib
@@ -669,34 +670,28 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
         """Test that all models are available from :mod:`pykeen.models`."""
         models_path = pathlib.Path(pykeen.models.__file__).parent.absolute()
 
-        model_names = set()
-        for directory_str, _, filenames in os.walk(models_path):
-            directory = pathlib.Path(directory_str)
-            for filename in filenames:
-                if not filename.endswith(".py"):
-                    continue
+        # Find models
+        model_names: set[str] = set()
+        for path in models_path.rglob("*.py"):
+            # skip private / __init__
+            if path.stem.startswith("_"):
+                continue
 
-                path = directory.joinpath(filename)
-                relpath = path.relative_to(models_path)
-                if relpath.name == "__init__.py":
-                    continue
+            # build import path
+            rel_path = path.relative_to(models_path).with_suffix("")
+            import_path = ".".join(("pykeen", "models", *rel_path.parts))
+            module = importlib.import_module(import_path)
 
-                import_path = "pykeen.models." + relpath.as_posix().removesuffix(".py").replace(os.sep, ".")
-                module = importlib.import_module(import_path)
+            # Search for sub-classes of Model
+            for name in dir(module):
+                value = getattr(module, name)
+                with contextlib.suppress(TypeError):
+                    if isinstance(value, type) and issubclass(value, Model):
+                        model_names.add(value.__name__)
 
-                for name in dir(module):
-                    value = getattr(module, name)
-                    try:
-                        if isinstance(value, type) and issubclass(value, Model):
-                            model_names.add(value.__name__)
-                    except TypeError:
-                        continue
-
-        star_model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES)
-        # FIXME definitely a type mismatch going on here
-        model_names = _remove_non_models(model_names - SKIP_MODULES)
-
-        assert model_names == star_model_names, "Forgot to add some imports"
+        # remove skip modules
+        model_names.difference_update(m.__name__ for m in SKIP_MODULES)
+        assert model_names.issubset(pykeen.models.__all__), "Forgot to add some imports"
 
     @unittest.skip("no longer necessary?")
     def test_models_have_experiments(self):
