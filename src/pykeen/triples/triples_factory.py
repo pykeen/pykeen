@@ -488,8 +488,8 @@ class CoreTriplesFactory(KGInfo):
             mapped_triples=mapped_triples, num_entities=num_entities, num_relations=num_relations
         ):
             raise ValueError(
-                f"Encountered invalid ids in mapped_triples: {mapped_triples.min(dim=0).values=} "
-                f"and {mapped_triples.max(dim=0).values=} while {self.num_entities=} and {self.num_relations=}"
+                f"Encountered invalid ids in mapped_triples: {mapped_triples.min(dim=0).values=} "  # noqa: PD011
+                f"and {mapped_triples.max(dim=0).values=} while {self.num_entities=} and {self.num_relations=}"  # noqa: PD011
             )
         if metadata is None:
             metadata = {}
