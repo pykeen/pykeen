@@ -24,7 +24,7 @@ class NoRegularizerTest(cases.RegularizerTestCase):
 
     # docstr-coverage: inherited
     def test_apply_only_once(self):  # noqa: D102
-        raise unittest.SkipTest()
+        raise unittest.SkipTest
 
 
 class L1RegularizerTest(cases.LpRegularizerTest):
