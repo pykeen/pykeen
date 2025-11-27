@@ -2,7 +2,6 @@
 
 import contextlib
 import importlib
-import os
 import pathlib
 import unittest
 from collections.abc import Iterable, MutableMapping
