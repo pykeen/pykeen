@@ -172,7 +172,7 @@ class AttentionEdgeWeighting(EdgeWeighting):
         :raises ValueError: If ``message_dim`` is not divisible by ``num_heads``
         """
         super().__init__()
-        if 0 != message_dim % num_heads:
+        if message_dim % num_heads != 0:
             raise ValueError(f"output_dim={message_dim} must be divisible by num_heads={num_heads}!")
         self.num_heads = num_heads
         self.weight = nn.Parameter(data=nn.init.xavier_uniform_(torch.empty(num_heads, 2 * message_dim // num_heads)))

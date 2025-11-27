@@ -441,7 +441,7 @@ class MultiBackfillRepresentationTests(cases.RepresentationTestCase):
                 pykeen.nn.Partition(ids=[2, 3], base=None, kwargs={"shape": (2,)}),
             ],
         )
-        assert 2 == len(x.bases)
+        assert len(x.bases) == 2
 
 
 class BackfillRepresentationTests(cases.RepresentationTestCase):

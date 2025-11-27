@@ -893,23 +893,22 @@ class PackedZipRemoteDataset(LazyDataset):
             logger.info("downloading data from %s to %s", self.url, self.path)
             download(url=self.url, path=self.path)
 
-        with zipfile.ZipFile(file=self.path) as zf:
-            # relative paths within zip file's always follow Posix path, even on Windows
-            with zf.open(relative_path.as_posix()) as file:
-                logger.debug("loading %s", relative_path)
-                df = pd.read_csv(
-                    file,
-                    usecols=[self.head_column, self.relation_column, self.tail_column],
-                    header=self.header,
-                    sep=self.sep,
-                )
-                return TriplesFactory.from_labeled_triples(
-                    triples=df.values,
-                    create_inverse_triples=self._create_inverse_triples,
-                    metadata={"path": relative_path},
-                    entity_to_id=entity_to_id,
-                    relation_to_id=relation_to_id,
-                )
+        # relative paths within zip file's always follow Posix path, even on Windows
+        with zipfile.ZipFile(file=self.path) as zf, zf.open(relative_path.as_posix()) as file:
+            logger.debug("loading %s", relative_path)
+            df = pd.read_csv(
+                file,
+                usecols=[self.head_column, self.relation_column, self.tail_column],
+                header=self.header,
+                sep=self.sep,
+            )
+            return TriplesFactory.from_labeled_triples(
+                triples=df.values,
+                create_inverse_triples=self._create_inverse_triples,
+                metadata={"path": relative_path},
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+            )
 
 
 class CompressedSingleDataset(LazyDataset):
@@ -992,10 +991,8 @@ class ZipSingleDataset(CompressedSingleDataset):
         if not path.is_file():
             download(self.url, self._get_path())  # noqa:S310
 
-        with zipfile.ZipFile(path) as zip_file:
-            with zip_file.open(self._relative_path.as_posix()) as file:
-                df = pd.read_csv(file, sep=self.delimiter)
-        return df
+        with zipfile.ZipFile(path) as zip_file, zip_file.open(self._relative_path.as_posix()) as file:
+            return pd.read_csv(file, sep=self.delimiter)
 
 
 class TarFileSingleDataset(CompressedSingleDataset):

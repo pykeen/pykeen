@@ -67,15 +67,6 @@ def iterate_config_paths() -> Iterable[tuple[str, pathlib.Path, pathlib.Path]]:
             yield model_directory.name, config, path
 
 
-def _should_skip_because_type(x):
-    # don't worry about functions because they can't be specified by JSON.
-    # Could make a better mo
-    if inspect.isfunction(x):
-        return True
-    # later could extend for other non-JSON valid types
-    return False
-
-
 def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
     configuration = load_configuration(path)
@@ -153,7 +144,10 @@ def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
 
             if name in _SKIP_NAMES or annotation in _SKIP_ANNOTATIONS:
                 continue
-            if parameter.default and _should_skip_because_type(parameter.default):
+            # don't worry about functions because they can't be specified by JSON.
+            # Could make a better mo
+            # later could extend for other non-JSON valid types
+            if parameter.default and inspect.isfunction(parameter.default):
                 continue
 
             if required_kwargs is not None and name not in required_kwargs:

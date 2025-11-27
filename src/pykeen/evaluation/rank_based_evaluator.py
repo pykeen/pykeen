@@ -99,10 +99,7 @@ def _iter_ranks(
     ranks_flat = _flatten(ranks)
     num_candidates_flat = _flatten(num_candidates)
     weights_flat: Mapping[Target, np.ndarray]
-    if weights is None:
-        weights_flat = {}
-    else:
-        weights_flat = _flatten(weights)
+    weights_flat = {} if weights is None else _flatten(weights)
     for rank_type in RANK_TYPES:
         # individual side
         for side in sides:

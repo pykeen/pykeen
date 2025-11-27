@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import ftplib
 import functools
 import itertools as itt
@@ -306,10 +307,7 @@ def all_in_bounds(
         return False
 
     # upper bound
-    if high is not None and (x > high + a_tol).any():
-        return False
-
-    return True
+    return not (high is not None and (x > high + a_tol).any())
 
 
 def is_cudnn_error(runtime_error: RuntimeError) -> bool:
@@ -425,10 +423,8 @@ def get_df_io(df: pd.DataFrame) -> BytesIO:
 
 def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: str) -> None:
     """Ensure the directory exists on the FTP server."""
-    try:
+    with contextlib.suppress(ftplib.error_perm):  # its fine...
         ftp.mkd(directory)
-    except ftplib.error_perm:
-        pass  # its fine...
 
 
 K = TypeVar("K")

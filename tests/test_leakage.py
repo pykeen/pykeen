@@ -82,7 +82,7 @@ class TestLeakage(unittest.TestCase):
         test_relation_id, test_relation_inverse_id = (
             train_factory.relation_to_id[r] for r in (test_relation, test_relation_inverse)
         )
-        assert 0 != len(sealant.candidate_inverse_relations), (
+        assert len(sealant.candidate_inverse_relations) != 0, (
             f"did not find any candidate inverse relations at frequency>={min_frequency}"
         )
         assert {
@@ -103,7 +103,7 @@ class TestLeakage(unittest.TestCase):
         test_leaked = test_factory.mapped_triples[
             test_factory.get_mask_for_relations(relations=sealant.inverse_relations_to_delete, invert=False)
         ]
-        assert 1 == len(test_leaked)
+        assert len(test_leaked) == 1
         assert (train_factory.entity_to_id["-2"], test_relation_inverse, train_factory.entity_to_id["-1"]) == tuple(
             test_leaked[0]
         )

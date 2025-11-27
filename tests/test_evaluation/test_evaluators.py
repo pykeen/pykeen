@@ -105,7 +105,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         result = self.instance.finalize_multi(n_boot=n_boot)
         # check type
         assert isinstance(result, dict)
-        assert all(isinstance(k, str) for k in result.keys())
+        assert all(isinstance(k, str) for k in result)
         assert all(isinstance(v, list) for v in result.values())
         # check length
         assert all(len(v) == n_boot for v in result.values())
@@ -117,7 +117,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         result = self.instance.finalize_with_confidence(n_boot=3)
         # check type
         assert isinstance(result, dict)
-        assert all(isinstance(k, str) for k in result.keys())
+        assert all(isinstance(k, str) for k in result)
         assert all(isinstance(v, tuple) for v in result.values())
         # check length
         assert all(len(v) == 2 for v in result.values())
@@ -767,7 +767,7 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
             metric_name = metric.key
-            assert any(metric_name in key for key in flat_dict.keys()), metric_name
+            assert any(metric_name in key for key in flat_dict), metric_name
 
     def test_monotonicity_in_rank_type(self):
         """Test monotonicity for different rank-types."""
@@ -777,8 +777,8 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
             "adjusted_hits_at_",
         ]
         self.instance: RankBasedMetricResults
-        targets = {key.side for key in self.instance.data.keys()}
-        for metric_name in {key.metric for key in self.instance.data.keys()}:
+        targets = {key.side for key in self.instance.data}
+        for metric_name in {key.metric for key in self.instance.data}:
             if metric_name in {"variance", "standard_deviation", "median_absolute_deviation"}:
                 continue
             norm_metric_name = metric_name
