@@ -46,8 +46,7 @@ def remix(*triples_factories: CoreTriplesFactory, **kwargs) -> list[CoreTriplesF
 
 def _get_ratios(*triples_factories: CoreTriplesFactory) -> Sequence[float]:
     total = sum(tf.num_triples for tf in triples_factories)
-    ratios = normalize_ratios([tf.num_triples / total for tf in triples_factories])
-    return ratios
+    return normalize_ratios([tf.num_triples / total for tf in triples_factories])
 
 
 @click.command()

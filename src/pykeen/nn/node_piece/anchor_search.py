@@ -267,11 +267,10 @@ class SparseBFSSearcher(AnchorSearcher):
         edge_index_torch = torch.as_tensor(edge_index, dtype=torch.long)
 
         # symmetric + self-loops
-        edge_list = torch.cat(
+        return torch.cat(
             [edge_index_torch, edge_index_torch.flip(0), torch.arange(num_entities).unsqueeze(0).repeat(2, 1)], dim=-1
         ).unique(dim=1)  # unique for deduplicating repeated edges
 
-        return edge_list
 
     @staticmethod
     def bfs(
@@ -374,8 +373,7 @@ class SparseBFSSearcher(AnchorSearcher):
         # values with distance 255 (or max for unsigned int8 type) are padding tokens
         indices[values == torch.iinfo(values.dtype).max] = -1
         # since the output is sorted, no need for random sampling, we just take top-k nearest
-        tokens = indices[:, :k].detach().cpu().numpy()
-        return tokens
+        return indices[:, :k].detach().cpu().numpy()
 
     # docstr-coverage: inherited
     def __call__(

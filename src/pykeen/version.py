@@ -108,6 +108,7 @@ def env(file=None):
     if _in_jupyter():
         return env_html()
     print(env_table(), file=file)  # noqa:T201
+    return None
 
 
 def _in_jupyter() -> bool:

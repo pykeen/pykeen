@@ -838,9 +838,8 @@ class CompGCNLayer(nn.Module):
         x_e = x_e.new_zeros(x_e.shape[0], m.shape[1]).index_add(dim=0, index=target, source=m)
 
         # dropout
-        x_e = self.drop(x_e)
+        return self.drop(x_e)
 
-        return x_e
 
     def forward(
         self,

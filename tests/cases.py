@@ -1319,8 +1319,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         if self.create_inverse_triples:
             extras.append("--create-inverse-triples")
 
-        extras = [str(e) for e in extras]
-        return extras
+        return [str(e) for e in extras]
 
     @pytest.mark.slow
     def test_cli_training_nations(self):
@@ -2321,8 +2320,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         # generate random weights such that sum = n
         generator = numpy.random.default_rng(seed=21)
         weights = generator.random(size=self.num_candidates.shape)
-        weights = self.num_ranks * weights / weights.sum()
-        return weights
+        return self.num_ranks * weights / weights.sum()
 
     def test_different_to_base_metric(self):
         """Check whether the value is different from the base metric (relevant for adjusted metrics)."""

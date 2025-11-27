@@ -678,9 +678,8 @@ def project_entity(
     e_bot[..., :change_dim] += e[..., :change_dim]
 
     # Enforce constraints
-    e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
+    return clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
 
-    return e_bot
 
 
 def upgrade_to_sequence(x: X | Sequence[X]) -> Sequence[X]:
