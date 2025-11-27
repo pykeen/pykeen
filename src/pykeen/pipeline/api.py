@@ -951,9 +951,9 @@ def _handle_model(
     model_instance: Model
     if model is not None and interaction is not None:
         raise ValueError("can not pass both a model and interaction")
-    elif model is None and interaction is None:
+    if model is None and interaction is None:
         raise ValueError("must pass one of model or interaction")
-    elif interaction is not None:
+    if interaction is not None:
         if dimensions is None:
             raise ValueError("missing dimensions")
         model = make_model_cls(

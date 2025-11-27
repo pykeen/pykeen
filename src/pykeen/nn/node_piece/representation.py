@@ -126,7 +126,7 @@ class TokenizationRepresentation(Representation):
                 f"The token representations only contain {token_representation.max_id} representations,"
                 f"but there are {self.vocabulary_size} tokens in use.",
             )
-        elif token_representation.max_id > self.vocabulary_size:
+        if token_representation.max_id > self.vocabulary_size:
             logger.warning(
                 f"Token representations do contain more representations ({token_representation.max_id}) "
                 f"than tokens are used ({self.vocabulary_size}).",
