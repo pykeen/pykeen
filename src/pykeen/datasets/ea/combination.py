@@ -267,7 +267,7 @@ class ProcessedTuple(NamedTuple):
 FactoryType = TypeVar("FactoryType", CoreTriplesFactory, TriplesFactory)
 
 
-class GraphPairCombinator(Generic[FactoryType], ABC):
+class GraphPairCombinator(ABC, Generic[FactoryType]):
     """A base class for combination of a graph pair into a single graph."""
 
     def __call__(
