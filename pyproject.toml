@@ -221,9 +221,10 @@ extend-select = [
     "PYI",  # flake8-pyi (PYI)
 ]
 ignore = [
-    "D105", # Missing docstring in magic method
-    "S101", # Use of assert detected, TODO remove
-    "D102", # Missing docstring in public method, TODO remove
+    "D105",   # Missing docstring in magic method
+    "S101",   # Use of assert detected, TODO remove
+    "D102",   # Missing docstring in public method, TODO remove
+    "PYI041", # "int | float" annotations should be not be replaced by "float"
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores
