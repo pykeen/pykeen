@@ -247,7 +247,7 @@ class TestSplit(unittest.TestCase):
         """Set up the tests."""
         self.dataset = Nations()
         self.triples_factory = self.dataset.training
-        assert 1592 == self.triples_factory.num_triples
+        assert self.triples_factory.num_triples == 1592
 
     def _test_invariants_shared(self, *factories: TriplesFactory, lossy: bool = False) -> None:
         # verify that the type got correctly promoted
@@ -402,7 +402,7 @@ class TestLiterals(unittest.TestCase):
     def test_inverse_triples(self):
         """Test that the right number of entities and triples exist after inverting them."""
         triples_factory = TriplesFactory.from_labeled_triples(triples=triples, create_inverse_triples=True)
-        assert 4 == triples_factory.num_relations
+        assert triples_factory.num_relations == 4
         assert set(range(triples_factory.num_entities)) == set(triples_factory.entity_to_id.values()), (
             "wrong number entities"
         )
@@ -413,7 +413,7 @@ class TestLiterals(unittest.TestCase):
         relations = set(triples[:, 1])
         entities = set(triples[:, 0]).union(triples[:, 2])
         assert len(entities) == triples_factory.num_entities, "wrong number entities"
-        assert 2 == len(relations), "Wrong number of relations in set"
+        assert len(relations) == 2, "Wrong number of relations in set"
         assert 2 * len(relations) == triples_factory.num_relations, "Wrong number of relations in factory"
 
     def test_metadata(self):
@@ -480,7 +480,7 @@ class TestUtils(unittest.TestCase):
             load_triples(path, column_remapping=[1, 2])
 
         _triples = load_triples(path, column_remapping=[0, 2, 1])
-        assert [["a", "r1", "b"], ["b", "r2", "c"]] == _triples.tolist()
+        assert _triples.tolist() == [["a", "r1", "b"], ["b", "r2", "c"]]
 
     def test_load_triples_with_nans(self):
         """Test loading triples that have a ``nan`` string.

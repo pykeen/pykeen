@@ -26,7 +26,7 @@ class TestIndicators(unittest.TestCase):
         """Test constructing an indicator."""
         y_score = np.array([5, 6, 7, 8])
         y_true = np.array([1, 0, 0, 1])
-        assert [0, 0, 1, 1] == construct_indicator(y_score=y_score, y_true=y_true).tolist()
+        assert construct_indicator(y_score=y_score, y_true=y_true).tolist() == [0, 0, 1, 1]
 
     def test_indicator_linear_invariant(self):
         """Test that the construction of the indicator is invariant to linear transformations."""

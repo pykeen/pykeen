@@ -186,12 +186,12 @@ class DatasetAnalysisTests(unittest.TestCase):
 
         # check confidence value range
         x = df[triple_analysis.CONFIDENCE_COLUMN_NAME].values
-        assert (0 <= x).all()
+        assert (x >= 0).all()
         assert (x <= 1).all()
 
         # check support value range
         x = df[triple_analysis.SUPPORT_COLUMN_NAME].values
-        assert (1 <= x).all()
+        assert (x >= 1).all()
 
     def test_relation_cardinality_types(self):
         """Tests for relation cardinality type classification."""

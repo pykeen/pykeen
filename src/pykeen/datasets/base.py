@@ -992,9 +992,8 @@ class ZipSingleDataset(CompressedSingleDataset):
         if not path.is_file():
             download(self.url, self._get_path())  # noqa:S310
 
-        with zipfile.ZipFile(path) as zip_file:
-            with zip_file.open(self._relative_path.as_posix()) as file:
-                df = pd.read_csv(file, sep=self.delimiter)
+        with zipfile.ZipFile(path) as zip_file, zip_file.open(self._relative_path.as_posix()) as file:
+            df = pd.read_csv(file, sep=self.delimiter)
         return df
 
 
