@@ -295,7 +295,6 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
         )
         return cast(BioKGTrainDict, data_dict) if which == "train" else cast(BioKGEvalDict, data_dict)
 
-
     def _map_entity_column(
         self, local_entity_id: numpy.ndarray, entity_type: Sequence[OGBBioKGNodeType]
     ) -> numpy.ndarray:
