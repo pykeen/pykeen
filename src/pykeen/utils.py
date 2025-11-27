@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import ftplib
 import functools
 import itertools as itt
@@ -422,10 +423,8 @@ def get_df_io(df: pd.DataFrame) -> BytesIO:
 
 def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: str) -> None:
     """Ensure the directory exists on the FTP server."""
-    try:
+    with contextlib.suppress(ftplib.error_perm):  # its fine...
         ftp.mkd(directory)
-    except ftplib.error_perm:
-        pass  # its fine...
 
 
 K = TypeVar("K")
