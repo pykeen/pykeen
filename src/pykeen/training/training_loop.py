@@ -656,7 +656,7 @@ class TrainingLoop(Generic[BatchType], ABC):
             sampler=sampler,
         )
         if len(train_data_loader) == 0:
-            raise NoTrainingBatchError()
+            raise NoTrainingBatchError
         if drop_last and not only_size_probing:
             logger.info(
                 "Dropping last (incomplete) batch each epoch (%s batches).",
