@@ -840,7 +840,6 @@ class CompGCNLayer(nn.Module):
         # dropout
         return self.drop(x_e)
 
-
     def forward(
         self,
         x_e: FloatTensor,

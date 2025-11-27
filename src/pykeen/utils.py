@@ -681,7 +681,6 @@ def project_entity(
     return clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
 
 
-
 def upgrade_to_sequence(x: X | Sequence[X]) -> Sequence[X]:
     """Ensure that the input is a sequence.
 

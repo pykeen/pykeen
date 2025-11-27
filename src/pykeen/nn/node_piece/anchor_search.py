@@ -271,7 +271,6 @@ class SparseBFSSearcher(AnchorSearcher):
             [edge_index_torch, edge_index_torch.flip(0), torch.arange(num_entities).unsqueeze(0).repeat(2, 1)], dim=-1
         ).unique(dim=1)  # unique for deduplicating repeated edges
 
-
     @staticmethod
     def bfs(
         anchors: numpy.ndarray,
