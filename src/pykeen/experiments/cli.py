@@ -275,8 +275,8 @@ def _iter_configurations() -> Iterable[pathlib.Path]:
         yield from HERE.rglob(f"*{ext}")
 
 
-@experiments.command()
-def list() -> None:
+@experiments.command(name="list")
+def cmd_list() -> None:
     """List experiment configurations."""
     data = set()
     for path in tqdm(_iter_configurations(), unit="configuration", unit_scale=True, leave=False):
