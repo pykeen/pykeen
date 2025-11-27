@@ -480,8 +480,7 @@ class MuRETests(cases.TranslationalInteractionTests):
         if self.instance.power_norm:
             s = s.pow(self.instance.p)
         s = -s
-        s = s + b_h + b_t
-        return s
+        return s + b_h + b_t
 
     def _additional_score_checks(self, scores):
         # Since MuRE has offsets, the scores do not need to negative

@@ -92,23 +92,23 @@ def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
         value = test_dict.get(key)
         if value is None:
             if not required:
-                return
+                return None
             errors.append(f"No key: {key}")
-            return
+            return None
         if normalize:
             value = normalize_string(value, suffix=suffix)
         if value not in choices:
             errors.append(f"Invalid {key}: {value}. Should be one of {sorted(choices)}")
-            return
+            return None
 
         if not check_kwargs:
-            return
+            return None
 
         kwargs_key = f"{key}_kwargs"
         kwargs_value = test_dict.get(kwargs_key)
         if kwargs_value is None:
             errors.append(f'Missing "{kwargs_key}" entry for {value}')
-            return
+            return None
 
         choice = choices[value]
         signature = inspect.signature(choice.__init__)
@@ -161,7 +161,7 @@ def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
             errors.append(f"Missing {kwargs_key} for {choice}:\n{_x}")
 
         if extraneous_kwargs or missing_kwargs:
-            return
+            return None
 
         return value
 

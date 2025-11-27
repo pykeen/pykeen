@@ -205,8 +205,8 @@ def filter_map_alignment(
             raise ValueError(f"Invalid dype in alignment dataframe for side={side}: {alignment[side].dtype}")
 
     # filter alignment
-    invalid_mask = (alignment.values < 0).any(axis=1) | (
-        alignment.values >= numpy.reshape(numpy.asarray([left.num_entities, right.num_entities]), newshape=(1, 2))
+    invalid_mask = (alignment.to_numpy() < 0).any(axis=1) | (
+        alignment.to_numpy() >= numpy.reshape(numpy.asarray([left.num_entities, right.num_entities]), newshape=(1, 2))
     ).any(axis=1)
     if invalid_mask.any():
         logger.warning(

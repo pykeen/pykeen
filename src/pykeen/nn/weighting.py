@@ -113,8 +113,7 @@ class InverseInDegreeEdgeWeighting(EdgeWeighting):
         weight = _inverse_frequency_weighting(idx=target)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
-        else:
-            return weight
+        return weight
 
 
 class InverseOutDegreeEdgeWeighting(EdgeWeighting):
@@ -131,8 +130,7 @@ class InverseOutDegreeEdgeWeighting(EdgeWeighting):
         weight = _inverse_frequency_weighting(idx=source)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
-        else:
-            return weight
+        return weight
 
 
 class SymmetricEdgeWeighting(EdgeWeighting):
@@ -149,9 +147,8 @@ class SymmetricEdgeWeighting(EdgeWeighting):
         weight = (_inverse_frequency_weighting(idx=source) * _inverse_frequency_weighting(idx=target)).sqrt()
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
-        else:
-            # backward compatibility with RGCN
-            return weight
+        # backward compatibility with RGCN
+        return weight
 
 
 class AttentionEdgeWeighting(EdgeWeighting):
