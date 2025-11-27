@@ -1511,7 +1511,7 @@ class TriplesFactory(CoreTriplesFactory):
             logger.warning(
                 "Could not import module `wordcloud`. Try installing it with `pip install wordcloud`",
             )
-            return
+            return None
 
         # pre-filter to keep only topk
         uniq, counts = ids.reshape(-1).unique(return_counts=True)

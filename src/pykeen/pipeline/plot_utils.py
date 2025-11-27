@@ -245,10 +245,9 @@ def _reduce_embeddings(embedding: Representation, reducer, fit: bool = False):
     if embeddings_numpy.shape[1] == 2:
         logger.debug("not reducing entity embeddings, already dim=2")
         return embeddings_numpy, False
-    elif fit:
+    if fit:
         return reducer.fit_transform(embeddings_numpy), True
-    else:
-        return reducer.transform(embeddings_numpy), True
+    return reducer.transform(embeddings_numpy), True
 
 
 def _get_reducer_cls(model: str, **kwargs):

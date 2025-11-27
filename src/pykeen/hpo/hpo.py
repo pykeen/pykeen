@@ -1004,7 +1004,7 @@ def _set_study_dataset(
     if dataset is not None:
         if training is not None or testing is not None or validation is not None:
             raise ValueError("Cannot specify dataset and training, testing and validation")
-        elif isinstance(dataset, str | pathlib.Path):
+        if isinstance(dataset, str | pathlib.Path):
             if isinstance(dataset, str) and has_dataset(dataset):
                 study.set_user_attr("dataset", dataset_resolver.normalize(dataset))
             else:
