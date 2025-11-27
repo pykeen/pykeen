@@ -219,6 +219,8 @@ extend-select = [
     "PERF",
     "PT",   # flake8-pytest-style
     "PYI",  # flake8-pyi (PYI)
+    "PD",   # pandas-vet
+    "A",    # flake8-builtins 
     "RSE",  # flake8-raise
 ]
 ignore = [
