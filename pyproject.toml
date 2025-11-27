@@ -219,6 +219,7 @@ extend-select = [
     "PERF",
     "PT",   # flake8-pytest-style
     "RSE",  # flake8-raise
+    "PTH",  # flake8-use-pathlib
 ]
 ignore = [
     "D105", # Missing docstring in magic method
