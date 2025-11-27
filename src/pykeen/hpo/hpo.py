@@ -140,7 +140,7 @@ class Objective:
                 result_tracker.end_run(success=True)
                 # also show info
                 logger.info(f"Pruned trial: {trial} at epoch {epoch} due to {metric}={result}")
-                raise TrialPruned()
+                raise TrialPruned
 
         def _stopped_callback(_early_stopper: EarlyStopper, _result: float | int, epoch: int) -> None:
             trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
