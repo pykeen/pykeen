@@ -222,6 +222,7 @@ extend-select = [
     "PD",   # pandas-vet
     "A",    # flake8-builtins 
     "RSE",  # flake8-raise
+    "SLF",  # flake8-self
 ]
 ignore = [
     "D105", # Missing docstring in magic method
@@ -244,6 +245,7 @@ ignore = [
 "tests/**/*.py" = [
     "INP001", # tests are not a package
     "PIE790", # allow pass in test stubs/abstract methods
+    "SLF001", # allow access to private members
 ]
 
 [tool.ruff.lint.pydocstyle]
