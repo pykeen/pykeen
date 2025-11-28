@@ -192,7 +192,7 @@ def _prepare_representation_module_list(
             raise ValueError(
                 f"{r} only provides {r.max_id} {label} representations, but should provide {max_id}.",
             )
-        elif r.max_id > max_id:
+        if r.max_id > max_id:
             logger.warning(
                 f"{r} provides {r.max_id} {label} representations, although only {max_id} are needed."
                 f"While this is not necessarily wrong, it can indicate an error where the number of {label} "

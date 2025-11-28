@@ -43,7 +43,7 @@ def deteriorate(
         raise NotImplementedError
 
     if isinstance(n, float):
-        if n < 0 or 1 <= n:
+        if n < 0 or n >= 1:
             raise ValueError
         n = int(n * reference.num_triples)
 

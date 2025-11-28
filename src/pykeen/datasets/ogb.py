@@ -187,11 +187,7 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
             weights_only=False,
         )
-        if which == "train":
-            data_dict = cast(WikiKG2TrainDict, data_dict)
-        else:
-            data_dict = cast(WikiKG2EvalDict, data_dict)
-        return data_dict
+        return cast(WikiKG2TrainDict, data_dict) if which == "train" else cast(WikiKG2EvalDict, data_dict)
 
     # docstr-coverage: inherited
     def _compose_mapped_triples(self, data_dict: WikiKG2TrainDict | WikiKG2EvalDict) -> numpy.ndarray:  # noqa: D102
@@ -297,12 +293,7 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
             weights_only=False,
         )
-        if which == "train":
-            data_dict = cast(BioKGTrainDict, data_dict)
-        else:
-            data_dict = cast(BioKGEvalDict, data_dict)
-
-        return data_dict
+        return cast(BioKGTrainDict, data_dict) if which == "train" else cast(BioKGEvalDict, data_dict)
 
     def _map_entity_column(
         self, local_entity_id: numpy.ndarray, entity_type: Sequence[OGBBioKGNodeType]
@@ -321,7 +312,7 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
         # revert change in order
         df = df.sort_values(by="old_index")
         # select global ID
-        return df["index"].values
+        return df["index"].to_numpy()
 
 
 @click.command()

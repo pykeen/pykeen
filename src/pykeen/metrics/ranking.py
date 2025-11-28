@@ -1031,8 +1031,7 @@ class GeometricMeanRank(RankBasedMetric):
         x = factor * np.log(x) / m
         x = logcumsumexp(x)
         # now select from precomputed cumulative sums and aggregate
-        x = x[num_candidates - 1] - np.log(num_candidates)
-        return x
+        return x[num_candidates - 1] - np.log(num_candidates)
 
 
 @parse_docdata
@@ -1142,8 +1141,7 @@ def harmonic_variances(n: int) -> np.ndarray:
     v = (n_range * h2 - h**2) / n_range**2
     # ensure non-negativity, mathematically not necessary, but just to be safe from the numeric perspective
     # cf. https://en.wikipedia.org/wiki/Loss_of_significance#Subtraction
-    v = np.maximum(v, 0.0)
-    return v
+    return np.maximum(v, 0.0)
 
 
 @parse_docdata

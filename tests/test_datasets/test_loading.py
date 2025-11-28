@@ -45,7 +45,7 @@ class TestAnnotated(unittest.TestCase):
             signature = dataset_resolver.signature(cls)
             random_state_param = signature.parameters.get("random_state")
             if random_state_param is not None:
-                assert 0 == random_state_param.default
+                assert random_state_param.default == 0
 
 
 class MockSingleTabbedDataset(SingleTabbedDataset):

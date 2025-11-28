@@ -334,7 +334,7 @@ class LossTestCase(GenericTestCase[Loss]):
     def _check_loss_value(self, loss_value: FloatTensor) -> None:
         """Check loss value dimensionality, and ability for backward."""
         # test reduction
-        assert 0 == loss_value.ndim
+        assert loss_value.ndim == 0
 
         # test finite loss value
         assert torch.isfinite(loss_value)
@@ -662,10 +662,7 @@ class InteractionTestCase(
                 (batch_size,),
             )
             scores = self.instance.score_r(h=h, all_relations=r, t=t)
-            if len(self.cls.relation_shape) == 0:
-                exp_shape = (batch_size, 1)
-            else:
-                exp_shape = (batch_size, self.num_relations)
+            exp_shape = (batch_size, 1) if len(self.cls.relation_shape) == 0 else (batch_size, self.num_relations)
             self._check_scores(scores=scores, exp_shape=exp_shape)
 
     def test_score_r_slicing(self):
@@ -906,14 +903,14 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         model.post_parameter_update()
 
         # Check if regularization term is reset
-        assert 0.0 == self.instance.term
+        assert self.instance.term == 0.0
 
     def _check_reset(self, instance: Regularizer | None = None):
         """Verify that the regularizer is in resetted state."""
         if instance is None:
             instance = self.instance
         # regularization term should be zero
-        assert 0.0 == instance.regularization_term.item()
+        assert instance.regularization_term.item() == 0.0
         # updated should be set to false
         assert not instance.updated
 
@@ -947,7 +944,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         self.instance.update(*inputs)
 
         # check shape
-        assert (1,) == self.instance.term.shape
+        assert self.instance.term.shape == (1,)
 
         # check result
         expected_term = self._expected_updated_term(inputs=inputs)
@@ -1000,7 +997,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         first_tensors = self._generate_update_input()
         instance.update(*first_tensors)
         assert instance.updated
-        assert 0.0 != instance.regularization_term.item()
+        assert instance.regularization_term.item() != 0.0
         term = instance.regularization_term.clone()
 
         # after second update, no change should happen
@@ -1096,7 +1093,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def test_get_grad_parameters(self):
         """Test the model's ``get_grad_params()`` method."""
-        assert 0 < len(list(self.instance.get_grad_params())), "There is not at least one trainable parameter"
+        assert len(list(self.instance.get_grad_params())) > 0, "There is not at least one trainable parameter"
 
         # Check that all the parameters actually require a gradient
         for parameter in self.instance.get_grad_params():
@@ -1144,7 +1141,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         try:
             scores = score(batch, mode=self.mode, **kwargs)
         except ValueError as error:
-            raise SkipTest() from error
+            raise SkipTest from error
         except NotImplementedError:
             self.fail(msg=f"{score} not yet implemented")
         except RuntimeError as e:
@@ -1319,8 +1316,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         if self.create_inverse_triples:
             extras.append("--create-inverse-triples")
 
-        extras = [str(e) for e in extras]
-        return extras
+        return [str(e) for e in extras]
 
     @pytest.mark.slow
     def test_cli_training_nations(self):
@@ -1370,7 +1366,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         result: Result = runner.invoke(cli, args)
 
         assert (
-            0 == result.exit_code
+            result.exit_code == 0
         ), f"""\nCommand\n=======\n$ pykeen train {self.cls.__name__.lower()} {" ".join(map(str, args))}\n\n"
             f"Output\n======\n{result.output}\n\nException\n=========\n{result.exc_info[1]}\n\n"
             f"Traceback\n=========\n{"".join(traceback.format_tb(result.exc_info[2]))}\n            """
@@ -2043,7 +2039,7 @@ class AnchorSelectionTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSelecti
         # shape
         assert len(anchors) == self.num_anchors
         # value range
-        assert (0 <= anchors).all()
+        assert (anchors >= 0).all()
         assert (anchors < self.num_entities).all()
         # no duplicates
         assert len(set(anchors.tolist())) == len(anchors)
@@ -2212,7 +2208,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     def test_docdata(self):
         """Test the docdata contents of the metric."""
         assert hasattr(self.instance, "increasing")
-        assert "" != self.cls.__doc__.splitlines()[0].strip(), "First line of docstring should not be blank"
+        assert self.cls.__doc__.splitlines()[0].strip() != "", "First line of docstring should not be blank"
         assert get_docdata(self.instance) is not None, "No docdata available"
         assert getattr_or_docdata(self.cls, "link") is not None
         assert getattr_or_docdata(self.cls, "name") is not None
@@ -2294,7 +2290,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             raise SkipTest("no implementation of closed-form variance") from error
 
         # variances are non-negative
-        assert 0 <= closed
+        assert closed >= 0
 
         generator = numpy.random.default_rng(seed=0)
         low, _simulated, high = self.instance.numeric_variance_with_ci(
@@ -2321,8 +2317,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         # generate random weights such that sum = n
         generator = numpy.random.default_rng(seed=21)
         weights = generator.random(size=self.num_candidates.shape)
-        weights = self.num_ranks * weights / weights.sum()
-        return weights
+        return self.num_ranks * weights / weights.sum()
 
     def test_different_to_base_metric(self):
         """Check whether the value is different from the base metric (relevant for adjusted metrics)."""
@@ -2596,10 +2591,9 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
 
             if should_stop:
                 break
-            else:
-                # check storing of results
-                assert self.instance.results == self.mock_losses[: epoch + 1]
-                assert self.instance.best_metric == self.best_results[epoch]
+            # check storing of results
+            assert self.instance.results == self.mock_losses[: epoch + 1]
+            assert self.instance.best_metric == self.best_results[epoch]
 
     def test_should_stop(self):
         """Test that the stopper knows when to stop."""
@@ -2616,9 +2610,9 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
         log_metrics.assert_called_once()
         _, call_args = log_metrics.call_args_list[0]
         assert "step" in call_args
-        assert 0 == call_args["step"]
+        assert call_args["step"] == 0
         assert "prefix" in call_args
-        assert "validation" == call_args["prefix"]
+        assert call_args["prefix"] == "validation"
 
     def test_serialization(self):
         """Test for serialization."""
@@ -2631,7 +2625,7 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
             evaluation_triples_factory=...,
         )
         new_stopper._write_from_summary_dict(**summary)
-        for key in summary.keys():
+        for key in summary:
             assert getattr(self.instance, key) == getattr(new_stopper, key)
 
 

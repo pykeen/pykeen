@@ -235,10 +235,7 @@ def verify(dataset_regex: str | None, min_triples: int | None, max_triples: int 
     valid = None
     for part, a in itt.product(("validation", "testing"), ("entities", "relations")):
         this_valid = df[f"num_training_{a}"] == df[f"num_{part}_{a}"]
-        if valid is None:
-            valid = this_valid
-        else:
-            valid = valid & this_valid
+        valid = this_valid if valid is None else valid & this_valid
     df["valid"] = valid
     click.echo(df.to_markdown())
 
@@ -323,7 +320,7 @@ def expected_metrics(
                 ]
                 this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = {}
                 for label, sides in SIDE_MAPPING.items():
-                    num_candidates = df[[f"{side}_candidates" for side in sides]].values.ravel()
+                    num_candidates = df[[f"{side}_candidates" for side in sides]].to_numpy().ravel()
                     this_metrics[label] = {
                         metric.key: metric.expected_value(
                             num_candidates=num_candidates,
@@ -477,7 +474,7 @@ def degree(
     logger.info(f"Saved plot to {path}")
 
     # Plot: difference between mean head and tail degree
-    df_2 = df.loc[df["statistic"] == "mean"].pivot(
+    df_2 = df.loc[df["statistic"] == "mean"].pivot_table(
         index=["dataset", "split", "num_triples"], columns="target", values="value"
     )
     df_2["difference"] = df_2["head"] - df_2["tail"]

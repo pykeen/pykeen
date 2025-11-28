@@ -480,8 +480,7 @@ class MuRETests(cases.TranslationalInteractionTests):
         if self.instance.power_norm:
             s = s.pow(self.instance.p)
         s = -s
-        s = s + b_h + b_t
-        return s
+        return s + b_h + b_t
 
     def _additional_score_checks(self, scores):
         # Since MuRE has offsets, the scores do not need to negative
@@ -724,8 +723,5 @@ class LineaRETests(cases.TranslationalInteractionTests):
     def _exp_score(self, h, r, t) -> torch.FloatTensor:
         r_head, r_mid, r_tail = r
         s = h * r_head - t * r_tail + r_mid
-        if self.instance.power_norm:
-            s = s.pow(self.instance.p).sum(dim=-1)
-        else:
-            s = s.norm(p=self.instance.p)
+        s = s.pow(self.instance.p).sum(dim=-1) if self.instance.power_norm else s.norm(p=self.instance.p)
         return -s

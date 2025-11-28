@@ -413,10 +413,7 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: s
             yield name, f":class:`{path}`"
         elif tablefmt == "github":
             doc = cls.__doc__
-            if link_fmt:
-                reference = f"[`{path}`]({link_fmt.format(path)})"
-            else:
-                reference = f"`{path}`"
+            reference = f"[`{path}`]({link_fmt.format(path)})" if link_fmt else f"`{path}`"
 
             yield name, reference, get_until_first_blank(doc)
         else:
@@ -537,10 +534,7 @@ def _get_resolver_lines(
                 doc = value.__class__.__doc__
 
             reference = f"pykeen.{submodule}.{ref}"
-            if link_fmt:
-                reference = f"[`{reference}`]({link_fmt.format(reference)})"
-            else:
-                reference = f"`{reference}`"
+            reference = f"[`{reference}`]({link_fmt.format(reference)})" if link_fmt else f"`{reference}`"
 
             yield name, reference, doc
         else:
@@ -621,8 +615,7 @@ def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Itera
 def _link(text: str, link: str, fmt: str) -> str:
     if fmt == "rst":
         return f"`{text} <{link}>`_"
-    else:
-        return f"[{text}]({link})"
+    return f"[{text}]({link})"
 
 
 def get_metric_list() -> list[tuple[str, type[Metric], type[MetricResults]]]:

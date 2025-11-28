@@ -140,7 +140,7 @@ class Objective:
                 result_tracker.end_run(success=True)
                 # also show info
                 logger.info(f"Pruned trial: {trial} at epoch {epoch} due to {metric}={result}")
-                raise TrialPruned()
+                raise TrialPruned
 
         def _stopped_callback(_early_stopper: EarlyStopper, _result: float | int, epoch: int) -> None:
             trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
@@ -1004,7 +1004,7 @@ def _set_study_dataset(
     if dataset is not None:
         if training is not None or testing is not None or validation is not None:
             raise ValueError("Cannot specify dataset and training, testing and validation")
-        elif isinstance(dataset, str | pathlib.Path):
+        if isinstance(dataset, str | pathlib.Path):
             if isinstance(dataset, str) and has_dataset(dataset):
                 study.set_user_attr("dataset", dataset_resolver.normalize(dataset))
             else:

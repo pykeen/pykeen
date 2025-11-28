@@ -85,9 +85,8 @@ def load_triples(
 
     if encoding is None:
         encoding = "utf-8"
-    if column_remapping is not None:
-        if len(column_remapping) != 3:
-            raise InvalidRemappingLengthError(len(column_remapping))
+    if column_remapping is not None and len(column_remapping) != 3:
+        raise InvalidRemappingLengthError(len(column_remapping))
     df = pandas.read_csv(
         path,
         sep=delimiter,
