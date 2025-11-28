@@ -223,6 +223,7 @@ extend-select = [
     "A",    # flake8-builtins 
     "RSE",  # flake8-raise
     "PTH",  # flake8-use-pathlib
+    "SIM",  # flake8-simplify
 ]
 ignore = [
     "D105", # Missing docstring in magic method

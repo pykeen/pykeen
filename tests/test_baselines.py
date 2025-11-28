@@ -13,7 +13,7 @@ class MarginalDistributionBaselineTests(cases.EvaluationOnlyModelTestCase):
 
     def _verify(self, scores: torch.FloatTensor):  # noqa: D102
         # check probability distribution
-        assert (0.0 <= scores).all()
+        assert (scores >= 0.0).all()
         assert (scores <= 1.0).all()
         assert torch.allclose(scores.sum(dim=1), torch.ones(self.batch_size))
 

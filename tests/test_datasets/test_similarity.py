@@ -48,7 +48,7 @@ class TestRemix(unittest.TestCase):
         b_test_tf = CoreTriplesFactory.create(b_test)
 
         steps = splits_steps([a_train_tf, a_test_tf], [b_train_tf, b_test_tf])
-        assert 2 == steps
+        assert steps == 2
 
         similarity = splits_similarity([a_train_tf, a_test_tf], [b_train_tf, b_test_tf])
         assert 1 - steps / 6 == similarity

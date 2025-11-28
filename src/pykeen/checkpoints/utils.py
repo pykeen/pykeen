@@ -56,16 +56,18 @@ class ResultListenerAdapter(ResultTracker):
         self.last_step = step
 
         # prefix filter
-        if self.metric_selection.prefix and not prefix == self.metric_selection.prefix:
+        if self.metric_selection.prefix and prefix != self.metric_selection.prefix:
             return
         # metric filter
         if self.metric_selection.metric not in metrics:
             return
         value = metrics[self.metric_selection.metric]
-        if self.metric_selection.maximize and value > self.best:
-            self.best_step = step
-            self.best = value
-        elif not self.metric_selection.maximize and value < self.best:
+        if (
+            self.metric_selection.maximize
+            and value > self.best
+            or not self.metric_selection.maximize
+            and value < self.best
+        ):
             self.best_step = step
             self.best = value
 
