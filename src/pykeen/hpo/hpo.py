@@ -5,7 +5,6 @@ import ftplib
 import inspect
 import json
 import logging
-import os
 import pathlib
 from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass
@@ -120,7 +119,7 @@ class Objective:
     result_tracker_kwargs: Mapping[str, Any] | None = None
     # Misc.
     device: None | str | torch.device = None
-    save_model_directory: str | None = None
+    save_model_directory: str | pathlib.Path | None = None
 
     @staticmethod
     def _update_stopper_callbacks(
@@ -317,8 +316,8 @@ class Objective:
             raise e
         else:
             if self.save_model_directory:
-                model_directory = os.path.join(self.save_model_directory, str(trial.number))
-                os.makedirs(model_directory, exist_ok=True)
+                model_directory = pathlib.Path(self.save_model_directory).joinpath(str(trial.number))
+                model_directory.mkdir(parents=True, exist_ok=True)
                 result.save_to_directory(model_directory)
 
             trial.set_user_attr("random_seed", result.random_seed)
@@ -413,24 +412,25 @@ class HpoPipelineResult(Result):
         with best_pipeline_directory.joinpath("pipeline_config.json").open("w") as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
-    def save_to_ftp(self, directory: str, ftp: ftplib.FTP):
+    def save_to_ftp(self, directory: str | pathlib.Path, ftp: ftplib.FTP):
         """Save the results to the directory in an FTP server.
 
         :param directory: The directory in the FTP server to save to
         :param ftp: A connection to the FTP server
         """
-        ensure_ftp_directory(ftp=ftp, directory=directory)
+        directory_p = pathlib.Path(directory)
+        ensure_ftp_directory(ftp=ftp, directory=directory_p)
 
-        study_path = os.path.join(directory, "study.json")
+        study_path = directory_p / "study.json"
         ftp.storbinary(f"STOR {study_path}", get_json_bytes_io(self.study.user_attrs))
 
-        trials_path = os.path.join(directory, "trials.tsv")
+        trials_path = directory_p / "trials.tsv"
         ftp.storbinary(f"STOR {trials_path}", get_df_io(self.study.trials_dataframe()))
 
-        best_pipeline_directory = os.path.join(directory, "best_pipeline")
+        best_pipeline_directory = directory_p / "best_pipeline"
         ensure_ftp_directory(ftp=ftp, directory=best_pipeline_directory)
 
-        best_config_path = os.path.join(best_pipeline_directory, "pipeline_config.json")
+        best_config_path = best_pipeline_directory / "pipeline_config.json"
         ftp.storbinary(f"STOR {best_config_path}", get_json_bytes_io(self._get_best_study_config()))
 
     def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
@@ -445,13 +445,14 @@ class HpoPipelineResult(Result):
 
             s3 = boto3.client("s3")
 
-        study_path = os.path.join(directory, "study.json")
+        directory_p = pathlib.Path(directory)
+        study_path = directory_p / "study.json"
         s3.upload_fileobj(get_json_bytes_io(self.study.user_attrs), bucket, study_path)
 
-        trials_path = os.path.join(directory, "trials.tsv")
+        trials_path = directory_p / "trials.tsv"
         s3.upload_fileobj(get_df_io(self.study.trials_dataframe()), bucket, trials_path)
 
-        best_config_path = os.path.join(directory, "best_pipeline", "pipeline_config.json")
+        best_config_path = directory_p / "best_pipeline", "pipeline_config.json"
         s3.upload_fileobj(get_json_bytes_io(self._get_best_study_config()), bucket, best_config_path)
 
     def replicate_best_pipeline(
@@ -492,7 +493,7 @@ class HpoPipelineResult(Result):
 
 def hpo_pipeline_from_path(path: str | pathlib.Path, **kwargs) -> HpoPipelineResult:
     """Run a HPO study from the configuration at the given path."""
-    with open(path) as file:
+    with pathlib.Path(path).open() as file:
         config = json.load(file)
     return hpo_pipeline_from_config(config, **kwargs)
 

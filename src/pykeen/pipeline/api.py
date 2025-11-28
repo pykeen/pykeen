@@ -187,7 +187,6 @@ import ftplib
 import hashlib
 import json
 import logging
-import os
 import pathlib
 import pickle
 import time
@@ -442,7 +441,7 @@ class PipelineResult(Result):
 
         logger.info(f"Saved to directory: {directory.resolve()}")
 
-    def save_to_ftp(self, directory: str, ftp: ftplib.FTP) -> None:
+    def save_to_ftp(self, directory: str | pathlib.Path, ftp: ftplib.FTP) -> None:
         """Save all artifacts to the given directory in the FTP server.
 
         :param directory: The directory in the FTP server to save to
@@ -488,16 +487,18 @@ class PipelineResult(Result):
         # TODO use pathlib here
         ensure_ftp_directory(ftp=ftp, directory=directory)
 
-        metadata_path = os.path.join(directory, "metadata.json")
+        directory_p = pathlib.Path(directory)
+
+        metadata_path = directory_p / "metadata.json"
         ftp.storbinary(f"STOR {metadata_path}", get_json_bytes_io(self.metadata))
 
-        results_path = os.path.join(directory, "results.json")
+        results_path = directory_p / "results.json"
         ftp.storbinary(f"STOR {results_path}", get_json_bytes_io(self._get_results()))
 
-        model_path = os.path.join(directory, "trained_model.pkl")
+        model_path = directory_p / "trained_model.pkl"
         ftp.storbinary(f"STOR {model_path}", get_model_io(self.model))
 
-    def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
+    def save_to_s3(self, directory: str | pathlib.Path, bucket: str, s3=None) -> None:
         """Save all artifacts to the given directory in an S3 Bucket.
 
         :param directory: The directory in the S3 bucket
@@ -525,13 +526,15 @@ class PipelineResult(Result):
 
             s3 = boto3.client("s3")
 
-        metadata_path = os.path.join(directory, "metadata.json")
+        directory_p = pathlib.Path(directory)
+
+        metadata_path = directory_p / "metadata.json"
         s3.upload_fileobj(get_json_bytes_io(self.metadata), bucket, metadata_path)
 
-        results_path = os.path.join(directory, "results.json")
+        results_path = directory_p / "results.json"
         s3.upload_fileobj(get_json_bytes_io(self._get_results()), bucket, results_path)
 
-        model_path = os.path.join(directory, "trained_model.pkl")
+        model_path = directory_p / "trained_model.pkl"
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
 
 

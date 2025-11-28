@@ -1,7 +1,6 @@
 """Run landmark experiments."""
 
 import logging
-import os
 import pathlib
 import shutil
 import sys
@@ -25,7 +24,7 @@ HERE = pathlib.Path(__file__).parent.resolve()
 
 
 def _make_dir(_ctx, _param, value):
-    os.makedirs(value, exist_ok=True)
+    pathlib.Path(value).mkdir(parents=True, exist_ok=True)
     return value
 
 
@@ -34,7 +33,7 @@ directory_option = click.option(
     "--directory",
     type=click.Path(dir_okay=True, file_okay=False),
     callback=_make_dir,
-    default=os.getcwd(),
+    default=pathlib.Path.cwd(),
 )
 replicates_option = click.option(
     "-r",

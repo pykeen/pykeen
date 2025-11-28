@@ -15,7 +15,6 @@ later, but that will cause problems - the code will get executed twice:
 
 import importlib
 import inspect
-import os
 import sys
 from collections.abc import Iterable, Mapping
 from operator import itemgetter
@@ -631,12 +630,11 @@ def get_metric_list() -> list[tuple[str, type[Metric], type[MetricResults]]]:
 @click.option("--check", is_flag=True)
 def readme(check: bool) -> None:
     """Generate the GitHub readme's ## Implementation section."""
-    readme_path = os.path.abspath(os.path.join(HERE, os.pardir, os.pardir, "README.md"))
+    readme_path = HERE.parents[1].joinpath("README.md").resolve()
     new_readme = get_readme()
 
     if check:
-        with open(readme_path, encoding="utf8") as file:
-            old_readme = file.read()
+        old_readme = readme_path.read_text(encoding="utf8")
         if new_readme.strip() != old_readme.strip():
             click.secho(
                 "Readme has not been updated properly! Make sure all changes are made in the template first,"
@@ -650,8 +648,7 @@ def readme(check: bool) -> None:
 
             sys.exit(-1)
 
-    with open(readme_path, "w", encoding="utf8") as file:
-        print(new_readme, file=file)  # noqa:T201
+    readme_path.write_text(new_readme, encoding="utf8", newline="\n")
 
 
 def get_readme() -> str:

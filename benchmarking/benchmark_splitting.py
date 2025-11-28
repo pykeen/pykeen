@@ -2,7 +2,6 @@
 
 import itertools as itt
 import logging
-import os
 import time
 from datetime import datetime
 
@@ -21,7 +20,7 @@ from pykeen.version import get_git_hash
 
 SPLITTING_DIRECTORY = get_benchmark("splitting")
 RESULTS_DIRECTORY = SPLITTING_DIRECTORY / "results"
-os.makedirs(RESULTS_DIRECTORY, exist_ok=True)
+RESULTS_DIRECTORY.mkdir(parents=True, exist_ok=True)
 
 tsv_path = SPLITTING_DIRECTORY / "split_benchmark.tsv"
 png_path = SPLITTING_DIRECTORY / "split_benchmark.png"
