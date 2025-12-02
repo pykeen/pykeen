@@ -162,23 +162,30 @@ def weighted_mean_expectation(individual: np.ndarray, weights: np.ndarray | None
 def weighted_mean_variance(individual: np.ndarray, weights: np.ndarray | None) -> float:
     r"""Calculate the variance of a weighted mean of variables with given individual variances.
 
+    When weights represent repeat counts (i.e., the number of independent observations from each variable),
+    the variance of the overall mean is computed as:
+
     .. math::
 
-        \mathbb{V}\left[\sum \limits_{i=1}^{n} w_i x_i\right]
-            = \sum \limits_{i=1}^{n} w_i^2 \mathbb{V}\left[x_i\right]
+        \mathbb{V}\left[\frac{1}{N} \sum \limits_{i=1}^{n} w_i x_i\right]
+            = \frac{1}{N^2} \sum \limits_{i=1}^{n} w_i \mathbb{V}\left[x_i\right]
 
-    where $w_i = \frac{1}{n}$, if no explicit weights are given. Moreover, the weights are normalized such that $\sum
-    w_i = 1$.
+    where $N = \sum_{i=1}^{n} w_i$ is the total number of observations, and $w_i$ represents the number
+    of independent samples from variable $x_i$.
+
+    When $w_i = 1$ for all $i$ (or weights is None), this reduces to $\frac{1}{n^2} \sum \mathbb{V}[x_i]$.
 
     :param individual: the individual variables' variances, $\mathbb{V}[x_i]$
-    :param weights: the individual variables' weights
+    :param weights: the repeat counts / weights for the individual variables. When None, each variable
+        is treated as appearing once.
 
     :returns: the variance of the weighted mean
     """
     n = individual.size
     if weights is None:
         return individual.mean() / n
-    return (individual * (weights / weights.sum()) ** 2).sum().item()
+    total_weight = weights.sum()
+    return (individual * weights).sum().item() / (total_weight ** 2)
 
 
 def stable_product(a: np.ndarray, is_log: bool = False) -> np.ndarray:
