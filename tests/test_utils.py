@@ -28,7 +28,6 @@ from pykeen.utils import (
     get_optimal_sequence,
     get_until_first_blank,
     iter_weisfeiler_lehman,
-    logcumsumexp,
     merge_kwargs,
     project_entity,
     set_random_seed,
