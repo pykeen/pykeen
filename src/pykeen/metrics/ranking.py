@@ -92,18 +92,17 @@ import numpy as np
 from class_resolver import ClassResolver, HintOrType
 from docdata import parse_docdata
 from scipy import stats
+from scipy.special import expm1
 
 from .utils import (
     Metric,
     ValueRange,
-    stable_product,
     weighted_harmonic_mean,
     weighted_mean_expectation,
     weighted_mean_variance,
     weighted_median,
 )
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
-from ..utils import logcumsumexp
 
 __all__ = [
     "rank_based_metric_resolver",
@@ -891,6 +890,184 @@ class InverseArithmeticMeanRank(RankBasedMetric):
         return np.reciprocal(np.average(np.asanyarray(ranks), weights=weights)).item()
 
 
+def _compute_log_expected_power(k_values: np.ndarray, powers: np.ndarray, memory_limit_elements: int = 10**7) -> float:
+    """
+    Compute $sum( ln( E[X_i^p_i] ) )$.
+
+    Does so efficiently by using sorted batching and vectorization.
+
+    Parameters
+    ----------
+    k_values : array_like, shape (n,)
+        Upper bounds.
+    powers : array_like, shape (n,)
+        Exponents.
+    memory_limit_elements : int
+        Max number of float elements in the temporary matrix buffer.
+        10^7 elements ~ 80MB RAM.
+
+    Returns
+    -------
+    float
+        The scalar log-value.
+    """
+    # 1. Sort inputs by k.
+    # This minimizes the 'masking waste' when we batch variables together.
+    # Small k's are processed with small k's; large with large.
+    sort_idx = np.argsort(k_values)
+    k_sorted = np.asarray(k_values)[sort_idx]
+    p_sorted = np.asarray(powers)[sort_idx]
+
+    n = len(k_sorted)
+    total_log_moment = 0.0
+
+    start_idx = 0
+    while start_idx < n:
+        # 2. Determine Batch Size dynamically based on Memory Limit.
+        # We want to find 'end_idx' such that:
+        # (rows in batch) * (max_k in batch) <= memory_limit
+        # Since k is sorted ascending, max_k_in_batch is simply k_sorted[end_idx-1].
+
+        end_idx = start_idx + 1
+
+        # We peek ahead to see how many rows we can fit.
+        # This is a heuristic: we check if adding the next block of rows
+        # would explode the matrix size required.
+        while end_idx < n:
+            current_max_k = k_sorted[end_idx]  # This would be the new width
+            current_rows = end_idx - start_idx + 1
+
+            # Check budget
+            if current_rows * current_max_k > memory_limit_elements:
+                break
+            end_idx += 1
+
+        # 3. Process the Batch
+        k_batch = k_sorted[start_idx:end_idx]
+        p_batch = p_sorted[start_idx:end_idx]
+
+        # Max k in this specific batch (determines matrix columns)
+        max_k_batch = int(k_batch[-1])
+
+        # TODO: check if we are 0- or 1-based
+        # Create base grid [1, 2, ..., max_k_batch]
+        # Shape: (1, max_k)
+        j_grid = np.arange(1, max_k_batch + 1, dtype=np.float64).reshape(1, -1)
+
+        # Reshape powers for broadcasting
+        # Shape: (batch_rows, 1)
+        p_col = p_batch.reshape(-1, 1)
+
+        # 4. Compute Powers (Broadcasting)
+        # Matrix Result: (batch_rows, max_k)
+        # value[i, j] = (j+1) ^ p_i
+        values = j_grid**p_col
+
+        # 5. Masking
+        # Since k is sorted, we have a "lower triangular" style validity mask
+        # (roughly), but strictly we just need to zero out j > k_i.
+        # Shape: (batch_rows, 1) compared to (1, max_k)
+        mask = j_grid <= k_batch.reshape(-1, 1)
+
+        # Apply mask (zero out values strictly greater than k_i)
+        # We use 'where' or multiplication. Multiplication is faster for floats usually.
+        values *= mask
+
+        # 6. Summation
+        # Sum along columns to get sum(j^p) for each variable
+        row_sums = np.sum(values, axis=1)
+
+        # Compute log terms: log(sum) - log(k)
+        # We use np.log with a safety for the 0 sums (though sums of j^p >= 1 are never 0)
+        batch_log_moments = np.log(row_sums) - np.log(k_batch)
+
+        total_log_moment += np.sum(batch_log_moments)
+
+        # Move to next batch
+        start_idx = end_idx
+
+    return total_log_moment
+
+
+def geometric_mean_expected_value(k_values: np.ndarray, weights: np.ndarray | None = None) -> float:
+    """
+    Compute the expected value of the weighted geometric mean of independent Uniform(1, k_i) random variables.
+
+    Parameters
+    ----------
+    k_values : array_like, shape (n,)
+        Array of upper bounds k_i.
+    weights : array_like, shape (n,), optional
+        Array of weights w_i. If None, defaults to uniform weights.
+
+    Returns
+    -------
+    float
+        The expected value E[G].
+    """
+    k_arr = np.atleast_1d(k_values)
+    n = len(k_arr)
+
+    if weights is None:
+        alpha = np.ones(n) / n
+    else:
+        w_arr = np.atleast_1d(weights)
+        alpha = w_arr / np.sum(w_arr)
+
+    # E[G] = Product( E[ X_i^alpha_i ] )
+    # We calculate this in log space
+    log_expectation = _compute_log_expected_power(k_arr, alpha)
+
+    return np.exp(log_expectation)
+
+
+def geometric_mean_variance(k_values: np.ndarray, weights: np.ndarray | None = None) -> float:
+    """
+    Compute the expected value of the weighted geometric mean of independent Uniform(1, k_i) random variables.
+
+    Parameters
+    ----------
+    k_values : array_like, shape (n,)
+        Array of upper bounds k_i.
+    weights : array_like, shape (n,), optional
+        Array of weights w_i. If None, defaults to uniform weights.
+
+    Returns
+    -------
+    float
+        The variance Var(G).
+    """
+    k_arr = np.atleast_1d(k_values)
+    n = len(k_arr)
+
+    if weights is None:
+        alpha = np.ones(n) / n
+    else:
+        w_arr = np.atleast_1d(weights)
+        alpha = w_arr / np.sum(w_arr)
+
+    # 1. Calculate Log of First Moment E[G]
+    # Power p = alpha
+    log_expectation = _compute_log_expected_power(k_arr, alpha)
+
+    # 2. Calculate Log of Second Moment E[G^2]
+    # Power p = 2 * alpha
+    log_squared_expectation = _compute_log_expected_power(k_arr, 2 * alpha)
+
+    # 3. Calculate Variance using Expm1 for stability
+    # Var = E[G^2] - (E[G])^2
+    #     = exp(log_E_G2) - exp(2 * log_E_G)
+    #     = exp(2 * log_E_G) * [ exp(log_E_G2 - 2*log_E_G) - 1 ]
+
+    log_diff = log_squared_expectation - (2 * log_expectation)
+
+    # Clamp negative zero errors (floating point noise)
+    if log_diff < 0:
+        log_diff = 0.0
+
+    return np.exp(2 * log_expectation) * expm1(log_diff)
+
+
 @parse_docdata
 class GeometricMeanRank(RankBasedMetric):
     r"""The (weighted) geometric mean rank.
@@ -958,6 +1135,14 @@ class GeometricMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         return stats.gmean(ranks, weights=weights).item()
 
+    @staticmethod
+    def _normalize_weights(weights: np.ndarray | None, n: int) -> np.ndarray:
+        if weights is None:
+            return np.full(shape=n, fill_value=1 / n)
+        total = np.sum(weights)
+        safe_total = np.clip(total, a_min=np.finfo(weights.dtype).eps, a_max=None)
+        return weights / safe_total
+
     # docstr-coverage: inherited
     def expected_value(
         self,
@@ -966,8 +1151,13 @@ class GeometricMeanRank(RankBasedMetric):
         weights: np.ndarray | None = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        is_log, individual = self._individual_expectation(num_candidates=num_candidates, weights=weights)
-        return stable_product(individual, is_log=is_log).item()
+        alpha = self._normalize_weights(weights, n=len(num_candidates))
+
+        # E[G] = Product( E[ X_i^alpha_i ] )
+        # We calculate this in log space
+        log_expectation = _compute_log_expected_power(num_candidates, powers=alpha)
+
+        return np.exp(log_expectation)
 
     # docstr-coverage: inherited
     def variance(
@@ -977,61 +1167,28 @@ class GeometricMeanRank(RankBasedMetric):
         weights: np.ndarray | None = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        # V (prod x_i) = prod (V[x_i] - E[x_i]^2) - prod(E[x_i])^2
-        is_log, individual_expectation = self._individual_expectation(num_candidates=num_candidates, weights=weights)
-        if is_log:
-            individual_expectation = np.exp(individual_expectation)
-        individual_variance = self._individual_variance(
-            num_candidates=num_candidates, weights=weights, individual_expectation=individual_expectation
-        )
-        return (
-            stable_product(individual_variance + individual_expectation**2)
-            - stable_product(individual_expectation) ** 2
-        )
+        alpha = self._normalize_weights(weights, n=len(num_candidates))
 
-    @classmethod
-    def _individual_variance(
-        cls, num_candidates: np.ndarray, weights: np.ndarray | None, individual_expectation: np.ndarray
-    ) -> np.ndarray:
-        # use V[x] = E[x^2] - E[x]^2
-        x2 = (
-            np.exp(cls._log_individual_expectation_no_weight(num_candidates=num_candidates, factor=2.0))
-            if weights is None
-            else cls._individual_expectation_weighted(num_candidates=num_candidates, weights=weights, factor=2.0)
-        )
-        return x2 - individual_expectation**2
+        # 1. Calculate Log of First Moment E[G]
+        # Power p = alpha
+        log_expectation = _compute_log_expected_power(num_candidates, alpha)
 
-    @classmethod
-    def _individual_expectation(cls, num_candidates: np.ndarray, weights: np.ndarray | None) -> tuple[bool, np.ndarray]:
-        if weights is None:
-            return True, cls._log_individual_expectation_no_weight(num_candidates=num_candidates)
-        return False, cls._individual_expectation_weighted(num_candidates=num_candidates, weights=weights)
+        # 2. Calculate Log of Second Moment E[G^2]
+        # Power p = 2 * alpha
+        log_squared_expectation = _compute_log_expected_power(num_candidates, 2 * alpha)
 
-    @staticmethod
-    def _individual_expectation_weighted(
-        num_candidates: np.ndarray, weights: np.ndarray, factor: float = 1.0
-    ) -> np.ndarray:
-        weights = factor * weights / weights.sum()
-        x = np.empty_like(weights)
-        # group by same weight -> compute H_w(n) for multiple n at once
-        unique_weights, inverse = np.unique(weights, return_inverse=True)
-        for i, w in enumerate(unique_weights):
-            mask = inverse == i
-            nc = num_candidates[mask]
-            h = generalized_harmonic_numbers(nc.max(), p=w)
-            x[mask] = h[nc - 1] / nc
-        return x
+        # 3. Calculate Variance using Expm1 for stability
+        # Var = E[G^2] - (E[G])^2
+        #     = exp(log_E_G2) - exp(2 * log_E_G)
+        #     = exp(2 * log_E_G) * [ exp(log_E_G2 - 2*log_E_G) - 1 ]
 
-    @staticmethod
-    def _log_individual_expectation_no_weight(num_candidates: np.ndarray, factor: float = 1.0) -> np.ndarray:
-        m = num_candidates.size
-        # we compute log E[r_i^(1/m)] for all N_i = 1 ... max_N_i once
-        max_val = num_candidates.max()
-        x = np.arange(1, max_val + 1, dtype=float)
-        x = factor * np.log(x) / m
-        x = logcumsumexp(x)
-        # now select from precomputed cumulative sums and aggregate
-        return x[num_candidates - 1] - np.log(num_candidates)
+        log_diff = log_squared_expectation - (2 * log_expectation)
+
+        # Clamp negative zero errors (floating point noise)
+        if log_diff < 0:
+            log_diff = 0.0
+
+        return np.exp(2 * log_expectation) * expm1(log_diff)
 
 
 @parse_docdata

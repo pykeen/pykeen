@@ -13,7 +13,6 @@ from ..utils import ExtraReprMixin, camel_to_snake
 __all__ = [
     "Metric",
     "ValueRange",
-    "stable_product",
     "weighted_mean_expectation",
     "weighted_mean_variance",
     "weighted_harmonic_mean",
@@ -185,45 +184,7 @@ def weighted_mean_variance(individual: np.ndarray, weights: np.ndarray | None) -
     if weights is None:
         return individual.mean() / n
     total_weight = weights.sum()
-    return (individual * weights).sum().item() / (total_weight ** 2)
-
-
-def stable_product(a: np.ndarray, is_log: bool = False) -> np.ndarray:
-    r"""Compute the product using the log-trick for increased numerical stability.
-
-    .. math::
-
-        \prod \limits_{i=1}^{n} a_i
-            = \exp \log \prod \limits_{i=1}^{n} a_i
-            = \exp \sum \limits_{i=1}^{n} \log a_i
-
-    To support negative values, we additionally use
-
-    .. math::
-
-        a_i = \textit{sign}(a_i) * \textit{abs}(a_i)
-
-    and
-
-    .. math::
-
-        \prod \limits_{i=1}^{n} a_i
-            = \left(\prod \limits_{i=1}^{n} \textit{sign}(a_i)\right)
-                \cdot \left(\prod \limits_{i=1}^{n} \textit{abs}(a_i)\right)
-
-    where the first part is computed without the log-trick.
-
-    :param a: the array
-    :param is_log: whether the array already contains the logarithm of the elements
-
-    :returns: the product of elements
-    """
-    if is_log:
-        sign = 1
-    else:
-        sign = np.prod(np.copysign(np.ones_like(a), a))
-        a = np.log(np.abs(a))
-    return sign * np.exp(np.sum(a))
+    return (individual * weights).sum().item() / (total_weight**2)
 
 
 def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray | None = None) -> np.ndarray:

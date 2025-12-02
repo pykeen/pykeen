@@ -1063,6 +1063,7 @@ def logcumsumexp(a: np.ndarray) -> np.ndarray:
     .. seealso ::
         :func:`scipy.special.logsumexp` and :func:`torch.logcumsumexp`
     """
+    # TODO: unused?
     a_max = np.amax(a)
     tmp = np.exp(a - a_max)
     s = np.cumsum(tmp)
