@@ -98,7 +98,6 @@ __all__ = [
     "get_preferred_device",
     "triple_tensor_to_set",
     "is_triple_tensor_subset",
-    "logcumsumexp",
     "get_connected_components",
     "normalize_path",
     "get_edge_index",
@@ -1049,27 +1048,6 @@ def camel_to_snake(name: str) -> str:
 def make_ones_like(prefix: Sequence) -> Sequence[int]:
     """Create a list of ones of same length as the input sequence."""
     return [1 for _ in prefix]
-
-
-def logcumsumexp(a: np.ndarray) -> np.ndarray:
-    """Compute ``log(cumsum(exp(a)))``.
-
-    :param a: shape: s
-        the array
-
-    :return: shape s
-        the log-cumsum-exp of the array
-
-    .. seealso ::
-        :func:`scipy.special.logsumexp` and :func:`torch.logcumsumexp`
-    """
-    # TODO: unused?
-    a_max = np.amax(a)
-    tmp = np.exp(a - a_max)
-    s = np.cumsum(tmp)
-    out = np.log(s)
-    out += a_max
-    return out
 
 
 def find(x: X, parent: MutableMapping[X, X]) -> X:
