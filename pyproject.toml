@@ -222,6 +222,7 @@ extend-select = [
     "PD",   # pandas-vet
     "A",    # flake8-builtins 
     "RSE",  # flake8-raise
+    "PTH",  # flake8-use-pathlib
     "SIM",  # flake8-simplify
 ]
 ignore = [
@@ -236,10 +237,12 @@ ignore = [
     "INP001", # docs are not a package
     "E402",   # allow imports not at top for narrative purposes
     "T201",   # allow prints
+    "PTH",    # allow os.path
 ]
 "notebooks/**" = [
     "INP001", # notebooks are not a package
     "T201",   # allow prints
+    "PTH",    # os.path instead of pathlib
 ]
 "benchmarking/**/*.py" = ["INP001"] # benchmarking scripts are not a package
 "tests/**/*.py" = [
