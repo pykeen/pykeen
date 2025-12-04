@@ -120,7 +120,7 @@ class TrainingCallback:
     @property
     def optimizer(self) -> optim.Optimizer:  # noqa:D401
         """The optimizer, accessed via the training loop."""
-        return self.training_loop.optimizer
+        return self.training_loop._optimizer
 
     @property
     def result_tracker(self) -> ResultTracker:  # noqa: D401

@@ -117,9 +117,17 @@ def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
 class TrainingLoop(Generic[BatchType], ABC):
     """A training loop."""
 
-    lr_scheduler: LRScheduler | None
     model: Model
-    optimizer: Optimizer
+
+    # Optimizer
+    optimizer: HintOrType[Optimizer]
+    optimizer_kwargs: OptionalKwargs
+    _optimizer: Optimizer | None
+
+    # LR Scheduler
+    lr_scheduler: HintOrType[LRScheduler]
+    lr_scheduler_kwargs: OptionalKwargs
+    _lr_scheduler: LRScheduler | None
 
     losses_per_epochs: list[float]
 
@@ -170,10 +178,13 @@ class TrainingLoop(Generic[BatchType], ABC):
         :param loss_weighter_kwargs: Parameters for the method to determine loss weights.
         """
         self.model = model
-        self.optimizer = optimizer_resolver.make(optimizer, pos_kwargs=optimizer_kwargs, params=model.get_grad_params())
-        self.lr_scheduler = lr_scheduler_resolver.make_safe(
-            lr_scheduler, pos_kwargs=lr_scheduler_kwargs, optimizer=self.optimizer
-        )
+        # delay instantiation
+        self.optimizer = optimizer
+        self.optimizer_kwargs = optimizer_kwargs
+        self._optimizer = None
+        self.lr_scheduler = lr_scheduler
+        self.lr_scheduler_kwargs = lr_scheduler_kwargs
+        self._lr_scheduler = None
         self.losses_per_epochs = []
         self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
@@ -208,9 +219,11 @@ class TrainingLoop(Generic[BatchType], ABC):
     @property
     def checksum(self) -> str:  # noqa: D401
         """The checksum of the model and optimizer the training loop was configured with."""
+        assert self._optimizer is not None
+        # TODO: check instance vs. hint
         h = md5()  # noqa: S303,S324
         h.update(str(self.model).encode("utf-8"))
-        h.update(str(self.optimizer).encode("utf-8"))
+        h.update(str(self._optimizer).encode("utf-8"))
         return h.hexdigest()
 
     def train(
@@ -413,8 +426,9 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         # Clear optimizer
         if clear_optimizer:
-            self.optimizer = None
-            self.lr_scheduler = None
+            # TODO
+            self._optimizer = None
+            self._lr_scheduler = None
 
         return result
 
@@ -489,7 +503,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         del batch
         del batches
         gc.collect()
-        self.optimizer.zero_grad()
+        assert isinstance(self._optimizer, Optimizer)
+        self._optimizer.zero_grad()
         self._free_graph_and_cache()
 
         return current_epoch_loss
@@ -525,8 +540,6 @@ class TrainingLoop(Generic[BatchType], ABC):
         pin_memory: bool = True,
     ) -> list[float] | None:
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
-        if self.optimizer is None:
-            raise ValueError("optimizer must be set before running _train()")
         # When using early stopping models have to be saved separately at the best epoch, since the training loop will
         # due to the patience continue to train after the best epoch and thus alter the model
         # -> the temporay file has to be created outside, which we assert here
@@ -600,26 +613,29 @@ class TrainingLoop(Generic[BatchType], ABC):
         if drop_last is None:
             drop_last = model_contains_batch_norm
 
+        if continue_training:
+            if not isinstance(self._optimizer, Optimizer):
+                raise ValueError("Cannot continue training without an initialized optimizer.")
+            if self._lr_scheduler and not isinstance(self._lr_scheduler, LRScheduler):
+                raise ValueError("Cannot continue training without an initialized lr schedule.")
         # Force weight initialization if training continuation is not explicitly requested.
-        if not continue_training:
+        else:
             # Reset the weights
             self.model.reset_parameters_()
             # afterwards, some parameters may be on the wrong device
             self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
 
             # Create new optimizer
-            optimizer_kwargs = _get_optimizer_kwargs(self.optimizer)
-            self.optimizer = self.optimizer.__class__(
-                params=self.model.get_grad_params(),
-                **optimizer_kwargs,
+            if isinstance(self.optimizer, Optimizer):
+                logger.warning("The optimizer was already passed instantiated.")
+                if self.optimizer_kwargs:
+                    logger.warning(f"optimizer_kwargs={self.optimizer_kwargs} will be ignored.")
+            self._optimizer = optimizer_resolver.make(
+                self.optimizer, self.optimizer_kwargs, params=self.model.get_grad_params()
             )
 
-            if self.lr_scheduler is not None:
-                # Create a new lr scheduler and add the optimizer
-                lr_scheduler_kwargs = _get_lr_scheduler_kwargs(self.lr_scheduler)
-                self.lr_scheduler = self.lr_scheduler.__class__(optimizer=self.optimizer, **lr_scheduler_kwargs)
-        elif not self.optimizer.state:
-            raise ValueError("Cannot continue_training without being trained once.")
+            # Create a LR schedule, if necessary
+            self._lr_scheduler = lr_scheduler_resolver.make_safe(self.lr_scheduler, self.lr_scheduler_kwargs)
 
         # Ensure the model is on the correct device
         self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
@@ -1107,8 +1123,7 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         :raises ValueError: if the internal optimizer is not set
         """
-        if self.optimizer is None:
-            raise ValueError
+        assert self._optimizer is not None
 
         logger.debug("=> Saving checkpoint.")
 
@@ -1125,7 +1140,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         else:
             best_epoch_model_checkpoint = None
 
-        lr_scheduler_state_dict = None if self.lr_scheduler is None else self.lr_scheduler.state_dict()
+        lr_scheduler_state_dict = None if self._lr_scheduler is None else self._lr_scheduler.state_dict()
 
         relation_to_id_dict = None
         entity_to_id_dict = None
@@ -1138,7 +1153,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                 "epoch": self._epoch,
                 "loss": self.losses_per_epochs,
                 "model_state_dict": self.model.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
+                "optimizer_state_dict": self._optimizer.state_dict(),
                 "lr_scheduler_state_dict": lr_scheduler_state_dict,
                 "checksum": self.checksum,
                 "random_seed": self.model._random_seed,
@@ -1177,8 +1192,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         :raises CheckpointMismatchError: If the given checkpoint file has a non-matching checksum, i.e. it was saved
             with a different configuration.
         """
-        if self.optimizer is None:
-            raise ValueError
+        assert self.optimizer is not None
 
         logger.info(f"=> loading checkpoint '{path}'")
         checkpoint = torch.load(path, weights_only=False)
@@ -1244,9 +1258,9 @@ class TrainingLoop(Generic[BatchType], ABC):
         self._epoch = checkpoint["epoch"]
         self.losses_per_epochs = checkpoint["loss"]
         self.model.load_state_dict(checkpoint["model_state_dict"])
-        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        if self.lr_scheduler is not None:
-            self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
+        self._optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        if self._lr_scheduler is not None:
+            self._lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
         random.setstate(checkpoint["random_state"])
         np.random.set_state(checkpoint["np_random_state"])  # noqa: NPY002
         torch.random.set_rng_state(checkpoint["torch_random_state"])
