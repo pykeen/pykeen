@@ -13,7 +13,6 @@ from ..utils import ExtraReprMixin, camel_to_snake
 __all__ = [
     "Metric",
     "ValueRange",
-    "stable_product",
     "weighted_mean_expectation",
     "weighted_mean_variance",
     "weighted_harmonic_mean",
@@ -162,61 +161,30 @@ def weighted_mean_expectation(individual: np.ndarray, weights: np.ndarray | None
 def weighted_mean_variance(individual: np.ndarray, weights: np.ndarray | None) -> float:
     r"""Calculate the variance of a weighted mean of variables with given individual variances.
 
+    When weights represent repeat counts (i.e., the number of independent observations from each variable),
+    the variance of the overall mean is computed as:
+
     .. math::
 
-        \mathbb{V}\left[\sum \limits_{i=1}^{n} w_i x_i\right]
-            = \sum \limits_{i=1}^{n} w_i^2 \mathbb{V}\left[x_i\right]
+        \mathbb{V}\left[\frac{1}{N} \sum \limits_{i=1}^{n} w_i x_i\right]
+            = \frac{1}{N^2} \sum \limits_{i=1}^{n} w_i \mathbb{V}\left[x_i\right]
 
-    where $w_i = \frac{1}{n}$, if no explicit weights are given. Moreover, the weights are normalized such that $\sum
-    w_i = 1$.
+    where $N = \sum_{i=1}^{n} w_i$ is the total number of observations, and $w_i$ represents the number
+    of independent samples from variable $x_i$.
+
+    When $w_i = 1$ for all $i$ (or weights is None), this reduces to $\frac{1}{n^2} \sum \mathbb{V}[x_i]$.
 
     :param individual: the individual variables' variances, $\mathbb{V}[x_i]$
-    :param weights: the individual variables' weights
+    :param weights: the repeat counts / weights for the individual variables. When None, each variable
+        is treated as appearing once.
 
     :returns: the variance of the weighted mean
     """
     n = individual.size
     if weights is None:
         return individual.mean() / n
-    return (individual * (weights / weights.sum()) ** 2).sum().item()
-
-
-def stable_product(a: np.ndarray, is_log: bool = False) -> np.ndarray:
-    r"""Compute the product using the log-trick for increased numerical stability.
-
-    .. math::
-
-        \prod \limits_{i=1}^{n} a_i
-            = \exp \log \prod \limits_{i=1}^{n} a_i
-            = \exp \sum \limits_{i=1}^{n} \log a_i
-
-    To support negative values, we additionally use
-
-    .. math::
-
-        a_i = \textit{sign}(a_i) * \textit{abs}(a_i)
-
-    and
-
-    .. math::
-
-        \prod \limits_{i=1}^{n} a_i
-            = \left(\prod \limits_{i=1}^{n} \textit{sign}(a_i)\right)
-                \cdot \left(\prod \limits_{i=1}^{n} \textit{abs}(a_i)\right)
-
-    where the first part is computed without the log-trick.
-
-    :param a: the array
-    :param is_log: whether the array already contains the logarithm of the elements
-
-    :returns: the product of elements
-    """
-    if is_log:
-        sign = 1
-    else:
-        sign = np.prod(np.copysign(np.ones_like(a), a))
-        a = np.log(np.abs(a))
-    return sign * np.exp(np.sum(a))
+    total_weight = weights.sum()
+    return (individual * weights).sum().item() / (total_weight**2)
 
 
 def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray | None = None) -> np.ndarray:
@@ -251,10 +219,13 @@ def weighted_median(a: np.ndarray, weights: np.ndarray | None = None) -> np.ndar
     s_ranks = a[indices]
     s_weights = weights[indices]
     cdf = np.cumsum(s_weights)
-    cdf /= cdf[-1]
-    # determine value at p=0.5
-    idx = np.searchsorted(cdf, v=0.5)
+    # to avoid loss of precision, we do not normalize, but keep the original data type
+    # but, we have to adjust the 0.5 search value accordingly
+    # cdf = cdf / cdf[-1]
+    # idx = np.searchsorted(cdf, v=0.5)
+    v = 0.5 * cdf[-1]
+    idx = np.searchsorted(cdf, v=v)
     # special case for exactly 0.5
-    if cdf[idx] == 0.5:
+    if cdf[idx] == v:
         return s_ranks[idx : idx + 2].mean()
     return s_ranks[idx]
