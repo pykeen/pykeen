@@ -200,6 +200,7 @@ class TrainingLoop(Generic[BatchType], ABC):
 
     @property
     def optimizer(self) -> Optimizer:
+        """Return the optimizer instance."""
         if self._optimizer is None:
             raise ValueError("Optimizer has not been instantiated yet.")
         return self._optimizer
