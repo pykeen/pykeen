@@ -102,14 +102,14 @@ class TrainingLoop(Generic[BatchType], ABC):
     model: Model
 
     # Optimizer
-    optimizer: HintOrType[Optimizer]
-    optimizer_kwargs: OptionalKwargs
+    _optimizer_hint: HintOrType[Optimizer]
+    _optimizer_kwargs: OptionalKwargs
     _optimizer: Optimizer | None
 
     # LR Scheduler
-    lr_scheduler: HintOrType[LRScheduler]
-    lr_scheduler_kwargs: OptionalKwargs
-    _lr_scheduler: LRScheduler | None
+    lr_scheduler: LRScheduler | None
+    _lr_scheduler_hint: HintOrType[LRScheduler]
+    _lr_scheduler_kwargs: OptionalKwargs
 
     losses_per_epochs: list[float]
 
@@ -161,12 +161,12 @@ class TrainingLoop(Generic[BatchType], ABC):
         """
         self.model = model
         # delay instantiation
-        self.optimizer = optimizer
-        self.optimizer_kwargs = optimizer_kwargs
+        self._optimizer_hint = optimizer
+        self._optimizer_kwargs = optimizer_kwargs
         self._optimizer = None
-        self.lr_scheduler = lr_scheduler
-        self.lr_scheduler_kwargs = lr_scheduler_kwargs
-        self._lr_scheduler = None
+        self._lr_scheduler_hint = lr_scheduler
+        self._lr_scheduler_kwargs = lr_scheduler_kwargs
+        self.lr_scheduler = None
         self.losses_per_epochs = []
         self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
@@ -199,13 +199,17 @@ class TrainingLoop(Generic[BatchType], ABC):
         return self.model.loss
 
     @property
+    def optimizer(self) -> Optimizer:
+        if self._optimizer is None:
+            raise ValueError("Optimizer has not been instantiated yet.")
+        return self._optimizer
+
+    @property
     def checksum(self) -> str:  # noqa: D401
         """The checksum of the model and optimizer the training loop was configured with."""
-        assert self._optimizer is not None
-        # TODO: check instance vs. hint
         h = md5()  # noqa: S303,S324
         h.update(str(self.model).encode("utf-8"))
-        h.update(str(self._optimizer).encode("utf-8"))
+        h.update(str(self.optimizer).encode("utf-8"))
         return h.hexdigest()
 
     def train(
@@ -408,9 +412,8 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         # Clear optimizer
         if clear_optimizer:
-            # TODO
             self._optimizer = None
-            self._lr_scheduler = None
+            self.lr_scheduler = None
 
         return result
 
@@ -485,8 +488,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         del batch
         del batches
         gc.collect()
-        assert isinstance(self._optimizer, Optimizer)
-        self._optimizer.zero_grad()
+        self.optimizer.zero_grad()
         self._free_graph_and_cache()
 
         return current_epoch_loss
@@ -596,9 +598,13 @@ class TrainingLoop(Generic[BatchType], ABC):
             drop_last = model_contains_batch_norm
 
         if continue_training:
-            if not isinstance(self._optimizer, Optimizer):
+            if isinstance(self._optimizer_hint, Optimizer):
+                self._optimizer = self._optimizer_hint
+            else:
                 raise ValueError("Cannot continue training without an initialized optimizer.")
-            if self._lr_scheduler and not isinstance(self._lr_scheduler, LRScheduler):
+            if isinstance(self._lr_scheduler_hint, LRScheduler) or self._lr_scheduler_hint is None:
+                self.lr_scheduler = self._lr_scheduler_hint
+            else:
                 raise ValueError("Cannot continue training without an initialized lr schedule.")
         # Force weight initialization if training continuation is not explicitly requested.
         else:
@@ -608,16 +614,16 @@ class TrainingLoop(Generic[BatchType], ABC):
             self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
 
             # Create new optimizer
-            if isinstance(self.optimizer, Optimizer):
+            if isinstance(self._optimizer_hint, Optimizer):
                 logger.warning("The optimizer was already passed instantiated.")
-                if self.optimizer_kwargs:
-                    logger.warning(f"optimizer_kwargs={self.optimizer_kwargs} will be ignored.")
+                if self._optimizer_kwargs:
+                    logger.warning(f"optimizer_kwargs={self._optimizer_kwargs} will be ignored.")
             self._optimizer = optimizer_resolver.make(
-                self.optimizer, self.optimizer_kwargs, params=self.model.get_grad_params()
+                self._optimizer_hint, self._optimizer_kwargs, params=self.model.get_grad_params()
             )
 
             # Create a LR schedule, if necessary
-            self._lr_scheduler = lr_scheduler_resolver.make_safe(self.lr_scheduler, self.lr_scheduler_kwargs)
+            self.lr_scheduler = lr_scheduler_resolver.make_safe(self._lr_scheduler_hint, self._lr_scheduler_kwargs)
 
         # Ensure the model is on the correct device
         self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
@@ -1105,8 +1111,6 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         :raises ValueError: if the internal optimizer is not set
         """
-        assert self._optimizer is not None
-
         logger.debug("=> Saving checkpoint.")
 
         if stopper is None:
@@ -1122,7 +1126,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         else:
             best_epoch_model_checkpoint = None
 
-        lr_scheduler_state_dict = None if self._lr_scheduler is None else self._lr_scheduler.state_dict()
+        lr_scheduler_state_dict = None if self.lr_scheduler is None else self.lr_scheduler.state_dict()
 
         relation_to_id_dict = None
         entity_to_id_dict = None
@@ -1135,7 +1139,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                 "epoch": self._epoch,
                 "loss": self.losses_per_epochs,
                 "model_state_dict": self.model.state_dict(),
-                "optimizer_state_dict": self._optimizer.state_dict(),
+                "optimizer_state_dict": self.optimizer.state_dict(),
                 "lr_scheduler_state_dict": lr_scheduler_state_dict,
                 "checksum": self.checksum,
                 "random_seed": self.model._random_seed,
@@ -1174,8 +1178,6 @@ class TrainingLoop(Generic[BatchType], ABC):
         :raises CheckpointMismatchError: If the given checkpoint file has a non-matching checksum, i.e. it was saved
             with a different configuration.
         """
-        assert self.optimizer is not None
-
         logger.info(f"=> loading checkpoint '{path}'")
         checkpoint = torch.load(path, weights_only=False)
         if checkpoint["checksum"] != self.checksum:
@@ -1240,9 +1242,9 @@ class TrainingLoop(Generic[BatchType], ABC):
         self._epoch = checkpoint["epoch"]
         self.losses_per_epochs = checkpoint["loss"]
         self.model.load_state_dict(checkpoint["model_state_dict"])
-        self._optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        if self._lr_scheduler is not None:
-            self._lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        if self.lr_scheduler is not None:
+            self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
         random.setstate(checkpoint["random_state"])
         np.random.set_state(checkpoint["np_random_state"])  # noqa: NPY002
         torch.random.set_rng_state(checkpoint["torch_random_state"])

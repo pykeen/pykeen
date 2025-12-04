@@ -120,7 +120,7 @@ class TrainingCallback:
     @property
     def optimizer(self) -> optim.Optimizer:  # noqa:D401
         """The optimizer, accessed via the training loop."""
-        return self.training_loop._optimizer
+        return self.training_loop.optimizer
 
     @property
     def result_tracker(self) -> ResultTracker:  # noqa: D401
@@ -437,9 +437,9 @@ class LearningRateSchedulerTrainingCallback(TrainingCallback):
 
     # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
-        if self.training_loop.lr_scheduler is None:
+        if self.training_loop._lr_scheduler_hint is None:
             raise ValueError(f"{self} can only be called when a learning rate schedule is used.")
-        self.training_loop.lr_scheduler.step(epoch=epoch)
+        self.training_loop._lr_scheduler_hint.step(epoch=epoch)
 
 
 def _hasher(kwargs: Mapping[str, Any]) -> int:
