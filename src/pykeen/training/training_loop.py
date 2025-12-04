@@ -1,7 +1,6 @@
 """Training loops for KGE models using multi-modal information."""
 
 import gc
-import inspect
 import logging
 import pathlib
 import pickle
