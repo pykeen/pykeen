@@ -623,7 +623,9 @@ class TrainingLoop(Generic[BatchType], ABC):
             )
 
             # Create a LR schedule, if necessary
-            self.lr_scheduler = lr_scheduler_resolver.make_safe(self._lr_scheduler_hint, self._lr_scheduler_kwargs)
+            self.lr_scheduler = lr_scheduler_resolver.make_safe(
+                self._lr_scheduler_hint, self._lr_scheduler_kwargs, optimizer=self.optimizer
+            )
 
         # Ensure the model is on the correct device
         self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
