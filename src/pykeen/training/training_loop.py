@@ -97,23 +97,6 @@ class SubBatchingNotSupportedError(NotImplementedError):
         )
 
 
-def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
-    optimizer_kwargs = optimizer.state_dict()
-    return {
-        key: value for key, value in optimizer_kwargs["param_groups"][0].items() if key not in ["params", "initial_lr"]
-    }
-
-
-def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
-    # note: this seems to be a pretty unsafe method to derive __init__ kwargs...
-    init_parameters = inspect.signature(lr_scheduler.__init__).parameters
-    return {
-        key: value
-        for key, value in lr_scheduler.state_dict().items()
-        if key not in {"last_epoch", "optimizer"} and key in init_parameters
-    }
-
-
 class TrainingLoop(Generic[BatchType], ABC):
     """A training loop."""
 
