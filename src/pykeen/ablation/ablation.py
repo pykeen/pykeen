@@ -466,7 +466,7 @@ def prepare_ablation(  # noqa:C901
             str,
         ]
     ]
-    it = itt.product(  # type: ignore
+    it = itt.product(
         datasets,
         create_inverse_triples,
         models,

@@ -116,7 +116,7 @@ class CooccurrenceFilteredModel(Model):
                     col_indices=mapped_triples[:, col_index],
                     shape=(num_rows, num_cols),
                     # TODO how to type this properly? np.bool and np.bool_ don't work either
-                    dtype=bool,  # type:ignore
+                    dtype=bool,  # type: ignore[arg-type]
                     norm=None,
                 )
                 for num_rows, (row_label, row_index) in zip(nums, TARGET_TO_INDEX.items(), strict=False)

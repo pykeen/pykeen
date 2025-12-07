@@ -113,7 +113,7 @@ class LazyInductiveDataset(InductiveDataset):
     cache_root: pathlib.Path
 
     @property
-    def transductive_training(self) -> TriplesFactory:  # type:ignore # noqa: D401
+    def transductive_training(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The training triples factory."""
         if not self._loaded:
             self._load()
@@ -121,7 +121,7 @@ class LazyInductiveDataset(InductiveDataset):
         return self._transductive_training
 
     @property
-    def inductive_inference(self) -> TriplesFactory:  # type:ignore # noqa: D401
+    def inductive_inference(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The inductive inference triples factory. MIGHT or MIGHT NOT share indices with the transductive train."""
         if not self._loaded:
             self._load()
@@ -129,7 +129,7 @@ class LazyInductiveDataset(InductiveDataset):
         return self._inductive_inference
 
     @property
-    def inductive_testing(self) -> TriplesFactory:  # type:ignore # noqa: D401
+    def inductive_testing(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The testing triples factory that share indices with the INDUCTIVE INFERENCE triples factory."""
         if not self._loaded:
             self._load()
@@ -137,7 +137,7 @@ class LazyInductiveDataset(InductiveDataset):
         return self._inductive_testing
 
     @property
-    def inductive_validation(self) -> TriplesFactory | None:  # type:ignore # noqa: D401
+    def inductive_validation(self) -> TriplesFactory | None:  # type: ignore[override]  # noqa: D401
         """The validation triples factory that shares indices with the INDUCTIVE INFERENCE triples factory."""
         if not self._loaded:
             self._load()
