@@ -280,8 +280,8 @@ extend-select = [
     # Perflint (PERF)
     "PERF",
     # pycodestyle (E, W)
-    "E",     # pycodestyle errors
-    "W",     # pycodestyle warnings
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
     # pydoclint (DOC)
     # "DOC",   # requires preview; supersedes darglint
     # pydocstyle (D)
@@ -289,7 +289,7 @@ extend-select = [
     # Pyflakes (F)
     "F",
     # pygrep-hooks (PGH)
-    # "PGH",
+    "PGH",
     # Pylint (PL)
     # "PL",
     # pyupgrade (UP)

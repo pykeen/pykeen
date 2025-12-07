@@ -768,7 +768,7 @@ def hpo_pipeline(
     if regularizer is not None:
         regularizer_cls = regularizer_resolver.lookup(regularizer)
     elif getattr(model_cls, "regularizer_default", None):
-        regularizer_cls = model_cls.regularizer_default  # type:ignore
+        regularizer_cls = model_cls.regularizer_default
     else:
         regularizer_cls = None
     if regularizer_cls:

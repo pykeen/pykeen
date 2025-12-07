@@ -110,7 +110,7 @@ corruption is used with probability $1 - p_r$.
         training_loop="sLCWA",
         negative_sampler="bernoulli",
     )
-"""  # noqa
+"""
 
 from class_resolver import ClassResolver
 
