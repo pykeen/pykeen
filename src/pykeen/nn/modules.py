@@ -146,9 +146,7 @@ def parallel_slice_batches(
     # yield batches
     for batch in zip(*parts, strict=False):
         # complex typing
-        yield unpack_singletons(*(batch[start:stop] for start, stop in zip(splits, splits[1:], strict=False)))  # type: ignore
-
-
+        yield unpack_singletons(*(batch[start:stop] for start, stop in zip(splits, splits[1:], strict=False)))
 # docstr-coverage:excused `overload`
 @overload
 def parallel_unsqueeze(x: Sequence[FloatTensor], dim: int) -> Sequence[FloatTensor]: ...
@@ -1873,7 +1871,7 @@ class TuckERInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
     # default core tensor initialization
     # cf. https://github.com/ibalazevic/TuckER/blob/master/model.py#L12
-    default_core_initializer: ClassVar[Initializer] = staticmethod(nn.init.uniform_)  # type: ignore
+    default_core_initializer: ClassVar[Initializer] = staticmethod(nn.init.uniform_)
     default_core_initializer_kwargs: Mapping[str, Any] = {"a": -1.0, "b": 1.0}
 
     @update_docstring_with_resolver_keys(

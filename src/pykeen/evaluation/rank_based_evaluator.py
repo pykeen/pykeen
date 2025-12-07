@@ -684,7 +684,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         # combine key batches
         keys = np.concatenate(list(keys), axis=0)
         # calculate key frequency
-        inverse, counts = np.unique(keys, axis=0, return_inverse=True, return_counts=True)[1:]  # type:ignore
+        inverse, counts = np.unique(keys, axis=0, return_inverse=True, return_counts=True)[1:]
         # weight = inverse frequency
         weights = np.reciprocal(counts, dtype=float)
         # broadcast to samples

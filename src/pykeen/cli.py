@@ -83,7 +83,7 @@ def ls() -> None:
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def models(tablefmt: str) -> None:
     """List models."""
     click.echo(_help_models(tablefmt=tablefmt)[0])
@@ -199,7 +199,7 @@ def _help_representations(tablefmt: str = "github", *, link_fmt: str | None = No
             resolver=representation_resolver,
             link_fmt=link_fmt,
             # cf. https://github.com/python/mypy/issues/5374
-            skip={MessagePassingRepresentation},  # type: ignore
+            skip={MessagePassingRepresentation},
         )
     ]
     headers = ["Name", "Reference"]
@@ -230,7 +230,7 @@ def _get_module_name(f: Any) -> str:
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 @click.option("--sort-size", is_flag=True)
 def datasets(tablefmt: str, sort_size: bool) -> None:
     """List datasets."""
@@ -258,7 +258,7 @@ def _help_inductive_datasets(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def training_loops(tablefmt: str) -> None:
     """List training approaches."""
     click.echo(_help_training(tablefmt))
@@ -274,7 +274,7 @@ def _help_training(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def negative_samplers(tablefmt: str) -> None:
     """List negative samplers."""
     click.echo(_help_negative_samplers(tablefmt))
@@ -290,7 +290,7 @@ def _help_negative_samplers(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def stoppers(tablefmt: str) -> None:
     """List stoppers."""
     click.echo(_help_stoppers(tablefmt))
@@ -306,7 +306,7 @@ def _help_stoppers(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def evaluators(tablefmt: str) -> None:
     """List evaluators."""
     click.echo(_help_evaluators(tablefmt))
@@ -322,7 +322,7 @@ def _help_evaluators(tablefmt, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def losses(tablefmt: str) -> None:
     """List losses."""
     click.echo(_help_losses(tablefmt))
@@ -338,7 +338,7 @@ def _help_losses(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def optimizers(tablefmt: str) -> None:
     """List optimizers."""
     click.echo(_help_optimizers(tablefmt))
@@ -360,7 +360,7 @@ def _help_optimizers(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def lr_schedulers(tablefmt: str) -> None:
     """List optimizers."""
     click.echo(_help_lr_schedulers(tablefmt))
@@ -382,7 +382,7 @@ def _help_lr_schedulers(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def regularizers(tablefmt: str) -> None:
     """List regularizers."""
     click.echo(_help_regularizers(tablefmt))
@@ -421,7 +421,7 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: s
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def metrics(tablefmt: str) -> None:
     """List metrics."""
     click.echo(_help_metrics(tablefmt))
@@ -441,14 +441,14 @@ def _help_metrics(tablefmt: str) -> str:
         headers.append("Reference")
         headers[0] = "Metric"
     return tabulate(
-        sorted(_get_metrics_lines(tablefmt), key=itemgetter(4, 0)),  # type:ignore
+        sorted(_get_metrics_lines(tablefmt), key=itemgetter(4, 0)),
         headers=headers,
         tablefmt=tablefmt,
     )
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def trackers(tablefmt: str) -> None:
     """List trackers."""
     click.echo(_help_trackers(tablefmt))
@@ -464,7 +464,7 @@ def _help_trackers(tablefmt: str, link_fmt: str | None = None) -> str:
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def hpo_samplers(tablefmt: str) -> None:
     """List HPO samplers."""
     click.echo(_help_hpo_samplers(tablefmt))
@@ -527,7 +527,7 @@ def _get_resolver_lines(
         elif tablefmt == "github":
             try:
                 ref = value.__name__
-                doc = value.__doc__.splitlines()[0]  # type: ignore
+                doc = value.__doc__.splitlines()[0]
             except AttributeError:
                 ref = name
                 doc = value.__class__.__doc__
@@ -706,8 +706,8 @@ def get_readme() -> str:
     )
 
 
-@main.group()  # type:ignore
-@click.pass_context  # type:ignore
+@main.group()
+@click.pass_context
 def train(ctx: click.Context) -> None:
     """Train a KGE model."""
 

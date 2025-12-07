@@ -135,7 +135,7 @@ def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
         for name, parameter in signature.parameters.items():
             if (
                 name == "self"
-                or parameter.default is inspect._empty  # type:ignore
+                or parameter.default is inspect._empty
                 or parameter.default is None
             ):
                 continue

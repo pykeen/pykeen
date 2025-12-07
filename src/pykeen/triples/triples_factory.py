@@ -657,7 +657,7 @@ class CoreTriplesFactory(KGInfo):
             create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
-                **(self.metadata if keep_metadata else {}),  # type: ignore
+                **(self.metadata if keep_metadata else {}),
             },
         )
 
@@ -1382,7 +1382,7 @@ class TriplesFactory(CoreTriplesFactory):
             create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
-                **(self.metadata if keep_metadata else {}),  # type: ignore
+                **(self.metadata if keep_metadata else {}),
             },
         )
 
@@ -1414,7 +1414,7 @@ class TriplesFactory(CoreTriplesFactory):
 
     def get_inverse_relation_id(self, relation: str | int) -> int:
         """Get the inverse relation identifier for the given relation."""
-        relation = next(iter(self.relations_to_ids(relations=[relation])))  # type: ignore
+        relation = next(iter(self.relations_to_ids(relations=[relation])))
         return super().get_inverse_relation_id(relation=relation)
 
     def label_triples(

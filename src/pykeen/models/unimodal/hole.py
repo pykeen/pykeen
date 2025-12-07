@@ -58,7 +58,7 @@ class HolE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         embedding_dim: int = 200,
         # Initialisation, cf. https://github.com/mnick/scikit-kge/blob/master/skge/param.py#L18-L27
         entity_initializer: Hint[Initializer] = xavier_uniform_,
-        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        entity_constrainer: Hint[Constrainer] = clamp_norm,
         entity_constrainer_kwargs: Mapping[str, Any] | None = None,
         entity_representation_kwargs: OptionalKwargs = None,
         relation_initializer: Hint[Constrainer] = xavier_uniform_,

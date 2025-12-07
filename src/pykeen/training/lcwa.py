@@ -62,11 +62,11 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         # The type inference is so confusing between the function switching
         # and polymorphism introduced by slicability that these need to be ignored
         if self.target == 0:
-            self.score_method = self.model.score_h  # type: ignore
+            self.score_method = self.model.score_h
         elif self.target == 1:
-            self.score_method = self.model.score_r  # type: ignore
+            self.score_method = self.model.score_r
         elif self.target == 2:
-            self.score_method = self.model.score_t  # type: ignore
+            self.score_method = self.model.score_t
         else:
             raise ValueError(f"Invalid target column: {self.target}. Must be from {{0, 1, 2}}.")
 

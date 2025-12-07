@@ -767,7 +767,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 # MyPy overrides are because you should
                 if (
-                    minutes_since_last_checkpoint >= checkpoint_frequency  # type: ignore
+                    minutes_since_last_checkpoint >= checkpoint_frequency
                     or self._should_stop
                     or epoch == num_epochs
                 ):
@@ -779,7 +779,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                         stopper=stopper,
                         best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
                         triples_factory=triples_factory,
-                    )  # type: ignore
+                    )
                     last_checkpoint = time.time()
 
             if self._should_stop:
