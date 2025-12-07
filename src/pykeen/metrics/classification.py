@@ -15,8 +15,7 @@ from __future__ import annotations
 import abc
 import math
 import warnings
-from collections.abc import Collection
-from typing import ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 import numpy
 from class_resolver import ClassResolver
@@ -24,6 +23,9 @@ from docdata import parse_docdata
 from sklearn import metrics
 
 from .utils import Metric, ValueRange
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
 
 __all__ = [
     "ClassificationMetric",

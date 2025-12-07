@@ -9,8 +9,7 @@ import abc
 import logging
 import pathlib
 import typing
-from collections.abc import Sequence
-from typing import ClassVar, Generic, Literal, TypedDict, TypeVar, cast, overload
+from typing import ClassVar, Generic, Literal, TypedDict, TypeVar, overload
 
 import click
 import numpy
@@ -21,10 +20,13 @@ from more_click import verbose_option
 
 from .base import LazyDataset
 from ..triples import TriplesFactory
-from ..typing import EntityMapping, RelationMapping
 
 if typing.TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ogb.linkproppred import LinkPropPredDataset
+
+    from ..typing import EntityMapping, RelationMapping
 
 __all__ = [
     "OGBLoader",
@@ -113,7 +115,9 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
     def _load_data_dict_for_split(self, dataset: LinkPropPredDataset, which: EvalKey) -> PreprocessedEvalDictType: ...
 
     @abc.abstractmethod
-    def _load_data_dict_for_split(self, dataset, which):
+    def _load_data_dict_for_split(
+        self, dataset: LinkPropPredDataset | LinkPropPredDataset, which: TrainKey | EvalKey
+    ) -> PreprocessedTrainDictType | PreprocessedEvalDictType:
         """Load the dictionary of preprocessed data for the given key."""
         raise NotImplementedError
 
@@ -181,13 +185,12 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
         return entity_to_id, relation_to_id
 
     # docstr-coverage: inherited
-    def _load_data_dict_for_split(self, dataset, which):
+    def _load_data_dict_for_split(self, dataset, which):  # noqa: D102
         # noqa: D102
-        data_dict = torch.load(
+        return torch.load(
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
             weights_only=False,
         )
-        return cast(WikiKG2TrainDict, data_dict) if which == "train" else cast(WikiKG2EvalDict, data_dict)
 
     # docstr-coverage: inherited
     def _compose_mapped_triples(self, data_dict: WikiKG2TrainDict | WikiKG2EvalDict) -> numpy.ndarray:  # noqa: D102
@@ -289,11 +292,10 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
 
     # docstr-coverage: inherited
     def _load_data_dict_for_split(self, dataset, which):  # noqa: D102
-        data_dict = torch.load(
+        return torch.load(
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
             weights_only=False,
         )
-        return cast(BioKGTrainDict, data_dict) if which == "train" else cast(BioKGEvalDict, data_dict)
 
     def _map_entity_column(
         self, local_entity_id: numpy.ndarray, entity_type: Sequence[OGBBioKGNodeType]

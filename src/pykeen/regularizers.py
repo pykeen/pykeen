@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Mapping
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import torch
 from class_resolver import ClassResolver, normalize_string
 from torch import nn
 from torch.nn import functional
 
-from .typing import FloatTensor
 from .utils import lp_norm, powersum_norm
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
+
+    from .typing import FloatTensor
 
 __all__ = [
     # Base Class

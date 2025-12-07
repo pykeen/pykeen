@@ -10,7 +10,6 @@ import json
 import logging
 import math
 import operator
-import os
 import pathlib
 import random
 import re
@@ -23,6 +22,7 @@ from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
 from typing import (
+    TYPE_CHECKING,
     Any,
     Generic,
     TextIO,
@@ -31,7 +31,6 @@ from typing import (
 )
 
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn
 import torch.nn.modules.batchnorm
@@ -42,8 +41,14 @@ from torch import nn
 from typing_extensions import ParamSpec
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import BoolTensor, DeviceHint, FloatTensor, LongTensor, MappedTriples, TorchRandomHint
 from .version import get_git_hash
+
+if TYPE_CHECKING:
+    import os
+
+    import pandas as pd
+
+    from .typing import BoolTensor, DeviceHint, FloatTensor, LongTensor, MappedTriples, TorchRandomHint
 
 __all__ = [
     "at_least_eps",

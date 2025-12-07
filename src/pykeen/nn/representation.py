@@ -10,7 +10,7 @@ import string
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Any, ClassVar, Literal, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import more_itertools
 import numpy
@@ -39,20 +39,8 @@ from .text.cache import PyOBOTextCache, TextCache, WikidataTextCache
 from .text.encoder import TextEncoder, text_encoder_resolver
 from .utils import BaseShapeError, ShapeError
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
-from ..datasets import Dataset
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
-from ..triples.triples_factory import Labeling
-from ..typing import (
-    Constrainer,
-    FloatTensor,
-    Hint,
-    HintType,
-    Initializer,
-    LongTensor,
-    Normalizer,
-    OneOrSequence,
-)
 from ..utils import (
     Bias,
     ExtraReprMixin,
@@ -65,6 +53,20 @@ from ..utils import (
     merge_kwargs,
     upgrade_to_sequence,
 )
+
+if TYPE_CHECKING:
+    from ..datasets import Dataset
+    from ..triples.triples_factory import Labeling
+    from ..typing import (
+        Constrainer,
+        FloatTensor,
+        Hint,
+        HintType,
+        Initializer,
+        LongTensor,
+        Normalizer,
+        OneOrSequence,
+    )
 
 __all__ = [
     "Representation",
@@ -1135,7 +1137,7 @@ def _clean_labels(labels: Sequence[str | None], missing_action: Literal["error",
             raise ValueError(
                 f"The labels at the following indexes were none. Consider an alternate `missing_action` policy.\n{idx}",
             )
-        return cast(Sequence[str], labels)
+        return labels  # type: ignore[return-value]
     if missing_action == "blank":
         return [label or "" for label in labels]
     raise ValueError(f"Invalid `missing_action` policy: {missing_action}")

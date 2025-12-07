@@ -2,7 +2,6 @@
 
 import logging
 from collections.abc import Iterable
-from typing import cast
 
 import torch
 from torch import nn
@@ -135,7 +134,4 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         ]
 
         # normalization
-        return cast(
-            tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
-            tuple(x[0] if len(x) == 1 else x for x in (hh, rr, tt)),
-        )
+        return tuple(x[0] if len(x) == 1 else x for x in (hh, rr, tt))

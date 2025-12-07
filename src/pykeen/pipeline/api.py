@@ -183,45 +183,36 @@ the :class:`pykeen.datasets.Nations`
 
 from __future__ import annotations
 
-import ftplib
 import hashlib
 import json
 import logging
 import pathlib
 import pickle
 import time
-from collections.abc import Collection, Iterable, Mapping, MutableMapping
 from dataclasses import dataclass, field
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
-    cast,
 )
 
 import pandas as pd
 import scipy.stats
 import torch
-from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
-from torch.optim.optimizer import Optimizer
 
 from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
-from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
 from ..evaluation.evaluator import normalize_flattened_metric_results
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
 from ..models import Model, make_model_cls, model_resolver
-from ..nn.modules import Interaction
 from ..optimizers import optimizer_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..stoppers import EarlyStopper, Stopper, stopper_resolver
 from ..trackers import ResultTracker, resolve_result_trackers
-from ..trackers.base import MultiResultTracker
 from ..training import SLCWATrainingLoop, TrainingLoop, training_loop_resolver
-from ..triples import CoreTriplesFactory
-from ..typing import DeviceHint, Hint, HintType, MappedTriples
 from ..utils import (
     Result,
     ensure_ftp_directory,
@@ -235,6 +226,19 @@ from ..utils import (
     set_random_seed,
 )
 from ..version import get_git_hash, get_version
+
+if TYPE_CHECKING:
+    import ftplib
+    from collections.abc import Collection, Iterable, Mapping, MutableMapping
+
+    from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
+    from torch.optim.optimizer import Optimizer
+
+    from ..datasets.base import Dataset
+    from ..nn.modules import Interaction
+    from ..trackers.base import MultiResultTracker
+    from ..triples import CoreTriplesFactory
+    from ..typing import DeviceHint, Hint, HintType, MappedTriples
 
 __all__ = [
     "PipelineResult",
@@ -966,7 +970,7 @@ def _handle_model(
         )
 
     if isinstance(model, Model):
-        model_instance = cast(Model, model)
+        model_instance = model  # type: ignore[assignment]
         # TODO should training be reset?
         # TODO should kwargs for loss and regularizer be checked and raised for?
     else:

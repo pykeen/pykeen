@@ -4,20 +4,16 @@ from __future__ import annotations
 
 import inspect
 import logging
-import os
 import pickle
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Mapping
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import torch
-from class_resolver import HintOrType
 from docdata import parse_docdata
 from torch import nn
 
 from ..inverse import RelationInverter, relation_inverter_resolver
 from ..losses import Loss, MarginRankingLoss, loss_resolver
-from ..triples import KGInfo
 from ..typing import (
     LABEL_HEAD,
     LABEL_RELATION,
@@ -29,6 +25,14 @@ from ..typing import (
     Target,
 )
 from ..utils import NoRandomSeedNecessary, get_preferred_device, set_random_seed
+
+if TYPE_CHECKING:
+    import os
+    from collections.abc import Iterable, Mapping
+
+    from class_resolver import HintOrType
+
+    from ..triples import KGInfo
 
 __all__ = [
     "Model",

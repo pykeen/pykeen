@@ -8,12 +8,14 @@ import logging
 import pathlib
 import time
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 from uuid import uuid4
 
 from ..training import SLCWATrainingLoop, training_loop_resolver
-from ..typing import OneOrSequence
 from ..utils import normalize_path, normalize_string, upgrade_to_sequence
+
+if TYPE_CHECKING:
+    from ..typing import OneOrSequence
 
 __all__ = [
     "ablation_pipeline",

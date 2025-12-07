@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Mapping
+from typing import TYPE_CHECKING
 
 from ..trackers.base import ResultTracker
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 __all__ = [
     "ResultListenerAdapter",

@@ -7,12 +7,12 @@ import math
 import pathlib
 from collections.abc import Iterable, Mapping, MutableMapping
 from textwrap import dedent
+from typing import TYPE_CHECKING
 
 import click
 import docdata
 import pandas as pd
 import scipy.stats
-import torch
 from more_click import force_option, log_level_option, verbose_option
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
@@ -34,6 +34,9 @@ from ..metrics.ranking import (
 )
 from ..triples import CoreTriplesFactory
 from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, SIDE_MAPPING, ExtendedTarget
+
+if TYPE_CHECKING:
+    import torch
 
 logger = logging.getLogger(__name__)
 

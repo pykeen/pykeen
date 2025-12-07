@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-import pathlib
-from typing import Any, BinaryIO, TypedDict
+from typing import TYPE_CHECKING, Any, BinaryIO, TypedDict
 
 import torch
 
-from ..models.base import Model
+if TYPE_CHECKING:
+    import pathlib
+
+    from ..models.base import Model
 
 __all__ = [
     "save_model",
