@@ -51,9 +51,9 @@ class TransD(
         relation_dim: int | None = None,
         interaction_kwargs: OptionalKwargs = None,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
-        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        entity_constrainer: Hint[Constrainer] = clamp_norm,
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
-        relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        relation_constrainer: Hint[Constrainer] = clamp_norm,
         **kwargs,
     ) -> None:
         """

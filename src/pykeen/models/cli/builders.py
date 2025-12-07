@@ -102,7 +102,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
 
         return command
 
-    @click.command(help=f"CLI for {model.__name__}", name=model.__name__.lower())  # type: ignore
+    @click.command(help=f"CLI for {model.__name__}", name=model.__name__.lower())
     @options.device_option
     @options.dataset_option
     @options.training_option
