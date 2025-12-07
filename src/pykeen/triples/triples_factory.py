@@ -657,7 +657,7 @@ class CoreTriplesFactory(KGInfo):
             create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
-                **(self.metadata if keep_metadata else {}),  # type: ignore[dict-item]
+                **(self.metadata if keep_metadata else {}),
             },
         )
 
