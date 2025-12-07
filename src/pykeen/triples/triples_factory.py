@@ -1414,7 +1414,8 @@ class TriplesFactory(CoreTriplesFactory):
 
     def get_inverse_relation_id(self, relation: str | int) -> int:
         """Get the inverse relation identifier for the given relation."""
-        relation = next(iter(self.relations_to_ids(relations=[relation])))  # type: ignore[arg-type]
+        relations: list[int] | list[str] = [relation]  # type: ignore[assignment]
+        relation = next(iter(self.relations_to_ids(relations=relations)))
         return super().get_inverse_relation_id(relation=relation)
 
     def label_triples(
