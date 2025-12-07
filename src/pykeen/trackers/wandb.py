@@ -46,13 +46,13 @@ class WANDBResultTracker(ResultTracker):
         self.project = project
 
         if offline:
-            os.environ[self.wandb.env.MODE] = "dryrun"  # type: ignore
+            os.environ[self.wandb.env.MODE] = "dryrun"
         self.kwargs = kwargs
         self.run = None
 
     # docstr-coverage: inherited
     def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
-        self.run = self.wandb.init(project=self.project, name=run_name, **self.kwargs)  # type: ignore
+        self.run = self.wandb.init(project=self.project, name=run_name, **self.kwargs)
 
     # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102

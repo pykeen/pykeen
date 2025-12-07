@@ -7,9 +7,8 @@ from .base import ResultTracker
 from ..utils import flatten_dictionary
 
 if TYPE_CHECKING:
-    import neptune  # noqa
-    import neptune.experiments  # noqa
-
+    import neptune
+    import neptune.experiments
 __all__ = [
     "NeptuneResultTracker",
 ]

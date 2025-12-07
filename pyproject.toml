@@ -289,7 +289,7 @@ extend-select = [
     # Pyflakes (F)
     "F",
     # pygrep-hooks (PGH)
-    # "PGH",
+    "PGH",
     # Pylint (PL)
     # "PL",
     # pyupgrade (UP)

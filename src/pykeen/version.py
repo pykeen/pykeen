@@ -114,7 +114,7 @@ def env(file=None):
 
 def _in_jupyter() -> bool:
     try:
-        get_ipython = sys.modules["IPython"].get_ipython  # type: ignore
+        get_ipython = sys.modules["IPython"].get_ipython
         if "IPKernelApp" not in get_ipython().config:
             raise ImportError("console")
         if "VSCODE_PID" in os.environ:

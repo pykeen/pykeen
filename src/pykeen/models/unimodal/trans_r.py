@@ -72,11 +72,11 @@ class TransR(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         # entity embedding
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_initializer_kwargs: OptionalKwargs = None,
-        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        entity_constrainer: Hint[Constrainer] = clamp_norm,
         # relation embedding
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
         relation_initializer_kwargs: OptionalKwargs = None,
-        relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        relation_constrainer: Hint[Constrainer] = clamp_norm,
         # relation projection
         relation_projection_initializer: Hint[Initializer] = torch.nn.init.xavier_uniform_,
         relation_projection_initializer_kwargs: OptionalKwargs = None,
