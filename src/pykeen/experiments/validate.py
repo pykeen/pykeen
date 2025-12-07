@@ -133,11 +133,7 @@ def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
 
         missing_kwargs = []
         for name, parameter in signature.parameters.items():
-            if (
-                name == "self"
-                or parameter.default is inspect._empty
-                or parameter.default is None
-            ):
+            if name == "self" or parameter.default is inspect._empty or parameter.default is None:
                 continue
 
             annotation = choice.__init__.__annotations__.get(name)

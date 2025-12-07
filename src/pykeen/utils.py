@@ -708,6 +708,8 @@ def upgrade_to_sequence(x: X | Sequence[X]) -> Sequence[X]:
     ('t', 'e', 's', 't')
     """
     return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)
+
+
 def broadcast_upgrade_to_sequences(*xs: X | Sequence[X]) -> Sequence[Sequence[X]]:
     """Apply upgrade_to_sequence to each input, and afterwards repeat singletons to match the maximum length.
 

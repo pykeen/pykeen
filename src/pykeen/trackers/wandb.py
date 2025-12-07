@@ -53,6 +53,7 @@ class WANDBResultTracker(ResultTracker):
     # docstr-coverage: inherited
     def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         self.run = self.wandb.init(project=self.project, name=run_name, **self.kwargs)
+
     # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         self.run.finish(exit_code=0 if success else -1)

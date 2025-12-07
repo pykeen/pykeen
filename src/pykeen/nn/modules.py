@@ -147,6 +147,8 @@ def parallel_slice_batches(
     for batch in zip(*parts, strict=False):
         # complex typing
         yield unpack_singletons(*(batch[start:stop] for start, stop in zip(splits, splits[1:], strict=False)))  # type: ignore[misc]
+
+
 # docstr-coverage:excused `overload`
 @overload
 def parallel_unsqueeze(x: Sequence[FloatTensor], dim: int) -> Sequence[FloatTensor]: ...

@@ -111,6 +111,7 @@ corruption is used with probability $1 - p_r$.
         negative_sampler="bernoulli",
     )
 """
+
 from class_resolver import ClassResolver
 
 from .basic_negative_sampler import BasicNegativeSampler
