@@ -776,7 +776,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                         stopper=stopper,
                         best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
                         triples_factory=triples_factory,
-                    )  # type: ignore[arg-type]
+                    )
                     last_checkpoint = time.time()
 
             if self._should_stop:
