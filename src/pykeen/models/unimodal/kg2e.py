@@ -60,10 +60,10 @@ class KG2E(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
         c_min: float = 0.05,
         c_max: float = 5.0,
         entity_initializer: Hint[Initializer] = uniform_,
-        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        entity_constrainer: Hint[Constrainer] = clamp_norm,
         entity_constrainer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = uniform_,
-        relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        relation_constrainer: Hint[Constrainer] = clamp_norm,
         relation_constrainer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:

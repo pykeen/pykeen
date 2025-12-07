@@ -61,7 +61,7 @@ try:
 
     #: A resolver for PyG message passing layers
     layer_resolver: ClassResolver[MessagePassing] = ClassResolver.from_subclasses(
-        base=MessagePassing,  # type: ignore
+        base=MessagePassing,
         suffix="Conv",
     )
 except ImportError:

@@ -386,7 +386,7 @@ def fix_dataclass_init_docs(cls: type[X]) -> type[X]:
 
     .. seealso:: https://github.com/agronholm/sphinx-autodoc-typehints/issues/123
     """
-    cls.__init__.__qualname__ = f"{cls.__name__}.__init__"  # type:ignore
+    cls.__init__.__qualname__ = f"{cls.__name__}.__init__"
     return cls
 
 
@@ -706,7 +706,7 @@ def upgrade_to_sequence(x: X | Sequence[X]) -> Sequence[X]:
     >>> upgrade_to_sequence(tuple("test"))
     ('t', 'e', 's', 't')
     """
-    return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)  # type: ignore
+    return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)
 
 
 def broadcast_upgrade_to_sequences(*xs: X | Sequence[X]) -> Sequence[Sequence[X]]:
@@ -1085,7 +1085,7 @@ def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collect
         if x == y:
             continue
         # make x the smaller one
-        if y < x:  # type: ignore
+        if y < x:  # type: ignore[operator]
             x, y = y, x
         # merge
         parent[y] = x
