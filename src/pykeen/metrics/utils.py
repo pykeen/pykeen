@@ -161,22 +161,24 @@ def weighted_mean_expectation(individual: np.ndarray, weights: np.ndarray | None
 def weighted_mean_variance(individual: np.ndarray, weights: np.ndarray | None) -> float:
     r"""Calculate the variance of a weighted mean of variables with given individual variances.
 
-    When weights represent repeat counts (i.e., the number of independent observations from each variable),
-    the variance of the overall mean is computed as:
+    For a weighted mean of independent random variables, the variance is computed as:
 
     .. math::
 
-        \mathbb{V}\left[\frac{1}{N} \sum \limits_{i=1}^{n} w_i x_i\right]
-            = \frac{1}{N^2} \sum \limits_{i=1}^{n} w_i \mathbb{V}\left[x_i\right]
+        \mathbb{V}\left[\frac{\sum \limits_{i=1}^{n} w_i x_i}{\sum \limits_{j=1}^{n} w_j}\right]
+            = \frac{\sum \limits_{i=1}^{n} w_i^2 \mathbb{V}\left[x_i\right]}{\left(\sum \limits_{j=1}^{n} w_j\right)^2}
 
-    where $N = \sum_{i=1}^{n} w_i$ is the total number of observations, and $w_i$ represents the number
-    of independent samples from variable $x_i$.
+    where $w_i$ are arbitrary positive weights associated with each variable $x_i$.
+
+    This formula applies to weighted averages where each variable $x_i$ is sampled once and then
+    scaled by its weight $w_i$. The quadratic term $w_i^2$ arises from the scaling property of
+    variance: $\mathbb{V}[w_i x_i] = w_i^2 \mathbb{V}[x_i]$.
 
     When $w_i = 1$ for all $i$ (or weights is None), this reduces to $\frac{1}{n^2} \sum \mathbb{V}[x_i]$.
 
     :param individual: the individual variables' variances, $\mathbb{V}[x_i]$
-    :param weights: the repeat counts / weights for the individual variables. When None, each variable
-        is treated as appearing once.
+    :param weights: the weights associated with each variable. When None, all variables are
+        weighted equally (weight = 1).
 
     :returns: the variance of the weighted mean
     """
@@ -184,7 +186,7 @@ def weighted_mean_variance(individual: np.ndarray, weights: np.ndarray | None) -
     if weights is None:
         return individual.mean() / n
     total_weight = weights.sum()
-    return (individual * weights).sum().item() / (total_weight**2)
+    return (individual * weights**2).sum().item() / (total_weight**2)
 
 
 def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray | None = None) -> np.ndarray:
