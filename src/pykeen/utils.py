@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import ftplib
 import functools
 import itertools as itt
@@ -306,10 +307,7 @@ def all_in_bounds(
         return False
 
     # upper bound
-    if high is not None and (x > high + a_tol).any():
-        return False
-
-    return True
+    return not (high is not None and (x > high + a_tol).any())
 
 
 def is_cudnn_error(runtime_error: RuntimeError) -> bool:
@@ -381,7 +379,7 @@ def combine_complex(
     return torch.view_as_complex(torch.stack([x_re, x_im], dim=-1))
 
 
-def fix_dataclass_init_docs(cls: type) -> type:
+def fix_dataclass_init_docs(cls: type[X]) -> type[X]:
     """Fix the ``__init__`` documentation for a :class:`dataclasses.dataclass`.
 
     :param cls: The class whose docstring needs fixing
@@ -423,12 +421,10 @@ def get_df_io(df: pd.DataFrame) -> BytesIO:
     return df_io
 
 
-def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: str) -> None:
+def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: pathlib.Path | str) -> None:
     """Ensure the directory exists on the FTP server."""
-    try:
-        ftp.mkd(directory)
-    except ftplib.error_perm:
-        pass  # its fine...
+    with contextlib.suppress(ftplib.error_perm):  # its fine...
+        ftp.mkd(pathlib.Path(directory).as_posix())
 
 
 K = TypeVar("K")

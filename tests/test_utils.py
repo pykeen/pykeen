@@ -129,7 +129,7 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         """Test the trivial string."""
         s = ""
         r = get_until_first_blank(s)
-        assert "" == r
+        assert r == ""
 
     def test_regular(self):
         """Test a regulat case."""
@@ -139,7 +139,7 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         Now I continue.
         """
         r = get_until_first_blank(s)
-        assert "Broken line." == r
+        assert r == "Broken line."
 
 
 def _generate_shapes(

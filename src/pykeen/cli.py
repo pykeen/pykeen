@@ -15,7 +15,6 @@ later, but that will cause problems - the code will get executed twice:
 
 import importlib
 import inspect
-import os
 import sys
 from collections.abc import Iterable, Mapping
 from operator import itemgetter
@@ -413,10 +412,7 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: s
             yield name, f":class:`{path}`"
         elif tablefmt == "github":
             doc = cls.__doc__
-            if link_fmt:
-                reference = f"[`{path}`]({link_fmt.format(path)})"
-            else:
-                reference = f"`{path}`"
+            reference = f"[`{path}`]({link_fmt.format(path)})" if link_fmt else f"`{path}`"
 
             yield name, reference, get_until_first_blank(doc)
         else:
@@ -537,10 +533,7 @@ def _get_resolver_lines(
                 doc = value.__class__.__doc__
 
             reference = f"pykeen.{submodule}.{ref}"
-            if link_fmt:
-                reference = f"[`{reference}`]({link_fmt.format(reference)})"
-            else:
-                reference = f"`{reference}`"
+            reference = f"[`{reference}`]({link_fmt.format(reference)})" if link_fmt else f"`{reference}`"
 
             yield name, reference, doc
         else:
@@ -637,12 +630,11 @@ def get_metric_list() -> list[tuple[str, type[Metric], type[MetricResults]]]:
 @click.option("--check", is_flag=True)
 def readme(check: bool) -> None:
     """Generate the GitHub readme's ## Implementation section."""
-    readme_path = os.path.abspath(os.path.join(HERE, os.pardir, os.pardir, "README.md"))
+    readme_path = HERE.parents[1].joinpath("README.md").resolve()
     new_readme = get_readme()
 
     if check:
-        with open(readme_path, encoding="utf8") as file:
-            old_readme = file.read()
+        old_readme = readme_path.read_text(encoding="utf8")
         if new_readme.strip() != old_readme.strip():
             click.secho(
                 "Readme has not been updated properly! Make sure all changes are made in the template first,"
@@ -656,8 +648,7 @@ def readme(check: bool) -> None:
 
             sys.exit(-1)
 
-    with open(readme_path, "w", encoding="utf8") as file:
-        print(new_readme, file=file)  # noqa:T201
+    readme_path.write_text(new_readme, encoding="utf8", newline="\n")
 
 
 def get_readme() -> str:
