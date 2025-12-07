@@ -1104,7 +1104,7 @@ def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collect
         if x == y:
             continue
         # make x the smaller one
-        if y < x:
+        if y < x:  # type: ignore[operator]
             x, y = y, x
         # merge
         parent[y] = x

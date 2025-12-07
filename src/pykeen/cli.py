@@ -441,7 +441,7 @@ def _help_metrics(tablefmt: str) -> str:
         headers.append("Reference")
         headers[0] = "Metric"
     return tabulate(
-        sorted(_get_metrics_lines(tablefmt), key=itemgetter(4, 0)),
+        sorted(_get_metrics_lines(tablefmt), key=itemgetter(4, 0)),  # type: ignore[arg-type]
         headers=headers,
         tablefmt=tablefmt,
     )
@@ -527,7 +527,7 @@ def _get_resolver_lines(
         elif tablefmt == "github":
             try:
                 ref = value.__name__
-                doc = value.__doc__.splitlines()[0]
+                doc = value.__doc__.splitlines()[0]  # type: ignore[union-attr]
             except AttributeError:
                 ref = name
                 doc = value.__class__.__doc__

@@ -533,7 +533,7 @@ class LazyDataset(Dataset):
     cache_root: pathlib.Path
 
     @property
-    def training(self) -> TriplesFactory:  # noqa: D401
+    def training(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The training triples factory."""
         if not self._loaded:
             self._load()
@@ -541,7 +541,7 @@ class LazyDataset(Dataset):
         return self._training
 
     @property
-    def testing(self) -> TriplesFactory:  # noqa: D401
+    def testing(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The testing triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
@@ -549,7 +549,7 @@ class LazyDataset(Dataset):
         return self._testing
 
     @property
-    def validation(self) -> TriplesFactory | None:  # noqa: D401
+    def validation(self) -> TriplesFactory | None:  # type: ignore[override]  # noqa: D401
         """The validation triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()

@@ -64,9 +64,9 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         if self.target == 0:
             self.score_method = self.model.score_h
         elif self.target == 1:
-            self.score_method = self.model.score_r
+            self.score_method = self.model.score_r  # type: ignore[assignment]
         elif self.target == 2:
-            self.score_method = self.model.score_t
+            self.score_method = self.model.score_t  # type: ignore[assignment]
         else:
             raise ValueError(f"Invalid target column: {self.target}. Must be from {{0, 1, 2}}.")
 

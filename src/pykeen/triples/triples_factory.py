@@ -650,14 +650,14 @@ class CoreTriplesFactory(KGInfo):
         """
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
-        return CoreTriplesFactory(
+        return CoreTriplesFactory(  # type: ignore[return-value]
             mapped_triples=mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.real_num_relations,
             create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
-                **(self.metadata if keep_metadata else {}),
+                **(self.metadata if keep_metadata else {}),  # type: ignore[dict-item]
             },
         )
 
@@ -1375,14 +1375,14 @@ class TriplesFactory(CoreTriplesFactory):
     ) -> Self:  # noqa: D102
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
-        return TriplesFactory(
+        return TriplesFactory(  # type: ignore[return-value]
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
             mapped_triples=mapped_triples,
             create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
-                **(self.metadata if keep_metadata else {}),
+                **(self.metadata if keep_metadata else {}),  # type: ignore[dict-item]
             },
         )
 
@@ -1414,7 +1414,7 @@ class TriplesFactory(CoreTriplesFactory):
 
     def get_inverse_relation_id(self, relation: str | int) -> int:
         """Get the inverse relation identifier for the given relation."""
-        relation = next(iter(self.relations_to_ids(relations=[relation])))
+        relation = next(iter(self.relations_to_ids(relations=[relation])))  # type: ignore[arg-type]
         return super().get_inverse_relation_id(relation=relation)
 
     def label_triples(

@@ -135,7 +135,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
-                **(self.metadata if keep_metadata else {}),
+                **(self.metadata if keep_metadata else {}),  # type: ignore[dict-item]
             },
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,

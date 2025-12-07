@@ -514,7 +514,7 @@ def _get_targets(
             ids = [i if isinstance(i, int) else label_to_id[i] for i in ids]
         # now, restriction is a sequence of integers
         assert all(isinstance(i, int) for i in ids)
-        id_list = sorted(ids)
+        id_list = sorted(ids)  # type: ignore[arg-type]
         tensor = torch.as_tensor(id_list, dtype=torch.long, device=device)
     # if explicit ids have been given, and label information is available, extract list of labels
     if id_list is not None and id_to_label is not None:
