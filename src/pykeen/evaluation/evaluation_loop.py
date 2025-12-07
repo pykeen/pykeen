@@ -317,7 +317,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, torch.T
 
         # stack groups into a single tensor
         result = {}
-        for target in triples.keys():
+        for target in triples:
             target_triples = torch.stack(triples[target])
             if target in nnz:
                 batch_ids = []

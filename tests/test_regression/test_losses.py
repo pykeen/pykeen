@@ -48,10 +48,7 @@ class LCWALossCalculator(LossCalculator):
         labels = (
             torch.rand(self.batch_size, self.num_entities, generator=generator).less(0.5).to(dtype=predictions.dtype)
         )
-        if self.weighted:
-            weights = torch.rand(self.batch_size, self.num_entities, generator=generator)
-        else:
-            weights = None
+        weights = torch.rand(self.batch_size, self.num_entities, generator=generator) if self.weighted else None
         return instance.process_lcwa_scores(
             predictions=predictions,
             labels=labels,
@@ -174,10 +171,8 @@ def update(path: pathlib.Path, digits: int) -> None:
 
     # determine unique settings (using JSON-representation)
     unique_cases_jsons: set[str] = set()
-    total = 0
     keys = {"seed", "type", "kwargs"}
     for record in iter_records(path):
-        total += 1
         unique_cases_jsons.add(json.dumps({key: record[key] for key in keys}, sort_keys=True))
     logger.info(f"Found {len(unique_cases_jsons):_} unique settings at {path!s}")
 
