@@ -74,7 +74,7 @@ class TestPipelineTriples(unittest.TestCase):
         assert isinstance(exc.value, DimensionError)
         assert {"d"} == exc.value.expected
         assert set() == exc.value.given
-        assert "Expected dimensions dictionary with keys {'d'} but got keys set()" == str(exc.value)
+        assert str(exc.value) == "Expected dimensions dictionary with keys {'d'} but got keys set()"
 
     def test_interaction_instance_builder(self):
         """Test resolving an interaction model instance."""
@@ -86,7 +86,7 @@ class TestPipelineTriples(unittest.TestCase):
         )
         assert isinstance(model, ERModel)
         assert isinstance(model.interaction, TransEInteraction)
-        assert 2 == model.interaction.p
+        assert model.interaction.p == 2
         _ = pipeline(
             training=self.training,
             testing=self.testing,
@@ -115,7 +115,7 @@ class TestPipelineTriples(unittest.TestCase):
     def _help_test_interaction_resolver(self, model_cls):
         assert issubclass(model_cls, ERModel)
         assert isinstance(model_cls._interaction, TransEInteraction)
-        assert 2 == model_cls._interaction.p
+        assert model_cls._interaction.p == 2
         _ = pipeline(
             training=self.training,
             testing=self.testing,

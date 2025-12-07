@@ -3,7 +3,6 @@
 import gc
 import inspect
 import logging
-import os
 import pathlib
 import pickle
 import random
@@ -100,10 +99,9 @@ class SubBatchingNotSupportedError(NotImplementedError):
 
 def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     optimizer_kwargs = optimizer.state_dict()
-    optimizer_kwargs = {
+    return {
         key: value for key, value in optimizer_kwargs["param_groups"][0].items() if key not in ["params", "initial_lr"]
     }
-    return optimizer_kwargs
 
 
 def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
@@ -656,7 +654,7 @@ class TrainingLoop(Generic[BatchType], ABC):
             sampler=sampler,
         )
         if len(train_data_loader) == 0:
-            raise NoTrainingBatchError()
+            raise NoTrainingBatchError
         if drop_last and not only_size_probing:
             logger.info(
                 "Dropping last (incomplete) batch each epoch (%s batches).",
@@ -757,8 +755,8 @@ class TrainingLoop(Generic[BatchType], ABC):
                         f"used as 'checkpoint_file' argument.",
                     )
                 # Delete temporary best epoch model
-                if best_epoch_model_file_path is not None and best_epoch_model_file_path.is_file():
-                    os.remove(best_epoch_model_file_path)
+                if best_epoch_model_file_path:
+                    best_epoch_model_file_path.unlink(missing_ok=True)
                 raise e
 
             # Includes a call to result_tracker.log_metrics
@@ -788,8 +786,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                 if last_best_epoch is not None and best_epoch_model_file_path is not None:
                     self._load_state(path=best_epoch_model_file_path)
                     # Delete temporary best epoch model
-                    if pathlib.Path.is_file(best_epoch_model_file_path):
-                        os.remove(best_epoch_model_file_path)
+                    best_epoch_model_file_path.unlink(missing_ok=True)
                 return self.losses_per_epochs
 
         callback.post_train(losses=self.losses_per_epochs)
@@ -799,8 +796,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         if stopper is not None and last_best_epoch is not None and best_epoch_model_file_path is not None:
             self._load_state(path=best_epoch_model_file_path)
             # Delete temporary best epoch model
-            if pathlib.Path.is_file(best_epoch_model_file_path):
-                os.remove(best_epoch_model_file_path)
+            best_epoch_model_file_path.unlink(missing_ok=True)
 
         return self.losses_per_epochs
 
@@ -1122,20 +1118,14 @@ class TrainingLoop(Generic[BatchType], ABC):
             stopper_dict = stopper.get_summary_dict()
 
         # Only if a cuda device is available, the random state is accessed
-        if torch.cuda.is_available():
-            torch_cuda_random_state = torch.cuda.get_rng_state()
-        else:
-            torch_cuda_random_state = None
+        torch_cuda_random_state = torch.cuda.get_rng_state() if torch.cuda.is_available() else None
 
         if best_epoch_model_checkpoint_file_path is not None:
             best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_file_path, weights_only=False)
         else:
             best_epoch_model_checkpoint = None
 
-        if self.lr_scheduler is None:
-            lr_scheduler_state_dict = None
-        else:
-            lr_scheduler_state_dict = self.lr_scheduler.state_dict()
+        lr_scheduler_state_dict = None if self.lr_scheduler is None else self.lr_scheduler.state_dict()
 
         relation_to_id_dict = None
         entity_to_id_dict = None
@@ -1218,7 +1208,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         best_epoch_model_file_path = None
         best_epoch = None
         if checkpoint.get("best_epoch_model_checkpoint"):
-            best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
+            with NamedTemporaryFile(delete=False) as ntf:
+                best_epoch_model_file_path = pathlib.Path(ntf.name)
             best_epoch = checkpoint["best_epoch_model_checkpoint"]["epoch"]
             torch.save(
                 checkpoint["best_epoch_model_checkpoint"],

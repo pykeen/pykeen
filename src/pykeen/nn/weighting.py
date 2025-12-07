@@ -113,8 +113,7 @@ class InverseInDegreeEdgeWeighting(EdgeWeighting):
         weight = _inverse_frequency_weighting(idx=target)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
-        else:
-            return weight
+        return weight
 
 
 class InverseOutDegreeEdgeWeighting(EdgeWeighting):
@@ -131,8 +130,7 @@ class InverseOutDegreeEdgeWeighting(EdgeWeighting):
         weight = _inverse_frequency_weighting(idx=source)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
-        else:
-            return weight
+        return weight
 
 
 class SymmetricEdgeWeighting(EdgeWeighting):
@@ -149,9 +147,8 @@ class SymmetricEdgeWeighting(EdgeWeighting):
         weight = (_inverse_frequency_weighting(idx=source) * _inverse_frequency_weighting(idx=target)).sqrt()
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
-        else:
-            # backward compatibility with RGCN
-            return weight
+        # backward compatibility with RGCN
+        return weight
 
 
 class AttentionEdgeWeighting(EdgeWeighting):
@@ -175,7 +172,7 @@ class AttentionEdgeWeighting(EdgeWeighting):
         :raises ValueError: If ``message_dim`` is not divisible by ``num_heads``
         """
         super().__init__()
-        if 0 != message_dim % num_heads:
+        if message_dim % num_heads != 0:
             raise ValueError(f"output_dim={message_dim} must be divisible by num_heads={num_heads}!")
         self.num_heads = num_heads
         self.weight = nn.Parameter(data=nn.init.xavier_uniform_(torch.empty(num_heads, 2 * message_dim // num_heads)))

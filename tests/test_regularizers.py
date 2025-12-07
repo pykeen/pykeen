@@ -24,7 +24,7 @@ class NoRegularizerTest(cases.RegularizerTestCase):
 
     # docstr-coverage: inherited
     def test_apply_only_once(self):  # noqa: D102
-        raise unittest.SkipTest()
+        raise unittest.SkipTest
 
 
 class L1RegularizerTest(cases.LpRegularizerTest):
@@ -99,10 +99,7 @@ class NormLimitRegularizerTest(cases.RegularizerTestCase):
         kwargs = self.instance_kwargs
         p = kwargs.get("p", 2.0)
         power_norm = kwargs.get("power_norm", True)
-        if power_norm:
-            value = x.pow(p).sum(dim=-1)
-        else:
-            value = x.norm(p=p, dim=-1)
+        value = x.pow(p).sum(dim=-1) if power_norm else x.norm(p=p, dim=-1)
         max_norm = kwargs.get("max_norm", 1.0)
         return (value - max_norm).relu().sum()
 

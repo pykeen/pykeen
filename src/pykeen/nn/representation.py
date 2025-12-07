@@ -661,9 +661,9 @@ def process_shape(
     """Make a shape pack."""
     if shape is None and dim is None:
         raise ValueError("Missing both, shape and embedding_dim")
-    elif shape is not None and dim is not None:
+    if shape is not None and dim is not None:
         raise ValueError("Provided both, shape and embedding_dim")
-    elif shape is None and dim is not None:
+    if shape is None and dim is not None:
         shape = (dim,)
     elif isinstance(shape, int) and dim is None:
         dim = shape
@@ -840,9 +840,7 @@ class CompGCNLayer(nn.Module):
         x_e = x_e.new_zeros(x_e.shape[0], m.shape[1]).index_add(dim=0, index=target, source=m)
 
         # dropout
-        x_e = self.drop(x_e)
-
-        return x_e
+        return self.drop(x_e)
 
     def forward(
         self,
@@ -1004,8 +1002,7 @@ class CombinedCompGCNRepresentations(nn.Module):
         if isinstance(dims, int):
             if num_layers is None:
                 raise ValueError
-            else:
-                dims = [dims] * num_layers
+            dims = [dims] * num_layers
         if len(dims) != num_layers:
             raise ValueError(
                 f"The number of provided dimensions ({len(dims)}) must equal the number of layers ({num_layers}).",
@@ -1143,8 +1140,7 @@ def _clean_labels(labels: Sequence[str | None], missing_action: Literal["error",
         return labels  # type: ignore[return-value]
     elif missing_action == "blank":
         return [label or "" for label in labels]
-    else:
-        raise ValueError(f"Invalid `missing_action` policy: {missing_action}")
+    raise ValueError(f"Invalid `missing_action` policy: {missing_action}")
 
 
 @parse_docdata
@@ -1269,10 +1265,7 @@ class TextRepresentation(Representation):
         self,
         indices: LongTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
-        if indices is None:
-            labels = self.labels
-        else:
-            labels = [self.labels[i] for i in indices.tolist()]
+        labels = self.labels if indices is None else [self.labels[i] for i in indices.tolist()]
         return self.encoder(labels=labels)
 
 
@@ -1705,7 +1698,7 @@ class MultiBackfillRepresentation(PartitionRepresentation):
                 f"The given {max_id=:_} was less than the number of unique IDs given in the backfill specification, "
                 f"{num_total_base_ids=:_}"
             )
-        elif max_id == num_total_base_ids:
+        if max_id == num_total_base_ids:
             logger.warning(
                 f"The given {max_id=:_} was equivalent to the number of unique IDs given in the backfill "
                 f"specification, {num_total_base_ids=:_}. This means that no backfill representation is necessary, "

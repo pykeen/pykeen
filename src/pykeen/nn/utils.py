@@ -49,10 +49,7 @@ def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Ten
             a = a.to_dense()
         # note: torch.sparse.mm only works for COO matrices;
         #       @ only works for CSR matrices
-        if matrix.is_sparse_csr:
-            a = matrix @ a
-        else:
-            a = torch.sparse.mm(matrix, a)
+        a = matrix @ a if matrix.is_sparse_csr else torch.sparse.mm(matrix, a)
         yield a
 
 

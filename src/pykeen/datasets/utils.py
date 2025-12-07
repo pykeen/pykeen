@@ -136,9 +136,8 @@ def get_dataset(
     if isinstance(dataset, str):
         if has_dataset(dataset):
             return _cached_get_dataset(dataset, dataset_kwargs)
-        else:
-            # Assume it's a file path
-            return Dataset.from_path(dataset)
+        # Assume it's a file path
+        return Dataset.from_path(dataset)
 
     if dataset is not None:
         raise TypeError(f"Dataset is invalid type: {type(dataset)}")
@@ -151,7 +150,7 @@ def get_dataset(
                 validation_path=validation,
                 **(dataset_kwargs or {}),
             )
-        elif validation is not None:
+        if validation is not None:
             raise TypeError(f"Validation is invalid type: {type(validation)}")
 
     if isinstance(training, CoreTriplesFactory) and isinstance(testing, CoreTriplesFactory):

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import ftplib
 import functools
 import itertools as itt
@@ -311,10 +312,7 @@ def all_in_bounds(
         return False
 
     # upper bound
-    if high is not None and (x > high + a_tol).any():
-        return False
-
-    return True
+    return not (high is not None and (x > high + a_tol).any())
 
 
 def is_cudnn_error(runtime_error: RuntimeError) -> bool:
@@ -386,7 +384,7 @@ def combine_complex(
     return torch.view_as_complex(torch.stack([x_re, x_im], dim=-1))
 
 
-def fix_dataclass_init_docs(cls: type) -> type:
+def fix_dataclass_init_docs(cls: type[X]) -> type[X]:
     """Fix the ``__init__`` documentation for a :class:`dataclasses.dataclass`.
 
     :param cls: The class whose docstring needs fixing
@@ -428,12 +426,10 @@ def get_df_io(df: pd.DataFrame) -> BytesIO:
     return df_io
 
 
-def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: str) -> None:
+def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: pathlib.Path | str) -> None:
     """Ensure the directory exists on the FTP server."""
-    try:
-        ftp.mkd(directory)
-    except ftplib.error_perm:
-        pass  # its fine...
+    with contextlib.suppress(ftplib.error_perm):  # its fine...
+        ftp.mkd(pathlib.Path(directory).as_posix())
 
 
 K = TypeVar("K")
@@ -683,9 +679,7 @@ def project_entity(
     e_bot[..., :change_dim] += e[..., :change_dim]
 
     # Enforce constraints
-    e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
-
-    return e_bot
+    return clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
 
 
 def upgrade_to_sequence(x: X | Sequence[X]) -> Sequence[X]:
@@ -900,11 +894,10 @@ def get_expected_norm(
         # mean = scipy.stats.norm.ppf(1 - 1/d)
         # scale = scipy.stats.norm.ppf(1 - 1/d * 1/math.e) - mean
         # return scipy.stats.gumbel_r.mean(loc=mean, scale=scale)
-    elif math.isfinite(p):
+    if math.isfinite(p):
         exp_abs_norm_p = math.pow(2, p / 2) * math.gamma((p + 1) / 2) / math.sqrt(math.pi)
         return math.pow(exp_abs_norm_p * d, 1 / p)
-    else:
-        raise TypeError(f"norm not implemented for {type(p)}: {p}")
+    raise TypeError(f"norm not implemented for {type(p)}: {p}")
 
 
 class Bias(nn.Module):

@@ -104,10 +104,7 @@ def _iter_ranks(
     ranks_flat = _flatten(ranks)
     num_candidates_flat = _flatten(num_candidates)
     weights_flat: Mapping[Target, np.ndarray]
-    if weights is None:
-        weights_flat = {}
-    else:
-        weights_flat = _flatten(weights)
+    weights_flat = {} if weights is None else _flatten(weights)
     for rank_type in RANK_TYPES:
         # individual side
         for side in sides:
@@ -535,9 +532,7 @@ def sample_negatives(
     for side in [LABEL_HEAD, LABEL_TAIL]:
         this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
         other = TARGET_TO_KEY_LABELS[side]
-        for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
-            by=other,
-        ):
+        for _, group in id_df.merge(all_df, on=other, suffixes=["_eval", "_all"]).groupby(by=other):
             pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
             if len(pool) < num_samples:
                 logger.warning(

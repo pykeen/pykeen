@@ -216,7 +216,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
             return
         if self.target == 2:
             return
-        elif supports_sub_batching:
+        if supports_sub_batching:
             report = (
                 "This model supports sub-batching, but it also requires slicing,"
                 " which is not implemented for this model yet."

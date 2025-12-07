@@ -218,10 +218,7 @@ class MixtureAnchorSelection(AnchorSelection):
         # input normalization
         if selections_kwargs is None:
             selections_kwargs = [None] * n_selections
-        if ratios is None:
-            norm_ratios = construct_uniform_probability(n_selections)
-        else:
-            norm_ratios = normalize_ratios(ratios)
+        norm_ratios = construct_uniform_probability(n_selections) if ratios is None else normalize_ratios(ratios)
         # determine absolute number of anchors for each strategy
         num_anchors = get_absolute_split_sizes(n_total=self.num_anchors, ratios=norm_ratios)
         self.selections = [

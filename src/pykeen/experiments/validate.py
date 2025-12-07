@@ -67,15 +67,6 @@ def iterate_config_paths() -> Iterable[tuple[str, pathlib.Path, pathlib.Path]]:
             yield model_directory.name, config, path
 
 
-def _should_skip_because_type(x):
-    # don't worry about functions because they can't be specified by JSON.
-    # Could make a better mo
-    if inspect.isfunction(x):
-        return True
-    # later could extend for other non-JSON valid types
-    return False
-
-
 def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
     """Get a list of errors with a given experimental configuration JSON file."""
     configuration = load_configuration(path)
@@ -101,23 +92,23 @@ def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
         value = test_dict.get(key)
         if value is None:
             if not required:
-                return
+                return None
             errors.append(f"No key: {key}")
-            return
+            return None
         if normalize:
             value = normalize_string(value, suffix=suffix)
         if value not in choices:
             errors.append(f"Invalid {key}: {value}. Should be one of {sorted(choices)}")
-            return
+            return None
 
         if not check_kwargs:
-            return
+            return None
 
         kwargs_key = f"{key}_kwargs"
         kwargs_value = test_dict.get(kwargs_key)
         if kwargs_value is None:
             errors.append(f'Missing "{kwargs_key}" entry for {value}')
-            return
+            return None
 
         choice = choices[value]
         signature = inspect.signature(choice.__init__)
@@ -153,7 +144,10 @@ def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
 
             if name in _SKIP_NAMES or annotation in _SKIP_ANNOTATIONS:
                 continue
-            if parameter.default and _should_skip_because_type(parameter.default):
+            # don't worry about functions because they can't be specified by JSON.
+            # Could make a better mo
+            # later could extend for other non-JSON valid types
+            if parameter.default and inspect.isfunction(parameter.default):
                 continue
 
             if required_kwargs is not None and name not in required_kwargs:
@@ -167,7 +161,7 @@ def get_configuration_errors(path: str | pathlib.Path):  # noqa: C901
             errors.append(f"Missing {kwargs_key} for {choice}:\n{_x}")
 
         if extraneous_kwargs or missing_kwargs:
-            return
+            return None
 
         return value
 

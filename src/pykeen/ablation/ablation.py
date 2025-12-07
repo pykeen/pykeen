@@ -295,7 +295,7 @@ def prepare_ablation_from_path(
     :returns: pairs of output directories and HPO config paths inside those directories
     """
     directory = normalize_path(directory, *iter_unique_ids())
-    with open(path) as file:
+    with directory.open() as file:
         config = json.load(file)
     return prepare_ablation_from_config(config=config, directory=directory, save_artifacts=save_artifacts)
 

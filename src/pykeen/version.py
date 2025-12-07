@@ -1,6 +1,7 @@
 """Version information for PyKEEN."""
 
 import os
+import pathlib
 import sys
 from functools import lru_cache
 from subprocess import CalledProcessError, check_output  # noqa: S404
@@ -43,11 +44,11 @@ def get_git_branch() -> str | None:
 
 
 def _run(*args: str) -> str | None:
-    with open(os.devnull, "w") as devnull:
+    with pathlib.Path(os.devnull).open("w") as devnull:
         try:
             ret = check_output(  # noqa: S603,S607
                 args,  # noqa:S603
-                cwd=os.path.dirname(__file__),
+                cwd=pathlib.Path(__file__).parent,
                 stderr=devnull,
             )
         except (CalledProcessError, FileNotFoundError):
@@ -107,8 +108,8 @@ def env(file=None):
     """
     if _in_jupyter():
         return env_html()
-    else:
-        print(env_table(), file=file)  # noqa:T201
+    print(env_table(), file=file)  # noqa:T201
+    return None
 
 
 def _in_jupyter() -> bool:
