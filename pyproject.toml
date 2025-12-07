@@ -181,49 +181,125 @@ extend-include = ["*.ipynb"]
 [tool.ruff.lint]
 # See https://docs.astral.sh/ruff/rules
 extend-select = [
-    "F",    # pyflakes
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings
-    "C90",  # mccabe
-    "I",    # isort
-    "UP",   # pyupgrade
-    "D",    # pydocstyle
-    "B",    # bugbear
-    "S",    # bandit
-    "T20",  # print
-    "N",    # pep8 naming
-    "EXE",  # flake8-executable
-    "FA",   # flake8-future-annotations
-    "FLY",  # flynt
-    "FURB", # refurb
-    "INP",  # flake8-no-pep420
-    "ISC",  # flake8-implicit-str-concat
-    "PIE",  # flake8-pie
-    "Q",    # flake8-quotes
-    "SLOT", # flake8-slots
-    "T10",  # flake8-debugger
-    "NPY",  # numpy checks
-    "LOG",  # flake8-logging
-    "C4",   # flake8-comprehensions
-    # Framework-specific rules (not used in this project):
-    # "AIR",   # Airflow
-    # "ASYNC", # flake8-async
-    # "DJ",    # flake8-django
-    # "FAST",  # FastAPI
-    # "INT",   # flake8-gettext
-    # "YTT",   # flake8-2020 (not needed for Python >=3.10)
-    # Rules with violations:
-    # "ERA",   # eradicate commented out code; false positives for "mathy" comments
-    # "RUF",   # ruff rules
-    # "DOC",   # pydoclint (DOC), requires preview; supersedes darglint
+    # Airflow (AIR)
+    # "AIR",   # (framework-specific, not used in this project)
+    # eradicate (ERA)
+    # "ERA",   # commented out code; false positives for "mathy" comments
+    # FastAPI (FAST)
+    # "FAST",  # (framework-specific, not used in this project)
+    # flake8-2020 (YTT)
+    # "YTT",   # (not needed for Python >=3.10)
+    # flake8-annotations (ANN)
+    # "ANN",
+    # flake8-async (ASYNC)
+    # "ASYNC",
+    # flake8-bandit (S)
+    "S",
+    # flake8-blind-except (BLE)
+    # "BLE",
+    # flake8-boolean-trap (FBT)
+    # "FBT",
+    # flake8-bugbear (B)
+    "B",
+    # flake8-builtins (A)
+    "A",
+    # flake8-commas (COM)
+    # "COM",
+    # flake8-comprehensions (C4)
+    "C4",
+    # flake8-copyright (CPY)
+    # "CPY",
+    # flake8-datetimez (DTZ)
+    # "DTZ",
+    # flake8-debugger (T10)
+    "T10",
+    # flake8-django (DJ)
+    # "DJ",    # (framework-specific, not used in this project)
+    # flake8-errmsg (EM)
+    # "EM",
+    # flake8-executable (EXE)
+    "EXE",
+    # flake8-fixme (FIX)
+    # "FIX",
+    # flake8-future-annotations (FA)
+    "FA",
+    # flake8-gettext (INT)
+    # "INT",   # (framework-specific, not used in this project)
+    # flake8-implicit-str-concat (ISC)
+    "ISC",
+    # flake8-import-conventions (ICN)
+    # "ICN",
+    # flake8-logging (LOG)
+    "LOG",
+    # flake8-logging-format (G)
+    # "G",
+    # flake8-no-pep420 (INP)
+    "INP",
+    # flake8-pie (PIE)
+    "PIE",
+    # flake8-print (T20)
+    "T20",
+    # flake8-pyi (PYI)
+    # "PYI",
+    # flake8-pytest-style (PT)
+    "PT",
+    # flake8-quotes (Q)
+    "Q",
+    # flake8-raise (RSE)
+    "RSE",
+    # flake8-return (RET)
+    "RET",
+    # flake8-self (SLF)
+    # "SLF",
+    # flake8-simplify (SIM)
+    "SIM",
+    # flake8-slots (SLOT)
+    "SLOT",
+    # flake8-tidy-imports (TID)
+    # "TID",
+    # flake8-todos (TD)
+    # "TD",
+    # flake8-type-checking (TC)
+    # "TC",
+    # flake8-unused-arguments (ARG)
+    # "ARG",
+    # flake8-use-pathlib (PTH)
+    "PTH",
+    # flynt (FLY)
+    "FLY",
+    # isort (I)
+    "I",
+    # mccabe (C90)
+    "C90",
+    # NumPy-specific rules (NPY)
+    "NPY",
+    # pandas-vet (PD)
+    "PD",
+    # pep8-naming (N)
+    "N",
+    # Perflint (PERF)
     "PERF",
-    "PT",   # flake8-pytest-style
-    "RET",  # flake8-return (RET)
-    "PD",   # pandas-vet
-    "A",    # flake8-builtins 
-    "RSE",  # flake8-raise
-    "PTH",  # flake8-use-pathlib
-    "SIM",  # flake8-simplify
+    # pycodestyle (E, W)
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    # pydoclint (DOC)
+    # "DOC",   # requires preview; supersedes darglint
+    # pydocstyle (D)
+    "D",
+    # Pyflakes (F)
+    "F",
+    # pygrep-hooks (PGH)
+    # "PGH",
+    # Pylint (PL)
+    # "PL",
+    # pyupgrade (UP)
+    "UP",
+    # refurb (FURB)
+    "FURB",
+    # Ruff-specific rules (RUF)
+    # "RUF",
+    # tryceratops (TRY)
+    # "TRY",
 ]
 ignore = [
     "D105", # Missing docstring in magic method
