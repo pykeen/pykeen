@@ -119,7 +119,7 @@ by keeping the tensor in "dense" shape ``(batch_size, num_entities)``.
 Second, filtering during evaluation has to be correct, and is crucial for reproducing results
 from the filtered setting. For evaluation it makes sense to use all information we have to get
 as solid evaluation results as possible.
-"""
+"""  # noqa: D205, E501
 
 import math
 from abc import abstractmethod
