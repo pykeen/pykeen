@@ -286,11 +286,11 @@ def lit_pipeline(
 @options.inverse_triples_option
 @model_resolver.get_option("-m", "--model", default="mure")
 @loss_resolver.get_option("-l", "--loss", default="bcewithlogits")
-@options.batch_size_option  # type:ignore
+@options.batch_size_option
 @click.option("--embedding-dim", type=int, default=128)
 @click.option("-b", "--batch-size", type=int, default=128)
 @click.option("--mixed-precision", is_flag=True)
-@options.number_epochs_option  # type:ignore
+@options.number_epochs_option
 def _main(
     training_loop: HintOrType[LitModule],
     dataset: HintOrType[Dataset],

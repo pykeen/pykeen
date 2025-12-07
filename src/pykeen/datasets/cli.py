@@ -441,7 +441,7 @@ def degree(
         value_vars=["mean", "variance", "skewness", "kurtosis"],
         var_name="statistic",
     )
-    grid_1: sns.FacetGrid = sns.relplot(  # type: ignore
+    grid_1: sns.FacetGrid = sns.relplot(  # type: ignore[name-defined]
         data=df,
         hue="dataset",
         x="num_triples",
@@ -478,7 +478,7 @@ def degree(
         index=["dataset", "split", "num_triples"], columns="target", values="value"
     )
     df_2["difference"] = df_2["head"] - df_2["tail"]
-    grid_2: sns.FacetGrid = sns.relplot(  # type: ignore
+    grid_2: sns.FacetGrid = sns.relplot(  # type: ignore[name-defined]
         data=df_2,
         hue="dataset",
         x="num_triples",

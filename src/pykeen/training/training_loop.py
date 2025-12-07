@@ -764,13 +764,10 @@ class TrainingLoop(ABC, Generic[BatchType]):
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints and checkpoint_path is not None:
+                assert checkpoint_frequency is not None
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 # MyPy overrides are because you should
-                if (
-                    minutes_since_last_checkpoint >= checkpoint_frequency  # type: ignore
-                    or self._should_stop
-                    or epoch == num_epochs
-                ):
+                if minutes_since_last_checkpoint >= checkpoint_frequency or self._should_stop or epoch == num_epochs:
                     # When there wasn't a best epoch the checkpoint path should be None
                     if last_best_epoch is not None and best_epoch_model_file_path is not None:
                         best_epoch_model_checkpoint_file_path = best_epoch_model_file_path
@@ -779,7 +776,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
                         stopper=stopper,
                         best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
                         triples_factory=triples_factory,
-                    )  # type: ignore
+                    )
                     last_checkpoint = time.time()
 
             if self._should_stop:
