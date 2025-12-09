@@ -1583,13 +1583,14 @@ class MedianRank(RankBasedMetric):
 
         return weighted_median(a=ranks, weights=weights).item()
 
+    # docstr-coverage: inherited
     def expected_value(
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:
+    ) -> float:  # noqa: D102
         # weighted case is equivalent to Subset Sum Problem (~NP complete)
         if weights is not None:
             return super().expected_value(
@@ -1603,9 +1604,10 @@ class MedianRank(RankBasedMetric):
         # We slice [:-1] because the array goes up to x=k_max, and P(M > k_max) is 0.
         return np.sum(sf[:-1])
 
+    # docstr-coverage: inherited
     def variance(
         self, num_candidates: np.ndarray, num_samples: int | None = None, weights: np.ndarray | None = None, **kwargs
-    ) -> float:
+    ) -> float:  # noqa: D102
         # weighted case is equivalent to Subset Sum Problem (~NP complete)
         if weights is not None:
             return super().variance(num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs)
