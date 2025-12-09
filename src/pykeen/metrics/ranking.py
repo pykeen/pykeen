@@ -1493,9 +1493,9 @@ class StandardDeviation(RankBasedMetric):
 
     .. math::
 
-        \\sigma = \\sqrt{\\frac{\\sum_{i=1}^{n} w_i (r_i - \\bar{r})^2}{\\sum_{j=1}^{n} w_j}}
+        \sigma = \sqrt{\frac{\sum_{i=1}^{n} w_i (r_i - \bar{r})^2}{\sum_{j=1}^{n} w_j}}
 
-    where $\\bar{r} = \\frac{\\sum_{i=1}^{n} w_i r_i}{\\sum_{j=1}^{n} w_j}$ is the weighted mean.
+    where $\bar{r} = \frac{\sum_{i=1}^{n} w_i r_i}{\sum_{j=1}^{n} w_j}$ is the weighted mean.
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
@@ -1528,9 +1528,9 @@ class Variance(RankBasedMetric):
 
     .. math::
 
-        \\sigma^2 = \\frac{\\sum_{i=1}^{n} w_i (r_i - \\bar{r})^2}{\\sum_{j=1}^{n} w_j}
+        \sigma^2 = \frac{\sum_{i=1}^{n} w_i (r_i - \bar{r})^2}{\sum_{j=1}^{n} w_j}
 
-    where $\\bar{r} = \\frac{\\sum_{i=1}^{n} w_i r_i}{\\sum_{j=1}^{n} w_j}$ is the weighted mean.
+    where $\bar{r} = \frac{\sum_{i=1}^{n} w_i r_i}{\sum_{j=1}^{n} w_j}$ is the weighted mean.
 
     .. note::
         This computes the variance of the **observed weighted sample**, not the variance of the weighted mean
