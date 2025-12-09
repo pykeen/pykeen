@@ -2242,7 +2242,6 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_increasing(self):
         """Test correct increasing annotation."""
-        # TODO: this does not necessarily hold for dispersion metrics (std, var)
         x, y = (
             self.instance(ranks=ranks, num_candidates=self.num_candidates)
             for ranks in [
@@ -2331,7 +2330,6 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_weights_direction(self):
         """Test monotonicity of weighting."""
-        # TODO: this does not necessarily hold for dispersion metrics (std, var)
         if not self.instance.supports_weights:
             raise SkipTest(f"{self.instance} does not support weights")
 

@@ -146,17 +146,11 @@ class StandardDeviationTests(cases.RankBasedMetricTestCase):
 
     cls = pykeen.metrics.ranking.StandardDeviation
 
-    def test_weights_direction(self) -> None:
-        raise unittest.SkipTest("Test does not make sense to dispersion metrics")
-
 
 class VarianceTests(cases.RankBasedMetricTestCase):
     """Tests for rank variance."""
 
     cls = pykeen.metrics.ranking.Variance
-
-    def test_weights_direction(self) -> None:
-        raise unittest.SkipTest("Test does not make sense to dispersion metrics")
 
 
 class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.metrics.ranking.RankBasedMetric]):
