@@ -1499,53 +1499,68 @@ def _compute_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
     return 1.0 - cdf_median
 
 
-def median_expected_value(num_candidates: np.ndarray) -> float:
-    """
-    Compute the Expected Value of the median of discrete uniform variables.
-
-    :param num_candidates:
-        Array of k_i values.
-
-    :return:
-        E[Median]
-    """
-    # Get P(M > x) for x = 0, ..., k_max
-    sf = _compute_median_survival_function(num_candidates)
-
-    # For non-negative integer variables: E[X] = Sum_{x=0}^{inf} P(X > x)
-    # We slice [:-1] because the array goes up to x=k_max, and P(M > k_max) is 0.
-    return np.sum(sf[:-1])
-
-
-def median_variance(num_candidates: np.ndarray) -> float:
-    """
-    Compute the Variance of the median of discrete uniform variables.
-
-    :param num_candidates:
-        Array of k_i values.
-
-    :return:
-        Var(Median)
-    """
-    # Get P(M > x)
-    sf = _compute_median_survival_function(num_candidates)
-
-    # Calculate E[M]
-    # Sum P(M > x)
-    exp_val = np.sum(sf[:-1])
-
-    # Calculate E[M^2]
-    # Formula: E[X^2] = Sum_{x=0}^{inf} (2x + 1) * P(X > x)
-    x_indices = np.arange(len(sf) - 1)
-    exp_sq = np.sum((2 * x_indices + 1) * sf[:-1])
-
-    # Var(M) = E[M^2] - (E[M])^2
-    return exp_sq - exp_val**2
-
-
 @parse_docdata
 class MedianRank(RankBasedMetric):
-    """The median rank.
+    r"""The median rank.
+
+    The median rank is a robust measure of central tendency that is less sensitive to outliers than the arithmetic
+    mean. For a set of ranks $\mathcal{I}$, the median is the middle value when ranks are sorted.
+
+    .. warning::
+
+        Like other rank-based metrics, the median rank is dependent on the number of candidates. A median rank of 10
+        has different interpretations for a candidate set size of 100 versus 1,000,000.
+
+    **Weighted Median**
+
+    When weights $w_1, \ldots, w_n$ are provided, the weighted median is computed as the value $m$ such that the
+    cumulative weight of all ranks less than or equal to $m$ is at least half of the total weight, and the cumulative
+    weight of all ranks greater than or equal to $m$ is also at least half of the total weight. Formally, the weighted
+    median $m$ satisfies:
+
+    .. math::
+
+        \sum_{r_i \leq m} w_i \geq \frac{1}{2} \sum_j w_j \quad
+            \text{and} \quad \sum_{r_i \geq m} w_i \geq \frac{1}{2} \sum_j w_j
+
+    The weighted median generalizes the standard median: when all weights are equal, it reduces to the unweighted
+    median. The implementation uses PyKEEN's :func:`weighted_median` utility function.
+
+    **Expected Value (Unweighted Case)**
+
+    For the unweighted case, the expected value $\mathbb{E}[\text{Median}]$ can be computed exactly using dynamic
+    programming. The computation uses the survival function $P(\text{Median} > x)$ and the identity:
+
+    .. math::
+
+        \mathbb{E}[\text{Median}] = \sum_{x=0}^{\infty} P(\text{Median} > x)
+
+    The survival function is derived by modeling the median as the order statistic of discrete uniform random
+    variables $r_i \sim \mathcal{U}(1, N_i)$ and computing the distribution via dynamic programming with
+    complexity $O(K \cdot n)$, where $K = \max_i N_i$ and $n$ is the number of ranks.
+
+    **Variance (Unweighted Case)**
+
+    The variance $\mathbb{V}[\text{Median}]$ is similarly computed using:
+
+    .. math::
+
+        \mathbb{V}[\text{Median}] = \mathbb{E}[\text{Median}^2] - \mathbb{E}[\text{Median}]^2
+
+    where $\mathbb{E}[\text{Median}^2]$ is obtained from:
+
+    .. math::
+
+        \mathbb{E}[X^2] = \sum_{x=0}^{\infty} (2x + 1) \cdot P(X > x)
+
+    **Weighted Case**
+
+    .. warning::
+
+        Computing the expected value and variance for the weighted median is computationally intractable, as it
+        reduces to a variant of the `Subset Sum Problem <https://en.wikipedia.org/wiki/Subset_sum_problem>`_
+        (NP-complete). Therefore, when weights are provided, the metric falls back to **numeric estimation via
+        sampling**, which may be slow and less accurate.
 
     ---
     link: https://arxiv.org/abs/2203.07544
@@ -1556,6 +1571,8 @@ class MedianRank(RankBasedMetric):
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
     supports_weights = True
+    closed_expectation: ClassVar[bool] = True
+    closed_variance: ClassVar[bool] = True
 
     # docstr-coverage: inherited
     def __call__(
@@ -1578,7 +1595,13 @@ class MedianRank(RankBasedMetric):
             return super().expected_value(
                 num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
             )
-        return median_expected_value(num_candidates=num_candidates)
+
+        # Get P(M > x) for x = 0, ..., k_max
+        sf = _compute_median_survival_function(num_candidates)
+
+        # For non-negative integer variables: E[X] = Sum_{x=0}^{inf} P(X > x)
+        # We slice [:-1] because the array goes up to x=k_max, and P(M > k_max) is 0.
+        return np.sum(sf[:-1])
 
     def variance(
         self, num_candidates: np.ndarray, num_samples: int | None = None, weights: np.ndarray | None = None, **kwargs
@@ -1586,7 +1609,21 @@ class MedianRank(RankBasedMetric):
         # weighted case is equivalent to Subset Sum Problem (~NP complete)
         if weights is not None:
             return super().variance(num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs)
-        return median_variance(num_candidates=num_candidates)
+
+        # Get P(M > x)
+        sf = _compute_median_survival_function(num_candidates)
+
+        # Calculate E[M]
+        # Sum P(M > x)
+        exp_val = np.sum(sf[:-1])
+
+        # Calculate E[M^2]
+        # Formula: E[X^2] = Sum_{x=0}^{inf} (2x + 1) * P(X > x)
+        x_indices = np.arange(len(sf) - 1)
+        exp_sq = np.sum((2 * x_indices + 1) * sf[:-1])
+
+        # Var(M) = E[M^2] - (E[M])^2
+        return exp_sq - exp_val**2
 
 
 @parse_docdata
