@@ -951,19 +951,15 @@ def _compute_log_expected_power(k_values: np.ndarray, powers: np.ndarray, memory
 
     Does so efficiently by using sorted batching and vectorization.
 
-    Parameters
-    ----------
-    k_values : array_like, shape (n,)
+    :param k_values: shape: (n,)
         Upper bounds.
-    powers : array_like, shape (n,)
+    :param powers: shape: (n,)
         Exponents.
-    memory_limit_elements : int
+    :param memory_limit_elements:
         Max number of float elements in the temporary matrix buffer.
         10^7 elements ~ 80MB RAM.
 
-    Returns
-    -------
-    float
+    :return:
         The scalar log-value.
     """
     # 1. Sort inputs by k.
