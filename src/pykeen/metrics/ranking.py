@@ -1440,6 +1440,109 @@ class ZGeometricMeanRank(ZMetric):
     supports_weights: ClassVar[bool] = GeometricMeanRank.supports_weights
 
 
+def _compute_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
+    """
+    Compute P(Median > x) for x in range [0, max(k)].
+
+    This function uses dynamic programming to calculate the cumulative distribution
+    of the count of variables <= x, thereby deriving the median's distribution.
+
+    Memory complexity: O(K * n), where K is the maximum value of k.
+
+    :param num_candidates: shape: (n,)
+        The number of candidates.
+
+    :return: shape: (K,)
+        The survival function. $K$ denotes the maximum number of candidates.
+    """
+    ks = np.array(num_candidates, dtype=int)
+    n = len(ks)
+    k_max = ks.max()
+
+    # We target the index n // 2.
+    # For n=3 (odd), index 1 (2nd smallest).
+    # For n=4 (even), index 2 (3rd smallest, i.e., the 'upper' median).
+    target_threshold = n // 2
+
+    # Grid of values x = 0, 1, ..., k_max
+    # We compute probabilities up to k_max.
+    x_grid = np.arange(k_max + 1)
+
+    # Matrix of individual probabilities: P(X_i <= x)
+    # Shape: (k_max + 1, n)
+    # P(X_i <= x) = min(1, x / k_i)
+    p_matrix = np.minimum(1.0, x_grid[:, None] / ks[None, :])
+
+    # DP State: dp[v, c] = Probability that exactly 'c' variables are <= v
+    # Initialize: 0 variables <= v has probability 1 initially
+    dp = np.zeros((len(x_grid), n + 1))
+    dp[:, 0] = 1.0
+
+    # Vectorized Poisson-Binomial recurrence
+    for i in range(n):
+        p = p_matrix[:, i : i + 1]  # Column vector for broadcasting
+
+        # New DP state based on convolution with Bernoulli(p)
+        # dp[c] = dp[c]*(1-p) + dp[c-1]*p
+        term_fail = dp * (1 - p)
+
+        term_success = np.zeros_like(dp)
+        term_success[:, 1:] = dp[:, :-1] * p
+
+        dp = term_fail + term_success
+
+    # The median is <= x if the count of variables (<= x) is > target_threshold.
+    # CDF(x) = P(Median <= x) = Sum_{c=target+1}^{n} P(Count == c)
+    cdf_median = dp[:, target_threshold + 1 :].sum(axis=1)
+
+    # Survival Function: P(Median > x) = 1 - CDF(x)
+    return 1.0 - cdf_median
+
+
+def median_expected_value(num_candidates: np.ndarray) -> float:
+    """
+    Compute the Expected Value of the median of discrete uniform variables.
+
+    :param num_candidates:
+        Array of k_i values.
+
+    :return:
+        E[Median]
+    """
+    # Get P(M > x) for x = 0, ..., k_max
+    sf = _compute_median_survival_function(num_candidates)
+
+    # For non-negative integer variables: E[X] = Sum_{x=0}^{inf} P(X > x)
+    # We slice [:-1] because the array goes up to x=k_max, and P(M > k_max) is 0.
+    return np.sum(sf[:-1])
+
+
+def median_variance(num_candidates: np.ndarray) -> float:
+    """
+    Compute the Variance of the median of discrete uniform variables.
+
+    :param num_candidates:
+        Array of k_i values.
+
+    :return:
+        Var(Median)
+    """
+    # Get P(M > x)
+    sf = _compute_median_survival_function(num_candidates)
+
+    # Calculate E[M]
+    # Sum P(M > x)
+    exp_val = np.sum(sf[:-1])
+
+    # Calculate E[M^2]
+    # Formula: E[X^2] = Sum_{x=0}^{inf} (2x + 1) * P(X > x)
+    x_indices = np.arange(len(sf) - 1)
+    exp_sq = np.sum((2 * x_indices + 1) * sf[:-1])
+
+    # Var(M) = E[M^2] - (E[M])^2
+    return exp_sq - exp_val**2
+
+
 @parse_docdata
 class MedianRank(RankBasedMetric):
     """The median rank.
@@ -1462,6 +1565,28 @@ class MedianRank(RankBasedMetric):
             return np.median(ranks).item()
 
         return weighted_median(a=ranks, weights=weights).item()
+
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: int | None = None,
+        weights: np.ndarray | None = None,
+        **kwargs,
+    ) -> float:
+        # weighted case is equivalent to Subset Sum Problem (~NP complete)
+        if weights is not None:
+            return super().expected_value(
+                num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
+            )
+        return median_expected_value(num_candidates=num_candidates)
+
+    def variance(
+        self, num_candidates: np.ndarray, num_samples: int | None = None, weights: np.ndarray | None = None, **kwargs
+    ) -> float:
+        # weighted case is equivalent to Subset Sum Problem (~NP complete)
+        if weights is not None:
+            return super().variance(num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs)
+        return median_variance(num_candidates=num_candidates)
 
 
 @parse_docdata
