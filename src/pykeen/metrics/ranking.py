@@ -214,8 +214,9 @@ class RankBasedMetric(Metric):
 
     .. note::
 
-        **Weight Interpretation**: When metrics support weights
-        (``supports_weights=True``), PyKEEN interprets weights as **scaling factors**
+        **Weight Interpretation**: When metrics support weights (i.e., when
+        :data:`supports_weights` is annotated on the metric class as true),
+        PyKEEN interprets weights as **scaling factors**
         (arbitrary positive scalar weights), not as repeat counts (number of independent
         observations). This matches the semantics of :func:`numpy.average`.
 
@@ -683,8 +684,8 @@ class ZMetric(DerivedRankBasedMetric):
           yielding $\mathbb{V}[M] \propto \sum w_i^2 \mathbb{V}[x_i]$ (quadratic in
           weights)
 
-        Since z-scores depend on the variance via $Z = (M - \mathbb{E}[M]) /
-        \sqrt{\mathbb{V}[M]}$, the different variance formulas result in different
+        Since z-scores depend on the variance via $Z = \frac{M - \mathbb{E}[M]}{
+        \sqrt{\mathbb{V}[M]}}$, the different variance formulas result in different
         z-scores.
     """
 
