@@ -12,7 +12,6 @@ from scipy.stats import bootstrap
 import pykeen.metrics.ranking
 from pykeen.metrics.ranking import generalized_harmonic_numbers, harmonic_variances
 from pykeen.metrics.utils import (
-    stable_product,
     weighted_harmonic_mean,
     weighted_mean_expectation,
     weighted_mean_variance,
@@ -249,17 +248,3 @@ class WeightedTests(unittest.TestCase):
     def test_weighted_mean_variance(self):
         """Test weighted mean variance."""
         self._test_weighted_mean_moment(closed_form=weighted_mean_variance, statistic=numpy.var, key="scale")
-
-
-def test_stable_product():
-    """Test stable_product."""
-    generator = numpy.random.default_rng(seed=0)
-    array = generator.random(size=(13,))
-
-    # positive values only
-    numpy.testing.assert_almost_equal(stable_product(array), numpy.prod(array))
-    numpy.testing.assert_almost_equal(stable_product(np.log(array), is_log=True), numpy.prod(array))
-
-    # positive and negative values
-    array = 2 * array - 1
-    numpy.testing.assert_almost_equal(stable_product(array), numpy.prod(array))

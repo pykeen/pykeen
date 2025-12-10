@@ -13,7 +13,6 @@ from ..utils import ExtraReprMixin, camel_to_snake
 __all__ = [
     "Metric",
     "ValueRange",
-    "stable_product",
     "weighted_mean_expectation",
     "weighted_mean_variance",
     "weighted_harmonic_mean",
