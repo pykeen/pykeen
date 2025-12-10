@@ -1560,6 +1560,10 @@ class HitsAtK(RankBasedMetric):
         \mathbb{V}[Hits@k] &= \mathbb{V}\left[\frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]\right] \\
                            &= \frac{1}{n^2} \sum \limits_{i=1}^{n} \mathbb{V}\left[\mathbb{I}[r_i \leq k]\right] \\
                            &= \frac{1}{n^2} \sum \limits_{i=1}^{n} p_i(1 - p_i)
+
+    ---
+    description: The relative frequency of ranks not larger than a given k.
+    link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k
     """
 
     name = "Hits @ K"
