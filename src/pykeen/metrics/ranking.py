@@ -96,14 +96,12 @@ from scipy import stats
 from .utils import (
     Metric,
     ValueRange,
-    stable_product,
     weighted_harmonic_mean,
     weighted_mean_expectation,
     weighted_mean_variance,
     weighted_median,
 )
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
-from ..utils import logcumsumexp
 
 __all__ = [
     "rank_based_metric_resolver",
@@ -1349,7 +1347,7 @@ class InverseMedianRank(RankBasedMetric):
     def __call__(
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:  # noqa: D102
-        return np.reciprocal(weighted_median(a=ranks, weights=weights)).item()
+        return np.reciprocal(weighted_median(a=ranks, weights=weights), dtype=float).item()
 
 
 @parse_docdata
