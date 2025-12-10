@@ -210,7 +210,22 @@ class NoClosedFormError(ValueError):
 
 
 class RankBasedMetric(Metric):
-    """A base class for rank-based metrics."""
+    r"""A base class for rank-based metrics.
+
+    .. note::
+        **Weight Interpretation**: When metrics support weights (``supports_weights=True``), PyKEEN interprets
+        weights as **scaling factors** (arbitrary positive scalar weights), not as repeat counts (number of
+        independent observations). This matches the semantics of :func:`numpy.average`.
+
+        Specifically, for a metric value $M$ computed from weighted ranks:
+
+        - The expected value $\mathbb{E}[M]$ is identical for both interpretations
+        - The variance $\mathbb{V}[M]$ differs: scaling factors use $\sum w_i^2 \mathbb{V}[x_i]$ (quadratic),
+          while repeat counts would use $\sum w_i \mathbb{V}[x_i]$ (linear)
+
+        Consequently, ``metric(ranks, weights=w)`` may differ from ``metric(np.repeat(ranks, w))`` for
+        variance-normalized derived metrics (e.g., Z-metrics), even though the base metric values are identical.
+    """
 
     # rank based metrics do not need binarized scores
     binarize: ClassVar[bool] = False
@@ -644,7 +659,21 @@ class ZMetric(DerivedRankBasedMetric):
         sign of the result such that a larger z-value always corresponds to a better result irrespective of the base
         metric's direction.
 
-    .. warning:: This requires a closed-form solution to the expected value and the variance
+    .. warning::
+        This requires a closed-form solution to the expected value and the variance.
+
+    .. warning::
+        **Weights and Coherence**: When weights are used, the coherence property does not hold. That is,
+        ``metric(ranks, weights=w)`` will **not** equal ``metric(np.repeat(ranks, w), weights=None)`` even though
+        the base metric values are identical. This is because variance calculations differ between these scenarios:
+
+        - **Repeated ranks**: Treats each repeated entry as an independent sample, yielding
+          $\mathbb{V}[M] \propto \sum w_i \mathbb{V}[x_i]$ (linear in weights)
+        - **Weighted ranks**: Treats weights as scaling factors for a single sample, yielding
+          $\mathbb{V}[M] \propto \sum w_i^2 \mathbb{V}[x_i]$ (quadratic in weights)
+
+        Since z-scores depend on the variance via $Z = (M - \mathbb{E}[M]) / \sqrt{\mathbb{V}[M]}$, the different
+        variance formulas result in different z-scores.
     """
 
     #: Z-adjusted metrics are formulated to be increasing
@@ -809,6 +838,28 @@ class ArithmeticMeanRank(RankBasedMetric):
                        &= \frac{1}{n^2} \sum \limits_{i=1}^{n} \mathbb{V}[r_i] \\
                        &= \frac{1}{n^2} \sum \limits_{i=1}^{n} \frac{N_i^2 - 1}{12} \\
                        &= \frac{1}{12 n^2} \cdot \left(-n + \sum \limits_{i=1}^{n} N_i \right)
+
+    **Weighted Case**
+
+    When weights $w_1, \ldots, w_n$ are provided, the weighted mean rank and its moments are:
+
+    .. math::
+
+        \text{Weighted MR} = \frac{\sum_{i=1}^{n} w_i r_i}{\sum_{j=1}^{n} w_j}
+
+    The expected value is:
+
+    .. math::
+
+        \mathbb{E}[\text{Weighted MR}] = \frac{\sum_{i=1}^{n} w_i \mathbb{E}[r_i]}{\sum_{j=1}^{n} w_j}
+            = \frac{\sum_{i=1}^{n} w_i \frac{N_i + 1}{2}}{\sum_{j=1}^{n} w_j}
+
+    The variance uses the quadratic weight scaling (from $\mathbb{V}[c \cdot X] = c^2 \cdot \mathbb{V}[X]$):
+
+    .. math::
+
+        \mathbb{V}[\text{Weighted MR}] = \frac{\sum_{i=1}^{n} w_i^2 \mathbb{V}[r_i]}{\left(\sum_{j=1}^{n} w_j\right)^2}
+            = \frac{\sum_{i=1}^{n} w_i^2 \frac{N_i^2 - 1}{12}}{\left(\sum_{j=1}^{n} w_j\right)^2}
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank
