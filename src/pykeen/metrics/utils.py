@@ -171,23 +171,27 @@ def weighted_mean_expectation(individual: np.ndarray, weights: np.ndarray | None
 def weighted_mean_variance(individual: np.ndarray, weights: np.ndarray | None) -> float:
     r"""Calculate the variance of a weighted mean of variables with given individual variances.
 
-    For independent random variables $x_1, \ldots, x_n$ with individual variances $\mathbb{V}[x_i]$ and arbitrary
-    scalar weights $w_1, \ldots, w_n$, the variance of the weighted mean is:
+    For independent random variables $x_1, \ldots, x_n$ with individual variances
+    $\mathbb{V}[x_i]$ and arbitrary scalar weights $w_1, \ldots, w_n$, the variance of
+    the weighted mean is:
 
     .. math::
 
         \mathbb{V}\left[\frac{\sum \limits_{i=1}^{n} w_i x_i}{\sum \limits_{j=1}^{n} w_j}\right]
             = \frac{\sum \limits_{i=1}^{n} w_i^2 \mathbb{V}\left[x_i\right]}{\left(\sum \limits_{j=1}^{n} w_j\right)^2}
 
-    The $w_i^2$ term arises from the variance scaling property: $\mathbb{V}[c \cdot X] = c^2 \cdot \mathbb{V}[X]$.
+    The $w_i^2$ term arises from the variance scaling property: $\mathbb{V}[c \cdot X] =
+    c^2 \cdot \mathbb{V}[X]$.
 
-    When $w_i = \frac{1}{n}$ (uniform weights, used if no explicit weights are given), the weights are normalized
-    such that $\sum w_i = 1$.
+    When $w_i = \frac{1}{n}$ (uniform weights, used if no explicit weights are given),
+    the weights are normalized such that $\sum w_i = 1$.
 
     .. note::
-        This implements **scaling factor semantics**: each variable is sampled once and scaled by its weight.
-        This differs from **repeat count semantics** where weights would represent the number of independent
-        samples, which would yield a linear (not quadratic) dependence on weights.
+
+        This implements **scaling factor semantics**: each variable is sampled once and
+        scaled by its weight. This differs from **repeat count semantics** where weights
+        would represent the number of independent samples, which would yield a linear
+        (not quadratic) dependence on weights.
 
     :param individual: the individual variables' variances, $\mathbb{V}[x_i]$
     :param weights: the individual variables' scalar weights (not repeat counts)
