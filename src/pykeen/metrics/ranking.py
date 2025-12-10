@@ -815,24 +815,27 @@ class ReindexedMetric(DerivedRankBasedMetric):
 
 @parse_docdata
 class ArithmeticMeanRank(RankBasedMetric):
-    r"""The (arithmetic) mean rank.
+    r"""
+    The (arithmetic) mean rank.
 
-    The mean rank (MR) computes the arithmetic mean over all individual ranks.
-    Denoting the set of individual ranks as $\mathcal{I}$, it is given as:
+    The mean rank (MR) computes the arithmetic mean over all individual ranks. Denoting
+    the set of individual ranks as $\mathcal{I}$, it is given as:
 
     .. math::
 
         MR =\frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} r
 
-    It has the advantage over hits @ k that it is sensitive to any model performance changes, not only what occurs
-    under a certain cutoff and therefore reflects average performance. With PyKEEN's standard 1-based indexing,
-    the mean rank lies on the interval $[1, \infty)$ where lower is better.
+    It has the advantage over hits @ k that it is sensitive to any model performance
+    changes, not only what occurs under a certain cutoff and therefore reflects average
+    performance. With PyKEEN's standard 1-based indexing, the mean rank lies on the
+    interval $[1, \infty)$ where lower is better.
 
     .. warning::
 
-        While the arithmetic mean rank is interpretable, the mean rank is dependent on the number of candidates.
-        A mean rank of 10 might indicate strong performance for a candidate set size of 1,000,000,
-        but incredibly poor performance for a candidate set size of 20.
+        While the arithmetic mean rank is interpretable, the mean rank is dependent on
+        the number of candidates. A mean rank of 10 might indicate strong performance
+        for a candidate set size of 1,000,000, but incredibly poor performance for a
+        candidate set size of 20.
 
     For the expected value, we have
 
@@ -853,7 +856,8 @@ class ArithmeticMeanRank(RankBasedMetric):
 
     **Weighted Case**
 
-    When weights $w_1, \ldots, w_n$ are provided, the weighted mean rank and its moments are:
+    When weights $w_1, \ldots, w_n$ are provided, the weighted mean rank and its moments
+    are:
 
     .. math::
 
@@ -866,7 +870,8 @@ class ArithmeticMeanRank(RankBasedMetric):
         \mathbb{E}[\text{Weighted MR}] = \frac{\sum_{i=1}^{n} w_i \mathbb{E}[r_i]}{\sum_{j=1}^{n} w_j}
             = \frac{\sum_{i=1}^{n} w_i \frac{N_i + 1}{2}}{\sum_{j=1}^{n} w_j}
 
-    The variance uses the quadratic weight scaling (from $\mathbb{V}[c \cdot X] = c^2 \cdot \mathbb{V}[X]$):
+    The variance uses the quadratic weight scaling (from $\mathbb{V}[c \cdot X] = c^2
+    \cdot \mathbb{V}[X]$):
 
     .. math::
 
