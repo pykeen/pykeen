@@ -92,18 +92,17 @@ import numpy as np
 from class_resolver import ClassResolver, HintOrType
 from docdata import parse_docdata
 from scipy import stats
+from scipy.special import expm1
 
 from .utils import (
     Metric,
     ValueRange,
-    stable_product,
     weighted_harmonic_mean,
     weighted_mean_expectation,
     weighted_mean_variance,
     weighted_median,
 )
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
-from ..utils import logcumsumexp
 
 __all__ = [
     "rank_based_metric_resolver",
@@ -210,7 +209,22 @@ class NoClosedFormError(ValueError):
 
 
 class RankBasedMetric(Metric):
-    """A base class for rank-based metrics."""
+    r"""A base class for rank-based metrics.
+
+    .. note::
+        **Weight Interpretation**: When metrics support weights (``supports_weights=True``), PyKEEN interprets
+        weights as **scaling factors** (arbitrary positive scalar weights), not as repeat counts (number of
+        independent observations). This matches the semantics of :func:`numpy.average`.
+
+        Specifically, for a metric value $M$ computed from weighted ranks:
+
+        - The expected value $\\mathbb{E}[M]$ is identical for both interpretations
+        - The variance $\\mathbb{V}[M]$ differs: scaling factors use $\\sum w_i^2 \\mathbb{V}[x_i]$ (quadratic),
+          while repeat counts would use $\\sum w_i \\mathbb{V}[x_i]$ (linear)
+
+        Consequently, ``metric(ranks, weights=w)`` may differ from ``metric(np.repeat(ranks, w))`` for
+        variance-normalized derived metrics (e.g., Z-metrics), even though the base metric values are identical.
+    """
 
     # rank based metrics do not need binarized scores
     binarize: ClassVar[bool] = False
@@ -644,8 +658,26 @@ class ZMetric(DerivedRankBasedMetric):
         sign of the result such that a larger z-value always corresponds to a better result irrespective of the base
         metric's direction.
 
-    .. warning:: This requires a closed-form solution to the expected value and the variance
+    .. warning::
+        This requires a closed-form solution to the expected value and the variance.
+
+    .. warning::
+        **Weights and Coherence**: When weights are used, the coherence property does not hold. That is,
+        ``metric(ranks, weights=w)`` will **not** equal ``metric(np.repeat(ranks, w), weights=None)`` even though
+        the base metric values are identical. This is because variance calculations differ between these scenarios:
+
+        - **Repeated ranks**: Treats each repeated entry as an independent sample, yielding
+          $\mathbb{V}[M] \propto \sum w_i \mathbb{V}[x_i]$ (linear in weights)
+        - **Weighted ranks**: Treats weights as scaling factors for a single sample, yielding
+          $\mathbb{V}[M] \propto \sum w_i^2 \mathbb{V}[x_i]$ (quadratic in weights)
+
+        Since z-scores depend on the variance via $Z = (M - \mathbb{E}[M]) / \sqrt{\mathbb{V}[M]}$, the different
+        variance formulas result in different z-scores.
     """
+
+    # TODO:
+    #   Is the interpretation of the z-metric what we want?
+    #   Or would sampling weights be more appropriate?
 
     #: Z-adjusted metrics are formulated to be increasing
     increasing = True
@@ -810,6 +842,28 @@ class ArithmeticMeanRank(RankBasedMetric):
                        &= \frac{1}{n^2} \sum \limits_{i=1}^{n} \frac{N_i^2 - 1}{12} \\
                        &= \frac{1}{12 n^2} \cdot \left(-n + \sum \limits_{i=1}^{n} N_i \right)
 
+    **Weighted Case**
+
+    When weights $w_1, \ldots, w_n$ are provided, the weighted mean rank and its moments are:
+
+    .. math::
+
+        \text{Weighted MR} = \frac{\sum_{i=1}^{n} w_i r_i}{\sum_{j=1}^{n} w_j}
+
+    The expected value is:
+
+    .. math::
+
+        \mathbb{E}[\text{Weighted MR}] = \frac{\sum_{i=1}^{n} w_i \mathbb{E}[r_i]}{\sum_{j=1}^{n} w_j}
+            = \frac{\sum_{i=1}^{n} w_i \frac{N_i + 1}{2}}{\sum_{j=1}^{n} w_j}
+
+    The variance uses the quadratic weight scaling (from $\mathbb{V}[c \cdot X] = c^2 \cdot \mathbb{V}[X]$):
+
+    .. math::
+
+        \mathbb{V}[\text{Weighted MR}] = \frac{\sum_{i=1}^{n} w_i^2 \mathbb{V}[r_i]}{\left(\sum_{j=1}^{n} w_j\right)^2}
+            = \frac{\sum_{i=1}^{n} w_i^2 \frac{N_i^2 - 1}{12}}{\left(\sum_{j=1}^{n} w_j\right)^2}
+
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank
     description: The arithmetic mean over all ranks.
@@ -891,6 +945,101 @@ class InverseArithmeticMeanRank(RankBasedMetric):
         return np.reciprocal(np.average(np.asanyarray(ranks), weights=weights)).item()
 
 
+def _compute_log_expected_power(k_values: np.ndarray, powers: np.ndarray, memory_limit_elements: int = 10**7) -> float:
+    """
+    Compute $sum( ln( E[X_i^p_i] ) )$.
+
+    Does so efficiently by using sorted batching and vectorization.
+
+    :param k_values: shape: (n,)
+        Upper bounds.
+    :param powers: shape: (n,)
+        Exponents.
+    :param memory_limit_elements:
+        Max number of float elements in the temporary matrix buffer.
+        10^7 elements ~ 80MB RAM.
+
+    :return:
+        The scalar log-value.
+    """
+    # 1. Sort inputs by k.
+    # This minimizes the 'masking waste' when we batch variables together.
+    # Small k's are processed with small k's; large with large.
+    sort_idx = np.argsort(k_values)
+    k_sorted = np.asarray(k_values)[sort_idx]
+    p_sorted = np.asarray(powers)[sort_idx]
+
+    n = len(k_sorted)
+    total_log_moment = 0.0
+
+    start_idx = 0
+    while start_idx < n:
+        # 2. Determine Batch Size dynamically based on Memory Limit.
+        # We want to find 'end_idx' such that:
+        # (rows in batch) * (max_k in batch) <= memory_limit
+        # Since k is sorted ascending, max_k_in_batch is simply k_sorted[end_idx-1].
+
+        end_idx = start_idx + 1
+
+        # We peek ahead to see how many rows we can fit.
+        # This is a heuristic: we check if adding the next block of rows
+        # would explode the matrix size required.
+        while end_idx < n:
+            current_max_k = k_sorted[end_idx]  # This would be the new width
+            current_rows = end_idx - start_idx + 1
+
+            # Check budget
+            if current_rows * current_max_k > memory_limit_elements:
+                break
+            end_idx += 1
+
+        # 3. Process the Batch
+        k_batch = k_sorted[start_idx:end_idx]
+        p_batch = p_sorted[start_idx:end_idx]
+
+        # Max k in this specific batch (determines matrix columns)
+        max_k_batch = int(k_batch[-1])
+
+        # TODO: check if we are 0- or 1-based
+        # Create base grid [1, 2, ..., max_k_batch]
+        # Shape: (1, max_k)
+        j_grid = np.arange(1, max_k_batch + 1, dtype=np.float64).reshape(1, -1)
+
+        # Reshape powers for broadcasting
+        # Shape: (batch_rows, 1)
+        p_col = p_batch.reshape(-1, 1)
+
+        # 4. Compute Powers (Broadcasting)
+        # Matrix Result: (batch_rows, max_k)
+        # value[i, j] = (j+1) ^ p_i
+        values = j_grid**p_col
+
+        # 5. Masking
+        # Since k is sorted, we have a "lower triangular" style validity mask
+        # (roughly), but strictly we just need to zero out j > k_i.
+        # Shape: (batch_rows, 1) compared to (1, max_k)
+        mask = j_grid <= k_batch.reshape(-1, 1)
+
+        # Apply mask (zero out values strictly greater than k_i)
+        # We use 'where' or multiplication. Multiplication is faster for floats usually.
+        values *= mask
+
+        # 6. Summation
+        # Sum along columns to get sum(j^p) for each variable
+        row_sums = np.sum(values, axis=1)
+
+        # Compute log terms: log(sum) - log(k)
+        # We use np.log with a safety for the 0 sums (though sums of j^p >= 1 are never 0)
+        batch_log_moments = np.log(row_sums) - np.log(k_batch)
+
+        total_log_moment += np.sum(batch_log_moments)
+
+        # Move to next batch
+        start_idx = end_idx
+
+    return total_log_moment
+
+
 @parse_docdata
 class GeometricMeanRank(RankBasedMetric):
     r"""The (weighted) geometric mean rank.
@@ -958,6 +1107,14 @@ class GeometricMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         return stats.gmean(ranks, weights=weights).item()
 
+    @staticmethod
+    def _normalize_weights(weights: np.ndarray | None, n: int) -> np.ndarray:
+        if weights is None:
+            return np.full(shape=n, fill_value=1 / n)
+        total = np.sum(weights)
+        safe_total = np.clip(total, a_min=np.finfo(weights.dtype).eps, a_max=None)
+        return weights / safe_total
+
     # docstr-coverage: inherited
     def expected_value(
         self,
@@ -966,8 +1123,13 @@ class GeometricMeanRank(RankBasedMetric):
         weights: np.ndarray | None = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        is_log, individual = self._individual_expectation(num_candidates=num_candidates, weights=weights)
-        return stable_product(individual, is_log=is_log).item()
+        alpha = self._normalize_weights(weights, n=len(num_candidates))
+
+        # E[G] = Product( E[ X_i^alpha_i ] )
+        # We calculate this in log space
+        log_expectation = _compute_log_expected_power(num_candidates, powers=alpha)
+
+        return np.exp(log_expectation)
 
     # docstr-coverage: inherited
     def variance(
@@ -977,61 +1139,28 @@ class GeometricMeanRank(RankBasedMetric):
         weights: np.ndarray | None = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        # V (prod x_i) = prod (V[x_i] - E[x_i]^2) - prod(E[x_i])^2
-        is_log, individual_expectation = self._individual_expectation(num_candidates=num_candidates, weights=weights)
-        if is_log:
-            individual_expectation = np.exp(individual_expectation)
-        individual_variance = self._individual_variance(
-            num_candidates=num_candidates, weights=weights, individual_expectation=individual_expectation
-        )
-        return (
-            stable_product(individual_variance + individual_expectation**2)
-            - stable_product(individual_expectation) ** 2
-        )
+        alpha = self._normalize_weights(weights, n=len(num_candidates))
 
-    @classmethod
-    def _individual_variance(
-        cls, num_candidates: np.ndarray, weights: np.ndarray | None, individual_expectation: np.ndarray
-    ) -> np.ndarray:
-        # use V[x] = E[x^2] - E[x]^2
-        x2 = (
-            np.exp(cls._log_individual_expectation_no_weight(num_candidates=num_candidates, factor=2.0))
-            if weights is None
-            else cls._individual_expectation_weighted(num_candidates=num_candidates, weights=weights, factor=2.0)
-        )
-        return x2 - individual_expectation**2
+        # 1. Calculate Log of First Moment E[G]
+        # Power p = alpha
+        log_expectation = _compute_log_expected_power(num_candidates, alpha)
 
-    @classmethod
-    def _individual_expectation(cls, num_candidates: np.ndarray, weights: np.ndarray | None) -> tuple[bool, np.ndarray]:
-        if weights is None:
-            return True, cls._log_individual_expectation_no_weight(num_candidates=num_candidates)
-        return False, cls._individual_expectation_weighted(num_candidates=num_candidates, weights=weights)
+        # 2. Calculate Log of Second Moment E[G^2]
+        # Power p = 2 * alpha
+        log_squared_expectation = _compute_log_expected_power(num_candidates, 2 * alpha)
 
-    @staticmethod
-    def _individual_expectation_weighted(
-        num_candidates: np.ndarray, weights: np.ndarray, factor: float = 1.0
-    ) -> np.ndarray:
-        weights = factor * weights / weights.sum()
-        x = np.empty_like(weights)
-        # group by same weight -> compute H_w(n) for multiple n at once
-        unique_weights, inverse = np.unique(weights, return_inverse=True)
-        for i, w in enumerate(unique_weights):
-            mask = inverse == i
-            nc = num_candidates[mask]
-            h = generalized_harmonic_numbers(nc.max(), p=w)
-            x[mask] = h[nc - 1] / nc
-        return x
+        # 3. Calculate Variance using Expm1 for stability
+        # Var = E[G^2] - (E[G])^2
+        #     = exp(log_E_G2) - exp(2 * log_E_G)
+        #     = exp(2 * log_E_G) * [ exp(log_E_G2 - 2*log_E_G) - 1 ]
 
-    @staticmethod
-    def _log_individual_expectation_no_weight(num_candidates: np.ndarray, factor: float = 1.0) -> np.ndarray:
-        m = num_candidates.size
-        # we compute log E[r_i^(1/m)] for all N_i = 1 ... max_N_i once
-        max_val = num_candidates.max()
-        x = np.arange(1, max_val + 1, dtype=float)
-        x = factor * np.log(x) / m
-        x = logcumsumexp(x)
-        # now select from precomputed cumulative sums and aggregate
-        return x[num_candidates - 1] - np.log(num_candidates)
+        log_diff = log_squared_expectation - (2 * log_expectation)
+
+        # Clamp negative zero errors (floating point noise)
+        if log_diff < 0:
+            log_diff = 0.0
+
+        return np.exp(2 * log_expectation) * expm1(log_diff)
 
 
 @parse_docdata
@@ -1307,9 +1436,127 @@ class ZGeometricMeanRank(ZMetric):
     supports_weights: ClassVar[bool] = GeometricMeanRank.supports_weights
 
 
+def _compute_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
+    """
+    Compute P(Median > x) for x in range [0, max(k)].
+
+    This function uses dynamic programming to calculate the cumulative distribution
+    of the count of variables <= x, thereby deriving the median's distribution.
+
+    Memory complexity: O(K * n), where K is the maximum value of k.
+
+    :param num_candidates: shape: (n,)
+        The number of candidates.
+
+    :return: shape: (K,)
+        The survival function. $K$ denotes the maximum number of candidates.
+    """
+    ks = np.array(num_candidates, dtype=int)
+    n = len(ks)
+    k_max = ks.max()
+
+    # We target the index n // 2.
+    # For n=3 (odd), index 1 (2nd smallest).
+    # For n=4 (even), index 2 (3rd smallest, i.e., the 'upper' median).
+    target_threshold = n // 2
+
+    # Grid of values x = 0, 1, ..., k_max
+    # We compute probabilities up to k_max.
+    x_grid = np.arange(k_max + 1)
+
+    # Matrix of individual probabilities: P(X_i <= x)
+    # Shape: (k_max + 1, n)
+    # P(X_i <= x) = min(1, x / k_i)
+    p_matrix = np.minimum(1.0, x_grid[:, None] / ks[None, :])
+
+    # DP State: dp[v, c] = Probability that exactly 'c' variables are <= v
+    # Initialize: 0 variables <= v has probability 1 initially
+    dp = np.zeros((len(x_grid), n + 1))
+    dp[:, 0] = 1.0
+
+    # Vectorized Poisson-Binomial recurrence
+    for i in range(n):
+        p = p_matrix[:, i : i + 1]  # Column vector for broadcasting
+
+        # New DP state based on convolution with Bernoulli(p)
+        # dp[c] = dp[c]*(1-p) + dp[c-1]*p
+        term_fail = dp * (1 - p)
+
+        term_success = np.zeros_like(dp)
+        term_success[:, 1:] = dp[:, :-1] * p
+
+        dp = term_fail + term_success
+
+    # The median is <= x if the count of variables (<= x) is > target_threshold.
+    # CDF(x) = P(Median <= x) = Sum_{c=target+1}^{n} P(Count == c)
+    cdf_median = dp[:, target_threshold + 1 :].sum(axis=1)
+
+    # Survival Function: P(Median > x) = 1 - CDF(x)
+    return 1.0 - cdf_median
+
+
 @parse_docdata
 class MedianRank(RankBasedMetric):
-    """The median rank.
+    r"""The median rank.
+
+    The median rank is a robust measure of central tendency that is less sensitive to outliers than the arithmetic
+    mean. For a set of ranks $\mathcal{I}$, the median is the middle value when ranks are sorted.
+
+    .. warning::
+
+        Like other rank-based metrics, the median rank is dependent on the number of candidates. A median rank of 10
+        has different interpretations for a candidate set size of 100 versus 1,000,000.
+
+    **Weighted Median**
+
+    When weights $w_1, \ldots, w_n$ are provided, the weighted median is computed as the value $m$ such that the
+    cumulative weight of all ranks less than or equal to $m$ is at least half of the total weight, and the cumulative
+    weight of all ranks greater than or equal to $m$ is also at least half of the total weight. Formally, the weighted
+    median $m$ satisfies:
+
+    .. math::
+
+        \sum_{r_i \leq m} w_i \geq \frac{1}{2} \sum_j w_j \quad
+            \text{and} \quad \sum_{r_i \geq m} w_i \geq \frac{1}{2} \sum_j w_j
+
+    The weighted median generalizes the standard median: when all weights are equal, it reduces to the unweighted
+    median. The implementation uses PyKEEN's :func:`weighted_median` utility function.
+
+    **Expected Value (Unweighted Case)**
+
+    For the unweighted case, the expected value $\mathbb{E}[\text{Median}]$ can be computed exactly using dynamic
+    programming. The computation uses the survival function $P(\text{Median} > x)$ and the identity:
+
+    .. math::
+
+        \mathbb{E}[\text{Median}] = \sum_{x=0}^{\infty} P(\text{Median} > x)
+
+    The survival function is derived by modeling the median as the order statistic of discrete uniform random
+    variables $r_i \sim \mathcal{U}(1, N_i)$ and computing the distribution via dynamic programming with
+    complexity $O(K \cdot n)$, where $K = \max_i N_i$ and $n$ is the number of ranks.
+
+    **Variance (Unweighted Case)**
+
+    The variance $\mathbb{V}[\text{Median}]$ is similarly computed using:
+
+    .. math::
+
+        \mathbb{V}[\text{Median}] = \mathbb{E}[\text{Median}^2] - \mathbb{E}[\text{Median}]^2
+
+    where $\mathbb{E}[\text{Median}^2]$ is obtained from:
+
+    .. math::
+
+        \mathbb{E}[X^2] = \sum_{x=0}^{\infty} (2x + 1) \cdot P(X > x)
+
+    **Weighted Case**
+
+    .. warning::
+
+        Computing the expected value and variance for the weighted median is computationally intractable, as it
+        reduces to a variant of the `Subset Sum Problem <https://en.wikipedia.org/wiki/Subset_sum_problem>`_
+        (NP-complete). Therefore, when weights are provided, the metric falls back to **numeric estimation via
+        sampling**, which may be slow and less accurate.
 
     ---
     link: https://arxiv.org/abs/2203.07544
@@ -1320,6 +1567,8 @@ class MedianRank(RankBasedMetric):
     value_range = ValueRange(lower=1, lower_inclusive=True, upper=math.inf)
     increasing = False
     supports_weights = True
+    closed_expectation: ClassVar[bool] = True
+    closed_variance: ClassVar[bool] = True
 
     # docstr-coverage: inherited
     def __call__(
@@ -1329,6 +1578,50 @@ class MedianRank(RankBasedMetric):
             return np.median(ranks).item()
 
         return weighted_median(a=ranks, weights=weights).item()
+
+    # docstr-coverage: inherited
+    def expected_value(
+        self,
+        num_candidates: np.ndarray,
+        num_samples: int | None = None,
+        weights: np.ndarray | None = None,
+        **kwargs,
+    ) -> float:  # noqa: D102
+        # weighted case is equivalent to Subset Sum Problem (~NP complete)
+        if weights is not None:
+            return super().expected_value(
+                num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
+            )
+
+        # Get P(M > x) for x = 0, ..., k_max
+        sf = _compute_median_survival_function(num_candidates)
+
+        # For non-negative integer variables: E[X] = Sum_{x=0}^{inf} P(X > x)
+        # We slice [:-1] because the array goes up to x=k_max, and P(M > k_max) is 0.
+        return np.sum(sf[:-1])
+
+    # docstr-coverage: inherited
+    def variance(
+        self, num_candidates: np.ndarray, num_samples: int | None = None, weights: np.ndarray | None = None, **kwargs
+    ) -> float:  # noqa: D102
+        # weighted case is equivalent to Subset Sum Problem (~NP complete)
+        if weights is not None:
+            return super().variance(num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs)
+
+        # Get P(M > x)
+        sf = _compute_median_survival_function(num_candidates)
+
+        # Calculate E[M]
+        # Sum P(M > x)
+        exp_val = np.sum(sf[:-1])
+
+        # Calculate E[M^2]
+        # Formula: E[X^2] = Sum_{x=0}^{inf} (2x + 1) * P(X > x)
+        x_indices = np.arange(len(sf) - 1)
+        exp_sq = np.sum((2 * x_indices + 1) * sf[:-1])
+
+        # Var(M) = E[M^2] - (E[M])^2
+        return exp_sq - exp_val**2
 
 
 @parse_docdata
@@ -1349,12 +1642,20 @@ class InverseMedianRank(RankBasedMetric):
     def __call__(
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:  # noqa: D102
-        return np.reciprocal(weighted_median(a=ranks, weights=weights)).item()
+        return np.reciprocal(weighted_median(a=ranks, weights=weights), dtype=float).item()
 
 
 @parse_docdata
 class StandardDeviation(RankBasedMetric):
-    """The ranks' standard deviation.
+    r"""The ranks' standard deviation.
+
+    For weighted standard deviation, the calculation uses:
+
+    .. math::
+
+        \sigma = \sqrt{\frac{\sum_{i=1}^{n} w_i (r_i - \bar{r})^2}{\sum_{j=1}^{n} w_j}}
+
+    where $\bar{r} = \frac{\sum_{i=1}^{n} w_i r_i}{\sum_{j=1}^{n} w_j}$ is the weighted mean.
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
@@ -1364,17 +1665,36 @@ class StandardDeviation(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_std", "std")
+    supports_weights: ClassVar[bool] = True
 
     # docstr-coverage: inherited
     def __call__(
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:  # noqa: D102
-        return np.asanyarray(ranks).std().item()
+        ranks = np.asanyarray(ranks)
+        if weights is None:
+            return ranks.std().item()
+        # Weighted standard deviation: sqrt(E[(X - E[X])^2])
+        mean = np.average(ranks, weights=weights)
+        variance = np.average((ranks - mean) ** 2, weights=weights)
+        return math.sqrt(variance)
 
 
 @parse_docdata
 class Variance(RankBasedMetric):
-    """The ranks' variance.
+    r"""The ranks' variance.
+
+    For weighted variance, the calculation uses:
+
+    .. math::
+
+        \sigma^2 = \frac{\sum_{i=1}^{n} w_i (r_i - \bar{r})^2}{\sum_{j=1}^{n} w_j}
+
+    where $\bar{r} = \frac{\sum_{i=1}^{n} w_i r_i}{\sum_{j=1}^{n} w_j}$ is the weighted mean.
+
+    .. note::
+        This computes the variance of the **observed weighted sample**, not the variance of the weighted mean
+        (which is computed by :func:`weighted_mean_variance` and used in metric expected value/variance calculations).
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
@@ -1384,12 +1704,18 @@ class Variance(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_var", "var")
+    supports_weights: ClassVar[bool] = True
 
     # docstr-coverage: inherited
     def __call__(
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:  # noqa: D102
-        return np.asanyarray(ranks).var().item()
+        ranks = np.asanyarray(ranks)
+        if weights is None:
+            return ranks.var().item()
+        # Weighted variance: E[(X - E[X])^2]
+        mean = np.average(ranks, weights=weights)
+        return np.average((ranks - mean) ** 2, weights=weights).item()
 
 
 @parse_docdata
@@ -1413,7 +1739,12 @@ class MedianAbsoluteDeviation(RankBasedMetric):
         if weights is None:
             return stats.median_abs_deviation(ranks, scale="normal").item()
 
-        return weighted_median(a=np.abs(ranks - weighted_median(a=ranks, weights=weights)), weights=weights).item()
+        median = weighted_median(a=ranks, weights=weights)
+        abs_diff_from_median = np.abs(ranks - median)
+        # note: scale="normal", means that we divide by inverse of the standard normal
+        # quantile function at 0.75, which is approximately 0.67449.
+        scale = 0.67449
+        return weighted_median(a=abs_diff_from_median, weights=weights).item() / scale
 
 
 @parse_docdata
@@ -1421,6 +1752,12 @@ class Count(RankBasedMetric):
     """The ranks' count.
 
     Lower numbers may indicate unreliable results.
+
+    .. note::
+        This metric does not support weights. The count is defined as the number of rank observations,
+        not a weighted sum. If you need to track weighted sample sizes, consider using the sum of weights
+        separately.
+
     ---
     link: https://pykeen.readthedocs.io/en/stable/reference/evaluation.html
     """
@@ -1429,12 +1766,17 @@ class Count(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = True
     synonyms: ClassVar[Collection[str]] = ("rank_count",)
+    supports_weights: ClassVar[bool] = False
 
     # docstr-coverage: inherited
     def __call__(
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:  # noqa: D102
         # TODO: should we return the sum of weights?
+        if weights is not None:
+            raise ValueError(
+                f"{self.__class__.__name__} does not support weights. Count is the number of observations."
+            )
         return float(np.asanyarray(ranks).size)
 
 
