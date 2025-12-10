@@ -143,20 +143,22 @@ class Metric(ExtraReprMixin):
 def weighted_mean_expectation(individual: np.ndarray, weights: np.ndarray | None) -> float:
     r"""Calculate the expectation of a weighted mean of variables with given individual expected values.
 
-    For random variables $x_1, \ldots, x_n$ with individual expectations $\mathbb{E}[x_i]$ and scalar weights
-    $w_1, \ldots, w_n$, the expectation of the weighted mean is:
+    For random variables $x_1, \ldots, x_n$ with individual expectations
+    $\mathbb{E}[x_i]$ and scalar weights $w_1, \ldots, w_n$, the expectation of the
+    weighted mean is:
 
     .. math::
 
         \mathbb{E}\left[\frac{\sum \limits_{i=1}^{n} w_i x_i}{\sum \limits_{j=1}^{n} w_j}\right]
             = \frac{\sum \limits_{i=1}^{n} w_i \mathbb{E}\left[x_i\right]}{\sum \limits_{j=1}^{n} w_j}
 
-    When $w_i = \frac{1}{n}$ (uniform weights, used if no explicit weights are given), the weights are normalized
-    such that $\sum w_i = 1$.
+    When $w_i = \frac{1}{n}$ (uniform weights, used if no explicit weights are given),
+    the weights are normalized such that $\sum w_i = 1$.
 
     .. note::
-        Unlike variance, the expected value formula is identical for both scaling factor and repeat count
-        interpretations of weights.
+
+        Unlike variance, the expected value formula is identical for both scaling factor
+        and repeat count interpretations of weights.
 
     :param individual: the individual variables' expectations, $\mathbb{E}[x_i]$
     :param weights: the individual variables' scalar weights
