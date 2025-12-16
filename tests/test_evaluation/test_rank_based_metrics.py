@@ -1,7 +1,7 @@
 """Tests for rank-based metrics."""
 
 import unittest
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import numpy
 import numpy as np
@@ -12,6 +12,7 @@ from scipy.stats import bootstrap
 import pykeen.metrics.ranking
 from pykeen.metrics.ranking import generalized_harmonic_numbers, harmonic_variances
 from pykeen.metrics.utils import (
+    compute_log_expected_power,
     weighted_harmonic_mean,
     weighted_mean_expectation,
     weighted_mean_variance,
@@ -256,3 +257,80 @@ class WeightedTests(unittest.TestCase):
     def test_weighted_mean_variance(self):
         """Test weighted mean variance."""
         self._test_weighted_mean_moment(closed_form=weighted_mean_variance, statistic=numpy.var, key="scale")
+
+
+def _compute_log_expected_power_reference_single(k: int, p: float) -> float:
+    """Compute the reference value for compute_log_expected_power."""
+    # ln( E[X^p] )
+    ks = np.arange(1, k + 1, dtype=np.float64)
+    k_sum = (ks**p).sum()
+    return np.log(k_sum) - np.log(k)
+
+
+def _compute_test_compute_log_expected_power_reference(ks: Sequence[int], ps: Sequence[float]) -> float:
+    """Compute the reference value for compute_log_expected_power."""
+    # $sum( ln( E[X_i^p_i] ) )$.
+    return sum(_compute_log_expected_power_reference_single(k=k, p=p) for k, p in zip(ks, ps, strict=True))
+
+
+@pytest.mark.parametrize(
+    ("ks", "ps"),
+    [
+        # Single elements with various k and p values
+        ([5], [-1.0]),
+        ([5], [0.0]),
+        ([5], [1.0]),
+        ([10], [-1.0]),
+        ([10], [2.0]),
+        ([50], [0.5]),
+        ([100], [3.0]),
+        # Multiple elements
+        ([3, 5, 7], [1.0, 2.0, 0.5]),
+        ([10, 20, 30], [0.0, 1.0, 2.0]),
+        ([5, 10, 15, 20], [1.0, 1.5, 2.0, 0.5]),
+    ],
+)
+def test_compute_log_expected_power(ks: list[int], ps: list[float]) -> None:
+    """Test compute_log_expected_power with single and multiple elements."""
+    k_values = np.array(ks)
+    powers = np.array(ps)
+
+    expected = _compute_test_compute_log_expected_power_reference(ks, ps)
+    result = compute_log_expected_power(k_values, powers)
+    assert result == pytest.approx(expected, rel=1e-10)
+
+
+def test_compute_log_expected_power_batching_consistency() -> None:
+    """Test that different memory limits produce the same result."""
+    # Use a moderate-sized input
+    rng = np.random.default_rng(42)
+    k_values = rng.integers(10, 100, size=50)
+    powers = rng.uniform(0.5, 3.0, size=50)
+
+    # Compute reference value
+    expected = _compute_test_compute_log_expected_power_reference(k_values.tolist(), powers.tolist())
+
+    # Compute with different memory limits - all should match the reference
+    result_large = compute_log_expected_power(k_values, powers, memory_limit_elements=10**7)
+    result_small = compute_log_expected_power(k_values, powers, memory_limit_elements=100)
+    result_tiny = compute_log_expected_power(k_values, powers, memory_limit_elements=10)
+
+    assert result_large == pytest.approx(expected, rel=1e-10)
+    assert result_small == pytest.approx(expected, rel=1e-10)
+    assert result_tiny == pytest.approx(expected, rel=1e-10)
+
+
+def test_compute_log_expected_power_sorted_vs_unsorted():
+    """Test that the function handles both sorted and unsorted k_values correctly."""
+    # Base data
+    k_values = np.array([5, 10, 15, 20])
+    powers = np.array([1.0, 1.5, 2.0, 0.5])
+
+    # Indices for different orderings
+    unsorted_idx = np.array([2, 0, 3, 1])  # reorders to [15, 5, 20, 10]
+
+    result_sorted = compute_log_expected_power(k_values, powers)
+    result_unsorted = compute_log_expected_power(k_values[unsorted_idx], powers[unsorted_idx])
+
+    # Should get the same result regardless of input order
+    assert result_sorted == pytest.approx(result_unsorted, rel=1e-10)
