@@ -875,6 +875,14 @@ class ArithmeticMeanRank(RankBasedMetric):
         \mathbb{V}[MR] = \frac{1}{n^2} \sum_{i=1}^{n} \frac{N_i^2 - 1}{12}
                        = \frac{1}{12 n^2} \cdot \left(-n + \sum_{i=1}^{n} N_i^2\right)
 
+    In the simplest case with uniform weights and all ranking tasks having the same number
+    of candidates ($w_i = 1/n$ and $N_i = N$ for all $i$), we obtain:
+
+    .. math::
+
+        \mathbb{E}[MR] &= \frac{N + 1}{2} \\
+        \mathbb{V}[MR] &= \frac{N^2 - 1}{12n}
+
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank
     description: The arithmetic mean over all ranks.
