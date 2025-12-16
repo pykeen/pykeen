@@ -333,12 +333,10 @@ def test_median_survival_function_against_simulation():
 
     # Run simulation
     n_samples = 10_000
-    samples = np.array(
-        [np.median([generator.integers(1, k + 1) for k in num_candidates]) for _ in range(n_samples)]
-    )
+    samples = np.array([np.median([generator.integers(1, k + 1) for k in num_candidates]) for _ in range(n_samples)])
 
     # Compute empirical survival function
     empirical_sf = np.array([(samples > x).mean() for x in range(len(sf))])
 
     # The analytical result should be close to empirical (with some tolerance)
-    numpy.testing.assert_allclose(sf, empirical_sf, atol=0.02)
+    numpy.testing.assert_allclose(sf, empirical_sf, rtol=0.05)
