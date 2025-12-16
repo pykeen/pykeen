@@ -629,6 +629,10 @@ class TrainingLoop(Generic[BatchType], ABC):
             )
 
             # Create a LR schedule, if necessary
+            if isinstance(self._lr_scheduler_hint, LRScheduler):
+                logger.warning("The LR scheduler was already passed instantiated.")
+                if self._lr_scheduler_kwargs:
+                    logger.warning(f"lr_scheduler_kwargs={self._lr_scheduler_kwargs} will be ignored.")
             self._lr_scheduler = lr_scheduler_resolver.make_safe(
                 self._lr_scheduler_hint, self._lr_scheduler_kwargs, optimizer=self.optimizer
             )
