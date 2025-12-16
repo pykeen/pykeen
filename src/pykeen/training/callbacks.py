@@ -54,8 +54,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import uuid
-from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
@@ -63,18 +62,22 @@ from torch import optim
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 from torch_max_mem import maximize_memory_utilization
 
-from .. import training  # required for type annotations
 from ..checkpoints import CheckpointKeeper, CheckpointSchedule, keeper_resolver, save_model, schedule_resolver
 from ..constants import PYKEEN_CHECKPOINTS
 from ..evaluation import Evaluator, evaluator_resolver
 from ..evaluation.evaluation_loop import AdditionalFilterTriplesHint, LCWAEvaluationLoop
-from ..losses import Loss
-from ..models import Model
-from ..stoppers import Stopper
-from ..trackers import ResultTracker
-from ..triples import CoreTriplesFactory
 from ..typing import MappedTriples, OneOrSequence
 from ..utils import determine_maximum_batch_size
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
+    from .. import training
+    from ..losses import Loss
+    from ..models import Model
+    from ..stoppers import Stopper
+    from ..trackers import ResultTracker
+    from ..triples import CoreTriplesFactory
 
 logger = logging.getLogger(__name__)
 

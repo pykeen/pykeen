@@ -260,7 +260,7 @@ extend-select = [
     # flake8-todos (TD)
     # "TD",
     # flake8-type-checking (TC)
-    # "TC",
+    "TC",
     # flake8-unused-arguments (ARG)
     # "ARG",
     # flake8-use-pathlib (PTH)

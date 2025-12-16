@@ -9,12 +9,12 @@ from abc import ABC, abstractmethod
 from collections import ChainMap
 from collections.abc import Collection, Hashable, Mapping
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     Generic,
     NamedTuple,
     TypeVar,
-    cast,
 )
 
 import pandas
@@ -23,20 +23,21 @@ from torch_max_mem import maximize_memory_utilization
 from tqdm.autonotebook import tqdm
 
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX, TARGET_TO_KEY_LABELS
-from ..metrics.utils import Metric
-from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, BoolTensor, InductiveMode, MappedTriples, Target
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from ..utils import (
-    FloatTensor,
-    LongTensor,
     determine_maximum_batch_size,
     flatten_dictionary,
     format_relative_comparison,
     normalize_string,
     prepare_filter_triples,
 )
+
+if TYPE_CHECKING:
+    from ..metrics.utils import Metric
+    from ..models import Model
+    from ..typing import BoolTensor, FloatTensor, InductiveMode, LongTensor, MappedTriples, Target
 
 __all__ = [
     "Evaluator",
@@ -115,7 +116,7 @@ class MetricResults(Generic[MetricKeyType]):
         one_key = next(iter(self.data.keys()))
         # assert isinstance(one_key, NamedTuple)
         # TODO: should we enforce this?
-        one_key_nt = cast(NamedTuple, one_key)
+        one_key_nt: NamedTuple = one_key  # type:ignore[assignment]
         columns = [field.capitalize() for field in one_key_nt._fields] + ["Value"]
         return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
 

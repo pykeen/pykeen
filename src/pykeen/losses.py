@@ -166,7 +166,7 @@ import math
 from abc import abstractmethod
 from collections.abc import Callable, Mapping
 from textwrap import dedent
-from typing import Any, ClassVar, Literal, TypeAlias
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeAlias
 
 import torch
 from class_resolver import ClassResolver, Hint
@@ -176,7 +176,8 @@ from torch import nn
 from torch.nn import functional
 from torch.nn.modules.loss import _Loss
 
-from .typing import BoolTensor, FloatTensor, LongTensor
+if TYPE_CHECKING:
+    from .typing import BoolTensor, FloatTensor, LongTensor
 
 __all__ = [
     # Base Classes

@@ -7,9 +7,8 @@ import pathlib
 import tarfile
 import zipfile
 from abc import abstractmethod
-from collections.abc import Collection, Iterable, Mapping, Sequence
 from io import BytesIO
-from typing import Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import click
 import docdata
@@ -26,8 +25,12 @@ from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
-from ..typing import MappedTriples, TorchRandomHint
 from ..utils import ExtraReprMixin, format_relative_comparison, normalize_path, normalize_string
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Mapping, Sequence
+
+    from ..typing import MappedTriples, TorchRandomHint
 
 __all__ = [
     # Base classes
@@ -87,7 +90,7 @@ def _filter_mapped_triples(
 ) -> MappedTriples:
     heads, tails = _map_ids(mapped_triples[:, ::2], kept_old_ids=kept_old_entity_ids_t).unbind(dim=-1)
     relations = _map_ids(mapped_triples[:, 1], kept_old_ids=kept_old_relation_ids_t)
-    mapped_triples = cast(MappedTriples, torch.stack([heads, relations, tails], dim=-1))
+    mapped_triples = torch.stack([heads, relations, tails], dim=-1)
     # We can only keep triples where none of the IDs have been filtered.
     keep_mask = (mapped_triples >= 0).all(dim=-1)
     logger.info(f"keeping {format_relative_comparison(keep_mask.sum().item(), keep_mask.numel())} triples.")
@@ -296,10 +299,7 @@ class Dataset(ExtraReprMixin):
     @staticmethod
     def from_tf(tf: TriplesFactory, ratios: list[float] | None = None) -> Dataset:
         """Create a dataset from a single triples factory by splitting it in 3."""
-        training, testing, validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(ratios or [0.8, 0.1, 0.1]),
-        )
+        training, testing, validation = tf.split(ratios or [0.8, 0.1, 0.1])
         return EagerDataset(training=training, testing=testing, validation=validation)
 
     @classmethod
@@ -420,7 +420,7 @@ class Dataset(ExtraReprMixin):
                 id_to_label=training.relation_id_to_label, kept_ids=kept_relation_ids_t.tolist()
             )
             training = TriplesFactory(
-                mapped_triples=cast(MappedTriples, new_training_triples),
+                mapped_triples=new_training_triples,
                 entity_to_id=entity_to_id,
                 relation_to_id=relation_to_id,
                 create_inverse_triples=training.create_inverse_triples,
@@ -449,7 +449,7 @@ class Dataset(ExtraReprMixin):
             )
         else:
             training = CoreTriplesFactory(
-                mapped_triples=cast(MappedTriples, new_training_triples),
+                mapped_triples=new_training_triples,
                 create_inverse_triples=training.create_inverse_triples,
                 metadata=training.metadata,
                 num_entities=num_entities,
@@ -967,13 +967,7 @@ class CompressedSingleDataset(LazyDataset):
             create_inverse_triples=self._create_inverse_triples,
             metadata={"path": tf_path},
         )
-        self._training, self._testing, self._validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(
-                ratios=self.ratios,
-                random_state=self.random_state,
-            ),
-        )
+        self._training, self._testing, self._validation = tf.split(ratios=self.ratios, random_state=self.random_state)
         logger.info("[%s] done splitting data from %s", self.__class__.__name__, tf_path)
 
     def _get_df(self) -> pd.DataFrame:
@@ -1073,13 +1067,7 @@ class TabbedDataset(LazyDataset):
             create_inverse_triples=self._create_inverse_triples,
             metadata={"path": path} if path else None,
         )
-        self._training, self._testing, self._validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(
-                ratios=self.ratios,
-                random_state=self.random_state,
-            ),
-        )
+        self._training, self._testing, self._validation = tf.split(ratios=self.ratios, random_state=self.random_state)
 
     def _load_validation(self) -> None:
         pass  # already loaded by _load()

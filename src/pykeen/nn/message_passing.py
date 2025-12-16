@@ -5,8 +5,7 @@ from __future__ import annotations
 import logging
 import math
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Mapping, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import torch
 from class_resolver import (
@@ -25,9 +24,13 @@ from .init import uniform_norm_p1_, xavier_normal_
 from .representation import LowRankRepresentation, Representation
 from .utils import ShapeError, adjacency_tensor_to_stacked_matrix, use_horizontal_stacking
 from .weighting import EdgeWeighting, edge_weight_resolver
-from ..triples import CoreTriplesFactory
-from ..typing import FloatTensor, LongTensor
 from ..utils import ExtraReprMixin, einsum
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping, Sequence
+
+    from ..triples import CoreTriplesFactory
+    from ..typing import FloatTensor, LongTensor
 
 __all__ = [
     "RGCNRepresentation",

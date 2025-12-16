@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import abc
 import dataclasses
-from collections.abc import Collection, Sequence
+from typing import TYPE_CHECKING
 
 from class_resolver import ClassResolver, OneOrManyHintOrType, OneOrManyOptionalKwargs
 
 from .utils import MetricSelection, ResultListenerAdapter
-from ..trackers.base import ResultTracker
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Sequence
+
+    from ..trackers.base import ResultTracker
 
 __all__ = [
     "CheckpointSchedule",

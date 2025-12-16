@@ -9,8 +9,8 @@ import math
 import random
 import re
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from typing import (
+    TYPE_CHECKING,
     NamedTuple,
     TypeVar,
 )
@@ -19,14 +19,11 @@ import numpy as np
 import numpy.random
 import pandas as pd
 import torch
-from class_resolver import OneOrManyHintOrType, OneOrManyOptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranks import Ranks
 from ..constants import COLUMN_LABELS, TARGET_TO_KEY_LABELS, TARGET_TO_KEYS
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
-from ..metrics.utils import Metric
-from ..triples.triples_factory import CoreTriplesFactory
 from ..triples.utils import get_num_ids
 from ..typing import (
     LABEL_HEAD,
@@ -45,6 +42,14 @@ from ..typing import (
     normalize_rank_type,
     normalize_target,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
+
+    from class_resolver import OneOrManyHintOrType, OneOrManyOptionalKwargs
+
+    from ..metrics.utils import Metric
+    from ..triples.triples_factory import CoreTriplesFactory
 
 __all__ = [
     "RankBasedEvaluator",

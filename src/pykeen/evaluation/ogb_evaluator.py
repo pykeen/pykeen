@@ -3,18 +3,14 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Collection, Iterable, Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import torch
 from torch_max_mem import maximize_memory_utilization
 from tqdm.auto import tqdm
 
-from .evaluator import MetricResults
 from .rank_based_evaluator import RankBasedMetricKey, RankBasedMetricResults, SampledRankBasedEvaluator
-from ..metrics import RankBasedMetric
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank
-from ..models import Model
 from ..typing import (
     LABEL_HEAD,
     LABEL_TAIL,
@@ -25,6 +21,13 @@ from ..typing import (
     MappedTriples,
     Target,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Mapping
+
+    from .evaluator import MetricResults
+    from ..metrics import RankBasedMetric
+    from ..models import Model
 
 __all__ = [
     "OGBEvaluator",

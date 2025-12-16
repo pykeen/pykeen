@@ -5,21 +5,17 @@ from __future__ import annotations
 import logging
 from abc import ABC
 from collections import defaultdict
-from collections.abc import Iterable, Iterator, Mapping, Sequence
 from operator import itemgetter
-from typing import Any, ClassVar, Generic, Literal, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal
 
 import torch
-from class_resolver import HintOrType, OptionalKwargs
 from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs, normalize_with_default
 from torch import nn
 
 from .base import Model
 from ..nn import representation_resolver
 from ..nn.modules import Interaction, interaction_resolver, parallel_unsqueeze
-from ..nn.representation import Representation
 from ..regularizers import Regularizer, regularizer_resolver
-from ..triples import KGInfo
 from ..typing import (
     FloatTensor,
     HeadRepresentation,
@@ -29,6 +25,14 @@ from ..typing import (
     TailRepresentation,
 )
 from ..utils import check_shapes, get_batchnorm_modules
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
+
+    from class_resolver import HintOrType, OptionalKwargs
+
+    from ..nn.representation import Representation
+    from ..triples import KGInfo
 
 __all__ = [
     "_NewAbstractModel",
@@ -184,7 +188,9 @@ def _prepare_representation_module_list(
     """
     # TODO: allow max_id being present in representation_kwargs; if it matches max_id
     # TODO: we could infer some shapes from the given interaction shape information
-    rs = representation_resolver.make_many(representations, kwargs=representations_kwargs, max_id=max_id)
+    rs: Sequence[Representation] = representation_resolver.make_many(
+        representations, kwargs=representations_kwargs, max_id=max_id
+    )
 
     # check max-id
     for r in rs:
@@ -199,7 +205,7 @@ def _prepare_representation_module_list(
                 f"representations was chosen wrong.",
             )
 
-    rs = cast(Sequence[Representation], nn.ModuleList(rs))
+    rs = nn.ModuleList(rs)
     if skip_checks:
         return rs
 
@@ -677,7 +683,4 @@ class ERModel(
             )
         )
         # normalization
-        return cast(
-            tuple[HeadRepresentation, RelationRepresentation, TailRepresentation],
-            tuple(x[0] if len(x) == 1 else x for x in (hr, rr, tr)),
-        )
+        return tuple(x[0] if len(x) == 1 else x for x in (hr, rr, tr))  # type: ignore[return-value]

@@ -7,7 +7,7 @@ a sign of the generalizability of a model to predict novel triples.
 
 import logging
 from collections.abc import Collection, Iterable, Mapping
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import click
 import numpy
@@ -319,15 +319,17 @@ def _translate_triples(
 
 def reindex(*triples_factories: CoreTriplesFactory) -> list[CoreTriplesFactory]:
     """Reindex a set of triples factories."""
+    if not all(isinstance(f, TriplesFactory) for f in triples_factories):
+        raise NotImplementedError("reindex has not been updated for non-TriplesFactory yet.")
+    # for mypy
+    triples_factories_with_labels: tuple[TriplesFactory, ...] = triples_factories  # type: ignore[assignment]
+    # TODO: check for matching label-to-id mappings, too?
+
     # get entities and relations occurring in triples
     all_triples = cat_triples(*triples_factories)
 
-    if not all(isinstance(f, TriplesFactory) for f in triples_factories):
-        raise NotImplementedError("reindex has not been updated for non-TriplesFactory yet.")
-    triples_factories = cast(tuple[TriplesFactory, ...], triples_factories)
-
     # generate ID translation and new label to Id mappings
-    one_factory = triples_factories[0]
+    one_factory = triples_factories_with_labels[0]
     (entity_to_id, entity_id_translation), (relation_to_id, relation_id_translation) = (
         _generate_compact_vectorized_lookup(
             ids=all_triples[:, cols],
@@ -350,7 +352,7 @@ def reindex(*triples_factories: CoreTriplesFactory) -> list[CoreTriplesFactory]:
             ),
             create_inverse_triples=factory.create_inverse_triples,
         )
-        for factory in triples_factories
+        for factory in triples_factories_with_labels
     ]
 
 
