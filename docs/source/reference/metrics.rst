@@ -14,4 +14,4 @@ Metrics
 .. automodapi:: pykeen.metrics.utils
     :headings: --
     :no-inheritance-diagram:
-    :skip: Metric
+    :skip: Metric,ValueRange
