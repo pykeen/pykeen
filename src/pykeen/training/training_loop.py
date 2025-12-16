@@ -107,7 +107,7 @@ class TrainingLoop(Generic[BatchType], ABC):
     _optimizer: Optimizer | None
 
     # LR Scheduler
-    lr_scheduler: LRScheduler | None
+    _lr_scheduler: LRScheduler | None
     _lr_scheduler_hint: HintOrType[LRScheduler]
     _lr_scheduler_kwargs: OptionalKwargs
 
@@ -166,7 +166,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         self._optimizer = None
         self._lr_scheduler_hint = lr_scheduler
         self._lr_scheduler_kwargs = lr_scheduler_kwargs
-        self.lr_scheduler = None
+        self._lr_scheduler = None
         self.losses_per_epochs = []
         self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
@@ -204,6 +204,11 @@ class TrainingLoop(Generic[BatchType], ABC):
         if self._optimizer is None:
             raise ValueError("Optimizer has not been instantiated yet.")
         return self._optimizer
+
+    @property
+    def lr_scheduler(self) -> LRScheduler | None:
+        """Return the learning rate scheduler instance."""
+        return self._lr_scheduler
 
     @property
     def checksum(self) -> str:  # noqa: D401
@@ -414,7 +419,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         # Clear optimizer
         if clear_optimizer:
             self._optimizer = None
-            self.lr_scheduler = None
+            self._lr_scheduler = None
 
         return result
 
@@ -604,7 +609,7 @@ class TrainingLoop(Generic[BatchType], ABC):
             else:
                 raise ValueError("Cannot continue training without an initialized optimizer.")
             if isinstance(self._lr_scheduler_hint, LRScheduler) or self._lr_scheduler_hint is None:
-                self.lr_scheduler = self._lr_scheduler_hint
+                self._lr_scheduler = self._lr_scheduler_hint
             else:
                 raise ValueError("Cannot continue training without an initialized lr schedule.")
         # Force weight initialization if training continuation is not explicitly requested.
@@ -624,7 +629,7 @@ class TrainingLoop(Generic[BatchType], ABC):
             )
 
             # Create a LR schedule, if necessary
-            self.lr_scheduler = lr_scheduler_resolver.make_safe(
+            self._lr_scheduler = lr_scheduler_resolver.make_safe(
                 self._lr_scheduler_hint, self._lr_scheduler_kwargs, optimizer=self.optimizer
             )
 
