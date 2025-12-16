@@ -819,12 +819,17 @@ class ArithmeticMeanRank(RankBasedMetric):
     r"""
     The (arithmetic) mean rank.
 
-    The mean rank (MR) computes the arithmetic mean over all individual ranks. Denoting
-    the set of individual ranks as $\mathcal{I}$, it is given as:
+    The mean rank (MR) computes the (weighted) arithmetic mean over individual ranks
+    $\{r_i\}_{i=1}^n$, with weights $\{w_i\}_{i=1}^n$ (defaulting to $w_i = 1/n$ when
+    not explicitly provided). Letting $W = \sum_{i=1}^n w_i$ denote the sum of weights,
+    it is given as:
 
     .. math::
 
-        MR =\frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} r
+        MR = \frac{1}{W} \sum_{i=1}^{n} w_i r_i
+
+    When weights are uniform ($w_i = 1/n$), this reduces to the standard arithmetic mean
+    $\frac{1}{n} \sum_{i=1}^n r_i$.
 
     It has the advantage over hits @ k that it is sensitive to any model performance
     changes, not only what occurs under a certain cutoff and therefore reflects average
@@ -838,46 +843,33 @@ class ArithmeticMeanRank(RankBasedMetric):
         for a candidate set size of 1,000,000, but incredibly poor performance for a
         candidate set size of 20.
 
-    For the expected value, we have
+    For the expected value, assuming each individual rank $r_i$ follows a discrete uniform
+    distribution $\mathcal{U}(1, N_i)$, we have $\mathbb{E}[r_i] = \frac{N_i + 1}{2}$ and
+    thus by the linearity of the expectation (see :func:`pykeen.metrics.utils.weighted_mean_expectation`):
 
     .. math::
 
-        \mathbb{E}[MR] &= \mathbb{E}[\frac{1}{n} \sum \limits_{i=1}^{n} r_i] \\
-                       &= \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{E}[r_i] \\
-                       &= \frac{1}{n} \sum \limits_{i=1}^{n} \frac{N_i + 1}{2}
+        \mathbb{E}[MR] &= \mathbb{E}\left[\frac{1}{W} \sum_{i=1}^{n} w_i r_i\right] \\
+                       &= \frac{1}{W} \sum_{i=1}^{n} w_i \mathbb{E}[r_i] \\
+                       &= \frac{1}{W} \sum_{i=1}^{n} w_i \frac{N_i + 1}{2}
 
-    For the variance, we have
-
-    .. math::
-
-        \mathbb{V}[MR] &= \mathbb{V}[\frac{1}{n} \sum \limits_{i=1}^{n} r_i] \\
-                       &= \frac{1}{n^2} \sum \limits_{i=1}^{n} \mathbb{V}[r_i] \\
-                       &= \frac{1}{n^2} \sum \limits_{i=1}^{n} \frac{N_i^2 - 1}{12} \\
-                       &= \frac{1}{12 n^2} \cdot \left(-n + \sum \limits_{i=1}^{n} N_i \right)
-
-    **Weighted Case**
-
-    When weights $w_1, \ldots, w_n$ are provided, the weighted mean rank and its moments
-    are:
+    For the variance, assuming independent ranks with individual variances
+    $\mathbb{V}[r_i] = \frac{N_i^2 - 1}{12}$, we use the quadratic weight scaling
+    (from $\mathbb{V}[c \cdot X] = c^2 \cdot \mathbb{V}[X]$) as implemented in
+    :func:`pykeen.metrics.utils.weighted_mean_variance`:
 
     .. math::
 
-        \text{Weighted MR} = \frac{\sum_{i=1}^{n} w_i r_i}{\sum_{j=1}^{n} w_j}
+        \mathbb{V}[MR] &= \mathbb{V}\left[\frac{1}{W} \sum_{i=1}^{n} w_i r_i\right] \\
+                       &= \frac{1}{W^2} \sum_{i=1}^{n} w_i^2 \mathbb{V}[r_i] \\
+                       &= \frac{1}{W^2} \sum_{i=1}^{n} w_i^2 \frac{N_i^2 - 1}{12}
 
-    The expected value is:
-
-    .. math::
-
-        \mathbb{E}[\text{Weighted MR}] = \frac{\sum_{i=1}^{n} w_i \mathbb{E}[r_i]}{\sum_{j=1}^{n} w_j}
-            = \frac{\sum_{i=1}^{n} w_i \frac{N_i + 1}{2}}{\sum_{j=1}^{n} w_j}
-
-    The variance uses the quadratic weight scaling (from $\mathbb{V}[c \cdot X] = c^2
-    \cdot \mathbb{V}[X]$):
+    In the unweighted case ($w_i = 1/n$ and thus $W = 1$), this simplifies to:
 
     .. math::
 
-        \mathbb{V}[\text{Weighted MR}] = \frac{\sum_{i=1}^{n} w_i^2 \mathbb{V}[r_i]}{\left(\sum_{j=1}^{n} w_j\right)^2}
-            = \frac{\sum_{i=1}^{n} w_i^2 \frac{N_i^2 - 1}{12}}{\left(\sum_{j=1}^{n} w_j\right)^2}
+        \mathbb{V}[MR] = \frac{1}{n^2} \sum_{i=1}^{n} \frac{N_i^2 - 1}{12}
+                       = \frac{1}{12 n^2} \cdot \left(-n + \sum_{i=1}^{n} N_i^2\right)
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank
