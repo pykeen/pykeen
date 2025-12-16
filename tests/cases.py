@@ -2364,8 +2364,15 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         weights = repeats.astype(float)
         value_weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
 
-        # TODO: abs=2 recovers the previous value passed to assertAlmostEqual, but is a wild tolerance...
-        assert value_repeat == pytest.approx(value_weighted, abs=2), (value_repeat, value_weighted)
+        assert value_repeat == pytest.approx(value_weighted), (value_repeat, value_weighted)
+
+
+class ZRankBasedMetricTestCase(RankBasedMetricTestCase):
+    """Test cases for z-normalized metrics."""
+
+    # docstr-coverage: inherited
+    def test_weights_coherence(self):  # noqa: D102
+        raise unittest.SkipTest("Z-normalized metrics do not work well with the sampling weight interpretation.")
 
 
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):

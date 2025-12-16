@@ -28,7 +28,6 @@ from pykeen.utils import (
     get_optimal_sequence,
     get_until_first_blank,
     iter_weisfeiler_lehman,
-    logcumsumexp,
     merge_kwargs,
     project_entity,
     set_random_seed,
@@ -336,14 +335,6 @@ class TestUtils(unittest.TestCase):
 
             # compare result to sequential addition
             assert torch.allclose(result, functools.reduce(operator.mul, tensors[1:], tensors[0]))
-
-    def test_logcumsumexp(self):
-        """Verify that our numpy implementation gives the same results as the torch variant."""
-        generator = numpy.random.default_rng(seed=42)
-        a = generator.random(size=(21,))
-        r1 = logcumsumexp(a)
-        r2 = torch.logcumsumexp(torch.as_tensor(a), dim=0).numpy()
-        numpy.testing.assert_allclose(r1, r2)
 
     def test_weisfeiler_lehman(self):
         """Test Weisfeiler Lehman."""

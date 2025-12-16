@@ -92,19 +92,19 @@ import numpy as np
 from class_resolver import ClassResolver, HintOrType
 from docdata import parse_docdata
 from scipy import stats
+from scipy.special import expm1
 
 from .utils import (
     Metric,
     ValueRange,
+    compute_log_expected_power,
     compute_median_survival_function,
-    stable_product,
     weighted_harmonic_mean,
     weighted_mean_expectation,
     weighted_mean_variance,
     weighted_median,
 )
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
-from ..utils import logcumsumexp
 
 __all__ = [
     "rank_based_metric_resolver",
@@ -1041,6 +1041,14 @@ class GeometricMeanRank(RankBasedMetric):
     ) -> float:  # noqa: D102
         return stats.gmean(ranks, weights=weights).item()
 
+    @staticmethod
+    def _normalize_weights(weights: np.ndarray | None, n: int) -> np.ndarray:
+        if weights is None:
+            return np.full(shape=n, fill_value=1 / n)
+        total = np.sum(weights)
+        safe_total = np.clip(total, a_min=np.finfo(weights.dtype).eps, a_max=None)
+        return weights / safe_total
+
     # docstr-coverage: inherited
     def expected_value(
         self,
@@ -1049,8 +1057,13 @@ class GeometricMeanRank(RankBasedMetric):
         weights: np.ndarray | None = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        is_log, individual = self._individual_expectation(num_candidates=num_candidates, weights=weights)
-        return stable_product(individual, is_log=is_log).item()
+        alpha = self._normalize_weights(weights, n=len(num_candidates))
+
+        # E[G] = Product( E[ X_i^alpha_i ] )
+        # We calculate this in log space
+        log_expectation = compute_log_expected_power(num_candidates, powers=alpha)
+
+        return np.exp(log_expectation)
 
     # docstr-coverage: inherited
     def variance(
@@ -1060,61 +1073,28 @@ class GeometricMeanRank(RankBasedMetric):
         weights: np.ndarray | None = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        # V (prod x_i) = prod (V[x_i] - E[x_i]^2) - prod(E[x_i])^2
-        is_log, individual_expectation = self._individual_expectation(num_candidates=num_candidates, weights=weights)
-        if is_log:
-            individual_expectation = np.exp(individual_expectation)
-        individual_variance = self._individual_variance(
-            num_candidates=num_candidates, weights=weights, individual_expectation=individual_expectation
-        )
-        return (
-            stable_product(individual_variance + individual_expectation**2)
-            - stable_product(individual_expectation) ** 2
-        )
+        alpha = self._normalize_weights(weights, n=len(num_candidates))
 
-    @classmethod
-    def _individual_variance(
-        cls, num_candidates: np.ndarray, weights: np.ndarray | None, individual_expectation: np.ndarray
-    ) -> np.ndarray:
-        # use V[x] = E[x^2] - E[x]^2
-        x2 = (
-            np.exp(cls._log_individual_expectation_no_weight(num_candidates=num_candidates, factor=2.0))
-            if weights is None
-            else cls._individual_expectation_weighted(num_candidates=num_candidates, weights=weights, factor=2.0)
-        )
-        return x2 - individual_expectation**2
+        # 1. Calculate Log of First Moment E[G]
+        # Power p = alpha
+        log_expectation = compute_log_expected_power(num_candidates, alpha)
 
-    @classmethod
-    def _individual_expectation(cls, num_candidates: np.ndarray, weights: np.ndarray | None) -> tuple[bool, np.ndarray]:
-        if weights is None:
-            return True, cls._log_individual_expectation_no_weight(num_candidates=num_candidates)
-        return False, cls._individual_expectation_weighted(num_candidates=num_candidates, weights=weights)
+        # 2. Calculate Log of Second Moment E[G^2]
+        # Power p = 2 * alpha
+        log_squared_expectation = compute_log_expected_power(num_candidates, 2 * alpha)
 
-    @staticmethod
-    def _individual_expectation_weighted(
-        num_candidates: np.ndarray, weights: np.ndarray, factor: float = 1.0
-    ) -> np.ndarray:
-        weights = factor * weights / weights.sum()
-        x = np.empty_like(weights)
-        # group by same weight -> compute H_w(n) for multiple n at once
-        unique_weights, inverse = np.unique(weights, return_inverse=True)
-        for i, w in enumerate(unique_weights):
-            mask = inverse == i
-            nc = num_candidates[mask]
-            h = generalized_harmonic_numbers(nc.max(), p=w)
-            x[mask] = h[nc - 1] / nc
-        return x
+        # 3. Calculate Variance using Expm1 for stability
+        # Var = E[G^2] - (E[G])^2
+        #     = exp(log_E_G2) - exp(2 * log_E_G)
+        #     = exp(2 * log_E_G) * [ exp(log_E_G2 - 2*log_E_G) - 1 ]
 
-    @staticmethod
-    def _log_individual_expectation_no_weight(num_candidates: np.ndarray, factor: float = 1.0) -> np.ndarray:
-        m = num_candidates.size
-        # we compute log E[r_i^(1/m)] for all C_i = 1 ... max_C_i once
-        max_val = num_candidates.max()
-        x = np.arange(1, max_val + 1, dtype=float)
-        x = factor * np.log(x) / m
-        x = logcumsumexp(x)
-        # now select from precomputed cumulative sums and aggregate
-        return x[num_candidates - 1] - np.log(num_candidates)
+        log_diff = log_squared_expectation - (2 * log_expectation)
+
+        # Clamp negative zero errors (floating point noise)
+        if log_diff < 0:
+            log_diff = 0.0
+
+        return np.exp(2 * log_expectation) * expm1(log_diff)
 
 
 @parse_docdata
@@ -1570,7 +1550,7 @@ class InverseMedianRank(RankBasedMetric):
     def __call__(
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:  # noqa: D102
-        return np.reciprocal(weighted_median(a=ranks, weights=weights)).item()
+        return np.reciprocal(weighted_median(a=ranks, weights=weights), dtype=float).item()
 
 
 @parse_docdata
