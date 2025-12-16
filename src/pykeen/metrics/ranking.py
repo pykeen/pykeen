@@ -149,9 +149,16 @@ __all__ = [
     "harmonic_variances",
     #
     "HITS_METRICS",
+    "WEIGHTED_MEDIAN_SCALE",
+    "EPSILON",
 ]
 
+#: A small value to help avoid dividing by zero
 EPSILON = 1.0e-12
+
+#: note: scale="normal", means that we divide by inverse of the standard normal
+#: quantile function at 0.75, which is approximately 0.67449.
+WEIGHTED_MEDIAN_SCALE = 0.67449
 
 
 def generate_ranks(
@@ -1556,10 +1563,8 @@ class MedianAbsoluteDeviation(RankBasedMetric):
 
         median = weighted_median(a=ranks, weights=weights)
         abs_diff_from_median = np.abs(ranks - median)
-        # note: scale="normal", means that we divide by inverse of the standard normal
-        # quantile function at 0.75, which is approximately 0.67449.
-        scale = 0.67449
-        return weighted_median(a=abs_diff_from_median, weights=weights).item() / scale
+
+        return weighted_median(a=abs_diff_from_median, weights=weights).item() / WEIGHTED_MEDIAN_SCALE
 
 
 @parse_docdata
