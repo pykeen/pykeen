@@ -210,7 +210,31 @@ class NoClosedFormError(ValueError):
 
 
 class RankBasedMetric(Metric):
-    """A base class for rank-based metrics."""
+    r"""A base class for rank-based metrics.
+
+    .. note::
+
+        **Weight Interpretation**: When metrics support weights (i.e., when
+        :data:`supports_weights` is annotated on the metric class as true),
+        PyKEEN interprets weights as **scaling factors**
+        (arbitrary positive scalar weights), not as repeat counts (number of independent
+        observations). This matches the semantics of :func:`numpy.average`.
+
+        Weights $\{w_i\}_{i=1}^n$ are **normalized** internally, with $W = \sum_{i=1}^n w_i$
+        used as the normalization factor. When no weights are provided, uniform weights
+        $w_i = 1/n$ are used (implying $W = 1$).
+
+        Specifically, for a metric value $M$ computed from weighted ranks:
+
+        - The expected value $\mathbb{E}[M]$ is identical for both interpretations
+        - The variance $\mathbb{V}[M]$ differs: scaling factors use $\frac{1}{W^2} \sum w_i^2
+          \mathbb{V}[x_i]$ (quadratic), while repeat counts would use $\frac{1}{W^2} \sum w_i
+          \mathbb{V}[x_i]$ (linear)
+
+        Consequently, ``metric(ranks, weights=w)`` may differ from
+        ``metric(np.repeat(ranks, w))`` for variance-normalized derived metrics (e.g.,
+        Z-metrics), even though the base metric values are identical.
+    """
 
     # rank based metrics do not need binarized scores
     binarize: ClassVar[bool] = False
@@ -316,7 +340,7 @@ class RankBasedMetric(Metric):
         Compute expected metric value by summation.
 
         The expectation is computed under the assumption that each individual rank follows a discrete uniform
-        distribution $\mathcal{U}\left(1, N_i\right)$, where $N_i$ denotes the number of candidates for
+        distribution $\mathcal{U}\left(1, C_i\right)$, where $C_i$ denotes the number of candidates for
         ranking task $r_i$.
 
         :param kwargs:
@@ -346,7 +370,7 @@ class RankBasedMetric(Metric):
         r"""Compute expected metric value.
 
         The expectation is computed under the assumption that each individual rank follows a
-        discrete uniform distribution $\mathcal{U}\left(1, N_i\right)$, where $N_i$ denotes
+        discrete uniform distribution $\mathcal{U}\left(1, C_i\right)$, where $C_i$ denotes
         the number of candidates for ranking task $r_i$.
 
         :param num_candidates:
@@ -380,7 +404,7 @@ class RankBasedMetric(Metric):
         r"""Compute variance by summation.
 
         The variance is computed under the assumption that each individual rank follows a discrete uniform
-        distribution $\mathcal{U}\left(1, N_i\right)$, where $N_i$ denotes the number of candidates for
+        distribution $\mathcal{U}\left(1, C_i\right)$, where $C_i$ denotes the number of candidates for
         ranking task $r_i$.
 
         :param kwargs:
@@ -410,7 +434,7 @@ class RankBasedMetric(Metric):
         r"""Compute variance.
 
         The variance is computed under the assumption that each individual rank follows a discrete uniform
-        distribution $\mathcal{U}\left(1, N_i\right)$, where $N_i$ denotes the number of candidates for
+        distribution $\mathcal{U}\left(1, C_i\right)$, where $C_i$ denotes the number of candidates for
         ranking task $r_i$.
 
         :param num_candidates:
@@ -627,24 +651,46 @@ class ZMetric(DerivedRankBasedMetric):
     r"""
     A z-score adjusted metrics.
 
-    .. math ::
+    .. math::
 
         \mathbb{M}^* = \frac{\mathbb{M} - \mathbb{E}[\mathbb{M}]}{\sqrt{\mathbb{V}[\mathbb{M}]}}
 
-    In terms of the affine transformation from DerivedRankBasedMetric, we obtain the following coefficients:
+    In terms of the affine transformation from DerivedRankBasedMetric, we obtain the
+    following coefficients:
 
-    .. math ::
+    .. math::
 
         \alpha &= \frac{1}{\sqrt{\mathbb{V}[\mathbb{M}]}} \\
         \beta  &= -\alpha \cdot \mathbb{E}[\mathbb{M}]
 
-    .. note ::
+    .. note::
 
-        For non-increasing metrics, i.e., where larger values correspond to better results, we additionally change the
-        sign of the result such that a larger z-value always corresponds to a better result irrespective of the base
-        metric's direction.
+        For non-increasing metrics, i.e., where larger values correspond to better
+        results, we additionally change the sign of the result such that a larger
+        z-value always corresponds to a better result irrespective of the base metric's
+        direction.
 
-    .. warning:: This requires a closed-form solution to the expected value and the variance
+    .. warning::
+
+        This requires a closed-form solution to the expected value and the variance.
+
+    .. warning::
+
+        **Weights and Coherence**: When weights are used, the coherence property does
+        not hold. That is, ``metric(ranks, weights=w)`` will **not** equal
+        ``metric(np.repeat(ranks, w), weights=None)`` even though the base metric values
+        are identical. This is because variance calculations differ between these
+        scenarios:
+
+        - **Repeated ranks**: Treats each repeated entry as an independent sample,
+          yielding $\mathbb{V}[M] \propto \sum w_i \mathbb{V}[x_i]$ (linear in weights)
+        - **Weighted ranks**: Treats weights as scaling factors for a single sample,
+          yielding $\mathbb{V}[M] \propto \sum w_i^2 \mathbb{V}[x_i]$ (quadratic in
+          weights)
+
+        Since z-scores depend on the variance via $Z = \frac{M - \mathbb{E}[M]}{
+        \sqrt{\mathbb{V}[M]}}$, the different variance formulas result in different
+        z-scores.
     """
 
     #: Z-adjusted metrics are formulated to be increasing
@@ -776,39 +822,66 @@ class ReindexedMetric(DerivedRankBasedMetric):
 class ArithmeticMeanRank(RankBasedMetric):
     r"""The (arithmetic) mean rank.
 
-    The mean rank (MR) computes the arithmetic mean over all individual ranks.
-    Denoting the set of individual ranks as $\mathcal{I}$, it is given as:
+    The mean rank (MR) computes the (weighted) arithmetic mean over individual ranks
+    $\{r_i\}_{i=1}^n$, with weights $\{w_i\}_{i=1}^n$ (defaulting to $w_i = 1/n$ when
+    not explicitly provided). Letting $W = \sum_{i=1}^n w_i$ denote the sum of weights,
+    it is given as:
 
     .. math::
 
-        MR =\frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} r
+        MR = \frac{1}{W} \sum_{i=1}^{n} w_i r_i
 
-    It has the advantage over hits @ k that it is sensitive to any model performance changes, not only what occurs
-    under a certain cutoff and therefore reflects average performance. With PyKEEN's standard 1-based indexing,
-    the mean rank lies on the interval $[1, \infty)$ where lower is better.
+    When weights are uniform ($w_i = 1/n$), this reduces to the standard arithmetic mean
+    $\frac{1}{n} \sum_{i=1}^n r_i$.
+
+    It has the advantage over hits @ k that it is sensitive to any model performance
+    changes, not only what occurs under a certain cutoff and therefore reflects average
+    performance. With PyKEEN's standard 1-based indexing, the mean rank lies on the
+    interval $[1, \infty)$ where lower is better.
 
     .. warning::
 
-        While the arithmetic mean rank is interpretable, the mean rank is dependent on the number of candidates.
-        A mean rank of 10 might indicate strong performance for a candidate set size of 1,000,000,
-        but incredibly poor performance for a candidate set size of 20.
+        While the arithmetic mean rank is interpretable, the mean rank is dependent on
+        the number of candidates. A mean rank of 10 might indicate strong performance
+        for a candidate set size of 1,000,000, but incredibly poor performance for a
+        candidate set size of 20.
 
-    For the expected value, we have
-
-    .. math::
-
-        \mathbb{E}[MR] &= \mathbb{E}[\frac{1}{n} \sum \limits_{i=1}^{n} r_i] \\
-                       &= \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{E}[r_i] \\
-                       &= \frac{1}{n} \sum \limits_{i=1}^{n} \frac{N_i + 1}{2}
-
-    For the variance, we have
+    For the expected value, assuming each individual rank $r_i$ follows a discrete uniform
+    distribution $\mathcal{U}(1, C_i)$, where $C_i$ denotes the number of candidates for
+    ranking task $i$, we have $\mathbb{E}[r_i] = \frac{C_i + 1}{2}$ and thus by the
+    linearity of the expectation (see :func:`pykeen.metrics.utils.weighted_mean_expectation`):
 
     .. math::
 
-        \mathbb{V}[MR] &= \mathbb{V}[\frac{1}{n} \sum \limits_{i=1}^{n} r_i] \\
-                       &= \frac{1}{n^2} \sum \limits_{i=1}^{n} \mathbb{V}[r_i] \\
-                       &= \frac{1}{n^2} \sum \limits_{i=1}^{n} \frac{N_i^2 - 1}{12} \\
-                       &= \frac{1}{12 n^2} \cdot \left(-n + \sum \limits_{i=1}^{n} N_i \right)
+        \mathbb{E}[MR] &= \mathbb{E}\left[\frac{1}{W} \sum_{i=1}^{n} w_i r_i\right] \\
+                       &= \frac{1}{W} \sum_{i=1}^{n} w_i \mathbb{E}[r_i] \\
+                       &= \frac{1}{W} \sum_{i=1}^{n} w_i \frac{C_i + 1}{2}
+
+    For the variance, assuming independent ranks with individual variances
+    $\mathbb{V}[r_i] = \frac{C_i^2 - 1}{12}$, we use the quadratic weight scaling
+    (from $\mathbb{V}[c \cdot X] = c^2 \cdot \mathbb{V}[X]$) as implemented in
+    :func:`pykeen.metrics.utils.weighted_mean_variance`:
+
+    .. math::
+
+        \mathbb{V}[MR] &= \mathbb{V}\left[\frac{1}{W} \sum_{i=1}^{n} w_i r_i\right] \\
+                       &= \frac{1}{W^2} \sum_{i=1}^{n} w_i^2 \mathbb{V}[r_i] \\
+                       &= \frac{1}{W^2} \sum_{i=1}^{n} w_i^2 \frac{C_i^2 - 1}{12}
+
+    In the unweighted case ($w_i = 1/n$ and thus $W = 1$), this simplifies to:
+
+    .. math::
+
+        \mathbb{V}[MR] = \frac{1}{n^2} \sum_{i=1}^{n} \frac{C_i^2 - 1}{12}
+                       = \frac{1}{12 n^2} \cdot \left(-n + \sum_{i=1}^{n} C_i^2\right)
+
+    In the simplest case with uniform weights and all ranking tasks having the same number
+    of candidates ($w_i = 1/n$ and $C_i = C$ for all $i$), we obtain:
+
+    .. math::
+
+        \mathbb{E}[MR] &= \frac{C + 1}{2} \\
+        \mathbb{V}[MR] &= \frac{C^2 - 1}{12n}
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank
@@ -899,27 +972,27 @@ class GeometricMeanRank(RankBasedMetric):
 
     .. math::
 
-        M = \left(\prod \limits_{i=1}^{m} r_i^{w_i}\right)^{1/w}
+        M = \left(\prod \limits_{i=1}^{n} r_i^{w_i}\right)^{1/W}
 
-    with $w = \sum \limits_{i=1}^{m} w_i$. The unweighted GMR is obtained by setting $w_i = 1$.
+    with $W = \sum \limits_{i=1}^{n} w_i$. The unweighted GMR is obtained by setting $w_i = 1$.
 
     For computing the expected value, we first observe that
 
     .. math::
 
-        \mathbb{E}[M] &= \mathbb{E}\left[\sqrt[w]{\prod \limits_{i=1}^{m} r_i^{w_i}}\right] \\
-                      &= \prod \limits_{i=1}^{m} \mathbb{E}[r_i^{w_i/w}] \\
-                      &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[r_i^{w_i/w}]
+        \mathbb{E}[M] &= \mathbb{E}\left[\sqrt[W]{\prod \limits_{i=1}^{n} r_i^{w_i}}\right] \\
+                      &= \prod \limits_{i=1}^{n} \mathbb{E}[r_i^{w_i/W}] \\
+                      &= \exp \sum \limits_{i=1}^{n} \log \mathbb{E}[r_i^{w_i/W}]
 
     where the last steps permits a numerically more stable computation. Moreover, we have
 
     .. math::
 
-        \log \mathbb{E}[r_i^{w_i/w}]
-            &= \log \frac{1}{N_i} \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} \exp \log j^{w_i/w} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} \exp ( \frac{w_i}{w} \cdot \log j )
+        \log \mathbb{E}[r_i^{w_i/W}]
+            &= \log \frac{1}{C_i} \sum \limits_{j=1}^{C_i} j^{w_i/W} \\
+            &= -\log \frac{1}{C_i} + \log \sum \limits_{j=1}^{C_i} j^{w_i/W} \\
+            &= -\log \frac{1}{C_i} + \log \sum \limits_{j=1}^{C_i} \exp \log j^{w_i/W} \\
+            &= -\log \frac{1}{C_i} + \log \sum \limits_{j=1}^{C_i} \exp ( \frac{w_i}{W} \cdot \log j )
 
     For the second summand in the last line, we observe a log-sum-exp term, with known numerically stable
     implementation.
@@ -927,18 +1000,19 @@ class GeometricMeanRank(RankBasedMetric):
     Alternatively, we can write
 
     .. math::
-        \log \mathbb{E}[r_i^{w_i/w}]
-            &= \log \frac{1}{N_i} \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
-            &= \log \frac{H_{-w_i/w}(N_i)}{N_i} \\
-            &= \log H_{-w_i/w}(N_i) - \log N_i
+        \log \mathbb{E}[r_i^{w_i/W}]
+            &= \log \frac{1}{C_i} \sum \limits_{j=1}^{C_i} j^{w_i/W} \\
+            &= \log \frac{H_{-w_i/W}(C_i)}{C_i} \\
+            &= \log H_{-w_i/W}(C_i) - \log C_i
 
     .. math::
         \mathbb{E}[M]
-            &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[r_i^{w_i/w}] \\
-            &= \exp \sum \limits_{i=1}^{m} (\log H_{-w_i/w}(N_i) - \log N_i) \\
-            &= \exp \sum \limits_{i=1}^{m} \log H_{-w_i/w}(N_i) - \exp \sum \limits_{i=1}^{m} \log N_i
+            &= \exp \sum \limits_{i=1}^{n} \log \mathbb{E}[r_i^{w_i/W}] \\
+            &= \exp \sum \limits_{i=1}^{n} (\log H_{-w_i/W}(C_i) - \log C_i) \\
+            &= \exp \sum \limits_{i=1}^{n} \log H_{-w_i/W}(C_i) - \exp \sum \limits_{i=1}^{n} \log C_i
 
-    where $H_p(n)$ denotes the generalized harmonic number, cf. :func:`generalized_harmonic_numbers`.
+    where $C_i$ denotes the number of candidates for ranking task $i$, and $H_p(c)$ denotes
+    the generalized harmonic number, cf. :func:`generalized_harmonic_numbers`.
     ---
     link: https://arxiv.org/abs/2203.07544
     description: The geometric mean over all ranks.
@@ -1025,7 +1099,7 @@ class GeometricMeanRank(RankBasedMetric):
     @staticmethod
     def _log_individual_expectation_no_weight(num_candidates: np.ndarray, factor: float = 1.0) -> np.ndarray:
         m = num_candidates.size
-        # we compute log E[r_i^(1/m)] for all N_i = 1 ... max_N_i once
+        # we compute log E[r_i^(1/m)] for all C_i = 1 ... max_C_i once
         max_val = num_candidates.max()
         x = np.arange(1, max_val + 1, dtype=float)
         x = factor * np.log(x) / m
@@ -1041,11 +1115,14 @@ class InverseGeometricMeanRank(RankBasedMetric):
     The mean rank corresponds to the arithmetic mean, and tends to be more affected by high rank values.
     The mean reciprocal rank corresponds to the harmonic mean, and tends to be more affected by low rank values.
     The remaining Pythagorean mean, the geometric mean, lies in the center and therefore could better balance these
-    biases. Therefore, the inverse geometric mean rank (IGMR) is defined as:
+    biases. Therefore, the inverse geometric mean rank (IGMR) is defined as the reciprocal of the geometric mean
+    over individual ranks $\{r_i\}_{i=1}^n$:
 
     .. math::
 
-        IGMR = \sqrt[\|\mathcal{I}\|]{\prod \limits_{r \in \mathcal{I}} r}
+        M = \prod \limits_{i=1}^{n} r_i^{-w_i/W}
+
+    with $W = \sum \limits_{i=1}^{n} w_i$.
 
     .. note:: This metric is novel as of its implementation in PyKEEN and was proposed by Max Berrendorf
 
@@ -1069,7 +1146,36 @@ class InverseGeometricMeanRank(RankBasedMetric):
 
 @parse_docdata
 class HarmonicMeanRank(RankBasedMetric):
-    """The harmonic mean rank.
+    r"""The harmonic mean rank.
+
+    The harmonic mean rank (HMR) computes the weighted harmonic mean over individual ranks
+    $\{r_i\}_{i=1}^n$, with weights $\{w_i\}_{i=1}^n$ (defaulting to $w_i = 1/n$ when
+    not explicitly provided). Letting $W = \sum_{i=1}^n w_i$ denote the sum of weights,
+    it is given as the reciprocal of the weighted arithmetic mean of reciprocals:
+
+    .. math::
+
+        HMR = \frac{W}{\sum_{i=1}^{n} \frac{w_i}{r_i}} = \frac{1}{\frac{1}{W} \sum_{i=1}^{n} \frac{w_i}{r_i}}
+
+    When weights are uniform ($w_i = 1/n$), this reduces to the standard harmonic mean
+    $\frac{n}{\sum_{i=1}^n r_i^{-1}}$.
+
+    The harmonic mean is particularly sensitive to small values (good ranks), making it
+    more robust to outliers with large ranks compared to the arithmetic mean. With PyKEEN's
+    standard 1-based indexing, the harmonic mean rank lies on the interval $[1, \infty)$
+    where lower is better.
+
+    .. note::
+
+        The harmonic mean is always less than or equal to the geometric mean, which is
+        always less than or equal to the arithmetic mean, assuming positive values. This
+        inequality holds for both weighted and unweighted cases, provided the same weights
+        are used for all three means.
+
+    .. warning::
+
+        The expected value and variance of the harmonic mean rank do not have a simple
+        closed-form solution.
 
     ---
     link: https://arxiv.org/abs/2203.07544
@@ -1149,11 +1255,11 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     r"""The inverse harmonic mean rank.
 
     The mean reciprocal rank (MRR) is the arithmetic mean of reciprocal ranks, and thus the inverse of the harmonic mean
-    of the ranks. It is defined as:
+    of the ranks. For individual ranks $\{r_i\}_{i=1}^n$, it is defined as:
 
     .. math::
 
-        IHMR = MRR =\frac{1}{|\mathcal{I}|} \sum_{r \in \mathcal{I}} r^{-1}
+        IHMR = MRR = \frac{1}{n} \sum_{i=1}^{n} r_i^{-1}
 
     .. warning::
 
@@ -1171,14 +1277,15 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
     .. math::
 
-        H_m(n) = \sum \limits_{i=1}^{n} i^{-m}
+        H_m(c) = \sum \limits_{j=1}^{c} j^{-m}
 
-    denote the generalized harmonic number, with $H(n) := H_{1}(n)$ for brevity.
+    denote the generalized harmonic number, with $H(c) := H_{1}(c)$ for brevity, and let
+    $C_i$ denote the number of candidates for ranking task $i$.
     Thus, we have
 
     .. math::
 
-        \mathbb{E}\left[r_i^{-1}\right] = \frac{H(N_i)}{N_i}
+        \mathbb{E}\left[r_i^{-1}\right] = \frac{H(C_i)}{C_i}
 
     and hence
 
@@ -1187,15 +1294,15 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         \mathbb{E}\left[\textrm{MRR}\right]
             &= \mathbb{E}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right] \\
             &= \frac{1}{n} \sum \limits_{i=1}^n \mathbb{E}\left[r_i^{-1}\right] \\
-            &= \frac{1}{n} \sum \limits_{i=1}^n \frac{H(N_i)}{N_i}
+            &= \frac{1}{n} \sum \limits_{i=1}^n \frac{H(C_i)}{C_i}
 
     For the variance, we have for the individual ranks
 
     .. math::
 
         \mathbb{V}\left[r_i^{-1}\right]
-            &= \frac{1}{N_i} \sum \limits_{i=1}^{N_i} \left(\frac{H(N_i)}{N_i} - \frac{1}{i}\right)^2 \\
-            &= \frac{N_i \cdot H_2(N_i) - H(N_i)^2}{N_i^2}
+            &= \frac{1}{C_i} \sum \limits_{j=1}^{C_i} \left(\frac{H(C_i)}{C_i} - \frac{1}{j}\right)^2 \\
+            &= \frac{C_i \cdot H_2(C_i) - H(C_i)^2}{C_i^2}
 
     and thus overall
 
@@ -1204,7 +1311,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         \mathbb{V}\left[\textrm{MRR}\right]
             &= \mathbb{V}\left[\frac{1}{n} \sum \limits_{i=1}^n r_i^{-1}\right] \\
             &= \frac{1}{n^2} \sum \limits_{i=1}^n \mathbb{V}\left[r_i^{-1}\right] \\
-            &= \frac{1}{n^2} \sum \limits_{i=1}^n \frac{N_i \cdot H_2(N_i) - H(N_i)^2}{N_i^2} \\
+            &= \frac{1}{n^2} \sum \limits_{i=1}^n \frac{C_i \cdot H_2(C_i) - H(C_i)^2}{C_i^2}
 
     .. seealso::
         https://en.wikipedia.org/wiki/Inverse_distribution#Inverse_uniform_distribution
@@ -1443,11 +1550,11 @@ class HitsAtK(RankBasedMetric):
     r"""The Hits @ k.
 
     The hits @ k describes the fraction of true entities that appear in the first $k$ entities of the sorted rank list.
-    Denoting the set of individual ranks as $\mathcal{I}$, it is given as:
+    For individual ranks $\{r_i\}_{i=1}^n$, it is given as:
 
     .. math::
 
-        H_k = \frac{1}{|\mathcal{I}|} \sum \limits_{r \in \mathcal{I}} \mathbb{I}[r \leq k]
+        H_k = \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]
 
     For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
     hits @ 20. The hits @ k, regardless of $k$, lies on the $[0, 1]$ where closer to 1 is better.
@@ -1465,7 +1572,8 @@ class HitsAtK(RankBasedMetric):
 
         \mathbb{I}[r_i \leq k] \sim \textit{Bernoulli}(p_i)
 
-    with $p_i = \min\{\frac{k}{N_i}, 1\}$. Thus, we have
+    with $p_i = \min\{\frac{k}{C_i}, 1\}$, where $C_i$ denotes the number of candidates for
+    ranking task $i$. Thus, we have
 
     .. math::
 
@@ -1492,6 +1600,7 @@ class HitsAtK(RankBasedMetric):
         \mathbb{V}[Hits@k] &= \mathbb{V}\left[\frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]\right] \\
                            &= \frac{1}{n^2} \sum \limits_{i=1}^{n} \mathbb{V}\left[\mathbb{I}[r_i \leq k]\right] \\
                            &= \frac{1}{n^2} \sum \limits_{i=1}^{n} p_i(1 - p_i)
+
     ---
     description: The relative frequency of ranks not larger than a given k.
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k
@@ -1540,7 +1649,7 @@ class HitsAtK(RankBasedMetric):
         **kwargs,
     ) -> float:  # noqa: D102
         num_candidates = np.asanyarray(num_candidates, dtype=float)
-        # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/N_i)
+        # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/C_i)
         individual = np.minimum(self.k / num_candidates, 1.0)
         return weighted_mean_expectation(individual=individual, weights=weights)
 
@@ -1552,7 +1661,7 @@ class HitsAtK(RankBasedMetric):
         weights: np.ndarray | None = None,
         **kwargs,
     ) -> float:  # noqa: D102
-        # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/N_i)
+        # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/C_i)
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         p = np.minimum(self.k / num_candidates, 1.0)
         individual_variance = p * (1 - p)
