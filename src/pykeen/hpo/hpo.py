@@ -875,7 +875,7 @@ def hpo_pipeline(
 
     # Invoke optimization of the objective function.
     study.optimize(
-        objective,  # type: ignore
+        objective,
         n_trials=n_trials,
         timeout=timeout,
         gc_after_trial=gc_after_trial,

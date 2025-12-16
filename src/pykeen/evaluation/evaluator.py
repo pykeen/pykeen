@@ -116,7 +116,7 @@ class MetricResults(Generic[MetricKeyType]):
         one_key = next(iter(self.data.keys()))
         # assert isinstance(one_key, NamedTuple)
         # TODO: should we enforce this?
-        one_key_nt: NamedTuple = one_key  # type: ignore
+        one_key_nt: NamedTuple = one_key  # type:ignore[assignment]
         columns = [field.capitalize() for field in one_key_nt._fields] + ["Value"]
         return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
 

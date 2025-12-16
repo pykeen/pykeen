@@ -205,7 +205,7 @@ def _prepare_representation_module_list(
                 f"representations was chosen wrong.",
             )
 
-    rs = nn.ModuleList(rs)  # type: ignore
+    rs = nn.ModuleList(rs)
     if skip_checks:
         return rs
 
