@@ -1463,13 +1463,15 @@ class InverseMedianRank(RankBasedMetric):
 class StandardDeviation(RankBasedMetric):
     r"""The ranks' standard deviation.
 
-    For weighted standard deviation, the calculation uses:
+    For individual ranks $\{r_i\}_{i=1}^n$ with weights $\{w_i\}_{i=1}^n$ (defaulting to
+    $w_i = 1/n$ when not explicitly provided), and letting $W = \sum_{i=1}^n w_i$ denote
+    the sum of weights, the weighted standard deviation is:
 
     .. math::
 
-        \sigma = \sqrt{\frac{\sum_{i=1}^{n} w_i (r_i - \bar{r})^2}{\sum_{j=1}^{n} w_j}}
+        \sigma = \sqrt{\frac{1}{W} \sum_{i=1}^{n} w_i (r_i - \bar{r})^2}
 
-    where $\bar{r} = \frac{\sum_{i=1}^{n} w_i r_i}{\sum_{j=1}^{n} w_j}$ is the weighted mean.
+    where $\bar{r} = \frac{1}{W} \sum_{i=1}^{n} w_i r_i$ is the weighted mean.
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
@@ -1498,13 +1500,15 @@ class StandardDeviation(RankBasedMetric):
 class Variance(RankBasedMetric):
     r"""The ranks' variance.
 
-    For weighted variance, the calculation uses:
+    For individual ranks $\{r_i\}_{i=1}^n$ with weights $\{w_i\}_{i=1}^n$ (defaulting to
+    $w_i = 1/n$ when not explicitly provided), and letting $W = \sum_{i=1}^n w_i$ denote
+    the sum of weights, the weighted variance is:
 
     .. math::
 
-        \sigma^2 = \frac{\sum_{i=1}^{n} w_i (r_i - \bar{r})^2}{\sum_{j=1}^{n} w_j}
+        \sigma^2 = \frac{1}{W} \sum_{i=1}^{n} w_i (r_i - \bar{r})^2
 
-    where $\bar{r} = \frac{\sum_{i=1}^{n} w_i r_i}{\sum_{j=1}^{n} w_j}$ is the weighted mean.
+    where $\bar{r} = \frac{1}{W} \sum_{i=1}^{n} w_i r_i$ is the weighted mean.
 
     .. note::
 
@@ -1535,7 +1539,23 @@ class Variance(RankBasedMetric):
 
 @parse_docdata
 class MedianAbsoluteDeviation(RankBasedMetric):
-    """The ranks' median absolute deviation (MAD).
+    r"""The ranks' median absolute deviation (MAD).
+
+    For individual ranks $\{r_i\}_{i=1}^n$ with optional weights $\{w_i\}_{i=1}^n$, the
+    median absolute deviation is defined as:
+
+    .. math::
+
+        MAD = \frac{\text{median}_w(|r_i - \text{median}_w(r)|)}{c}
+
+    where $\text{median}_w$ denotes the weighted median and $c \approx 0.67449$ is a
+    consistency constant equal to the 0.75 quantile of the standard normal distribution
+    (i.e., $\Phi^{-1}(0.75)$), ensuring that MAD estimates the standard deviation for
+    normally distributed data.
+
+    When weights are not provided, this reduces to the standard (unweighted) median
+    absolute deviation computed via :func:`scipy.stats.median_abs_deviation` with
+    ``scale='normal'``.
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
