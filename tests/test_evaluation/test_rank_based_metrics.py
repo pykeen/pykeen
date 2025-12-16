@@ -142,6 +142,9 @@ class MedianAbsoluteDeviationTests(cases.RankBasedMetricTestCase):
 
     cls = pykeen.metrics.ranking.MedianAbsoluteDeviation
 
+    def test_weights_direction(self) -> None:
+        raise unittest.SkipTest("Test does not make sense to dispersion metrics")
+
 
 class MedianRankTests(cases.RankBasedMetricTestCase):
     """Tests for median rank."""
