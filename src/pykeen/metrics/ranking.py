@@ -820,8 +820,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
 
 @parse_docdata
 class ArithmeticMeanRank(RankBasedMetric):
-    r"""
-    The (arithmetic) mean rank.
+    r"""The (arithmetic) mean rank.
 
     The mean rank (MR) computes the (weighted) arithmetic mean over individual ranks
     $\{r_i\}_{i=1}^n$, with weights $\{w_i\}_{i=1}^n$ (defaulting to $w_i = 1/n$ when
