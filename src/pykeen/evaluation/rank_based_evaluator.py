@@ -681,8 +681,8 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
     @classmethod
     def _iter_default_metrics(cls) -> Iterable[tuple[HintOrType[RankBasedMetric], OptionalKwargs]]:
         for metric, kwargs in super()._iter_default_metrics():
-            cls = rank_based_metric_resolver.lookup(metric)
-            if cls.supports_weights:
+            metric_cls = rank_based_metric_resolver.lookup(metric)
+            if metric_cls.supports_weights:
                 yield metric, kwargs
 
     @staticmethod
