@@ -150,9 +150,17 @@ __all__ = [
     "harmonic_variances",
     #
     "HITS_METRICS",
+    "WEIGHTED_MEDIAN_SCALE",
+    "EPSILON",
+    "NoWeightSupportError",
 ]
 
+#: A small value to help avoid dividing by zero
 EPSILON = 1.0e-12
+
+#: The consistency constant for MAD with scale="normal": the 0.75 quantile of the
+#: standard normal distribution (Φ^(-1)(0.75))
+WEIGHTED_MEDIAN_SCALE = 0.67449
 
 
 def generate_ranks(
@@ -1547,7 +1555,17 @@ class InverseMedianRank(RankBasedMetric):
 
 @parse_docdata
 class StandardDeviation(RankBasedMetric):
-    """The ranks' standard deviation.
+    r"""The ranks' standard deviation.
+
+    For individual ranks $\{r_i\}_{i=1}^n$ with weights $\{w_i\}_{i=1}^n$ (defaulting to
+    $w_i = 1/n$ when not explicitly provided), and letting $W = \sum_{i=1}^n w_i$ denote
+    the sum of weights, the weighted standard deviation is:
+
+    .. math::
+
+        \sigma = \sqrt{\frac{1}{W} \sum_{i=1}^{n} w_i (r_i - \bar{r})^2}
+
+    where $\bar{r} = \frac{1}{W} \sum_{i=1}^{n} w_i r_i$ is the weighted mean.
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
@@ -1557,17 +1575,39 @@ class StandardDeviation(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_std", "std")
+    supports_weights: ClassVar[bool] = True
 
     # docstr-coverage: inherited
     def __call__(
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:  # noqa: D102
-        return np.asanyarray(ranks).std().item()
+        ranks = np.asanyarray(ranks)
+        if weights is None:
+            return ranks.std().item()
+        # Weighted standard deviation: sqrt(E[(X - E[X])^2])
+        mean = np.average(ranks, weights=weights)
+        variance = np.average((ranks - mean) ** 2, weights=weights)
+        return math.sqrt(variance)
 
 
 @parse_docdata
 class Variance(RankBasedMetric):
-    """The ranks' variance.
+    r"""The ranks' variance.
+
+    For individual ranks $\{r_i\}_{i=1}^n$ with weights $\{w_i\}_{i=1}^n$ (defaulting to
+    $w_i = 1/n$ when not explicitly provided), and letting $W = \sum_{i=1}^n w_i$ denote
+    the sum of weights, the weighted variance is:
+
+    .. math::
+
+        \sigma^2 = \frac{1}{W} \sum_{i=1}^{n} w_i (r_i - \bar{r})^2
+
+    where $\bar{r} = \frac{1}{W} \sum_{i=1}^{n} w_i r_i$ is the weighted mean.
+
+    .. note::
+
+        This computes the variance of the **observed weighted sample**, not the variance of the weighted mean
+        (which is computed by :func:`weighted_mean_variance` and used in metric expected value/variance calculations).
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
@@ -1577,17 +1617,39 @@ class Variance(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = False
     synonyms: ClassVar[Collection[str]] = ("rank_var", "var")
+    supports_weights: ClassVar[bool] = True
 
     # docstr-coverage: inherited
     def __call__(
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:  # noqa: D102
-        return np.asanyarray(ranks).var().item()
+        ranks = np.asanyarray(ranks)
+        if weights is None:
+            return ranks.var().item()
+        # Weighted variance: E[(X - E[X])^2]
+        mean = np.average(ranks, weights=weights)
+        return np.average((ranks - mean) ** 2, weights=weights).item()
 
 
 @parse_docdata
 class MedianAbsoluteDeviation(RankBasedMetric):
-    """The ranks' median absolute deviation (MAD).
+    r"""The ranks' median absolute deviation (MAD).
+
+    For individual ranks $\{r_i\}_{i=1}^n$ with optional weights $\{w_i\}_{i=1}^n$, the
+    median absolute deviation is defined as:
+
+    .. math::
+
+        MAD = \frac{\text{median}_w(|r_i - \text{median}_w(r)|)}{c}
+
+    where $\text{median}_w$ denotes the weighted median and $c \approx 0.67449$ is a
+    consistency constant equal to the 0.75 quantile of the standard normal distribution
+    (i.e., $\Phi^{-1}(0.75)$), ensuring that MAD estimates the standard deviation for
+    normally distributed data.
+
+    When weights are not provided, this reduces to the standard (unweighted) median
+    absolute deviation computed via :func:`scipy.stats.median_abs_deviation` with
+    ``scale='normal'``.
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html
@@ -1606,7 +1668,14 @@ class MedianAbsoluteDeviation(RankBasedMetric):
         if weights is None:
             return stats.median_abs_deviation(ranks, scale="normal").item()
 
-        return weighted_median(a=np.abs(ranks - weighted_median(a=ranks, weights=weights)), weights=weights).item()
+        median = weighted_median(a=ranks, weights=weights)
+        abs_diff_from_median = np.abs(ranks - median)
+
+        return weighted_median(a=abs_diff_from_median, weights=weights).item() / WEIGHTED_MEDIAN_SCALE
+
+
+class NoWeightSupportError(ValueError):
+    """The metric does not support weights."""
 
 
 @parse_docdata
@@ -1614,6 +1683,13 @@ class Count(RankBasedMetric):
     """The ranks' count.
 
     Lower numbers may indicate unreliable results.
+
+    .. note::
+
+        This metric does not support weights. The count is defined as the number of rank observations,
+        not a weighted sum. If you need to track weighted sample sizes, consider using the sum of weights
+        separately.
+
     ---
     link: https://pykeen.readthedocs.io/en/stable/reference/evaluation.html
     """
@@ -1622,12 +1698,17 @@ class Count(RankBasedMetric):
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=math.inf)
     increasing = True
     synonyms: ClassVar[Collection[str]] = ("rank_count",)
+    supports_weights: ClassVar[bool] = False
 
     # docstr-coverage: inherited
     def __call__(
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:  # noqa: D102
         # TODO: should we return the sum of weights?
+        if weights is not None:
+            raise NoWeightSupportError(
+                f"{self.__class__.__name__} does not support weights. Count is the number of observations."
+            )
         return float(np.asanyarray(ranks).size)
 
 
