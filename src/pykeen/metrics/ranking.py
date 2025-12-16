@@ -151,6 +151,7 @@ __all__ = [
     "HITS_METRICS",
     "WEIGHTED_MEDIAN_SCALE",
     "EPSILON",
+    "NoWeightSupportError",
 ]
 
 #: A small value to help avoid dividing by zero
@@ -1587,6 +1588,10 @@ class MedianAbsoluteDeviation(RankBasedMetric):
         return weighted_median(a=abs_diff_from_median, weights=weights).item() / WEIGHTED_MEDIAN_SCALE
 
 
+class NoWeightSupportError(ValueError):
+    """The metric does not support weights."""
+
+
 @parse_docdata
 class Count(RankBasedMetric):
     """The ranks' count.
@@ -1615,7 +1620,7 @@ class Count(RankBasedMetric):
     ) -> float:  # noqa: D102
         # TODO: should we return the sum of weights?
         if weights is not None:
-            raise ValueError(
+            raise NoWeightSupportError(
                 f"{self.__class__.__name__} does not support weights. Count is the number of observations."
             )
         return float(np.asanyarray(ranks).size)
