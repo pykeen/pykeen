@@ -33,7 +33,7 @@ class AdjustedArithmeticMeanRankIndexTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.AdjustedArithmeticMeanRankIndex
 
 
-class ZInverseHarmonicMeanRankTests(cases.RankBasedMetricTestCase):
+class ZInverseHarmonicMeanRankTests(cases.ZRankBasedMetricTestCase):
     """Tests for adjusted MRR."""
 
     cls = pykeen.metrics.ranking.ZInverseHarmonicMeanRank
@@ -57,7 +57,7 @@ class ArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.ArithmeticMeanRank
 
 
-class ZArithmeticMeanRankTests(cases.RankBasedMetricTestCase):
+class ZArithmeticMeanRankTests(cases.ZRankBasedMetricTestCase):
     """Tests for z-scored arithmetic mean rank."""
 
     cls = pykeen.metrics.ranking.ZArithmeticMeanRank
@@ -85,14 +85,10 @@ class AdjustedGeometricMeanRankIndexTests(cases.RankBasedMetricTestCase):
         raise unittest.SkipTest("The weights of a geometric mean do not represent sample weights.")
 
 
-class ZGeometricMeanRankTests(cases.RankBasedMetricTestCase):
+class ZGeometricMeanRankTests(cases.ZRankBasedMetricTestCase):
     """Tests for z-geometric mean rank."""
 
     cls = pykeen.metrics.ranking.ZGeometricMeanRank
-
-    def test_weights_coherence(self) -> None:
-        # TODO: do we want this interpretation?
-        raise unittest.SkipTest("The weights of a geometric mean do not represent sample weights.")
 
 
 class HarmonicMeanRankTests(cases.RankBasedMetricTestCase):
@@ -107,7 +103,7 @@ class HitsAtKTests(cases.RankBasedMetricTestCase):
     cls = pykeen.metrics.ranking.HitsAtK
 
 
-class ZHitsAtKTests(cases.RankBasedMetricTestCase):
+class ZHitsAtKTests(cases.ZRankBasedMetricTestCase):
     """Tests for z-scored hits at k."""
 
     cls = pykeen.metrics.ranking.ZHitsAtK

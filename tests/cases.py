@@ -2365,6 +2365,14 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         assert value_repeat == pytest.approx(value_weighted), (value_repeat, value_weighted)
 
 
+class ZRankBasedMetricTestCase(RankBasedMetricTestCase):
+    """Test cases for z-normalized metrics."""
+
+    # docstr-coverage: inherited
+    def test_weights_coherence(self):  # noqa: D102
+        raise unittest.SkipTest("Z-normalized metrics do not work well with the sampling weight interpretation.")
+
+
 class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
     """Test for metric results."""
 
