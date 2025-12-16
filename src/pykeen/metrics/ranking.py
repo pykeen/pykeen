@@ -964,27 +964,27 @@ class GeometricMeanRank(RankBasedMetric):
 
     .. math::
 
-        M = \left(\prod \limits_{i=1}^{m} r_i^{w_i}\right)^{1/w}
+        M = \left(\prod \limits_{i=1}^{n} r_i^{w_i}\right)^{1/W}
 
-    with $w = \sum \limits_{i=1}^{m} w_i$. The unweighted GMR is obtained by setting $w_i = 1$.
+    with $W = \sum \limits_{i=1}^{n} w_i$. The unweighted GMR is obtained by setting $w_i = 1$.
 
     For computing the expected value, we first observe that
 
     .. math::
 
-        \mathbb{E}[M] &= \mathbb{E}\left[\sqrt[w]{\prod \limits_{i=1}^{m} r_i^{w_i}}\right] \\
-                      &= \prod \limits_{i=1}^{m} \mathbb{E}[r_i^{w_i/w}] \\
-                      &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[r_i^{w_i/w}]
+        \mathbb{E}[M] &= \mathbb{E}\left[\sqrt[W]{\prod \limits_{i=1}^{n} r_i^{w_i}}\right] \\
+                      &= \prod \limits_{i=1}^{n} \mathbb{E}[r_i^{w_i/W}] \\
+                      &= \exp \sum \limits_{i=1}^{n} \log \mathbb{E}[r_i^{w_i/W}]
 
     where the last steps permits a numerically more stable computation. Moreover, we have
 
     .. math::
 
-        \log \mathbb{E}[r_i^{w_i/w}]
-            &= \log \frac{1}{N_i} \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} \exp \log j^{w_i/w} \\
-            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} \exp ( \frac{w_i}{w} \cdot \log j )
+        \log \mathbb{E}[r_i^{w_i/W}]
+            &= \log \frac{1}{N_i} \sum \limits_{j=1}^{N_i} j^{w_i/W} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} j^{w_i/W} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} \exp \log j^{w_i/W} \\
+            &= -\log \frac{1}{N_i} + \log \sum \limits_{j=1}^{N_i} \exp ( \frac{w_i}{W} \cdot \log j )
 
     For the second summand in the last line, we observe a log-sum-exp term, with known numerically stable
     implementation.
@@ -992,16 +992,16 @@ class GeometricMeanRank(RankBasedMetric):
     Alternatively, we can write
 
     .. math::
-        \log \mathbb{E}[r_i^{w_i/w}]
-            &= \log \frac{1}{N_i} \sum \limits_{j=1}^{N_i} j^{w_i/w} \\
-            &= \log \frac{H_{-w_i/w}(N_i)}{N_i} \\
-            &= \log H_{-w_i/w}(N_i) - \log N_i
+        \log \mathbb{E}[r_i^{w_i/W}]
+            &= \log \frac{1}{N_i} \sum \limits_{j=1}^{N_i} j^{w_i/W} \\
+            &= \log \frac{H_{-w_i/W}(N_i)}{N_i} \\
+            &= \log H_{-w_i/W}(N_i) - \log N_i
 
     .. math::
         \mathbb{E}[M]
-            &= \exp \sum \limits_{i=1}^{m} \log \mathbb{E}[r_i^{w_i/w}] \\
-            &= \exp \sum \limits_{i=1}^{m} (\log H_{-w_i/w}(N_i) - \log N_i) \\
-            &= \exp \sum \limits_{i=1}^{m} \log H_{-w_i/w}(N_i) - \exp \sum \limits_{i=1}^{m} \log N_i
+            &= \exp \sum \limits_{i=1}^{n} \log \mathbb{E}[r_i^{w_i/W}] \\
+            &= \exp \sum \limits_{i=1}^{n} (\log H_{-w_i/W}(N_i) - \log N_i) \\
+            &= \exp \sum \limits_{i=1}^{n} \log H_{-w_i/W}(N_i) - \exp \sum \limits_{i=1}^{n} \log N_i
 
     where $H_p(n)$ denotes the generalized harmonic number, cf. :func:`generalized_harmonic_numbers`.
     ---
