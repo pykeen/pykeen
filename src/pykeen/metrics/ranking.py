@@ -1400,6 +1400,7 @@ class Variance(RankBasedMetric):
     where $\bar{r} = \frac{\sum_{i=1}^{n} w_i r_i}{\sum_{j=1}^{n} w_j}$ is the weighted mean.
 
     .. note::
+
         This computes the variance of the **observed weighted sample**, not the variance of the weighted mean
         (which is computed by :func:`weighted_mean_variance` and used in metric expected value/variance calculations).
 
@@ -1461,6 +1462,7 @@ class Count(RankBasedMetric):
     Lower numbers may indicate unreliable results.
 
     .. note::
+
         This metric does not support weights. The count is defined as the number of rank observations,
         not a weighted sum. If you need to track weighted sample sizes, consider using the sum of weights
         separately.
