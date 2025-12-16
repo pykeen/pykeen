@@ -1156,7 +1156,9 @@ class HarmonicMeanRank(RankBasedMetric):
     .. note::
 
         The harmonic mean is always less than or equal to the geometric mean, which is
-        always less than or equal to the arithmetic mean, assuming positive values.
+        always less than or equal to the arithmetic mean, assuming positive values. This
+        inequality holds for both weighted and unweighted cases, provided the same weights
+        are used for all three means.
 
     ---
     link: https://arxiv.org/abs/2203.07544
