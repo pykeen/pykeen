@@ -19,7 +19,7 @@ import numpy as np
 import numpy.random
 import pandas as pd
 import torch
-from class_resolver import OneOrManyHintOrType, OneOrManyOptionalKwargs
+from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranks import Ranks
@@ -329,18 +329,25 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
             metrics = []
         self.metrics = rank_based_metric_resolver.make_many(metrics, metrics_kwargs)
         if add_defaults:
-            hits_at_k_keys = [rank_based_metric_resolver.normalize_cls(cls) for cls in HITS_METRICS]
-            ks = (1, 3, 5, 10)
-            metrics = [key for key in rank_based_metric_resolver.lookup_dict if key not in hits_at_k_keys]
-            metrics_kwargs = [None] * len(metrics)
-            for hits_at_k_key in hits_at_k_keys:
-                metrics += [hits_at_k_key] * len(ks)
-                metrics_kwargs += [{"k": k} for k in ks]
-            self.metrics.extend(rank_based_metric_resolver.make_many(metrics, metrics_kwargs))
+            self.metrics.extend(
+                rank_based_metric_resolver.make(metric, kwargs) for metric, kwargs in self._iter_default_metrics()
+            )
         self.ranks = defaultdict(list)
         self.num_candidates = defaultdict(list)
         self.num_entities = None
         self.clear_on_finalize = clear_on_finalize
+
+    @classmethod
+    def _iter_default_metrics(cls) -> Iterable[tuple[HintOrType[RankBasedMetric], OptionalKwargs]]:
+        hits_at_k_keys = [rank_based_metric_resolver.normalize_cls(cls) for cls in HITS_METRICS]
+        ks = (1, 3, 5, 10)
+        for hits_at_k_key in hits_at_k_keys:
+            for k in ks:
+                yield hits_at_k_key, {"k": k}
+        for key in rank_based_metric_resolver.lookup_dict:
+            if key in hits_at_k_keys:
+                continue
+            yield key, None
 
     # docstr-coverage: inherited
     def process_scores_(
@@ -670,6 +677,13 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         """
         super().__init__(**kwargs)
         self.keys = defaultdict(list)
+
+    @classmethod
+    def _iter_default_metrics(cls) -> Iterable[tuple[HintOrType[RankBasedMetric], OptionalKwargs]]:
+        for metric, kwargs in super()._iter_default_metrics():
+            cls = rank_based_metric_resolver.lookup(metric)
+            if cls.supports_weights:
+                yield metric, kwargs
 
     @staticmethod
     def _calculate_weights(keys: Iterable[np.ndarray]) -> np.ndarray:
