@@ -1134,7 +1134,29 @@ class InverseGeometricMeanRank(RankBasedMetric):
 
 @parse_docdata
 class HarmonicMeanRank(RankBasedMetric):
-    """The harmonic mean rank.
+    r"""The harmonic mean rank.
+
+    The harmonic mean rank (HMR) computes the weighted harmonic mean over individual ranks
+    $\{r_i\}_{i=1}^n$, with weights $\{w_i\}_{i=1}^n$ (defaulting to $w_i = 1/n$ when
+    not explicitly provided). Letting $W = \sum_{i=1}^n w_i$ denote the sum of weights,
+    it is given as the reciprocal of the weighted arithmetic mean of reciprocals:
+
+    .. math::
+
+        HMR = \frac{W}{\sum_{i=1}^{n} \frac{w_i}{r_i}} = \frac{1}{\frac{1}{W} \sum_{i=1}^{n} \frac{w_i}{r_i}}
+
+    When weights are uniform ($w_i = 1/n$), this reduces to the standard harmonic mean
+    $\frac{n}{\sum_{i=1}^n r_i^{-1}}$.
+
+    The harmonic mean is particularly sensitive to small values (good ranks), making it
+    more robust to outliers with large ranks compared to the arithmetic mean. With PyKEEN's
+    standard 1-based indexing, the harmonic mean rank lies on the interval $[1, \infty)$
+    where lower is better.
+
+    .. note::
+
+        The harmonic mean is always less than or equal to the geometric mean, which is
+        always less than or equal to the arithmetic mean, assuming positive values.
 
     ---
     link: https://arxiv.org/abs/2203.07544
