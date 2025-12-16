@@ -220,11 +220,15 @@ class RankBasedMetric(Metric):
         (arbitrary positive scalar weights), not as repeat counts (number of independent
         observations). This matches the semantics of :func:`numpy.average`.
 
+        Weights $\{w_i\}_{i=1}^n$ are **normalized** internally, with $W = \sum_{i=1}^n w_i$
+        used as the normalization factor. When no weights are provided, uniform weights
+        $w_i = 1/n$ are used (implying $W = 1$).
+
         Specifically, for a metric value $M$ computed from weighted ranks:
 
         - The expected value $\mathbb{E}[M]$ is identical for both interpretations
-        - The variance $\mathbb{V}[M]$ differs: scaling factors use $\sum w_i^2
-          \mathbb{V}[x_i]$ (quadratic), while repeat counts would use $\sum w_i
+        - The variance $\mathbb{V}[M]$ differs: scaling factors use $\frac{1}{W^2} \sum w_i^2
+          \mathbb{V}[x_i]$ (quadratic), while repeat counts would use $\frac{1}{W^2} \sum w_i
           \mathbb{V}[x_i]$ (linear)
 
         Consequently, ``metric(ranks, weights=w)`` may differ from
