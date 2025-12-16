@@ -139,6 +139,10 @@ class MedianAbsoluteDeviationTests(cases.RankBasedMetricTestCase):
 
     cls = pykeen.metrics.ranking.MedianAbsoluteDeviation
 
+    # docstr-coverage: inherited
+    def test_weights_coherence(self):  # noqa: D102
+        raise unittest.SkipTest("Does not work well with the sampling weight interpretation.")
+
     def test_weights_direction(self) -> None:
         raise unittest.SkipTest("Test does not make sense to dispersion metrics")
 
