@@ -12,6 +12,7 @@ from scipy.stats import bootstrap
 import pykeen.metrics.ranking
 from pykeen.metrics.ranking import generalized_harmonic_numbers, harmonic_variances
 from pykeen.metrics.utils import (
+    compute_median_survival_function,
     stable_product,
     weighted_harmonic_mean,
     weighted_mean_expectation,
@@ -271,3 +272,71 @@ def test_stable_product():
     # positive and negative values
     array = 2 * array - 1
     numpy.testing.assert_almost_equal(stable_product(array), numpy.prod(array))
+
+
+def _assert_valid_survival_function(sf: np.ndarray, k_max: int, atol: float = 0.0) -> None:
+    """Assert that the given array is a valid survival function.
+
+    :param sf: The survival function array
+    :param k_max: The maximum $k$.
+    :param atol: Absolute tolerance for boundary checks and monotonicity
+    """
+    # 0 to k_max
+    assert len(sf) == k_max + 1
+    # All probabilities should be in [0, 1]
+    assert all(sf >= 0.0)
+    assert all(sf <= 1.0)
+    # Starts at 1
+    assert sf[0] == pytest.approx(1.0, abs=atol)
+    # Ends at 0
+    assert sf[-1] == pytest.approx(0.0, abs=atol)
+    # Monotonically non-increasing
+    # Check monotonicity: sf[i] >= sf[i+1]
+    differences = np.diff(sf)
+    assert all(differences <= atol)
+
+
+def test_median_survival_function_single_candidate():
+    """Test with a single variable."""
+    # Single variable with k=10
+    num_candidates = np.array([10])
+    sf = compute_median_survival_function(num_candidates)
+
+    # For single variable, median is just that variable
+    # P(X > x) = (k - x) / k for x in [0, k]
+    expected = np.linspace(1.0, 0.0, 11)
+    numpy.testing.assert_allclose(sf, expected, atol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "num_candidates",
+    [
+        pytest.param(np.full(3, 5), id="uniform_candidates"),
+        pytest.param(np.array([3, 5, 7]), id="different_candidates"),
+        pytest.param(np.full(2, 4), id="two_variables_even"),
+        pytest.param(np.full(3, 6), id="three_variables_odd"),
+    ],
+)
+def test_median_survival_function_basic_properties(num_candidates: np.ndarray):
+    """Test basic survival function properties for various candidate configurations."""
+    sf = compute_median_survival_function(num_candidates)
+    _assert_valid_survival_function(sf, k_max=int(num_candidates.max()))
+
+
+def test_median_survival_function_against_simulation():
+    """Test against empirical simulation for validation."""
+    generator = numpy.random.default_rng(seed=42)
+    num_candidates = np.array([10, 15, 20])
+
+    # Compute analytical survival function
+    sf = compute_median_survival_function(num_candidates)
+
+    # Run simulation
+    n_samples = 10_000
+    samples = np.array([np.median([generator.integers(1, k + 1) for k in num_candidates]) for _ in range(n_samples)])
+
+    # Compute empirical survival function
+    empirical_sf = np.array([(samples > x).mean() for x in range(len(sf))])
+
+    # The analytical result should be close to empirical (with some tolerance)
+    numpy.testing.assert_allclose(sf, empirical_sf, rtol=0.05)
