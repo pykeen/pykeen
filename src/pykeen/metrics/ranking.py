@@ -1116,11 +1116,14 @@ class InverseGeometricMeanRank(RankBasedMetric):
     The mean rank corresponds to the arithmetic mean, and tends to be more affected by high rank values.
     The mean reciprocal rank corresponds to the harmonic mean, and tends to be more affected by low rank values.
     The remaining Pythagorean mean, the geometric mean, lies in the center and therefore could better balance these
-    biases. Therefore, the inverse geometric mean rank (IGMR) is defined as:
+    biases. Therefore, the inverse geometric mean rank (IGMR) is defined as the reciprocal of the geometric mean
+    over individual ranks $\{r_i\}_{i=1}^n$:
 
     .. math::
 
-        IGMR = \sqrt[\|\mathcal{I}\|]{\prod \limits_{r \in \mathcal{I}} r}
+        M = \prod \limits_{i=1}^{n} r_i^{-w_i/W}
+
+    with $W = \sum \limits_{i=1}^{n} w_i$.
 
     .. note:: This metric is novel as of its implementation in PyKEEN and was proposed by Max Berrendorf
 
