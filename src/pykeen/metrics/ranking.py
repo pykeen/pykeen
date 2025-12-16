@@ -156,8 +156,8 @@ __all__ = [
 #: A small value to help avoid dividing by zero
 EPSILON = 1.0e-12
 
-#: note: scale="normal", means that we divide by inverse of the standard normal
-#: quantile function at 0.75, which is approximately 0.67449.
+#: The consistency constant for MAD with scale="normal": the 0.75 quantile of the
+#: standard normal distribution (Φ^(-1)(0.75))
 WEIGHTED_MEDIAN_SCALE = 0.67449
 
 
