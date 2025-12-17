@@ -166,7 +166,7 @@ def parallel_unsqueeze(x: FloatTensor | Sequence[FloatTensor], dim: int) -> Floa
     return cast(Sequence[FloatTensor], [xx.unsqueeze(dim=dim) for xx in x])
 
 
-class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
+class Interaction(nn.Module, ABC, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     """Base class for interaction functions."""
 
     #: The symbolic shapes for entity representations
@@ -425,7 +425,7 @@ class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation,
                 mod.reset_parameters()
 
 
-class NormBasedInteraction(Interaction, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
+class NormBasedInteraction(Interaction, ABC, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):
     """Norm-based interactions use a (powered) $p$-norm in their scoring function."""
 
     def __init__(self, p: int, power_norm: bool = False):

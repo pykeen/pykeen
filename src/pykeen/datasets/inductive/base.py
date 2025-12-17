@@ -201,7 +201,7 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
         transductive_training_path: str | pathlib.Path,
         inductive_inference_path: str | pathlib.Path,
         inductive_testing_path: str | pathlib.Path,
-        inductive_validation_path: str | str | pathlib.Path,
+        inductive_validation_path: str | pathlib.Path,
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,

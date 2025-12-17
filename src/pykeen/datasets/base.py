@@ -153,7 +153,7 @@ class Dataset(ExtraReprMixin):
     metadata_file_name: ClassVar[str] = "metadata.pth"
     triples_factory_cls: ClassVar[type[CoreTriplesFactory]] = TriplesFactory
 
-    def __eq__(self, __o: object) -> bool:  # noqa: D105
+    def __eq__(self, __o: object, /) -> bool:  # noqa: D105
         return (
             isinstance(__o, Dataset)
             and (self.training == __o.training)
