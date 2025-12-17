@@ -17,6 +17,8 @@ __all__ = [
     "weighted_mean_variance",
     "weighted_harmonic_mean",
     "weighted_median",
+    "compute_log_expected_power",
+    "compute_median_survival_function",
 ]
 
 
@@ -142,20 +144,22 @@ class Metric(ExtraReprMixin):
 def weighted_mean_expectation(individual: np.ndarray, weights: np.ndarray | None) -> float:
     r"""Calculate the expectation of a weighted mean of variables with given individual expected values.
 
-    For random variables $x_1, \ldots, x_n$ with individual expectations $\mathbb{E}[x_i]$ and scalar weights
-    $w_1, \ldots, w_n$, the expectation of the weighted mean is:
+    For random variables $x_1, \ldots, x_n$ with individual expectations
+    $\mathbb{E}[x_i]$ and scalar weights $w_1, \ldots, w_n$, the expectation of the
+    weighted mean is:
 
     .. math::
 
         \mathbb{E}\left[\frac{\sum \limits_{i=1}^{n} w_i x_i}{\sum \limits_{j=1}^{n} w_j}\right]
             = \frac{\sum \limits_{i=1}^{n} w_i \mathbb{E}\left[x_i\right]}{\sum \limits_{j=1}^{n} w_j}
 
-    When $w_i = \frac{1}{n}$ (uniform weights, used if no explicit weights are given), the weights are normalized
-    such that $\sum w_i = 1$.
+    When $w_i = \frac{1}{n}$ (uniform weights, used if no explicit weights are given),
+    the weights are normalized such that $\sum w_i = 1$.
 
     .. note::
-        Unlike variance, the expected value formula is identical for both scaling factor and repeat count
-        interpretations of weights.
+
+        Unlike variance, the expected value formula is identical for both scaling factor
+        and repeat count interpretations of weights.
 
     :param individual: the individual variables' expectations, $\mathbb{E}[x_i]$
     :param weights: the individual variables' scalar weights
@@ -168,23 +172,27 @@ def weighted_mean_expectation(individual: np.ndarray, weights: np.ndarray | None
 def weighted_mean_variance(individual: np.ndarray, weights: np.ndarray | None) -> float:
     r"""Calculate the variance of a weighted mean of variables with given individual variances.
 
-    For independent random variables $x_1, \ldots, x_n$ with individual variances $\mathbb{V}[x_i]$ and arbitrary
-    scalar weights $w_1, \ldots, w_n$, the variance of the weighted mean is:
+    For independent random variables $x_1, \ldots, x_n$ with individual variances
+    $\mathbb{V}[x_i]$ and arbitrary scalar weights $w_1, \ldots, w_n$, the variance of
+    the weighted mean is:
 
     .. math::
 
         \mathbb{V}\left[\frac{\sum \limits_{i=1}^{n} w_i x_i}{\sum \limits_{j=1}^{n} w_j}\right]
             = \frac{\sum \limits_{i=1}^{n} w_i^2 \mathbb{V}\left[x_i\right]}{\left(\sum \limits_{j=1}^{n} w_j\right)^2}
 
-    The $w_i^2$ term arises from the variance scaling property: $\mathbb{V}[c \cdot X] = c^2 \cdot \mathbb{V}[X]$.
+    The $w_i^2$ term arises from the variance scaling property: $\mathbb{V}[c \cdot X] =
+    c^2 \cdot \mathbb{V}[X]$.
 
-    When $w_i = \frac{1}{n}$ (uniform weights, used if no explicit weights are given), the weights are normalized
-    such that $\sum w_i = 1$.
+    When $w_i = \frac{1}{n}$ (uniform weights, used if no explicit weights are given),
+    the weights are normalized such that $\sum w_i = 1$.
 
     .. note::
-        This implements **scaling factor semantics**: each variable is sampled once and scaled by its weight.
-        This differs from **repeat count semantics** where weights would represent the number of independent
-        samples, which would yield a linear (not quadratic) dependence on weights.
+
+        This implements **scaling factor semantics**: each variable is sampled once and
+        scaled by its weight. This differs from **repeat count semantics** where weights
+        would represent the number of independent samples, which would yield a linear
+        (not quadratic) dependence on weights.
 
     :param individual: the individual variables' variances, $\mathbb{V}[x_i]$
     :param weights: the individual variables' scalar weights (not repeat counts)
@@ -240,3 +248,156 @@ def weighted_median(a: np.ndarray, weights: np.ndarray | None = None) -> np.ndar
     if cdf[idx] == v:
         return s_ranks[idx : idx + 2].mean()
     return s_ranks[idx]
+
+
+def compute_log_expected_power(k_values: np.ndarray, powers: np.ndarray, memory_limit_elements: int = 10**7) -> float:
+    """
+    Compute $sum( ln( E[X_i^p_i] ) )$.
+
+    Does so efficiently by using sorted batching and vectorization.
+
+    :param k_values: shape: (n,)
+        Upper bounds.
+    :param powers: shape: (n,)
+        Exponents.
+    :param memory_limit_elements:
+        Max number of float elements in the temporary matrix buffer.
+        10^7 elements ~ 80MB RAM.
+
+    :return:
+        The scalar log-value.
+    """
+    # 1. Sort inputs by k.
+    # This minimizes the 'masking waste' when we batch variables together.
+    # Small k's are processed with small k's; large with large.
+    sort_idx = np.argsort(k_values)
+    k_sorted = np.asarray(k_values)[sort_idx]
+    p_sorted = np.asarray(powers)[sort_idx]
+
+    n = len(k_sorted)
+    total_log_moment = 0.0
+
+    start_idx = 0
+    while start_idx < n:
+        # 2. Determine Batch Size dynamically based on Memory Limit.
+        # We want to find 'end_idx' such that:
+        # (rows in batch) * (max_k in batch) <= memory_limit
+        # Since k is sorted ascending, max_k_in_batch is simply k_sorted[end_idx-1].
+
+        end_idx = start_idx + 1
+
+        # We peek ahead to see how many rows we can fit.
+        # This is a heuristic: we check if adding the next block of rows
+        # would explode the matrix size required.
+        while end_idx < n:
+            current_max_k = k_sorted[end_idx]  # This would be the new width
+            current_rows = end_idx - start_idx + 1
+
+            # Check budget
+            if current_rows * current_max_k > memory_limit_elements:
+                break
+            end_idx += 1
+
+        # 3. Process the Batch
+        k_batch = k_sorted[start_idx:end_idx]
+        p_batch = p_sorted[start_idx:end_idx]
+
+        # Max k in this specific batch (determines matrix columns)
+        max_k_batch = int(k_batch[-1])
+
+        # TODO: check if we are 0- or 1-based
+        # Create base grid [1, 2, ..., max_k_batch]
+        # Shape: (1, max_k)
+        j_grid = np.arange(1, max_k_batch + 1, dtype=np.float64).reshape(1, -1)
+
+        # Reshape powers for broadcasting
+        # Shape: (batch_rows, 1)
+        p_col = p_batch.reshape(-1, 1)
+
+        # 4. Compute Powers (Broadcasting)
+        # Matrix Result: (batch_rows, max_k)
+        # value[i, j] = (j+1) ^ p_i
+        values = j_grid**p_col
+
+        # 5. Masking
+        # Since k is sorted, we have a "lower triangular" style validity mask
+        # (roughly), but strictly we just need to zero out j > k_i.
+        # Shape: (batch_rows, 1) compared to (1, max_k)
+        mask = j_grid <= k_batch.reshape(-1, 1)
+
+        # Apply mask (zero out values strictly greater than k_i)
+        # We use 'where' or multiplication. Multiplication is faster for floats usually.
+        values *= mask
+
+        # 6. Summation
+        # Sum along columns to get sum(j^p) for each variable
+        row_sums = np.sum(values, axis=1)
+
+        # Compute log terms: log(sum) - log(k)
+        # We use np.log with a safety for the 0 sums (though sums of j^p >= 1 are never 0)
+        batch_log_moments = np.log(row_sums) - np.log(k_batch)
+
+        total_log_moment += np.sum(batch_log_moments)
+
+        # Move to next batch
+        start_idx = end_idx
+
+    return total_log_moment
+
+
+def compute_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
+    """Compute $P(Median > x)$ for x in range $[0, max(k)]$.
+
+    This function uses dynamic programming to calculate the cumulative distribution
+    of the count of variables <= x, thereby deriving the median's distribution.
+
+    Memory complexity: O(K * n), where K is the maximum value of k.
+
+    :param num_candidates: shape: (n,)
+        The number of candidates.
+
+    :return: shape: (K,)
+        The survival function. $K$ denotes the maximum number of candidates.
+    """
+    ks = np.array(num_candidates, dtype=int)
+    n = len(ks)
+    k_max = ks.max()
+
+    # We target the index n // 2.
+    # For n=3 (odd), index 1 (2nd smallest).
+    # For n=4 (even), index 2 (3rd smallest, i.e., the 'upper' median).
+    target_threshold = n // 2
+
+    # Grid of values x = 0, 1, ..., k_max
+    # We compute probabilities up to k_max.
+    x_grid = np.arange(k_max + 1)
+
+    # Matrix of individual probabilities: P(X_i <= x)
+    # Shape: (k_max + 1, n)
+    # P(X_i <= x) = min(1, x / k_i)
+    p_matrix = np.minimum(1.0, x_grid[:, None] / ks[None, :])
+
+    # DP State: dp[v, c] = Probability that exactly 'c' variables are <= v
+    # Initialize: 0 variables <= v has probability 1 initially
+    dp = np.zeros((len(x_grid), n + 1))
+    dp[:, 0] = 1.0
+
+    # Vectorized Poisson-Binomial recurrence
+    for i in range(n):
+        p = p_matrix[:, i : i + 1]  # Column vector for broadcasting
+
+        # New DP state based on convolution with Bernoulli(p)
+        # dp[c] = dp[c]*(1-p) + dp[c-1]*p
+        term_fail = dp * (1 - p)
+
+        term_success = np.zeros_like(dp)
+        term_success[:, 1:] = dp[:, :-1] * p
+
+        dp = term_fail + term_success
+
+    # The median is <= x if the count of variables (<= x) is > target_threshold.
+    # CDF(x) = P(Median <= x) = Sum_{c=target+1}^{n} P(Count == c)
+    cdf_median = dp[:, target_threshold + 1 :].sum(axis=1)
+
+    # Survival Function: P(Median > x) = 1 - CDF(x)
+    return 1.0 - cdf_median
