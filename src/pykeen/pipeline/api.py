@@ -208,6 +208,7 @@ from ..constants import PYKEEN_CHECKPOINTS, USER_DEFINED_CODE
 from ..datasets import get_dataset
 from ..datasets.base import Dataset
 from ..evaluation import Evaluator, MetricResults, evaluator_resolver
+from ..evaluation.evaluation_loop import LCWAEvaluationLoop
 from ..evaluation.evaluator import normalize_flattened_metric_results
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
@@ -1223,7 +1224,6 @@ def _handle_evaluation(
             f"The model itself determines whether inverse relations are used in head prediction. "
             f"Here, the model was created with {training.create_inverse_triples=}",
         )
-    mapped_triples = evaluation_factory.mapped_triples
 
     # Build up a list of triples if we want to be in the filtered setting
     additional_filter_triples_names = {}
@@ -1283,10 +1283,22 @@ def _handle_evaluation(
             }
         }
     )
+    evaluation_loop_kwargs = {}
+    # patch dictionary
+    for key in ("targets", "additional_filter_triples"):
+        if key in evaluation_kwargs:
+            evaluation_loop_kwargs[key] = evaluation_kwargs.pop(key)
     evaluate_start_time = time.time()
-    metric_results = evaluator_instance.evaluate(
-        model=model_instance, mapped_triples=mapped_triples, **evaluation_kwargs
+    # TODO: what about SampledEvaluator?
+    # Note: if you want to set the inductive mode during evaluation,
+    # then it is done via the construction of the evaluator instance.
+    evaluation_loop = LCWAEvaluationLoop(
+        model=model_instance,
+        triples_factory=evaluation_factory,
+        evaluator=evaluator_instance,
+        **evaluation_loop_kwargs,
     )
+    metric_results = evaluation_loop.evaluate(**evaluation_kwargs)
     evaluate_end_time = time.time() - evaluate_start_time
     step = training_kwargs.get("num_epochs")
     _result_tracker.log_metrics(metrics={"final_evaluation": evaluate_end_time}, step=step, prefix="times")

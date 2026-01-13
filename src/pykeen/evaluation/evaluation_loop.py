@@ -53,10 +53,11 @@ def _hasher(d: Mapping[str, Any]) -> int:
     return id(obj)
 
 
-@maximize_memory_utilization(hasher=_hasher)
+@maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
 def _evaluate(
     loop: "EvaluationLoop",
     batch_size: int,
+    slice_size: int,
     use_tqdm: bool,
     tqdm_kwargs: OptionalKwargs,
     **kwargs,
@@ -69,6 +70,7 @@ def _evaluate(
 
     :param loop: the evaluation loop instance.
     :param batch_size: the batch size
+    :param slice_size: The optional slice size.
     :param use_tqdm: whether to use tqdm progress bar
     :param tqdm_kwargs: additional keyword-based parameters for the progress bar
     :param kwargs: additional keyword-based parameters passed to :meth:`EvaluationLoop.get_loader`
@@ -88,7 +90,7 @@ def _evaluate(
             **(tqdm_kwargs or {}),
         )
     for batch in loader:
-        loop.process_batch(batch=batch)
+        loop.process_batch(batch=batch, slice_size=slice_size)
     return loop.evaluator.finalize()
 
 
@@ -111,11 +113,16 @@ class EvaluationLoop(Generic[BatchType]):
         self.evaluator = evaluator
         self.dataset = dataset
 
+    def mode(self) -> InductiveMode | None:
+        """Get the mode from the evaluator."""
+        return self.evaluator.mode
+
     @abstractmethod
-    def process_batch(self, batch: BatchType) -> None:
+    def process_batch(self, batch: BatchType, slice_size: int | None = None) -> None:
         """Process a single batch.
 
         :param batch: one batch of evaluation samples from the dataset.
+        :param slice_size: The optional slice size.
         """
         raise NotImplementedError
 
@@ -146,6 +153,7 @@ class EvaluationLoop(Generic[BatchType]):
         self,
         # batch
         batch_size: int | None = None,
+        slice_size: int | None = None,
         # tqdm
         use_tqdm: bool = True,
         tqdm_kwargs: OptionalKwargs = None,
@@ -159,6 +167,7 @@ class EvaluationLoop(Generic[BatchType]):
             the contained model will be set to evaluation mode.
 
         :param batch_size: the batch size. If None, enable automatic memory optimization to maximize memory utilization.
+        :param slice_size: the slice size. If None, enable automatic slicing.
         :param use_tqdm: whether to use tqdm progress bar
         :param tqdm_kwargs: additional keyword-based parameters passed to tqdm
         :param kwargs: additional keyword-based parameters passed to :meth:`get_loader`
@@ -169,12 +178,17 @@ class EvaluationLoop(Generic[BatchType]):
         batch_size = determine_maximum_batch_size(
             batch_size=batch_size, device=self.model.device, maximum_batch_size=len(self.dataset)
         )
+        # set upper limit for slice size
+        # TODO: if we knew the targets here, we could guess this better
+        if slice_size is None:
+            slice_size = max(self.model.num_entities, self.model.num_relations)
         # set model to evaluation mode
         self.model.eval()
         # delegate to AMO wrapper
         return _evaluate(
             loop=self,
             batch_size=batch_size,
+            slice_size=slice_size,
             use_tqdm=use_tqdm,
             tqdm_kwargs=tqdm_kwargs,
             **kwargs,
@@ -348,7 +362,6 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         evaluator: HintOrType[Evaluator] = None,
         evaluator_kwargs: OptionalKwargs = None,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
-        mode: InductiveMode | None = None,
         additional_filter_triples: AdditionalFilterTriplesHint = None,
         **kwargs,
     ) -> None:
@@ -358,7 +371,6 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         :param evaluator: the evaluator, or a hint thereof
         :param evaluator_kwargs: additional keyword-based parameters for instantiating the evaluator
         :param targets: the prediction targets.
-        :param mode: the inductive mode, or None for transductive evaluation
         :param additional_filter_triples: additional filter triples to use for creating the filter
         :param kwargs: additional keyword-based parameters passed to :meth:`EvaluationLoop.__init__`. Should not contain
             the keys `dataset` or `evaluator`.
@@ -379,21 +391,20 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
             **kwargs,
         )
         self.targets = targets
-        self.mode = mode
 
     # docstr-coverage: inherited
     def get_collator(self):  # noqa: D102
         return LCWAEvaluationDataset.collate
 
     # docstr-coverage: inherited
-    def process_batch(self, batch: Mapping[Target, MappedTriples]) -> None:  # noqa: D102
+    def process_batch(self, batch: Mapping[Target, MappedTriples], slice_size: int | None = None) -> None:  # noqa: D102
         # note: most of the time, this loop will only make a single iteration, since the evaluation dataset typically is
         #       not shuffled, and contains evaluation ranking tasks sorted by target
         for target, (hrt_batch, filter_batch) in batch.items():
             # TODO: in theory, we could make a single score calculation for e.g.,
             # {(h, r, t1), (h, r, t1), ..., (h, r, tk)}
             # predict scores for all candidates
-            scores = self.model.predict(hrt_batch=hrt_batch, target=target, mode=self.mode)
+            scores = self.model.predict(hrt_batch=hrt_batch, target=target, mode=self.mode, slice_size=slice_size)
             true_scores = dense_positive_mask = None
 
             # filter scores
