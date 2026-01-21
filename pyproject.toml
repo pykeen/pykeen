@@ -250,7 +250,7 @@ extend-select = [
     # flake8-return (RET)
     "RET",
     # flake8-self (SLF)
-    # "SLF",
+    "SLF",
     # flake8-simplify (SIM)
     "SIM",
     # flake8-slots (SLOT)
@@ -324,6 +324,7 @@ ignore = [
 "tests/**/*.py" = [
     "INP001", # tests are not a package
     "PIE790", # allow pass in test stubs/abstract methods
+    "SLF001", # allow access to private members
 ]
 
 [tool.ruff.lint.pydocstyle]
