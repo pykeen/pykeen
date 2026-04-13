@@ -111,11 +111,15 @@ def _map_triples_elements_to_ids(
     num_no_tail = tail_filter.sum()
 
     if (num_no_head > 0) or (num_no_relation > 0) or (num_no_tail > 0):
+        non_mappable_triples = head_filter | relation_filter | tail_filter
+        unseen_entities = len(
+            set(triples[head_filter.flatten(), 0]) | set(triples[tail_filter.flatten(), 2])
+        )
         logger.warning(
-            f"You're trying to map triples with {num_no_head + num_no_tail} entities and {num_no_relation} relations"
+            f"You're trying to map {non_mappable_triples.sum():.0f} triples with {unseen_entities} entities "
+            f"({num_no_head} as head, {num_no_tail} as tail) and {num_no_relation} relations"
             f" that are not in the training set. These triples will be excluded from the mapping.",
         )
-        non_mappable_triples = head_filter | relation_filter | tail_filter
         head_column = head_column[~non_mappable_triples, None]
         relation_column = relation_column[~non_mappable_triples, None]
         tail_column = tail_column[~non_mappable_triples, None]
