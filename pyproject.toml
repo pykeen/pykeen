@@ -64,7 +64,7 @@ dependencies = [
     "click",
     "click_default_group",
     "scikit-learn",
-    "torch>=2.0,<2.11; sys_platform == 'win32'",
+    "torch>=2.0,<2.10; sys_platform == 'win32'",
     "torch>=2.0; sys_platform != 'win32'",
     "tqdm",
     "requests",
