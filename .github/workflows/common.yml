@@ -46,6 +46,7 @@ jobs:
     name: Tests
     if: github.event.pull_request.draft == false || github.event_name != 'pull_request'
     strategy:
+      fail-fast: ${{ github.event_name != 'workflow_dispatch' }}
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: [ "3.10", "3.14" ]
