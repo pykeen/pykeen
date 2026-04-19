@@ -348,7 +348,7 @@ class HpoPipelineResult(Result):
         for k, v in self.study.user_attrs.items():
             if k.startswith("pykeen_"):
                 metadata[k[len("pykeen_") :]] = v
-            elif k in {"metric"}:
+            elif k == "metric":
                 continue
             else:
                 pipeline_config[k] = v
