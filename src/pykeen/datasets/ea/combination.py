@@ -206,7 +206,7 @@ def filter_map_alignment(
 
     # filter alignment
     invalid_mask = (alignment.to_numpy() < 0).any(axis=1) | (
-        alignment.to_numpy() >= numpy.reshape(numpy.asarray([left.num_entities, right.num_entities]), newshape=(1, 2))
+        alignment.to_numpy() >= numpy.reshape(numpy.asarray([left.num_entities, right.num_entities]), (1, 2))
     ).any(axis=1)
     if invalid_mask.any():
         logger.warning(
