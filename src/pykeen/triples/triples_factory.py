@@ -106,26 +106,25 @@ def _map_triples_elements_to_ids(
     head_filter = head_column < 0
     relation_filter = relation_column < 0
     tail_filter = tail_column < 0
-    num_no_head = head_filter.sum()
-    num_no_relation = relation_filter.sum()
-    num_no_tail = tail_filter.sum()
+    non_mappable_triples = head_filter | relation_filter | tail_filter
 
-    if (num_no_head > 0) or (num_no_relation > 0) or (num_no_tail > 0):
-        non_mappable_triples = head_filter | relation_filter | tail_filter
+    if non_mappable_triples.any():
+        num_no_head = int(head_filter.sum())
+        num_no_relation = int(relation_filter.sum())
+        num_no_tail = int(tail_filter.sum())
         unseen_entities = len(
             set(triples[head_filter.flatten(), 0]) | set(triples[tail_filter.flatten(), 2])
         )
+        num_filtered = int(non_mappable_triples.sum())
         logger.warning(
-            f"You're trying to map {non_mappable_triples.sum():.0f} triples with {unseen_entities} entities "
+            f"You're trying to map {num_filtered} triples with {unseen_entities} entities "
             f"({num_no_head} as head, {num_no_tail} as tail) and {num_no_relation} relations"
-            f" that are not in the training set. These triples will be excluded from the mapping.",
+            f" that are not in the training set. {num_filtered} of {triples.shape[0]} triples"
+            f" will be excluded from the mapping.",
         )
         head_column = head_column[~non_mappable_triples, None]
         relation_column = relation_column[~non_mappable_triples, None]
         tail_column = tail_column[~non_mappable_triples, None]
-        logger.warning(
-            f"In total {non_mappable_triples.sum():.0f} from {triples.shape[0]:.0f} triples were filtered out",
-        )
 
     triples_of_ids = np.concatenate([head_column, relation_column, tail_column], axis=1)
 
