@@ -115,9 +115,9 @@ def _map_triples_elements_to_ids(
         unseen_entities = len(np.union1d(triples[head_filter, 0], triples[tail_filter, 2]))
         num_filtered = int(non_mappable_triples.sum())
         logger.warning(
-            f"You're trying to map {num_filtered} triples with {unseen_entities} entities "
-            f"({num_no_head} as head, {num_no_tail} as tail) and {num_no_relation} relations"
-            f" that are not in the training set. {num_filtered} of {triples.shape[0]} triples"
+            f"You're trying to map {num_filtered:_} triples with {unseen_entities:_} entities "
+            f"({num_no_head:_} as head, {num_no_tail:_} as tail) and {num_no_relation:_} relations"
+            f" that are not in the training set. {num_filtered:_} of {triples.shape[0]:_} triples"
             f" will be excluded from the mapping.",
         )
         mask = ~non_mappable_triples
