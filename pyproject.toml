@@ -73,7 +73,7 @@ dependencies = [
     "tabulate",
     "more_click",
     "more_itertools",
-    "pystow>=0.4.3,<0.8",
+    "pystow>=0.8.4",
     "docdata>=0.0.5",
     "class_resolver>=0.6.0",
     "pyyaml",
