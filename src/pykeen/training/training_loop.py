@@ -200,14 +200,20 @@ class TrainingLoop(Generic[BatchType], ABC):
 
     @property
     def optimizer(self) -> Optimizer:
-        """Return the optimizer instance."""
+        """Return the optimizer instance, creating it from hints if needed."""
         if self._optimizer is None:
-            raise ValueError("Optimizer has not been instantiated yet.")
+            self._optimizer = optimizer_resolver.make(
+                self._optimizer_hint, self._optimizer_kwargs, params=self.model.get_grad_params()
+            )
         return self._optimizer
 
     @property
     def lr_scheduler(self) -> LRScheduler | None:
-        """Return the learning rate scheduler instance."""
+        """Return the learning rate scheduler instance, creating it from hints if needed."""
+        if self._lr_scheduler is None and self._lr_scheduler_hint is not None:
+            self._lr_scheduler = lr_scheduler_resolver.make_safe(
+                self._lr_scheduler_hint, self._lr_scheduler_kwargs, optimizer=self.optimizer
+            )
         return self._lr_scheduler
 
     @property
@@ -365,6 +371,12 @@ class TrainingLoop(Generic[BatchType], ABC):
         if getattr(stopper, "stopped", False):
             result: list[float] | None = self.losses_per_epochs
         else:
+            # Force weight re-initialization and fresh optimizer when not continuing a previous run
+            if not continue_training:
+                self.model.reset_parameters_()
+                self._optimizer = None
+                self._lr_scheduler = None
+
             # send model to device before going into the internal training loop
             self.model = self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
 
@@ -602,40 +614,6 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         if drop_last is None:
             drop_last = model_contains_batch_norm
-
-        if continue_training:
-            if isinstance(self._optimizer_hint, Optimizer):
-                self._optimizer = self._optimizer_hint
-            else:
-                raise ValueError("Cannot continue training without an initialized optimizer.")
-            if isinstance(self._lr_scheduler_hint, LRScheduler) or self._lr_scheduler_hint is None:
-                self._lr_scheduler = self._lr_scheduler_hint
-            else:
-                raise ValueError("Cannot continue training without an initialized lr schedule.")
-        # Force weight initialization if training continuation is not explicitly requested.
-        else:
-            # Reset the weights
-            self.model.reset_parameters_()
-            # afterwards, some parameters may be on the wrong device
-            self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
-
-            # Create new optimizer
-            if isinstance(self._optimizer_hint, Optimizer):
-                logger.warning("The optimizer was already passed instantiated.")
-                if self._optimizer_kwargs:
-                    logger.warning(f"optimizer_kwargs={self._optimizer_kwargs} will be ignored.")
-            self._optimizer = optimizer_resolver.make(
-                self._optimizer_hint, self._optimizer_kwargs, params=self.model.get_grad_params()
-            )
-
-            # Create a LR schedule, if necessary
-            if isinstance(self._lr_scheduler_hint, LRScheduler):
-                logger.warning("The LR scheduler was already passed instantiated.")
-                if self._lr_scheduler_kwargs:
-                    logger.warning(f"lr_scheduler_kwargs={self._lr_scheduler_kwargs} will be ignored.")
-            self._lr_scheduler = lr_scheduler_resolver.make_safe(
-                self._lr_scheduler_hint, self._lr_scheduler_kwargs, optimizer=self.optimizer
-            )
 
         # Ensure the model is on the correct device
         self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
