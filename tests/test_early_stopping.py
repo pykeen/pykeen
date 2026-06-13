@@ -1,6 +1,7 @@
 """Tests of early stopping."""
 
 import unittest
+from unittest.mock import patch
 
 import numpy
 import pytest
@@ -10,7 +11,9 @@ from torch.optim import Adam
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import RankBasedEvaluator
+from pykeen.evaluation.evaluator import Evaluator
 from pykeen.models import Model, TransE
+from pykeen.pipeline import pipeline
 from pykeen.stoppers.early_stopping import EarlyStopper, EarlyStoppingLogic, is_improvement
 from pykeen.training import SLCWATrainingLoop
 from tests import cases
@@ -144,3 +147,33 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
         assert stopper.number_results == len(losses) // stopper.frequency
         assert stopper.best_epoch == self.stop_epoch - self.patience * stopper.frequency
         assert self.stop_epoch == len(losses), "Did not stop early like it should have"
+
+
+def test_pipeline_forwards_evaluation_kwargs_to_stopper():
+    """Verify that evaluation_kwargs passed to pipeline() reach every evaluator.evaluate() call.
+
+    Regression test for https://github.com/pykeen/pykeen/issues/1587.
+    """
+    targets = ("tail",)
+    observed_targets: list = []
+    _original_evaluate = Evaluator.evaluate
+
+    def spy_evaluate(self, *args, **kwargs):
+        observed_targets.append(kwargs.get("targets"))
+        return _original_evaluate(self, *args, **kwargs)
+
+    with patch.object(Evaluator, "evaluate", spy_evaluate):
+        pipeline(
+            dataset="nations",
+            model="TransE",
+            training_kwargs=dict(num_epochs=2),
+            evaluation_kwargs=dict(targets=targets),
+            stopper="early",
+            stopper_kwargs=dict(frequency=1, patience=100),
+            use_testing_data=False,
+        )
+
+    assert observed_targets, "evaluator.evaluate() was never called"
+    assert all(t == targets for t in observed_targets), (
+        f"Expected all evaluate() calls to use targets={targets!r}, got {observed_targets!r}"
+    )
