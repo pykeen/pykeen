@@ -149,6 +149,7 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
         assert self.stop_epoch == len(losses), "Did not stop early like it should have"
 
 
+@pytest.mark.slow
 def test_pipeline_forwards_evaluation_kwargs_to_stopper():
     """Verify that evaluation_kwargs passed to pipeline() reach every evaluator.evaluate() call.
 
