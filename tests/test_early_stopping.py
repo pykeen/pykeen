@@ -167,10 +167,10 @@ def test_pipeline_forwards_evaluation_kwargs_to_stopper():
         pipeline(
             dataset="nations",
             model="TransE",
-            training_kwargs=dict(num_epochs=2),
-            evaluation_kwargs=dict(targets=targets),
+            training_kwargs={"num_epochs": 2},
+            evaluation_kwargs={"targets": targets},
             stopper="early",
-            stopper_kwargs=dict(frequency=1, patience=100),
+            stopper_kwargs={"frequency": 1, "patience": 100},
             use_testing_data=False,
         )
 
