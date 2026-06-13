@@ -218,16 +218,24 @@ class TrainingLoop(Generic[BatchType], ABC):
 
     @contextmanager
     def _preserve_optimizer_state(self):
-        """Context manager that saves and restores optimizer (and LR scheduler) state."""
-        optimizer_state = self.optimizer.state_dict()
+        """Context manager that saves and restores optimizer (and LR scheduler) state via a temp file."""
         lr_scheduler = self.lr_scheduler
-        lr_scheduler_state = lr_scheduler.state_dict() if lr_scheduler is not None else None
-        try:
-            yield
-        finally:
-            self.optimizer.load_state_dict(optimizer_state)
-            if lr_scheduler is not None:
-                lr_scheduler.load_state_dict(lr_scheduler_state)
+        with TemporaryDirectory() as tmp_dir:
+            path = pathlib.Path(tmp_dir) / "optimizer_state.pt"
+            torch.save(
+                {
+                    "optimizer": self.optimizer.state_dict(),
+                    "lr_scheduler": lr_scheduler.state_dict() if lr_scheduler is not None else None,
+                },
+                path,
+            )
+            try:
+                yield
+            finally:
+                state = torch.load(path, weights_only=False)  # noqa: S614
+                self.optimizer.load_state_dict(state["optimizer"])
+                if lr_scheduler is not None:
+                    lr_scheduler.load_state_dict(state["lr_scheduler"])
 
     @property
     def checksum(self) -> str:  # noqa: D401
