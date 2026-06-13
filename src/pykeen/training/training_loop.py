@@ -220,13 +220,14 @@ class TrainingLoop(Generic[BatchType], ABC):
     def _preserve_optimizer_state(self):
         """Context manager that saves and restores optimizer (and LR scheduler) state."""
         optimizer_state = self.optimizer.state_dict()
-        lr_scheduler_state = self.lr_scheduler.state_dict() if self.lr_scheduler is not None else None
+        lr_scheduler = self.lr_scheduler
+        lr_scheduler_state = lr_scheduler.state_dict() if lr_scheduler is not None else None
         try:
             yield
         finally:
             self.optimizer.load_state_dict(optimizer_state)
-            if lr_scheduler_state is not None:
-                self.lr_scheduler.load_state_dict(lr_scheduler_state)
+            if lr_scheduler is not None:
+                lr_scheduler.load_state_dict(lr_scheduler_state)
 
     @property
     def checksum(self) -> str:  # noqa: D401
