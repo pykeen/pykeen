@@ -586,7 +586,13 @@ class TrainingLoop(Generic[BatchType], ABC):
                         f"Therefore, the batch_size will be set to the default value '{batch_size}'",
                     )
                 else:
+                    # Save optimizer state before size probing so probe runs don't contaminate training state.
+                    optimizer_state = self.optimizer.state_dict()
+                    lr_scheduler_state = self.lr_scheduler.state_dict() if self.lr_scheduler is not None else None
                     batch_size, batch_size_sufficient = self.batch_size_search(triples_factory=triples_factory)
+                    self.optimizer.load_state_dict(optimizer_state)
+                    if lr_scheduler_state is not None:
+                        self.lr_scheduler.load_state_dict(lr_scheduler_state)
             else:
                 batch_size = 256
                 logger.info(f"No batch_size provided. Setting {batch_size=:_}.")
@@ -598,10 +604,16 @@ class TrainingLoop(Generic[BatchType], ABC):
             and not batch_size_sufficient
             and not continue_training
         ):
+            # Save optimizer state before size probing so probe runs don't contaminate training state.
+            optimizer_state = self.optimizer.state_dict()
+            lr_scheduler_state = self.lr_scheduler.state_dict() if self.lr_scheduler is not None else None
             # return the relevant parameters slice_size and batch_size
             sub_batch_size, slice_size = self.sub_batch_and_slice(
                 batch_size=batch_size, sampler=sampler, triples_factory=triples_factory
             )
+            self.optimizer.load_state_dict(optimizer_state)
+            if lr_scheduler_state is not None:
+                self.lr_scheduler.load_state_dict(lr_scheduler_state)
 
         if sub_batch_size is None or sub_batch_size == batch_size:  # by default do not split batches in sub-batches
             sub_batch_size = batch_size
