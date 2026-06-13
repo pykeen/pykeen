@@ -1154,6 +1154,11 @@ def _handle_training(
     _evaluation_batch_size = evaluation_kwargs.get("batch_size")
     if _evaluation_batch_size is not None:
         stopper_kwargs.setdefault("evaluation_batch_size", _evaluation_batch_size)
+    # Forward remaining evaluation_kwargs (e.g., targets) to the stopper so that
+    # validation runs during early stopping use the same settings as the final evaluation.
+    _stopper_evaluation_kwargs = {k: v for k, v in evaluation_kwargs.items() if k not in ("batch_size", "slice_size")}
+    if _stopper_evaluation_kwargs:
+        stopper_kwargs.setdefault("evaluation_kwargs", _stopper_evaluation_kwargs)
 
     stopper_instance: Stopper = stopper_resolver.make(
         stopper,
