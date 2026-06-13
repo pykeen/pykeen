@@ -1,13 +1,17 @@
 """Test embeddings."""
 
+import pathlib
+import tempfile
 from collections import ChainMap
 from collections.abc import MutableMapping
 from typing import Any, ClassVar
+from unittest.mock import MagicMock
 
 import numpy
 import pytest
 import torch
 import unittest_templates
+from PIL import Image
 
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
@@ -300,6 +304,14 @@ class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs)
         kwargs.pop("max_id")
         self.max_id = len(kwargs["wikidata_ids"])
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        fake_image_path = pathlib.Path(self._tmp.name) / "fake.jpg"
+        Image.new("RGB", (256, 256)).save(fake_image_path)
+        wikidata_ids = kwargs["wikidata_ids"]
+        mock_cache = MagicMock()
+        mock_cache.get_image_paths.return_value = [fake_image_path] * (len(wikidata_ids) - 1) + [None]
+        kwargs["cache"] = mock_cache
         return kwargs
 
 
@@ -330,6 +342,9 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
         # the representation module infers the max_id from the provided labels
         kwargs.pop("max_id")
         self.max_id = len(kwargs["identifiers"])
+        mock_cache = MagicMock()
+        mock_cache.get_texts.return_value = list(kwargs["identifiers"])
+        kwargs["cache"] = mock_cache
         return kwargs
 
 
@@ -352,6 +367,9 @@ class BiomedicalCURIERepresentationTests(cases.RepresentationTestCase):
         # the representation module infers the max_id from the provided labels
         kwargs.pop("max_id")
         self.max_id = len(kwargs["identifiers"])
+        mock_cache = MagicMock()
+        mock_cache.get_texts.return_value = list(kwargs["identifiers"])
+        kwargs["cache"] = mock_cache
         return kwargs
 
 

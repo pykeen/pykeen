@@ -398,6 +398,43 @@ class TestLiterals(unittest.TestCase):
             == triples_factory.mapped_triples
         ).all()
 
+    def test_map_triples_unseen_entities(self):
+        """Test that unseen entities appearing in both head and tail are counted once."""
+        train_triples = np.array(
+            [["a", "rel", "b"], ["b", "rel", "c"]],
+            dtype=str,
+        )
+        factory = TriplesFactory.from_labeled_triples(triples=train_triples)
+
+        # "unseen" appears as head in one triple and as tail in another — must count as 1 unique entity
+        # "unseen2" appears only as head — 1 unique entity
+        # total: 2 unique unseen entities across 3 filtered triples, 1 known triple passes through
+        test_triples = np.array(
+            [
+                ["unseen", "rel", "b"],
+                ["a", "rel", "unseen"],
+                ["unseen2", "rel", "b"],
+                ["a", "rel", "b"],
+            ],
+            dtype=str,
+        )
+
+        with self.assertLogs("pykeen.triples.triples_factory", level="WARNING") as log:
+            result = _map_triples_elements_to_ids(
+                triples=test_triples,
+                entity_to_id=factory.entity_to_id,
+                relation_to_id=factory.relation_to_id,
+            )
+
+        assert result.shape[0] == 1, "only the fully known triple should pass through"
+        assert log.output == [
+            "WARNING:pykeen.triples.triples_factory:"
+            "You're trying to map 3 triples with 2 entities "
+            "(2 as head, 1 as tail) and 0 relations"
+            " that are not in the training set. 3 of 4 triples"
+            " will be excluded from the mapping."
+        ]
+
     def test_inverse_triples(self):
         """Test that the right number of entities and triples exist after inverting them."""
         triples_factory = TriplesFactory.from_labeled_triples(triples=triples, create_inverse_triples=True)

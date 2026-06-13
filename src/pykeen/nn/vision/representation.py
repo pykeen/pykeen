@@ -214,7 +214,12 @@ class WikidataVisualRepresentation(BackfillRepresentation):
     """
 
     def __init__(
-        self, wikidata_ids: Sequence[str], max_id: int | None = None, image_kwargs: OptionalKwargs = None, **kwargs
+        self,
+        wikidata_ids: Sequence[str],
+        max_id: int | None = None,
+        image_kwargs: OptionalKwargs = None,
+        cache: WikidataImageCache | None = None,
+        **kwargs,
     ):
         """Initialize the representation.
 
@@ -222,6 +227,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         :param max_id: The total number of IDs. If provided, must match the length of ``wikidata_ids``.
         :param image_kwargs: Keyword-based parameters passed to
             :meth:`pykeen.nn.vision.cache.WikidataImageCache.get_image_paths`.
+        :param cache: A pre-instantiated image cache. If None, :class:`WikidataImageCache` is used.
         :param kwargs: Additional keyword-based parameters passed to
             :class:`pykeen.nn.vision.representation.VisualRepresentation`.
 
@@ -230,7 +236,8 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         max_id = max_id or len(wikidata_ids)
         if len(wikidata_ids) != max_id:
             raise ValueError(f"Inconsistent max_id={max_id} vs. len(wikidata_ids)={len(wikidata_ids)}")
-        images = WikidataImageCache().get_image_paths(wikidata_ids, **(image_kwargs or {}))
+        cache = cache or WikidataImageCache()
+        images = cache.get_image_paths(wikidata_ids, **(image_kwargs or {}))
         base_ids = [i for i, path in enumerate(images) if path is not None]
         images = [path for path in images if path is not None]
         super().__init__(

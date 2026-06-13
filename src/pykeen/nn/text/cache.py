@@ -56,7 +56,7 @@ class IdentityCache(TextCache):
         return identifiers
 
 
-PYOBO_PREFIXES_WARNED = set()
+PYOBO_PREFIXES_WARNED: set[str] = set()
 
 
 class PyOBOTextCache(TextCache):

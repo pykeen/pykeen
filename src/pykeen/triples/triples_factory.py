@@ -97,33 +97,35 @@ def _map_triples_elements_to_ids(
 
     # When triples that don't exist are trying to be mapped, they get the id "-1"
     entity_getter = np.vectorize(entity_to_id.get)
-    head_column = entity_getter(triples[:, 0:1], [-1])
-    tail_column = entity_getter(triples[:, 2:3], [-1])
+    head_column = entity_getter(triples[:, 0], [-1])
+    tail_column = entity_getter(triples[:, 2], [-1])
     relation_getter = np.vectorize(relation_to_id.get)
-    relation_column = relation_getter(triples[:, 1:2], [-1])
+    relation_column = relation_getter(triples[:, 1], [-1])
 
     # Filter all non-existent triples
     head_filter = head_column < 0
     relation_filter = relation_column < 0
     tail_filter = tail_column < 0
-    num_no_head = head_filter.sum()
-    num_no_relation = relation_filter.sum()
-    num_no_tail = tail_filter.sum()
+    non_mappable_triples = head_filter | relation_filter | tail_filter
 
-    if (num_no_head > 0) or (num_no_relation > 0) or (num_no_tail > 0):
+    if non_mappable_triples.any():
+        num_no_head = int(head_filter.sum())
+        num_no_relation = int(relation_filter.sum())
+        num_no_tail = int(tail_filter.sum())
+        unseen_entities = len(np.union1d(triples[head_filter, 0], triples[tail_filter, 2]))
+        num_filtered = int(non_mappable_triples.sum())
         logger.warning(
-            f"You're trying to map triples with {num_no_head + num_no_tail} entities and {num_no_relation} relations"
-            f" that are not in the training set. These triples will be excluded from the mapping.",
+            f"You're trying to map {num_filtered:_} triples with {unseen_entities:_} entities "
+            f"({num_no_head:_} as head, {num_no_tail:_} as tail) and {num_no_relation:_} relations"
+            f" that are not in the training set. {num_filtered:_} of {triples.shape[0]:_} triples"
+            f" will be excluded from the mapping.",
         )
-        non_mappable_triples = head_filter | relation_filter | tail_filter
-        head_column = head_column[~non_mappable_triples, None]
-        relation_column = relation_column[~non_mappable_triples, None]
-        tail_column = tail_column[~non_mappable_triples, None]
-        logger.warning(
-            f"In total {non_mappable_triples.sum():.0f} from {triples.shape[0]:.0f} triples were filtered out",
-        )
+        mask = ~non_mappable_triples
+        head_column = head_column[mask]
+        relation_column = relation_column[mask]
+        tail_column = tail_column[mask]
 
-    triples_of_ids = np.concatenate([head_column, relation_column, tail_column], axis=1)
+    triples_of_ids = np.column_stack([head_column, relation_column, tail_column])
 
     triples_of_ids = np.array(triples_of_ids, dtype=np.int64)
     # Note: Unique changes the order of the triples

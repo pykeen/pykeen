@@ -4,10 +4,8 @@ on:
   push:
   merge_group:
   workflow_dispatch:
-  pull_request:
-    types: [auto_merge_enabled]
   pull_request_target:
-    types: [auto_merge_enabled, opened, synchronize]
+    types: [opened, synchronize]
 
 jobs:
   lint:
