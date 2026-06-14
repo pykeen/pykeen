@@ -15,7 +15,7 @@ from pykeen.models import ERModel, FixedModel, Model
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
 from pykeen.nn.representation import Embedding
-from pykeen.pipeline import PipelineResult, pipeline
+from pykeen.pipeline import PipelineResult, TrainResult, pipeline, train_pipeline
 from pykeen.pipeline.api import replicate_pipeline_from_config
 from pykeen.regularizers import NoRegularizer
 from pykeen.sampling.negative_sampler import NegativeSampler
@@ -404,6 +404,43 @@ def test_negative_sampler_kwargs():
             model="distmult",
             epochs=0,
         )
+
+
+def test_train_pipeline_training_only():
+    """Test train_pipeline without testing triples (training-only mode, issue #1579)."""
+    tf = generate_triples_factory(num_entities=20, num_relations=5, num_triples=100)
+    training, _, validation = tf.split([0.8, 0.1, 0.1])
+
+    result = train_pipeline(
+        training=training,
+        validation=validation,
+        model="TransE",
+        model_kwargs={"embedding_dim": 8},
+        training_kwargs={"num_epochs": 1, "use_tqdm": False},
+    )
+    assert isinstance(result, TrainResult)
+    assert result.testing is None
+    assert len(result.losses) == 1
+
+
+def test_train_pipeline_deferred_evaluate():
+    """Test that train_pipeline result can be evaluated later with an explicit testing factory."""
+    tf = generate_triples_factory(num_entities=20, num_relations=5, num_triples=100)
+    training, testing, validation = tf.split([0.8, 0.1, 0.1])
+
+    train_result = train_pipeline(
+        training=training,
+        testing=testing,
+        validation=validation,
+        model="TransE",
+        model_kwargs={"embedding_dim": 8},
+        training_kwargs={"num_epochs": 1, "use_tqdm": False},
+    )
+    assert isinstance(train_result, TrainResult)
+
+    pipeline_result = train_result.evaluate()
+    assert isinstance(pipeline_result, PipelineResult)
+    assert pipeline_result.metric_results is not None
 
 
 @pytest.mark.parametrize("tf_cls", [CoreTriplesFactory, TriplesFactory])
