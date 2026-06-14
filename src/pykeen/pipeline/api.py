@@ -1046,7 +1046,11 @@ def _handle_dataset(
         dataset_instance = get_dataset(
             dataset=dataset, dataset_kwargs=dataset_kwargs, training=training, testing=testing, validation=validation
         )
-        training_tf, testing_tf, validation_tf = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
+        training_tf, testing_tf, validation_tf = (
+            dataset_instance.training,
+            dataset_instance.testing,
+            dataset_instance.validation,
+        )
 
     if dataset is None:
         _result_tracker.log_params(
@@ -1059,8 +1063,9 @@ def _handle_dataset(
         )
     else:
         assert dataset_instance is not None
-        _result_tracker.log_params({"dataset": dataset_instance.get_normalized_name(), "dataset_kwargs": dataset_kwargs})
-
+        _result_tracker.log_params(
+            {"dataset": dataset_instance.get_normalized_name(), "dataset_kwargs": dataset_kwargs}
+        )
 
     if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
         if testing_tf is not None:
