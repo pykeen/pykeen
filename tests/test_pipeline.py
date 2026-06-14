@@ -420,6 +420,7 @@ def test_resolve_pipeline():
         model="TransE",
         model_kwargs={"embedding_dim": 8},
         training_kwargs={"num_epochs": 1, "use_tqdm": False},
+        random_seed=42,
     )
     assert isinstance(resolution, ResolutionResult)
     # factories are the exact objects passed in — no copies
@@ -449,6 +450,7 @@ def test_training_only():
         model="TransE",
         model_kwargs={"embedding_dim": 8},
         training_kwargs={"num_epochs": 1, "use_tqdm": False},
+        random_seed=42,
     ).train()
     assert isinstance(result, TrainResult)
     assert result.testing is None
@@ -475,6 +477,7 @@ def test_deferred_evaluate():
         model="TransE",
         model_kwargs={"embedding_dim": 8},
         training_kwargs={"num_epochs": 1, "use_tqdm": False},
+        random_seed=42,
     ).train()
 
     # default: evaluates on testing_a
