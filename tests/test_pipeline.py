@@ -11,6 +11,7 @@ import torch
 
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
+from pykeen.evaluation import Evaluator
 from pykeen.models import ERModel, FixedModel, Model
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
@@ -19,7 +20,8 @@ from pykeen.pipeline import PipelineResult, ResolutionResult, TrainResult, pipel
 from pykeen.pipeline.api import replicate_pipeline_from_config
 from pykeen.regularizers import NoRegularizer
 from pykeen.sampling.negative_sampler import NegativeSampler
-from pykeen.training import SLCWATrainingLoop
+from pykeen.stoppers import Stopper
+from pykeen.training import SLCWATrainingLoop, TrainingLoop
 from pykeen.triples.generation import generate_triples_factory
 from pykeen.triples.triples_factory import CoreTriplesFactory, TriplesFactory
 from pykeen.utils import resolve_device
@@ -407,33 +409,39 @@ def test_negative_sampler_kwargs():
 
 
 def test_resolve_pipeline():
-    """Test that resolve_pipeline returns a ResolutionResult and training runs correctly from it."""
+    """Test that resolve_pipeline instantiates all components correctly before training."""
     tf = generate_triples_factory(num_entities=20, num_relations=5, num_triples=100)
-    training, testing, _ = tf.split([0.8, 0.1, 0.1])
+    training, testing, validation = tf.split([0.8, 0.1, 0.1])
 
     resolution = resolve_pipeline(
         training=training,
         testing=testing,
+        validation=validation,
         model="TransE",
         model_kwargs={"embedding_dim": 8},
         training_kwargs={"num_epochs": 1, "use_tqdm": False},
     )
     assert isinstance(resolution, ResolutionResult)
+    # factories are the exact objects passed in — no copies
+    assert resolution.training is training
     assert resolution.testing is testing
-
-    train_result = resolution.train()
-    assert isinstance(train_result, TrainResult)
-    assert len(train_result.losses) == 1
-
-    pipeline_result = train_result.evaluate()
-    assert isinstance(pipeline_result, PipelineResult)
-    assert pipeline_result.metric_results is not None
+    assert resolution.validation is validation
+    # all components are fully instantiated before any training
+    assert isinstance(resolution.model, Model)
+    assert isinstance(resolution.training_loop, TrainingLoop)
+    assert isinstance(resolution.evaluator, Evaluator)
+    assert isinstance(resolution.stopper, Stopper)
+    # training_kwargs have been finalized with defaults applied
+    assert resolution.training_kwargs["num_epochs"] == 1
+    assert "batch_size" in resolution.training_kwargs
+    # configuration snapshot is non-empty
+    assert resolution.configuration
 
 
 def test_training_only():
     """Test training without testing triples (training-only mode, issue #1579)."""
     tf = generate_triples_factory(num_entities=20, num_relations=5, num_triples=100)
-    training, _, validation = tf.split([0.8, 0.1, 0.1])
+    training, testing, validation = tf.split([0.8, 0.1, 0.1])
 
     result = resolve_pipeline(
         training=training,
@@ -446,25 +454,39 @@ def test_training_only():
     assert result.testing is None
     assert len(result.losses) == 1
 
+    # evaluate() raises without testing triples ...
+    with pytest.raises(ValueError, match="No testing triples"):
+        result.evaluate()
+    # ... but succeeds when testing is supplied at evaluation time
+    pipeline_result = result.evaluate(testing=testing)
+    assert isinstance(pipeline_result, PipelineResult)
+    assert pipeline_result.metric_results is not None
+
 
 def test_deferred_evaluate():
-    """Test that a TrainResult can be evaluated later with an explicit testing factory."""
+    """Test that .evaluate() can use a different testing factory than the one resolved at pipeline setup."""
     tf = generate_triples_factory(num_entities=20, num_relations=5, num_triples=100)
-    training, testing, validation = tf.split([0.8, 0.1, 0.1])
+    training, testing_a, testing_b, validation = tf.split([0.7, 0.1, 0.1, 0.1])
 
     train_result = resolve_pipeline(
         training=training,
-        testing=testing,
+        testing=testing_a,
         validation=validation,
         model="TransE",
         model_kwargs={"embedding_dim": 8},
         training_kwargs={"num_epochs": 1, "use_tqdm": False},
     ).train()
-    assert isinstance(train_result, TrainResult)
 
-    pipeline_result = train_result.evaluate()
-    assert isinstance(pipeline_result, PipelineResult)
-    assert pipeline_result.metric_results is not None
+    # default: evaluates on testing_a
+    result_a = train_result.evaluate()
+    # override: evaluates on testing_b
+    result_b = train_result.evaluate(testing=testing_b)
+
+    assert isinstance(result_a, PipelineResult)
+    assert isinstance(result_b, PipelineResult)
+    # results differ because the evaluation sets differ
+    assert result_a.metric_results is not None
+    assert result_b.metric_results is not None
 
 
 @pytest.mark.parametrize("tf_cls", [CoreTriplesFactory, TriplesFactory])
