@@ -1341,7 +1341,7 @@ def _handle_evaluation(
     evaluator_instance: Evaluator,
     stopper_instance: Stopper,
     training: CoreTriplesFactory,
-    testing: CoreTriplesFactory,
+    testing: CoreTriplesFactory | None,
     validation: CoreTriplesFactory | None,
     training_kwargs: dict[str, Any],
     evaluation_kwargs: dict[str, Any],
@@ -1352,6 +1352,8 @@ def _handle_evaluation(
     use_tqdm: bool | None = None,
 ) -> tuple[MetricResults, float]:
     if use_testing_data:
+        if testing is None:
+            raise ValueError("no testing triples available")
         evaluation_factory = testing
     elif validation is None:
         raise ValueError("no validation triples available")
