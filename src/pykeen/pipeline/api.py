@@ -1002,6 +1002,15 @@ def _handle_random_seed(
     return _random_seed, clear_optimizer
 
 
+def _log_hint(hint: Hint[CoreTriplesFactory]) -> str | None:
+    """Convert a factory hint to a loggable value: path string, None, or USER_DEFINED_CODE."""
+    if hint is None:
+        return None
+    if isinstance(hint, str):
+        return hint
+    return USER_DEFINED_CODE
+
+
 def _handle_dataset(
     *,
     _result_tracker: ResultTracker,
@@ -1024,50 +1033,33 @@ def _handle_dataset(
             raise ValueError("When testing=None, training must be a pre-built CoreTriplesFactory (not a path/string).")
         if validation is not None and not isinstance(validation, CoreTriplesFactory):
             raise ValueError("validation must be a pre-built CoreTriplesFactory when testing=None.")
-        _result_tracker.log_params({"dataset": USER_DEFINED_CODE})
-        if validation is not None and any(
-            f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)
-        ):
-            validation = validation.new_with_restriction(
-                entities=evaluation_entity_whitelist,
-                relations=evaluation_relation_whitelist,
-            )
-        return training, None, validation
-
-    dataset_instance: Dataset = get_dataset(
-        dataset=dataset,
-        dataset_kwargs=dataset_kwargs,
-        training=training,
-        testing=testing,
-        validation=validation,
-    )
-    if dataset is not None:
-        _result_tracker.log_params(
-            {
-                "dataset": dataset_instance.get_normalized_name(),
-                "dataset_kwargs": dataset_kwargs,
-            }
-        )
+        training_tf, testing_tf, validation_tf = training, None, validation
     else:
+        dataset_instance = get_dataset(
+            dataset=dataset, dataset_kwargs=dataset_kwargs, training=training, testing=testing, validation=validation
+        )
+        training_tf, testing_tf, validation_tf = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
+
+    if dataset is None:
         _result_tracker.log_params(
             {
                 "dataset": USER_DEFINED_CODE,
-                "training": training if isinstance(training, str) else USER_DEFINED_CODE,
-                "testing": testing if isinstance(testing, str) else USER_DEFINED_CODE,
-                "validation": validation if isinstance(validation, str) else USER_DEFINED_CODE,
+                "training": _log_hint(training),
+                "testing": _log_hint(testing),
+                "validation": _log_hint(validation),
             }
         )
+    else:
+        assert dataset_instance is not None
+        _result_tracker.log_params({"dataset": dataset_instance.get_normalized_name(), "dataset_kwargs": dataset_kwargs})
 
-    training_tf, testing_tf, validation_tf = (
-        dataset_instance.training,
-        dataset_instance.testing,
-        dataset_instance.validation,
-    )
+
     if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
-        testing_tf = testing_tf.new_with_restriction(
-            entities=evaluation_entity_whitelist,
-            relations=evaluation_relation_whitelist,
-        )
+        if testing_tf is not None:
+            testing_tf = testing_tf.new_with_restriction(
+                entities=evaluation_entity_whitelist,
+                relations=evaluation_relation_whitelist,
+            )
         if validation_tf is not None:
             validation_tf = validation_tf.new_with_restriction(
                 entities=evaluation_entity_whitelist,
