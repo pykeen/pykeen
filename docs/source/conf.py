@@ -254,7 +254,7 @@ intersphinx_mapping = {
     "pyobo": ("https://pyobo.readthedocs.io/en/stable", None),
     "class_resolver": ("https://class-resolver.readthedocs.io/en/latest", None),
     "bio2bel": ("https://bio2bel.readthedocs.io/en/latest", None),
-    "boto3": ("https://boto3.amazonaws.com/v1/documentation/api/latest", None),
+    "boto3": ("https://docs.aws.amazon.com/boto3/latest", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
     # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
     "datasets": ("https://huggingface.co/docs/datasets/main/en", None),
