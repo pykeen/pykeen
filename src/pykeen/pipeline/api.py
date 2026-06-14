@@ -1024,9 +1024,17 @@ def _handle_dataset(
 ) -> tuple[CoreTriplesFactory, CoreTriplesFactory | None, CoreTriplesFactory | None]:
     """Resolve training, testing, and validation factories.
 
-    When ``dataset=None`` and ``testing=None``, both ``training`` and ``validation``
-    must be pre-built :class:`CoreTriplesFactory` instances; testing stays ``None``
-    and the caller is responsible for failing at evaluation time if needed.
+    Behaviour depends on which of ``dataset`` and ``testing`` are provided:
+
+    - ``dataset=None, testing=None``: training-only mode. ``training`` (and ``validation``
+      if given) must be pre-built :class:`CoreTriplesFactory` instances. Returns
+      ``testing=None``; evaluation will fail unless a testing factory is supplied at
+      evaluation time.
+    - ``dataset=None, testing=provided``: explicit factories. Passed directly to
+      :func:`get_dataset`, which accepts pre-built factories or path strings (but not mixed).
+    - ``dataset=provided, testing=None``: named dataset. Testing comes from the dataset;
+      passing ``training``/``testing`` alongside raises :exc:`ValueError`.
+    - ``dataset=provided, testing=provided``: raises :exc:`ValueError` (ambiguous).
     """
     if dataset is None and testing is None:
         if not isinstance(training, CoreTriplesFactory):
