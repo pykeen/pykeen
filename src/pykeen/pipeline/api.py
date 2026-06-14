@@ -1013,21 +1013,25 @@ def _handle_dataset(
     evaluation_entity_whitelist: Collection[str] | None = None,
     evaluation_relation_whitelist: Collection[str] | None = None,
 ) -> tuple[CoreTriplesFactory, CoreTriplesFactory | None, CoreTriplesFactory | None]:
-    # Training-only path: explicit factory provided, no testing requested
+    """Resolve training, testing, and validation factories.
+
+    When ``dataset=None`` and ``testing=None``, both ``training`` and ``validation``
+    must be pre-built :class:`CoreTriplesFactory` instances; testing stays ``None``
+    and the caller is responsible for failing at evaluation time if needed.
+    """
     if dataset is None and testing is None:
         if not isinstance(training, CoreTriplesFactory):
-            raise ValueError(
-                "When testing=None, training must be a pre-built CoreTriplesFactory (not a path/string)."
-            )
+            raise ValueError("When testing=None, training must be a pre-built CoreTriplesFactory (not a path/string).")
         if validation is not None and not isinstance(validation, CoreTriplesFactory):
             raise ValueError("validation must be a pre-built CoreTriplesFactory when testing=None.")
         _result_tracker.log_params({"dataset": USER_DEFINED_CODE})
-        if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
-            if validation is not None:
-                validation = validation.new_with_restriction(
-                    entities=evaluation_entity_whitelist,
-                    relations=evaluation_relation_whitelist,
-                )
+        if validation is not None and any(
+            f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)
+        ):
+            validation = validation.new_with_restriction(
+                entities=evaluation_entity_whitelist,
+                relations=evaluation_relation_whitelist,
+            )
         return training, None, validation
 
     dataset_instance: Dataset = get_dataset(
@@ -1054,19 +1058,22 @@ def _handle_dataset(
             }
         )
 
-    training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
-    # evaluation restriction to a subset of entities/relations
+    training_tf, testing_tf, validation_tf = (
+        dataset_instance.training,
+        dataset_instance.testing,
+        dataset_instance.validation,
+    )
     if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
-        testing = testing.new_with_restriction(
+        testing_tf = testing_tf.new_with_restriction(
             entities=evaluation_entity_whitelist,
             relations=evaluation_relation_whitelist,
         )
-        if validation is not None:
-            validation = validation.new_with_restriction(
+        if validation_tf is not None:
+            validation_tf = validation_tf.new_with_restriction(
                 entities=evaluation_entity_whitelist,
                 relations=evaluation_relation_whitelist,
             )
-    return training, testing, validation
+    return training_tf, testing_tf, validation_tf
 
 
 def _handle_model(
