@@ -238,12 +238,14 @@ from ..version import get_git_hash, get_version
 
 __all__ = [
     "PipelineResult",
+    "ResolutionResult",
     "TrainResult",
     "pipeline_from_path",
     "pipeline_from_config",
     "replicate_pipeline_from_config",
     "replicate_pipeline_from_path",
     "pipeline",
+    "resolve_pipeline",
     "train_pipeline",
 ]
 
@@ -659,6 +661,92 @@ class TrainResult:
             metadata=self.metadata,
             train_seconds=self.train_seconds,
             evaluate_seconds=evaluate_seconds,
+        )
+
+
+@fix_dataclass_init_docs
+@dataclass
+class ResolutionResult:
+    """Result of :func:`resolve_pipeline`, containing all resolved pipeline components before training.
+
+    Call :meth:`train` to run training and obtain a :class:`TrainResult`.
+    """
+
+    #: The random seed used at the beginning of the pipeline
+    random_seed: int
+
+    #: The model to train
+    model: Model
+
+    #: The training triples
+    training: CoreTriplesFactory
+
+    #: The testing triples (if any)
+    testing: CoreTriplesFactory | None
+
+    #: The validation triples (if any)
+    validation: CoreTriplesFactory | None
+
+    #: The training loop
+    training_loop: TrainingLoop
+
+    #: The evaluator (used by stopper during training, and for post-training evaluation)
+    evaluator: Evaluator
+
+    #: Keyword arguments forwarded to the evaluator's evaluate function
+    evaluation_kwargs: dict[str, Any]
+
+    #: The stopper (NopStopper when no early stopping was configured)
+    stopper: Stopper
+
+    #: The result tracker
+    result_tracker: MultiResultTracker
+
+    #: Keyword arguments used during training
+    training_kwargs: dict[str, Any]
+
+    #: Whether to clear the optimizer after training
+    clear_optimizer: bool
+
+    #: The resolved configuration, logged before training
+    configuration: Mapping[str, Any]
+
+    #: Any additional metadata as a dictionary
+    metadata: MutableMapping[str, Any] = field(default_factory=dict)
+
+    def train(self) -> TrainResult:
+        """Run training and return a :class:`TrainResult`.
+
+        :returns: A :class:`TrainResult` holding the trained model, losses, and all state
+            needed to call :meth:`TrainResult.evaluate` later.
+        """
+        training_start_time = time.time()
+        losses = self.training_loop.train(
+            triples_factory=self.training,
+            stopper=self.stopper,
+            clear_optimizer=self.clear_optimizer,
+            **self.training_kwargs,
+        )
+        assert losses is not None
+        train_seconds = time.time() - training_start_time
+        step = self.training_kwargs.get("num_epochs")
+        self.result_tracker.log_metrics(metrics={"total_training": train_seconds}, step=step, prefix="times")
+        return TrainResult(
+            random_seed=self.random_seed,
+            model=self.model,
+            training=self.training,
+            testing=self.testing,
+            validation=self.validation,
+            training_loop=self.training_loop,
+            losses=losses,
+            train_seconds=train_seconds,
+            stopper=self.stopper,
+            configuration=self.configuration,
+            metadata=self.metadata,
+            evaluator=self.evaluator,
+            evaluation_kwargs=self.evaluation_kwargs,
+            result_tracker=self.result_tracker,
+            training_kwargs=self.training_kwargs,
         )
 
 
@@ -1275,77 +1363,6 @@ def _handle_evaluator(
     return evaluator_instance, evaluation_kwargs
 
 
-def _handle_training(
-    *,
-    _result_tracker: MultiResultTracker,
-    training: CoreTriplesFactory,
-    validation: CoreTriplesFactory | None,
-    model_instance: Model,
-    evaluator_instance: Evaluator,
-    training_loop_instance: TrainingLoop,
-    clear_optimizer: bool,
-    evaluation_kwargs: Mapping[str, Any],
-    # 7. Training (ronaldo style)
-    epochs: int | None = None,
-    training_kwargs: dict[str, Any],
-    stopper: HintType[Stopper] = None,
-    stopper_kwargs: Mapping[str, Any] | None = None,
-    # Misc
-    use_tqdm: bool | None = None,
-) -> tuple[Stopper, Mapping[str, Any], list[float], float]:
-    # Stopping
-    if "stopper" in training_kwargs and stopper is not None:
-        raise ValueError("Specified stopper in training_kwargs and as stopper")
-    if "stopper" in training_kwargs:
-        stopper = training_kwargs.pop("stopper")
-    if stopper_kwargs is None:
-        stopper_kwargs = {}
-    stopper_kwargs = dict(stopper_kwargs)
-
-    # Load the evaluation batch size for the stopper, if it has been set
-    _evaluation_batch_size = evaluation_kwargs.get("batch_size")
-    if _evaluation_batch_size is not None:
-        stopper_kwargs.setdefault("evaluation_batch_size", _evaluation_batch_size)
-
-    stopper_instance: Stopper = stopper_resolver.make(
-        stopper,
-        model=model_instance,
-        evaluator=evaluator_instance,
-        training_triples_factory=training,
-        evaluation_triples_factory=validation,
-        result_tracker=_result_tracker,
-        **stopper_kwargs,
-    )
-
-    if epochs is not None:
-        training_kwargs["num_epochs"] = epochs
-    if use_tqdm is not None:
-        training_kwargs["use_tqdm"] = use_tqdm
-    training_kwargs.setdefault("num_epochs", 5)
-    training_kwargs.setdefault("batch_size", 256)
-    _result_tracker.log_params(params=training_kwargs)
-
-    # Add logging for debugging
-    configuration = _result_tracker.get_configuration()
-    logger.debug("Run Pipeline based on following config:")
-    for key, value in configuration.items():
-        logger.debug(f"{key}: {value}")
-
-    # Train like Cristiano Ronaldo
-    training_start_time = time.time()
-    losses = training_loop_instance.train(
-        triples_factory=training,
-        stopper=stopper_instance,
-        clear_optimizer=clear_optimizer,
-        **training_kwargs,
-    )
-    assert losses is not None  # losses is only none if it's doing search mode
-    training_end_time = time.time() - training_start_time
-    step = training_kwargs.get("num_epochs")
-    _result_tracker.log_metrics(metrics={"total_training": training_end_time}, step=step, prefix="times")
-    return stopper_instance, configuration, losses, training_end_time
-
-
 def _handle_evaluation(
     *,
     _result_tracker: ResultTracker,
@@ -1453,7 +1470,7 @@ def _handle_evaluation(
     return metric_results, evaluate_end_time
 
 
-def train_pipeline(
+def resolve_pipeline(
     *,
     # 1. Dataset
     dataset: None | str | Dataset | type[Dataset] = None,
@@ -1487,7 +1504,7 @@ def train_pipeline(
     training_loop_kwargs: Mapping[str, Any] | None = None,
     negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Mapping[str, Any] | None = None,
-    # 7. Training (ronaldo style)
+    # 7. Training
     epochs: int | None = None,
     training_kwargs: Mapping[str, Any] | None = None,
     stopper: HintType[Stopper] = None,
@@ -1504,18 +1521,14 @@ def train_pipeline(
     device: Hint[torch.device] = None,
     random_seed: int | None = None,
     use_tqdm: bool | None = None,
-) -> TrainResult:
-    """Train a model and return a :class:`TrainResult` without running post-training evaluation.
+) -> ResolutionResult:
+    """Resolve all pipeline components into a :class:`ResolutionResult` without running training.
 
-    All parameters match :func:`pipeline`. Evaluation-specific parameters
-    (``use_testing_data``, ``evaluation_fallback``, ``filter_validation_when_testing``) are
-    moved to :meth:`TrainResult.evaluate`.
+    All parameters match :func:`train_pipeline`. Use :meth:`ResolutionResult.train` to run
+    training and :meth:`TrainResult.evaluate` to run evaluation, or use the higher-level
+    :func:`train_pipeline` or :func:`pipeline` convenience functions.
 
-    Pass ``testing=None`` together with an explicit ``training`` factory to run in
-    training-only mode (no evaluation triples required).
-
-    :returns: A :class:`TrainResult` holding the trained model, losses, and all state
-        needed to call :meth:`TrainResult.evaluate` later.
+    :returns: A :class:`ResolutionResult` holding all resolved components ready for training.
     """
     if training_kwargs is None:
         training_kwargs = {}
@@ -1582,39 +1595,164 @@ def train_pipeline(
         evaluation_kwargs=evaluation_kwargs,
     )
 
-    stopper_instance, configuration, losses, train_seconds = _handle_training(
-        _result_tracker=_result_tracker,
-        training=training_tf,
-        validation=validation_tf,
-        model_instance=model_instance,
-        evaluator_instance=evaluator_instance,
-        training_loop_instance=training_loop_instance,
-        clear_optimizer=clear_optimizer,
-        evaluation_kwargs=evaluation_kwargs,
-        epochs=epochs,
-        training_kwargs=training_kwargs,
-        stopper=stopper,
-        stopper_kwargs=stopper_kwargs,
-        use_tqdm=use_tqdm,
+    # Resolve stopper
+    if "stopper" in training_kwargs and stopper is not None:
+        raise ValueError("Specified stopper in training_kwargs and as stopper")
+    if "stopper" in training_kwargs:
+        stopper = training_kwargs.pop("stopper")
+    if stopper_kwargs is None:
+        stopper_kwargs = {}
+    stopper_kwargs = dict(stopper_kwargs)
+    _evaluation_batch_size = evaluation_kwargs.get("batch_size")
+    if _evaluation_batch_size is not None:
+        stopper_kwargs.setdefault("evaluation_batch_size", _evaluation_batch_size)
+    stopper_instance: Stopper = stopper_resolver.make(
+        stopper,
+        model=model_instance,
+        evaluator=evaluator_instance,
+        training_triples_factory=training_tf,
+        evaluation_triples_factory=validation_tf,
+        result_tracker=_result_tracker,
+        **stopper_kwargs,
     )
 
-    return TrainResult(
+    # Finalize training kwargs and log
+    if epochs is not None:
+        training_kwargs["num_epochs"] = epochs
+    if use_tqdm is not None:
+        training_kwargs["use_tqdm"] = use_tqdm
+    training_kwargs.setdefault("num_epochs", 5)
+    training_kwargs.setdefault("batch_size", 256)
+    _result_tracker.log_params(params=training_kwargs)
+
+    # Configuration snapshot (all params logged at this point)
+    configuration = _result_tracker.get_configuration()
+    logger.debug("Run Pipeline based on following config:")
+    for key, value in configuration.items():
+        logger.debug(f"{key}: {value}")
+
+    return ResolutionResult(
         random_seed=_random_seed,
         model=model_instance,
         training=training_tf,
         testing=testing_tf,
         validation=validation_tf,
         training_loop=training_loop_instance,
-        losses=losses,
-        train_seconds=train_seconds,
-        stopper=stopper_instance,
-        configuration=configuration,
-        metadata=metadata,
         evaluator=evaluator_instance,
         evaluation_kwargs=evaluation_kwargs,
+        stopper=stopper_instance,
         result_tracker=_result_tracker,
         training_kwargs=training_kwargs,
+        clear_optimizer=clear_optimizer,
+        configuration=configuration,
+        metadata=metadata,
     )
+
+
+def train_pipeline(
+    *,
+    # 1. Dataset
+    dataset: None | str | Dataset | type[Dataset] = None,
+    dataset_kwargs: Mapping[str, Any] | None = None,
+    training: Hint[CoreTriplesFactory] = None,
+    testing: Hint[CoreTriplesFactory] = None,
+    validation: Hint[CoreTriplesFactory] = None,
+    evaluation_entity_whitelist: Collection[str] | None = None,
+    evaluation_relation_whitelist: Collection[str] | None = None,
+    # 2. Model
+    model: None | str | Model | type[Model] = None,
+    model_kwargs: Mapping[str, Any] | None = None,
+    interaction: None | str | Interaction | type[Interaction] = None,
+    interaction_kwargs: Mapping[str, Any] | None = None,
+    dimensions: None | int | Mapping[str, int] = None,
+    # 3. Loss
+    loss: HintType[Loss] = None,
+    loss_kwargs: Mapping[str, Any] | None = None,
+    # 4. Regularizer
+    regularizer: HintType[Regularizer] = None,
+    regularizer_kwargs: Mapping[str, Any] | None = None,
+    # 5. Optimizer
+    optimizer: HintType[Optimizer] = None,
+    optimizer_kwargs: Mapping[str, Any] | None = None,
+    clear_optimizer: bool = True,
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: HintType[LRScheduler] = None,
+    lr_scheduler_kwargs: Mapping[str, Any] | None = None,
+    # 6. Training Loop
+    training_loop: HintType[TrainingLoop] = None,
+    training_loop_kwargs: Mapping[str, Any] | None = None,
+    negative_sampler: HintType[NegativeSampler] = None,
+    negative_sampler_kwargs: Mapping[str, Any] | None = None,
+    # 7. Training (ronaldo style)
+    epochs: int | None = None,
+    training_kwargs: Mapping[str, Any] | None = None,
+    stopper: HintType[Stopper] = None,
+    stopper_kwargs: Mapping[str, Any] | None = None,
+    # 8. Evaluator (still needed: stopper calls it during training)
+    evaluator: HintType[Evaluator] = None,
+    evaluator_kwargs: Mapping[str, Any] | None = None,
+    evaluation_kwargs: Mapping[str, Any] | None = None,
+    # 9. Tracking
+    result_tracker: OneOrManyHintOrType[ResultTracker] = None,
+    result_tracker_kwargs: OneOrManyOptionalKwargs = None,
+    # Misc
+    metadata: dict[str, Any] | None = None,
+    device: Hint[torch.device] = None,
+    random_seed: int | None = None,
+    use_tqdm: bool | None = None,
+) -> TrainResult:
+    """Train a model and return a :class:`TrainResult` without running post-training evaluation.
+
+    All parameters match :func:`pipeline`. Evaluation-specific parameters
+    (``use_testing_data``, ``evaluation_fallback``, ``filter_validation_when_testing``) are
+    moved to :meth:`TrainResult.evaluate`.
+
+    Pass ``testing=None`` together with an explicit ``training`` factory to run in
+    training-only mode (no evaluation triples required).
+
+    :returns: A :class:`TrainResult` holding the trained model, losses, and all state
+        needed to call :meth:`TrainResult.evaluate` later.
+    """
+    return resolve_pipeline(
+        dataset=dataset,
+        dataset_kwargs=dataset_kwargs,
+        training=training,
+        testing=testing,
+        validation=validation,
+        evaluation_entity_whitelist=evaluation_entity_whitelist,
+        evaluation_relation_whitelist=evaluation_relation_whitelist,
+        model=model,
+        model_kwargs=model_kwargs,
+        interaction=interaction,
+        interaction_kwargs=interaction_kwargs,
+        dimensions=dimensions,
+        loss=loss,
+        loss_kwargs=loss_kwargs,
+        regularizer=regularizer,
+        regularizer_kwargs=regularizer_kwargs,
+        optimizer=optimizer,
+        optimizer_kwargs=optimizer_kwargs,
+        clear_optimizer=clear_optimizer,
+        lr_scheduler=lr_scheduler,
+        lr_scheduler_kwargs=lr_scheduler_kwargs,
+        training_loop=training_loop,
+        training_loop_kwargs=training_loop_kwargs,
+        negative_sampler=negative_sampler,
+        negative_sampler_kwargs=negative_sampler_kwargs,
+        epochs=epochs,
+        training_kwargs=training_kwargs,
+        stopper=stopper,
+        stopper_kwargs=stopper_kwargs,
+        evaluator=evaluator,
+        evaluator_kwargs=evaluator_kwargs,
+        evaluation_kwargs=evaluation_kwargs,
+        result_tracker=result_tracker,
+        result_tracker_kwargs=result_tracker_kwargs,
+        metadata=metadata,
+        device=device,
+        random_seed=random_seed,
+        use_tqdm=use_tqdm,
+    ).train()
 
 
 def pipeline(  # noqa: C901

@@ -15,7 +15,7 @@ from pykeen.models import ERModel, FixedModel, Model
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
 from pykeen.nn.representation import Embedding
-from pykeen.pipeline import PipelineResult, TrainResult, pipeline, train_pipeline
+from pykeen.pipeline import PipelineResult, ResolutionResult, TrainResult, pipeline, resolve_pipeline, train_pipeline
 from pykeen.pipeline.api import replicate_pipeline_from_config
 from pykeen.regularizers import NoRegularizer
 from pykeen.sampling.negative_sampler import NegativeSampler
@@ -404,6 +404,30 @@ def test_negative_sampler_kwargs():
             model="distmult",
             epochs=0,
         )
+
+
+def test_resolve_pipeline():
+    """Test that resolve_pipeline returns a ResolutionResult and training runs correctly from it."""
+    tf = generate_triples_factory(num_entities=20, num_relations=5, num_triples=100)
+    training, testing, _ = tf.split([0.8, 0.1, 0.1])
+
+    resolution = resolve_pipeline(
+        training=training,
+        testing=testing,
+        model="TransE",
+        model_kwargs={"embedding_dim": 8},
+        training_kwargs={"num_epochs": 1, "use_tqdm": False},
+    )
+    assert isinstance(resolution, ResolutionResult)
+    assert resolution.testing is testing
+
+    train_result = resolution.train()
+    assert isinstance(train_result, TrainResult)
+    assert len(train_result.losses) == 1
+
+    pipeline_result = train_result.evaluate()
+    assert isinstance(pipeline_result, PipelineResult)
+    assert pipeline_result.metric_results is not None
 
 
 def test_train_pipeline_training_only():
