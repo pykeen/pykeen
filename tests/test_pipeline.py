@@ -484,9 +484,8 @@ def test_deferred_evaluate():
 
     assert isinstance(result_a, PipelineResult)
     assert isinstance(result_b, PipelineResult)
-    # results differ because the evaluation sets differ
-    assert result_a.metric_results is not None
-    assert result_b.metric_results is not None
+    # results should differ because the evaluation sets differ
+    assert result_a.metric_results.to_dict() != result_b.metric_results.to_dict()
 
 
 @pytest.mark.parametrize("tf_cls", [CoreTriplesFactory, TriplesFactory])
