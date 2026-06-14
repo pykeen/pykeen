@@ -246,7 +246,6 @@ __all__ = [
     "replicate_pipeline_from_path",
     "pipeline",
     "resolve_pipeline",
-    "train_pipeline",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1649,112 +1648,6 @@ def resolve_pipeline(
     )
 
 
-def train_pipeline(
-    *,
-    # 1. Dataset
-    dataset: None | str | Dataset | type[Dataset] = None,
-    dataset_kwargs: Mapping[str, Any] | None = None,
-    training: Hint[CoreTriplesFactory] = None,
-    testing: Hint[CoreTriplesFactory] = None,
-    validation: Hint[CoreTriplesFactory] = None,
-    evaluation_entity_whitelist: Collection[str] | None = None,
-    evaluation_relation_whitelist: Collection[str] | None = None,
-    # 2. Model
-    model: None | str | Model | type[Model] = None,
-    model_kwargs: Mapping[str, Any] | None = None,
-    interaction: None | str | Interaction | type[Interaction] = None,
-    interaction_kwargs: Mapping[str, Any] | None = None,
-    dimensions: None | int | Mapping[str, int] = None,
-    # 3. Loss
-    loss: HintType[Loss] = None,
-    loss_kwargs: Mapping[str, Any] | None = None,
-    # 4. Regularizer
-    regularizer: HintType[Regularizer] = None,
-    regularizer_kwargs: Mapping[str, Any] | None = None,
-    # 5. Optimizer
-    optimizer: HintType[Optimizer] = None,
-    optimizer_kwargs: Mapping[str, Any] | None = None,
-    clear_optimizer: bool = True,
-    # 5.1 Learning Rate Scheduler
-    lr_scheduler: HintType[LRScheduler] = None,
-    lr_scheduler_kwargs: Mapping[str, Any] | None = None,
-    # 6. Training Loop
-    training_loop: HintType[TrainingLoop] = None,
-    training_loop_kwargs: Mapping[str, Any] | None = None,
-    negative_sampler: HintType[NegativeSampler] = None,
-    negative_sampler_kwargs: Mapping[str, Any] | None = None,
-    # 7. Training (ronaldo style)
-    epochs: int | None = None,
-    training_kwargs: Mapping[str, Any] | None = None,
-    stopper: HintType[Stopper] = None,
-    stopper_kwargs: Mapping[str, Any] | None = None,
-    # 8. Evaluator (still needed: stopper calls it during training)
-    evaluator: HintType[Evaluator] = None,
-    evaluator_kwargs: Mapping[str, Any] | None = None,
-    evaluation_kwargs: Mapping[str, Any] | None = None,
-    # 9. Tracking
-    result_tracker: OneOrManyHintOrType[ResultTracker] = None,
-    result_tracker_kwargs: OneOrManyOptionalKwargs = None,
-    # Misc
-    metadata: dict[str, Any] | None = None,
-    device: Hint[torch.device] = None,
-    random_seed: int | None = None,
-    use_tqdm: bool | None = None,
-) -> TrainResult:
-    """Train a model and return a :class:`TrainResult` without running post-training evaluation.
-
-    All parameters match :func:`pipeline`. Evaluation-specific parameters
-    (``use_testing_data``, ``evaluation_fallback``, ``filter_validation_when_testing``) are
-    moved to :meth:`TrainResult.evaluate`.
-
-    Pass ``testing=None`` together with an explicit ``training`` factory to run in
-    training-only mode (no evaluation triples required).
-
-    :returns: A :class:`TrainResult` holding the trained model, losses, and all state
-        needed to call :meth:`TrainResult.evaluate` later.
-    """
-    return resolve_pipeline(
-        dataset=dataset,
-        dataset_kwargs=dataset_kwargs,
-        training=training,
-        testing=testing,
-        validation=validation,
-        evaluation_entity_whitelist=evaluation_entity_whitelist,
-        evaluation_relation_whitelist=evaluation_relation_whitelist,
-        model=model,
-        model_kwargs=model_kwargs,
-        interaction=interaction,
-        interaction_kwargs=interaction_kwargs,
-        dimensions=dimensions,
-        loss=loss,
-        loss_kwargs=loss_kwargs,
-        regularizer=regularizer,
-        regularizer_kwargs=regularizer_kwargs,
-        optimizer=optimizer,
-        optimizer_kwargs=optimizer_kwargs,
-        clear_optimizer=clear_optimizer,
-        lr_scheduler=lr_scheduler,
-        lr_scheduler_kwargs=lr_scheduler_kwargs,
-        training_loop=training_loop,
-        training_loop_kwargs=training_loop_kwargs,
-        negative_sampler=negative_sampler,
-        negative_sampler_kwargs=negative_sampler_kwargs,
-        epochs=epochs,
-        training_kwargs=training_kwargs,
-        stopper=stopper,
-        stopper_kwargs=stopper_kwargs,
-        evaluator=evaluator,
-        evaluator_kwargs=evaluator_kwargs,
-        evaluation_kwargs=evaluation_kwargs,
-        result_tracker=result_tracker,
-        result_tracker_kwargs=result_tracker_kwargs,
-        metadata=metadata,
-        device=device,
-        random_seed=random_seed,
-        use_tqdm=use_tqdm,
-    ).train()
-
-
 def pipeline(  # noqa: C901
     *,
     # 1. Dataset
@@ -1930,48 +1823,52 @@ def pipeline(  # noqa: C901
 
     :returns: A pipeline result package.
     """
-    return train_pipeline(
-        dataset=dataset,
-        dataset_kwargs=dataset_kwargs,
-        training=training,
-        testing=testing,
-        validation=validation,
-        evaluation_entity_whitelist=evaluation_entity_whitelist,
-        evaluation_relation_whitelist=evaluation_relation_whitelist,
-        model=model,
-        model_kwargs=model_kwargs,
-        interaction=interaction,
-        interaction_kwargs=interaction_kwargs,
-        dimensions=dimensions,
-        loss=loss,
-        loss_kwargs=loss_kwargs,
-        regularizer=regularizer,
-        regularizer_kwargs=regularizer_kwargs,
-        optimizer=optimizer,
-        optimizer_kwargs=optimizer_kwargs,
-        clear_optimizer=clear_optimizer,
-        lr_scheduler=lr_scheduler,
-        lr_scheduler_kwargs=lr_scheduler_kwargs,
-        training_loop=training_loop,
-        training_loop_kwargs=training_loop_kwargs,
-        negative_sampler=negative_sampler,
-        negative_sampler_kwargs=negative_sampler_kwargs,
-        epochs=epochs,
-        training_kwargs=training_kwargs,
-        stopper=stopper,
-        stopper_kwargs=stopper_kwargs,
-        evaluator=evaluator,
-        evaluator_kwargs=evaluator_kwargs,
-        evaluation_kwargs=evaluation_kwargs,
-        result_tracker=result_tracker,
-        result_tracker_kwargs=result_tracker_kwargs,
-        metadata=metadata,
-        device=device,
-        random_seed=random_seed,
-        use_tqdm=use_tqdm,
-    ).evaluate(
-        use_testing_data=use_testing_data,
-        evaluation_fallback=evaluation_fallback,
-        filter_validation_when_testing=filter_validation_when_testing,
-        use_tqdm=use_tqdm,
+    return (
+        resolve_pipeline(
+            dataset=dataset,
+            dataset_kwargs=dataset_kwargs,
+            training=training,
+            testing=testing,
+            validation=validation,
+            evaluation_entity_whitelist=evaluation_entity_whitelist,
+            evaluation_relation_whitelist=evaluation_relation_whitelist,
+            model=model,
+            model_kwargs=model_kwargs,
+            interaction=interaction,
+            interaction_kwargs=interaction_kwargs,
+            dimensions=dimensions,
+            loss=loss,
+            loss_kwargs=loss_kwargs,
+            regularizer=regularizer,
+            regularizer_kwargs=regularizer_kwargs,
+            optimizer=optimizer,
+            optimizer_kwargs=optimizer_kwargs,
+            clear_optimizer=clear_optimizer,
+            lr_scheduler=lr_scheduler,
+            lr_scheduler_kwargs=lr_scheduler_kwargs,
+            training_loop=training_loop,
+            training_loop_kwargs=training_loop_kwargs,
+            negative_sampler=negative_sampler,
+            negative_sampler_kwargs=negative_sampler_kwargs,
+            epochs=epochs,
+            training_kwargs=training_kwargs,
+            stopper=stopper,
+            stopper_kwargs=stopper_kwargs,
+            evaluator=evaluator,
+            evaluator_kwargs=evaluator_kwargs,
+            evaluation_kwargs=evaluation_kwargs,
+            result_tracker=result_tracker,
+            result_tracker_kwargs=result_tracker_kwargs,
+            metadata=metadata,
+            device=device,
+            random_seed=random_seed,
+            use_tqdm=use_tqdm,
+        )
+        .train()
+        .evaluate(
+            use_testing_data=use_testing_data,
+            evaluation_fallback=evaluation_fallback,
+            filter_validation_when_testing=filter_validation_when_testing,
+            use_tqdm=use_tqdm,
+        )
     )
