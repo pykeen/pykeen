@@ -263,6 +263,9 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
     def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:  # noqa: D102
         y_pred = construct_indicator(y_score=y_score, y_true=y_true)
         matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred, sample_weight=weights, normalize=None)
+        # sklearn returns [[TN, FP], [FN, TP]] but extract_from_confusion_matrix
+        # expects [[TP, FN], [FP, TN]], so reverse both axes
+        matrix = matrix[::-1, ::-1]
         return self.extract_from_confusion_matrix(matrix=matrix)
 
 
