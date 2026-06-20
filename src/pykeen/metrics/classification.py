@@ -242,15 +242,21 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
     zero_division: ZeroDivisionPolicy = "warn"
 
     @abc.abstractmethod
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         """
-        Calculate the metric from the confusion table.
+        Calculate the metric from the confusion matrix entries.
 
-        :param matrix: shape: (2, 2)
-            the confusion table of the form::
+        The unpacking follows the sklearn convention:
 
-                [[ TP, FN ]
-                 [ FP, TN ]]
+        .. code-block:: python
+
+            # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html
+            tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+
+        :param tn: true negatives
+        :param fp: false positives
+        :param fn: false negatives
+        :param tp: true positives
 
         :return:
             the scalar metric
@@ -263,7 +269,9 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
     def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:  # noqa: D102
         y_pred = construct_indicator(y_score=y_score, y_true=y_true)
         matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred, sample_weight=weights, normalize=None)
-        return self.extract_from_confusion_matrix(matrix=matrix)
+        # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html
+        tn, fp, fn, tp = matrix.ravel().tolist()
+        return self.extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
 
 
 @parse_docdata
@@ -285,10 +293,8 @@ class TruePositiveRate(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("tpr", "sensitivity", "recall", "hit rate")
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[1, 1].item(), denominator=matrix[1, :].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tp, denominator=tp + fn, zero_division=self.zero_division)
 
 
 @parse_docdata
@@ -315,10 +321,8 @@ class TrueNegativeRate(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("tnr", "specificity", "selectivity")
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[0, 0].item(), denominator=matrix[0, :].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tn, denominator=tn + fp, zero_division=self.zero_division)
 
 
 @parse_docdata
@@ -340,10 +344,8 @@ class FalsePositiveRate(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("fpr", "fall-out", "false alarm ratio")
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[1, 0].item(), denominator=matrix[1, :].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=fp, denominator=fp + tn, zero_division=self.zero_division)
 
 
 @parse_docdata
@@ -365,10 +367,8 @@ class FalseNegativeRate(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("fnr", "miss-rate")
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[0, 1].item(), denominator=matrix[0, :].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=fn, denominator=fn + tp, zero_division=self.zero_division)
 
 
 @parse_docdata
@@ -390,10 +390,8 @@ class PositivePredictiveValue(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("ppv",)
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[0, 0].item(), denominator=matrix[:, 0].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tp, denominator=tp + fp, zero_division=self.zero_division)
 
 
 @parse_docdata
@@ -415,10 +413,8 @@ class NegativePredictiveValue(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("npv",)
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[1, 1].item(), denominator=matrix[:, 1].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tn, denominator=tn + fn, zero_division=self.zero_division)
 
 
 @parse_docdata
@@ -440,10 +436,8 @@ class FalseDiscoveryRate(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("fdr",)
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[1, 0].item(), denominator=matrix[:, 0].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=fp, denominator=fp + tp, zero_division=self.zero_division)
 
 
 @parse_docdata
@@ -465,10 +459,8 @@ class FalseOmissionRate(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("fom",)
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[0, 1].item(), denominator=matrix[:, 1].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=fn, denominator=fn + tn, zero_division=self.zero_division)
 
 
 @parse_docdata
@@ -490,10 +482,10 @@ class PositiveLikelihoodRatio(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("lr+",)
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
         return safe_divide(
-            numerator=(matrix[0, 0] * matrix[1, :].sum()).item(),
-            denominator=(matrix[1, 0] * matrix[0, :].sum()).item(),
+            numerator=tp * (tn + fp),
+            denominator=fp * (tp + fn),
             zero_division=self.zero_division,
         )
 
@@ -517,10 +509,10 @@ class NegativeLikelihoodRatio(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("lr-",)
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
         return safe_divide(
-            numerator=(matrix[0, 1] * matrix[0, :].sum()).item(),
-            denominator=(matrix[1, 1] * matrix[1, :].sum()).item(),
+            numerator=fn * (tn + fp),
+            denominator=tn * (tp + fn),
             zero_division=self.zero_division,
         )
 
@@ -546,12 +538,8 @@ class DiagnosticOddsRatio(ConfusionMatrixClassificationMetric):
     # todo: https://en.wikipedia.org/wiki/Diagnostic_odds_ratio#Confidence_interval
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=(matrix[0, 0] * matrix[1, 1]).item(),
-            denominator=(matrix[0, 1] * matrix[1, 0]).item(),
-            zero_division=self.zero_division,
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tp * tn, denominator=fp * fn, zero_division=self.zero_division)
 
 
 @parse_docdata
@@ -573,12 +561,8 @@ class Accuracy(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("acc", "fraction correct", "fc")
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=(matrix[0, 0] * matrix[1, 1]).item(),
-            denominator=matrix.sum().item(),
-            zero_division=self.zero_division,
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tp + tn, denominator=tp + tn + fp + fn, zero_division=self.zero_division)
 
 
 @parse_docdata
@@ -600,12 +584,8 @@ class F1Score(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("f1",)
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=2 * matrix[0, 0].item(),
-            denominator=(2 * matrix[0, 0] + matrix[0, 1] + matrix[1, 0]).item(),
-            zero_division=self.zero_division,
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=2 * tp, denominator=2 * tp + fp + fn, zero_division=self.zero_division)
 
 
 @parse_docdata
@@ -628,9 +608,9 @@ class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("pt",)
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        fpr = FalsePositiveRate().extract_from_confusion_matrix(matrix=matrix)
-        tpr = TruePositiveRate().extract_from_confusion_matrix(matrix=matrix)
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        fpr = FalsePositiveRate().extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
+        tpr = TruePositiveRate().extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
         return safe_divide(
             numerator=numpy.sqrt(fpr).item(),
             denominator=(numpy.sqrt(fpr) + numpy.sqrt(tpr)).item(),
@@ -657,12 +637,8 @@ class ThreatScore(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("ts", "critical success index", "csi", "jaccard index")
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[0, 0].item(),
-            denominator=(matrix[0, 0] + matrix[0, 1] + matrix[1, 0]).item(),
-            zero_division=self.zero_division,
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tp, denominator=tp + fn + fp, zero_division=self.zero_division)
 
 
 @parse_docdata
@@ -684,13 +660,9 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("fm", "fmi")
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
         return math.sqrt(
-            safe_divide(
-                numerator=matrix[0, 0].item() ** 2,
-                denominator=(2 * matrix[0, 0] + matrix[0, 1] + matrix[1, 0]).item(),
-                zero_division=self.zero_division,
-            )
+            safe_divide(numerator=tp**2, denominator=2 * tp + fp + fn, zero_division=self.zero_division)
         )
 
 
@@ -713,14 +685,10 @@ class Informedness(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("Youden's J", "Youden's Index", "yi")
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
         return (
-            safe_divide(
-                numerator=matrix[1, 1].item(), denominator=matrix[1, :].sum().item(), zero_division=self.zero_division
-            )
-            + safe_divide(
-                numerator=matrix[0, 0].item(), denominator=matrix[0, :].sum().item(), zero_division=self.zero_division
-            )
+            safe_divide(numerator=tp, denominator=tp + fn, zero_division=self.zero_division)
+            + safe_divide(numerator=tn, denominator=tn + fp, zero_division=self.zero_division)
             - 1
         )
 
@@ -746,10 +714,10 @@ class MatthewsCorrelationCoefficient(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("mcc",)
 
     # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
         return safe_divide(
-            numerator=(matrix[0, 0] * matrix[1, 1] - matrix[1, 0] * matrix[0, 1]).item(),
-            denominator=(matrix.sum(axis=1).prod() * matrix.sum(axis=0).prod()).item(),
+            numerator=tp * tn - fp * fn,
+            denominator=math.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)),
             zero_division=self.zero_division,
         )
 
