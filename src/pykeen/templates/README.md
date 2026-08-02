@@ -86,8 +86,8 @@ training approach and evaluates with [rank-based evaluation](https://pykeen.read
 from pykeen.pipeline import pipeline
 
 result = pipeline(
-    model='TransE',
-    dataset='nations',
+    model="TransE",
+    dataset="nations",
 )
 ```
 
