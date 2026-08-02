@@ -428,11 +428,13 @@ class TestLiterals(unittest.TestCase):
 
         assert result.shape[0] == 1, "only the fully known triple should pass through"
         assert log.output == [
-            "WARNING:pykeen.triples.triples_factory:"
-            "You're trying to map 3 triples with 2 entities "
-            "(2 as head, 1 as tail) and 0 relations"
-            " that are not in the training set. 3 of 4 triples"
-            " will be excluded from the mapping."
+            (
+                "WARNING:pykeen.triples.triples_factory:"
+                "You're trying to map 3 triples with 2 entities "
+                "(2 as head, 1 as tail) and 0 relations"
+                " that are not in the training set. 3 of 4 triples"
+                " will be excluded from the mapping."
+            )
         ]
 
     def test_inverse_triples(self):

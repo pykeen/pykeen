@@ -265,7 +265,7 @@ def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray | None = None) -> 
     return np.reciprocal(np.average(np.reciprocal(a.astype(float)), weights=weights))
 
 
-def weighted_median(a: np.ndarray, weights: np.ndarray | None = None) -> np.ndarray:
+def weighted_median(a: np.ndarray, weights: np.ndarray | None = None) -> np.floating:
     """Calculate weighted median."""
     if weights is None:
         return np.median(a)
