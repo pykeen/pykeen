@@ -138,7 +138,7 @@ class AnchorTokenizer(Tokenizer):
         num_empty = (tokens < 0).all(axis=1).sum()
         if num_empty > 0:
             logger.warning(
-                f"{format_relative_comparison(part=num_empty, total=num_entities)} do not have any anchor.",
+                f"{format_relative_comparison(part=num_empty.item(), total=num_entities)} do not have any anchor.",
             )
         # convert to torch
         return len(anchors) + 1, torch.as_tensor(tokens, dtype=torch.long)
