@@ -109,7 +109,7 @@ class WikidataImageCache(WikidataTextCache):
                 if relation not in url_dict:
                     continue
                 # now there is an image available -> select reproducible by URL sorting
-                image_url = sorted(url_dict[relation])[0]
+                image_url = min(url_dict[relation])
                 ext = image_url.rsplit(".", maxsplit=1)[-1].lower()
                 if ext not in extensions:
                     logger.warning(f"Unknown extension: {ext} for {image_url}")
