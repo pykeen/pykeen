@@ -661,9 +661,7 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
 
     # docstr-coverage: inherited
     def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
-        return math.sqrt(
-            safe_divide(numerator=tp**2, denominator=2 * tp + fp + fn, zero_division=self.zero_division)
-        )
+        return math.sqrt(safe_divide(numerator=tp**2, denominator=2 * tp + fp + fn, zero_division=self.zero_division))
 
 
 @parse_docdata
