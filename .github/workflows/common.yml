@@ -27,7 +27,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
           cache: 'pip'
-          cache-dependency-path: './pyproject.toml'
+          cache-dependency-path: |
+            ./pyproject.toml
+            ./tox.ini
       
       - name: Install dependencies
         run: pip install tox tox-uv
@@ -68,7 +70,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
           cache: 'pip'
-          cache-dependency-path: './pyproject.toml'
+          cache-dependency-path: |
+            ./pyproject.toml
+            ./tox.ini
       
       - name: Install dependencies
         run: pip install tox tox-uv
