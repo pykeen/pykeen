@@ -26,9 +26,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # - name: Check RST format
-      #   run: tox -e doclint
-
       - name: Check README.rst
         run: tox -e readme
 
@@ -66,9 +63,6 @@ jobs:
       
       - name: Run doctests
         run: tox -e doctests
-      
-      # - name: Test notebooks
-      #   run: tox -e treon
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
