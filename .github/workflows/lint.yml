@@ -17,20 +17,9 @@ jobs:
       matrix:
         python-version: [ "3.10", "3.14" ]
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-tox
         with:
           python-version: ${{ matrix.python-version }}
-          # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-          cache: 'pip'
-          cache-dependency-path: |
-            ./pyproject.toml
-            ./tox.ini
-
-      - name: Install dependencies
-        run: pip install tox tox-uv
 
       - name: Check static typing with MyPy
         run: tox -e mypy
@@ -42,20 +31,9 @@ jobs:
       matrix:
         python-version: [ "3.14" ]
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - uses: ./.github/actions/setup-tox
       with:
         python-version: ${{ matrix.python-version }}
-        # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-        cache: 'pip'
-        cache-dependency-path: |
-          ./pyproject.toml
-          ./tox.ini
-
-    - name: Install dependencies
-      run: pip install tox tox-uv
 
     - name: Check code quality
       run: tox -e lint

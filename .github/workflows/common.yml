@@ -19,21 +19,10 @@ jobs:
         # no need to check documentation with multiple python versions
         python-version: [ "3.14" ]
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-tox
         with:
           python-version: ${{ matrix.python-version }}
-          # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-          cache: 'pip'
-          cache-dependency-path: |
-            ./pyproject.toml
-            ./tox.ini
-      
-      - name: Install dependencies
-        run: pip install tox tox-uv
-      
+
       # - name: Check RST format
       #   run: tox -e doclint
 
@@ -62,21 +51,10 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-tox
         with:
           python-version: ${{ matrix.python-version }}
-          # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-          cache: 'pip'
-          cache-dependency-path: |
-            ./pyproject.toml
-            ./tox.ini
-      
-      - name: Install dependencies
-        run: pip install tox tox-uv
-      
+
       - name: Run fast tests
         run: tox -e py
       
