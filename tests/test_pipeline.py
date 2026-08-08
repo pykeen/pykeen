@@ -238,6 +238,9 @@ class TestPipelineCheckpoints(unittest.TestCase):
         # As the resumption capability currently is a function of the training loop, more thorough tests can be found
         # in the test_training.py unit tests. In the tests below the handling of training loop checkpoints by the
         # pipeline is checked.
+        # pinned to cpu: exact loss reproducibility across separate runs relies on deterministic floating-point
+        # reduction order, which accelerator backends (cuda, mps) do not guarantee.
+        device = "cpu"
 
         result_standard = pipeline(
             model=self.model,
@@ -245,6 +248,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
             training_loop=training_loop_type,
             training_kwargs={"num_epochs": 10, "use_tqdm": False, "use_tqdm_batch": False},
             random_seed=self.random_seed,
+            device=device,
         )
 
         # Set up a shared result that runs two pipelines that should replicate the results of the standard pipeline.
@@ -261,6 +265,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
                 "checkpoint_frequency": 0,
             },
             random_seed=self.random_seed,
+            device=device,
         )
 
         # Resume the previous pipeline
@@ -276,6 +281,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
                 "checkpoint_directory": self.temporary_directory.name,
                 "checkpoint_frequency": 0,
             },
+            device=device,
         )
         assert result_standard.losses == result_split.losses
 
