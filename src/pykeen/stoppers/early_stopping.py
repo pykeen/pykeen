@@ -165,6 +165,9 @@ class EarlyStopper(Stopper):
     use_tqdm: bool = False
     #: Keyword arguments for the tqdm progress bar
     tqdm_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
+    #: Additional keyword arguments passed to :meth:`pykeen.evaluation.Evaluator.evaluate`.
+    #: Do not include ``batch_size`` or ``slice_size`` here; use the dedicated fields instead.
+    evaluation_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
 
     _stopper: EarlyStoppingLogic = dataclasses.field(init=False, repr=False)
 
@@ -225,6 +228,7 @@ class EarlyStopper(Stopper):
             slice_size=self.evaluation_slice_size,
             # Only perform time-consuming checks for the first call.
             do_time_consuming_checks=self.evaluation_batch_size is None,
+            **self.evaluation_kwargs,
         )
         # After the first evaluation pass the optimal batch and slice size is obtained and saved for re-use
         self.evaluation_batch_size = self.evaluator.batch_size

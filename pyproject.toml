@@ -181,7 +181,7 @@ extend-include = ["*.ipynb"]
 
 [tool.ruff.lint]
 # See https://docs.astral.sh/ruff/rules
-extend-select = [
+select = [
     # Airflow (AIR)
     # "AIR",   # (framework-specific, not used in this project)
     # eradicate (ERA)
