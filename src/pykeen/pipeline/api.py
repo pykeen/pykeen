@@ -238,11 +238,14 @@ from ..version import get_git_hash, get_version
 
 __all__ = [
     "PipelineResult",
+    "ResolutionResult",
+    "TrainResult",
     "pipeline_from_path",
     "pipeline_from_config",
     "replicate_pipeline_from_config",
     "replicate_pipeline_from_path",
     "pipeline",
+    "resolve_pipeline",
 ]
 
 logger = logging.getLogger(__name__)
@@ -536,6 +539,214 @@ class PipelineResult(Result):
 
         model_path = directory_p / "trained_model.pkl"
         s3.upload_fileobj(get_model_io(self.model), bucket, model_path)
+
+
+@fix_dataclass_init_docs
+@dataclass
+class TrainResult:
+    """Result of :func:`train_pipeline`, containing a trained model without post-training evaluation.
+
+    Call :meth:`evaluate` to run evaluation and obtain a full :class:`PipelineResult`.
+    """
+
+    #: The random seed used at the beginning of the pipeline
+    random_seed: int
+
+    #: The model trained by the pipeline
+    model: Model
+
+    #: The training triples
+    training: CoreTriplesFactory
+
+    #: The testing triples (if any)
+    testing: CoreTriplesFactory | None
+
+    #: The validation triples (if any)
+    validation: CoreTriplesFactory | None
+
+    #: The training loop used by the pipeline
+    training_loop: TrainingLoop
+
+    #: The losses during training
+    losses: list[float]
+
+    #: How long in seconds did training take?
+    train_seconds: float
+
+    #: The evaluator (also used by the stopper during training)
+    evaluator: Evaluator
+
+    #: Keyword arguments forwarded to the evaluator's evaluate function
+    evaluation_kwargs: dict[str, Any]
+
+    #: The result tracker
+    result_tracker: MultiResultTracker
+
+    #: Keyword arguments used during training (kept for evaluation logging)
+    training_kwargs: dict[str, Any]
+
+    #: The stopper used during training (NopStopper when no early stopping was configured)
+    stopper: Stopper
+
+    #: The configuration
+    configuration: Mapping[str, Any] = field(default_factory=dict)
+
+    #: Any additional metadata as a dictionary
+    metadata: MutableMapping[str, Any] = field(default_factory=dict)
+
+    def save_model(self, path: str | pathlib.Path) -> None:
+        """Save the trained model to the given path using :func:`torch.save`.
+
+        :param path: The path to which the model is saved.
+        """
+        torch.save(self.model, path, pickle_protocol=pickle.HIGHEST_PROTOCOL)
+
+    def evaluate(
+        self,
+        testing: CoreTriplesFactory | None = None,
+        *,
+        use_testing_data: bool = True,
+        evaluation_fallback: bool = False,
+        filter_validation_when_testing: bool = True,
+        use_tqdm: bool | None = None,
+    ) -> PipelineResult:
+        """Run post-training evaluation and return a full :class:`PipelineResult`.
+
+        :param testing:
+            Override the testing triples factory. Falls back to the one stored in this result.
+        :param use_testing_data:
+            If true, use the testing triples for evaluation; otherwise use validation triples.
+        :param evaluation_fallback:
+            If true, fall back to smaller batch sizes / CPU when GPU evaluation fails.
+        :param filter_validation_when_testing:
+            If true, add validation triples to the filtered-evaluation negative set when testing.
+        :param use_tqdm:
+            Globally override tqdm progress bar usage.
+
+        :returns: A full pipeline result including metric results.
+
+        :raises ValueError: if no testing triples are available and ``use_testing_data=True``.
+        """
+        resolved_testing = testing if testing is not None else self.testing
+        if resolved_testing is None and use_testing_data:
+            raise ValueError(
+                "No testing triples available. Pass testing= or set use_testing_data=False to evaluate on validation."
+            )
+        metric_results, evaluate_seconds = _handle_evaluation(
+            _result_tracker=self.result_tracker,
+            model_instance=self.model,
+            evaluator_instance=self.evaluator,
+            stopper_instance=self.stopper,
+            training=self.training,
+            testing=resolved_testing,
+            validation=self.validation,
+            training_kwargs=self.training_kwargs,
+            evaluation_kwargs=dict(self.evaluation_kwargs),
+            use_testing_data=use_testing_data,
+            evaluation_fallback=evaluation_fallback,
+            filter_validation_when_testing=filter_validation_when_testing,
+            use_tqdm=use_tqdm,
+        )
+        self.result_tracker.end_run()
+        return PipelineResult(
+            random_seed=self.random_seed,
+            model=self.model,
+            training=self.training,
+            training_loop=self.training_loop,
+            losses=self.losses,
+            stopper=self.stopper,
+            configuration=self.configuration,
+            metric_results=metric_results,
+            metadata=self.metadata,
+            train_seconds=self.train_seconds,
+            evaluate_seconds=evaluate_seconds,
+        )
+
+
+@fix_dataclass_init_docs
+@dataclass
+class ResolutionResult:
+    """Result of :func:`resolve_pipeline`, containing all resolved pipeline components before training.
+
+    Call :meth:`train` to run training and obtain a :class:`TrainResult`.
+    """
+
+    #: The random seed used at the beginning of the pipeline
+    random_seed: int
+
+    #: The model to train
+    model: Model
+
+    #: The training triples
+    training: CoreTriplesFactory
+
+    #: The testing triples (if any)
+    testing: CoreTriplesFactory | None
+
+    #: The validation triples (if any)
+    validation: CoreTriplesFactory | None
+
+    #: The training loop
+    training_loop: TrainingLoop
+
+    #: The evaluator (used by stopper during training, and for post-training evaluation)
+    evaluator: Evaluator
+
+    #: Keyword arguments forwarded to the evaluator's evaluate function
+    evaluation_kwargs: dict[str, Any]
+
+    #: The stopper (NopStopper when no early stopping was configured)
+    stopper: Stopper
+
+    #: The result tracker
+    result_tracker: MultiResultTracker
+
+    #: Keyword arguments used during training
+    training_kwargs: dict[str, Any]
+
+    #: Whether to clear the optimizer after training
+    clear_optimizer: bool
+
+    #: The resolved configuration, logged before training
+    configuration: Mapping[str, Any]
+
+    #: Any additional metadata as a dictionary
+    metadata: MutableMapping[str, Any] = field(default_factory=dict)
+
+    def train(self) -> TrainResult:
+        """Run training and return a :class:`TrainResult`.
+
+        :returns: A :class:`TrainResult` holding the trained model, losses, and all state
+            needed to call :meth:`TrainResult.evaluate` later.
+        """
+        training_start_time = time.time()
+        losses = self.training_loop.train(
+            triples_factory=self.training,
+            stopper=self.stopper,
+            clear_optimizer=self.clear_optimizer,
+            **self.training_kwargs,
+        )
+        assert losses is not None
+        train_seconds = time.time() - training_start_time
+        step = self.training_kwargs.get("num_epochs")
+        self.result_tracker.log_metrics(metrics={"total_training": train_seconds}, step=step, prefix="times")
+        return TrainResult(
+            random_seed=self.random_seed,
+            model=self.model,
+            training=self.training,
+            testing=self.testing,
+            validation=self.validation,
+            training_loop=self.training_loop,
+            losses=losses,
+            train_seconds=train_seconds,
+            stopper=self.stopper,
+            configuration=self.configuration,
+            metadata=self.metadata,
+            evaluator=self.evaluator,
+            evaluation_kwargs=self.evaluation_kwargs,
+            result_tracker=self.result_tracker,
+            training_kwargs=self.training_kwargs,
+        )
 
 
 def replicate_pipeline_from_path(
@@ -878,6 +1089,15 @@ def _handle_random_seed(
     return _random_seed, clear_optimizer
 
 
+def _log_hint(hint: Hint[CoreTriplesFactory]) -> str | None:
+    """Convert a factory hint to a loggable value: path string, None, or USER_DEFINED_CODE."""
+    if hint is None:
+        return None
+    if isinstance(hint, str):
+        return hint
+    return USER_DEFINED_CODE
+
+
 def _handle_dataset(
     *,
     _result_tracker: ResultTracker,
@@ -888,45 +1108,64 @@ def _handle_dataset(
     validation: Hint[CoreTriplesFactory] = None,
     evaluation_entity_whitelist: Collection[str] | None = None,
     evaluation_relation_whitelist: Collection[str] | None = None,
-) -> tuple[CoreTriplesFactory, CoreTriplesFactory, CoreTriplesFactory | None]:
-    # TODO: allow empty validation / testing
-    dataset_instance: Dataset = get_dataset(
-        dataset=dataset,
-        dataset_kwargs=dataset_kwargs,
-        training=training,
-        testing=testing,
-        validation=validation,
-    )
-    if dataset is not None:
-        _result_tracker.log_params(
-            {
-                "dataset": dataset_instance.get_normalized_name(),
-                "dataset_kwargs": dataset_kwargs,
-            }
+) -> tuple[CoreTriplesFactory, CoreTriplesFactory | None, CoreTriplesFactory | None]:
+    """Resolve training, testing, and validation factories.
+
+    Behaviour depends on which of ``dataset`` and ``testing`` are provided:
+
+    - ``dataset=None, testing=None``: training-only mode. ``training`` (and ``validation``
+      if given) must be pre-built :class:`CoreTriplesFactory` instances. Returns
+      ``testing=None``; evaluation will fail unless a testing factory is supplied at
+      evaluation time.
+    - ``dataset=None, testing=provided``: explicit factories. Passed directly to
+      :func:`get_dataset`, which accepts pre-built factories or path strings (but not mixed).
+    - ``dataset=provided, testing=None``: named dataset. Testing comes from the dataset;
+      passing ``training``/``testing`` alongside raises :exc:`ValueError`.
+    - ``dataset=provided, testing=provided``: raises :exc:`ValueError` (ambiguous).
+    """
+    if dataset is None and testing is None:
+        if not isinstance(training, CoreTriplesFactory):
+            raise ValueError("When testing=None, training must be a pre-built CoreTriplesFactory (not a path/string).")
+        if validation is not None and not isinstance(validation, CoreTriplesFactory):
+            raise ValueError("validation must be a pre-built CoreTriplesFactory when testing=None.")
+        training_tf, testing_tf, validation_tf = training, None, validation
+    else:
+        dataset_instance = get_dataset(
+            dataset=dataset, dataset_kwargs=dataset_kwargs, training=training, testing=testing, validation=validation
         )
-    else:  # means that dataset was defined by triples factories
+        training_tf, testing_tf, validation_tf = (
+            dataset_instance.training,
+            dataset_instance.testing,
+            dataset_instance.validation,
+        )
+
+    if dataset is None:
         _result_tracker.log_params(
             {
                 "dataset": USER_DEFINED_CODE,
-                "training": training if isinstance(training, str) else USER_DEFINED_CODE,
-                "testing": testing if isinstance(training, str) else USER_DEFINED_CODE,
-                "validation": validation if isinstance(training, str) else USER_DEFINED_CODE,
+                "training": _log_hint(training),
+                "testing": _log_hint(testing),
+                "validation": _log_hint(validation),
             }
         )
-
-    training, testing, validation = dataset_instance.training, dataset_instance.testing, dataset_instance.validation
-    # evaluation restriction to a subset of entities/relations
-    if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
-        testing = testing.new_with_restriction(
-            entities=evaluation_entity_whitelist,
-            relations=evaluation_relation_whitelist,
+    else:
+        assert dataset_instance is not None
+        _result_tracker.log_params(
+            {"dataset": dataset_instance.get_normalized_name(), "dataset_kwargs": dataset_kwargs}
         )
-        if validation is not None:
-            validation = validation.new_with_restriction(
+
+    if any(f is not None for f in (evaluation_entity_whitelist, evaluation_relation_whitelist)):
+        if testing_tf is not None:
+            testing_tf = testing_tf.new_with_restriction(
                 entities=evaluation_entity_whitelist,
                 relations=evaluation_relation_whitelist,
             )
-    return training, testing, validation
+        if validation_tf is not None:
+            validation_tf = validation_tf.new_with_restriction(
+                entities=evaluation_entity_whitelist,
+                relations=evaluation_relation_whitelist,
+            )
+    return training_tf, testing_tf, validation_tf
 
 
 def _handle_model(
@@ -1123,82 +1362,6 @@ def _handle_evaluator(
     return evaluator_instance, evaluation_kwargs
 
 
-def _handle_training(
-    *,
-    _result_tracker: MultiResultTracker,
-    training: CoreTriplesFactory,
-    validation: CoreTriplesFactory | None,
-    model_instance: Model,
-    evaluator_instance: Evaluator,
-    training_loop_instance: TrainingLoop,
-    clear_optimizer: bool,
-    evaluation_kwargs: Mapping[str, Any],
-    # 7. Training (ronaldo style)
-    epochs: int | None = None,
-    training_kwargs: dict[str, Any],
-    stopper: HintType[Stopper] = None,
-    stopper_kwargs: Mapping[str, Any] | None = None,
-    # Misc
-    use_tqdm: bool | None = None,
-) -> tuple[Stopper, Mapping[str, Any], list[float], float]:
-    # Stopping
-    if "stopper" in training_kwargs and stopper is not None:
-        raise ValueError("Specified stopper in training_kwargs and as stopper")
-    if "stopper" in training_kwargs:
-        stopper = training_kwargs.pop("stopper")
-    if stopper_kwargs is None:
-        stopper_kwargs = {}
-    stopper_kwargs = dict(stopper_kwargs)
-
-    # Load the evaluation batch size for the stopper, if it has been set
-    _evaluation_batch_size = evaluation_kwargs.get("batch_size")
-    if _evaluation_batch_size is not None:
-        stopper_kwargs.setdefault("evaluation_batch_size", _evaluation_batch_size)
-    # Forward remaining evaluation_kwargs (e.g., targets) to the stopper so that
-    # validation runs during early stopping use the same settings as the final evaluation.
-    _stopper_evaluation_kwargs = {k: v for k, v in evaluation_kwargs.items() if k not in ("batch_size", "slice_size")}
-    if _stopper_evaluation_kwargs:
-        stopper_kwargs.setdefault("evaluation_kwargs", _stopper_evaluation_kwargs)
-
-    stopper_instance: Stopper = stopper_resolver.make(
-        stopper,
-        model=model_instance,
-        evaluator=evaluator_instance,
-        training_triples_factory=training,
-        evaluation_triples_factory=validation,
-        result_tracker=_result_tracker,
-        **stopper_kwargs,
-    )
-
-    if epochs is not None:
-        training_kwargs["num_epochs"] = epochs
-    if use_tqdm is not None:
-        training_kwargs["use_tqdm"] = use_tqdm
-    training_kwargs.setdefault("num_epochs", 5)
-    training_kwargs.setdefault("batch_size", 256)
-    _result_tracker.log_params(params=training_kwargs)
-
-    # Add logging for debugging
-    configuration = _result_tracker.get_configuration()
-    logger.debug("Run Pipeline based on following config:")
-    for key, value in configuration.items():
-        logger.debug(f"{key}: {value}")
-
-    # Train like Cristiano Ronaldo
-    training_start_time = time.time()
-    losses = training_loop_instance.train(
-        triples_factory=training,
-        stopper=stopper_instance,
-        clear_optimizer=clear_optimizer,
-        **training_kwargs,
-    )
-    assert losses is not None  # losses is only none if it's doing search mode
-    training_end_time = time.time() - training_start_time
-    step = training_kwargs.get("num_epochs")
-    _result_tracker.log_metrics(metrics={"total_training": training_end_time}, step=step, prefix="times")
-    return stopper_instance, configuration, losses, training_end_time
-
-
 def _handle_evaluation(
     *,
     _result_tracker: ResultTracker,
@@ -1206,7 +1369,7 @@ def _handle_evaluation(
     evaluator_instance: Evaluator,
     stopper_instance: Stopper,
     training: CoreTriplesFactory,
-    testing: CoreTriplesFactory,
+    testing: CoreTriplesFactory | None,
     validation: CoreTriplesFactory | None,
     training_kwargs: dict[str, Any],
     evaluation_kwargs: dict[str, Any],
@@ -1217,6 +1380,8 @@ def _handle_evaluation(
     use_tqdm: bool | None = None,
 ) -> tuple[MetricResults, float]:
     if use_testing_data:
+        if testing is None:
+            raise ValueError("no testing triples available")
         evaluation_factory = testing
     elif validation is None:
         raise ValueError("no validation triples available")
@@ -1302,6 +1467,193 @@ def _handle_evaluation(
     )
 
     return metric_results, evaluate_end_time
+
+
+def resolve_pipeline(
+    *,
+    # 1. Dataset
+    dataset: None | str | Dataset | type[Dataset] = None,
+    dataset_kwargs: Mapping[str, Any] | None = None,
+    training: Hint[CoreTriplesFactory] = None,
+    testing: Hint[CoreTriplesFactory] = None,
+    validation: Hint[CoreTriplesFactory] = None,
+    evaluation_entity_whitelist: Collection[str] | None = None,
+    evaluation_relation_whitelist: Collection[str] | None = None,
+    # 2. Model
+    model: None | str | Model | type[Model] = None,
+    model_kwargs: Mapping[str, Any] | None = None,
+    interaction: None | str | Interaction | type[Interaction] = None,
+    interaction_kwargs: Mapping[str, Any] | None = None,
+    dimensions: None | int | Mapping[str, int] = None,
+    # 3. Loss
+    loss: HintType[Loss] = None,
+    loss_kwargs: Mapping[str, Any] | None = None,
+    # 4. Regularizer
+    regularizer: HintType[Regularizer] = None,
+    regularizer_kwargs: Mapping[str, Any] | None = None,
+    # 5. Optimizer
+    optimizer: HintType[Optimizer] = None,
+    optimizer_kwargs: Mapping[str, Any] | None = None,
+    clear_optimizer: bool = True,
+    # 5.1 Learning Rate Scheduler
+    lr_scheduler: HintType[LRScheduler] = None,
+    lr_scheduler_kwargs: Mapping[str, Any] | None = None,
+    # 6. Training Loop
+    training_loop: HintType[TrainingLoop] = None,
+    training_loop_kwargs: Mapping[str, Any] | None = None,
+    negative_sampler: HintType[NegativeSampler] = None,
+    negative_sampler_kwargs: Mapping[str, Any] | None = None,
+    # 7. Training
+    epochs: int | None = None,
+    training_kwargs: Mapping[str, Any] | None = None,
+    stopper: HintType[Stopper] = None,
+    stopper_kwargs: Mapping[str, Any] | None = None,
+    # 8. Evaluator (still needed: stopper calls it during training)
+    evaluator: HintType[Evaluator] = None,
+    evaluator_kwargs: Mapping[str, Any] | None = None,
+    evaluation_kwargs: Mapping[str, Any] | None = None,
+    # 9. Tracking
+    result_tracker: OneOrManyHintOrType[ResultTracker] = None,
+    result_tracker_kwargs: OneOrManyOptionalKwargs = None,
+    # Misc
+    metadata: dict[str, Any] | None = None,
+    device: Hint[torch.device] = None,
+    random_seed: int | None = None,
+    use_tqdm: bool | None = None,
+) -> ResolutionResult:
+    """Resolve all pipeline components into a :class:`ResolutionResult` without running training.
+
+    All parameters match :func:`train_pipeline`. Use :meth:`ResolutionResult.train` to run
+    training and :meth:`TrainResult.evaluate` to run evaluation, or use the higher-level
+    :func:`train_pipeline` or :func:`pipeline` convenience functions.
+
+    :returns: A :class:`ResolutionResult` holding all resolved components ready for training.
+    """
+    if training_kwargs is None:
+        training_kwargs = {}
+    training_kwargs = dict(training_kwargs)
+
+    _random_seed, clear_optimizer = _handle_random_seed(
+        training_kwargs=training_kwargs, random_seed=random_seed, clear_optimizer=clear_optimizer
+    )
+    set_random_seed(_random_seed)
+
+    _result_tracker = resolve_result_trackers(result_tracker, result_tracker_kwargs)
+
+    if not metadata:
+        metadata = {}
+    title = metadata.get("title")
+
+    _result_tracker.start_run(run_name=title)
+
+    training_tf, testing_tf, validation_tf = _handle_dataset(
+        _result_tracker=_result_tracker,
+        dataset=dataset,
+        dataset_kwargs=dataset_kwargs,
+        training=training,
+        testing=testing,
+        validation=validation,
+        evaluation_entity_whitelist=evaluation_entity_whitelist,
+        evaluation_relation_whitelist=evaluation_relation_whitelist,
+    )
+
+    model_instance = _handle_model(
+        device=device,
+        _result_tracker=_result_tracker,
+        _random_seed=_random_seed,
+        training=training_tf,
+        model=model,
+        model_kwargs=model_kwargs,
+        interaction=interaction,
+        interaction_kwargs=interaction_kwargs,
+        dimensions=dimensions,
+        loss=loss,
+        loss_kwargs=loss_kwargs,
+        regularizer=regularizer,
+        regularizer_kwargs=regularizer_kwargs,
+    )
+
+    training_loop_instance = _handle_training_loop(
+        _result_tracker=_result_tracker,
+        model_instance=model_instance,
+        training=training_tf,
+        optimizer=optimizer,
+        optimizer_kwargs=optimizer_kwargs,
+        lr_scheduler=lr_scheduler,
+        lr_scheduler_kwargs=lr_scheduler_kwargs,
+        training_loop=training_loop,
+        training_loop_kwargs=training_loop_kwargs,
+        negative_sampler=negative_sampler,
+        negative_sampler_kwargs=negative_sampler_kwargs,
+    )
+
+    evaluator_instance, evaluation_kwargs = _handle_evaluator(
+        _result_tracker=_result_tracker,
+        evaluator=evaluator,
+        evaluator_kwargs=evaluator_kwargs,
+        evaluation_kwargs=evaluation_kwargs,
+    )
+
+    # Resolve stopper
+    if "stopper" in training_kwargs and stopper is not None:
+        raise ValueError("Specified stopper in training_kwargs and as stopper")
+    if "stopper" in training_kwargs:
+        stopper = training_kwargs.pop("stopper")
+    if stopper_kwargs is None:
+        stopper_kwargs = {}
+    stopper_kwargs = dict(stopper_kwargs)
+
+    # Load the evaluation batch size for the stopper, if it has been set
+    _evaluation_batch_size = evaluation_kwargs.get("batch_size")
+    if _evaluation_batch_size is not None:
+        stopper_kwargs.setdefault("evaluation_batch_size", _evaluation_batch_size)
+    # Forward remaining evaluation_kwargs (e.g., targets) to the stopper so that
+    # validation runs during early stopping use the same settings as the final evaluation.
+    _stopper_evaluation_kwargs = {k: v for k, v in evaluation_kwargs.items() if k not in ("batch_size", "slice_size")}
+    if _stopper_evaluation_kwargs:
+        stopper_kwargs.setdefault("evaluation_kwargs", _stopper_evaluation_kwargs)
+
+    stopper_instance: Stopper = stopper_resolver.make(
+        stopper,
+        model=model_instance,
+        evaluator=evaluator_instance,
+        training_triples_factory=training_tf,
+        evaluation_triples_factory=validation_tf,
+        result_tracker=_result_tracker,
+        **stopper_kwargs,
+    )
+
+    # Finalize training kwargs and log
+    if epochs is not None:
+        training_kwargs["num_epochs"] = epochs
+    if use_tqdm is not None:
+        training_kwargs["use_tqdm"] = use_tqdm
+    training_kwargs.setdefault("num_epochs", 5)
+    training_kwargs.setdefault("batch_size", 256)
+    _result_tracker.log_params(params=training_kwargs)
+
+    # Configuration snapshot (all params logged at this point)
+    configuration = _result_tracker.get_configuration()
+    logger.debug("Run Pipeline based on following config:")
+    for key, value in configuration.items():
+        logger.debug(f"{key}: {value}")
+
+    return ResolutionResult(
+        random_seed=_random_seed,
+        model=model_instance,
+        training=training_tf,
+        testing=testing_tf,
+        validation=validation_tf,
+        training_loop=training_loop_instance,
+        evaluator=evaluator_instance,
+        evaluation_kwargs=evaluation_kwargs,
+        stopper=stopper_instance,
+        result_tracker=_result_tracker,
+        training_kwargs=training_kwargs,
+        clear_optimizer=clear_optimizer,
+        configuration=configuration,
+        metadata=metadata,
+    )
 
 
 def pipeline(  # noqa: C901
@@ -1479,115 +1831,52 @@ def pipeline(  # noqa: C901
 
     :returns: A pipeline result package.
     """
-    if training_kwargs is None:
-        training_kwargs = {}
-    training_kwargs = dict(training_kwargs)
-
-    _random_seed, clear_optimizer = _handle_random_seed(
-        training_kwargs=training_kwargs, random_seed=random_seed, clear_optimizer=clear_optimizer
-    )
-    set_random_seed(_random_seed)
-
-    _result_tracker = resolve_result_trackers(result_tracker, result_tracker_kwargs)
-
-    if not metadata:
-        metadata = {}
-    title = metadata.get("title")
-
-    # Start tracking
-    _result_tracker.start_run(run_name=title)
-
-    training, testing, validation = _handle_dataset(
-        _result_tracker=_result_tracker,
-        dataset=dataset,
-        dataset_kwargs=dataset_kwargs,
-        training=training,
-        testing=testing,
-        validation=validation,
-        evaluation_entity_whitelist=evaluation_entity_whitelist,
-        evaluation_relation_whitelist=evaluation_relation_whitelist,
-    )
-
-    model_instance = _handle_model(
-        device=device,
-        _result_tracker=_result_tracker,
-        _random_seed=_random_seed,
-        training=training,
-        model=model,
-        model_kwargs=model_kwargs,
-        interaction=interaction,
-        interaction_kwargs=interaction_kwargs,
-        dimensions=dimensions,
-        loss=loss,
-        loss_kwargs=loss_kwargs,
-        regularizer=regularizer,
-        regularizer_kwargs=regularizer_kwargs,
-    )
-
-    training_loop_instance = _handle_training_loop(
-        _result_tracker=_result_tracker,
-        model_instance=model_instance,
-        training=training,
-        optimizer=optimizer,
-        optimizer_kwargs=optimizer_kwargs,
-        lr_scheduler=lr_scheduler,
-        lr_scheduler_kwargs=lr_scheduler_kwargs,
-        training_loop=training_loop,
-        training_loop_kwargs=training_loop_kwargs,
-        negative_sampler=negative_sampler,
-        negative_sampler_kwargs=negative_sampler_kwargs,
-    )
-
-    evaluator_instance, evaluation_kwargs = _handle_evaluator(
-        _result_tracker=_result_tracker,
-        evaluator=evaluator,
-        evaluator_kwargs=evaluator_kwargs,
-        evaluation_kwargs=evaluation_kwargs,
-    )
-
-    stopper_instance, configuration, losses, train_seconds = _handle_training(
-        _result_tracker=_result_tracker,
-        training=training,
-        validation=validation,
-        model_instance=model_instance,
-        evaluator_instance=evaluator_instance,
-        training_loop_instance=training_loop_instance,
-        clear_optimizer=clear_optimizer,
-        evaluation_kwargs=evaluation_kwargs,
-        epochs=epochs,
-        training_kwargs=training_kwargs,
-        stopper=stopper,
-        stopper_kwargs=stopper_kwargs,
-        use_tqdm=use_tqdm,
-    )
-
-    metric_results, evaluate_seconds = _handle_evaluation(
-        _result_tracker=_result_tracker,
-        model_instance=model_instance,
-        evaluator_instance=evaluator_instance,
-        stopper_instance=stopper_instance,
-        training=training,
-        testing=testing,
-        validation=validation,
-        training_kwargs=training_kwargs,
-        evaluation_kwargs=evaluation_kwargs,
-        use_testing_data=use_testing_data,
-        evaluation_fallback=evaluation_fallback,
-        filter_validation_when_testing=filter_validation_when_testing,
-        use_tqdm=use_tqdm,
-    )
-    _result_tracker.end_run()
-
-    return PipelineResult(
-        random_seed=_random_seed,
-        model=model_instance,
-        training=training,
-        training_loop=training_loop_instance,
-        losses=losses,
-        stopper=stopper_instance,
-        configuration=configuration,
-        metric_results=metric_results,
-        metadata=metadata,
-        train_seconds=train_seconds,
-        evaluate_seconds=evaluate_seconds,
+    return (
+        resolve_pipeline(
+            dataset=dataset,
+            dataset_kwargs=dataset_kwargs,
+            training=training,
+            testing=testing,
+            validation=validation,
+            evaluation_entity_whitelist=evaluation_entity_whitelist,
+            evaluation_relation_whitelist=evaluation_relation_whitelist,
+            model=model,
+            model_kwargs=model_kwargs,
+            interaction=interaction,
+            interaction_kwargs=interaction_kwargs,
+            dimensions=dimensions,
+            loss=loss,
+            loss_kwargs=loss_kwargs,
+            regularizer=regularizer,
+            regularizer_kwargs=regularizer_kwargs,
+            optimizer=optimizer,
+            optimizer_kwargs=optimizer_kwargs,
+            clear_optimizer=clear_optimizer,
+            lr_scheduler=lr_scheduler,
+            lr_scheduler_kwargs=lr_scheduler_kwargs,
+            training_loop=training_loop,
+            training_loop_kwargs=training_loop_kwargs,
+            negative_sampler=negative_sampler,
+            negative_sampler_kwargs=negative_sampler_kwargs,
+            epochs=epochs,
+            training_kwargs=training_kwargs,
+            stopper=stopper,
+            stopper_kwargs=stopper_kwargs,
+            evaluator=evaluator,
+            evaluator_kwargs=evaluator_kwargs,
+            evaluation_kwargs=evaluation_kwargs,
+            result_tracker=result_tracker,
+            result_tracker_kwargs=result_tracker_kwargs,
+            metadata=metadata,
+            device=device,
+            random_seed=random_seed,
+            use_tqdm=use_tqdm,
+        )
+        .train()
+        .evaluate(
+            use_testing_data=use_testing_data,
+            evaluation_fallback=evaluation_fallback,
+            filter_validation_when_testing=filter_validation_when_testing,
+            use_tqdm=use_tqdm,
+        )
     )
