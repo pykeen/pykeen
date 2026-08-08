@@ -50,13 +50,15 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: [ "3.10", "3.14" ]
-        # cannot use macos-latest for now, cf.
-        # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners
-        # cannot use Python 3.8
-        # cannot use M1 at all, since PyG does not provide M1 packages...
-        # include:
-        #   - os: macos-14
-        #     python-version: "3.11"
+        include:
+          # macos-latest is now an Apple Silicon (arm64) runner; torch and torch_geometric both
+          # ship arm64 wheels, so this now works. Kept to a single combination since macOS
+          # runners are billed at a much higher rate than Linux/Windows.
+          # resolve_device() never selects mps (it only falls back cuda -> cpu), so this only
+          # exercises the CPU path -- it does not cover the still-unresolved MPS support in
+          # torch_max_mem, cf. https://github.com/mberr/torch-max-mem/issues/14
+          - os: macos-latest
+            python-version: "3.14"
 
     runs-on: ${{ matrix.os }}
     steps:
