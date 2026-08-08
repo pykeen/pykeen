@@ -1,5 +1,5 @@
 name: Set up Python and tox
-description: Checks out the repository, sets up Python with pip caching, and installs tox and tox-uv.
+description: Sets up Python with pip caching and installs tox and tox-uv. Requires the repository to already be checked out.
 
 inputs:
   python-version:
@@ -9,8 +9,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v4
-
     - name: Set up Python ${{ inputs.python-version }}
       uses: actions/setup-python@v5
       with:

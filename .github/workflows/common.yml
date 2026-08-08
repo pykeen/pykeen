@@ -22,6 +22,8 @@ jobs:
         # no need to check documentation with multiple python versions
         python-version: [ "3.14" ]
     steps:
+      - uses: actions/checkout@v4
+
       - uses: ./.github/actions/setup-tox
         with:
           python-version: ${{ matrix.python-version }}
@@ -51,6 +53,8 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
+      - uses: actions/checkout@v4
+
       - uses: ./.github/actions/setup-tox
         with:
           python-version: ${{ matrix.python-version }}
