@@ -77,7 +77,7 @@ dependencies = [
     "docdata>=0.0.5",
     "class_resolver>=0.6.0",
     "pyyaml",
-    "torch_max_mem>=0.1.4",
+    "torch_max_mem>=0.1.5",
     "torch-ppr>=0.0.7",
     "typing_extensions",
 ]

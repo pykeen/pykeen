@@ -133,13 +133,27 @@ def at_least_eps(x: FloatTensor) -> FloatTensor:
 
 def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
-    if device is None or device == "gpu":
+    if device is None:
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+    elif device == "gpu":
         device = "cuda"
     if isinstance(device, str):
         device = torch.device(device)
-    if not torch.cuda.is_available() and device.type == "cuda":
+    if device.type == "cuda" and not torch.cuda.is_available():
+        if torch.backends.mps.is_available():
+            device = torch.device("mps")
+            logger.warning("No CUDA devices were available, but MPS was. The model runs on MPS.")
+        else:
+            device = torch.device("cpu")
+            logger.warning("No CUDA devices were available. The model runs on CPU")
+    elif device.type == "mps" and not torch.backends.mps.is_available():
         device = torch.device("cpu")
-        logger.warning("No cuda devices were available. The model runs on CPU")
+        logger.warning("MPS was not available. The model runs on CPU")
     return device
 
 
