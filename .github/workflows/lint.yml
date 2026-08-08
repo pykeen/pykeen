@@ -33,9 +33,6 @@ jobs:
       - name: Check static typing with MyPy
         run: tox -e mypy
 
-      - name: Check code quality
-        run: tox -e lint
-  
   lint-single-version:
     name: Lint Single Version
     runs-on: ubuntu-latest
@@ -55,6 +52,9 @@ jobs:
     
     - name: Install dependencies
       run: pip install tox tox-uv
+
+    - name: Check code quality
+      run: tox -e lint
 
     - name: Check package metadata with Pyroma
       run: tox -e pyroma
