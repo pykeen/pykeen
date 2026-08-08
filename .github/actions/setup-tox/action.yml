@@ -1,0 +1,24 @@
+name: Set up Python and tox
+description: Sets up Python with pip caching and installs tox and tox-uv. Requires the repository to already be checked out.
+
+inputs:
+  python-version:
+    description: The Python version to set up
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+        # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+        cache: 'pip'
+        cache-dependency-path: |
+          ./pyproject.toml
+          ./tox.ini
+
+    - name: Install dependencies
+      run: pip install tox tox-uv
+      shell: bash

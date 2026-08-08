@@ -9,6 +9,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
+permissions:
+  contents: read
+
 jobs:
   docs:
     name: Documentation
@@ -20,20 +23,10 @@ jobs:
         python-version: [ "3.14" ]
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+
+      - uses: ./.github/actions/setup-tox
         with:
           python-version: ${{ matrix.python-version }}
-          # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-          cache: 'pip'
-          cache-dependency-path: './pyproject.toml'
-      
-      - name: Install dependencies
-        run: pip install tox tox-uv
-      
-      # - name: Check RST format
-      #   run: tox -e doclint
 
       - name: Check README.rst
         run: tox -e readme
@@ -61,18 +54,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+
+      - uses: ./.github/actions/setup-tox
         with:
           python-version: ${{ matrix.python-version }}
-          # cache dependencies, cf. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-          cache: 'pip'
-          cache-dependency-path: './pyproject.toml'
-      
-      - name: Install dependencies
-        run: pip install tox tox-uv
-      
+
       - name: Run fast tests
         run: tox -e py
       
@@ -81,10 +67,7 @@ jobs:
       
       - name: Run doctests
         run: tox -e doctests
-      
-      # - name: Test notebooks
-      #   run: tox -e treon
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.event_name != 'merge_group' }}
