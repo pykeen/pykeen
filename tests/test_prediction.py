@@ -222,9 +222,7 @@ def _iter_predict_triples_inputs() -> Iterable[
     yield model, factory.mapped_triples[:3], None, None
 
 
-@pytest.mark.parametrize(
-    ("model", "triples", "triples_factory", "batch_size"), list(_iter_predict_triples_inputs())
-)
+@pytest.mark.parametrize(("model", "triples", "triples_factory", "batch_size"), list(_iter_predict_triples_inputs()))
 def test_predict_triples(
     model: pykeen.models.Model,
     triples: AnyTriples,
@@ -269,9 +267,7 @@ def _iter_get_input_batch_inputs() -> Iterable[
     yield factory, None, 1, "uk", pykeen.typing.LABEL_HEAD
 
 
-@pytest.mark.parametrize(
-    ("factory", "head", "relation", "tail", "exp_target"), list(_iter_get_input_batch_inputs())
-)
+@pytest.mark.parametrize(("factory", "head", "relation", "tail", "exp_target"), list(_iter_get_input_batch_inputs()))
 def test_get_input_batch(
     factory: CoreTriplesFactory | None,
     head: None | int | str,
