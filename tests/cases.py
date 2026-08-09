@@ -2572,6 +2572,9 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
         nations = Nations()
+        # use a per-test directory rather than a fixed shared path, since a fixed path can collide
+        # across tests running concurrently (e.g., under pytest-xdist)
+        self.directory = tempfile.TemporaryDirectory()
         kwargs.update(
             {
                 "evaluator": MockEvaluator(key=("hits_at_10", SIDE_BOTH, RANK_REALISTIC), values=self.mock_losses),
@@ -2581,10 +2584,14 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
                 "patience": self.patience,
                 "relative_delta": self.delta,
                 "larger_is_better": False,
-                "best_model_path": pathlib.Path(tempfile.gettempdir(), "test-best-model-weights.pt"),
+                "best_model_path": pathlib.Path(self.directory.name, "test-best-model-weights.pt"),
             }
         )
         return kwargs
+
+    def tearDown(self) -> None:
+        """Tear down the test case by cleaning up the temporary directory."""
+        self.directory.cleanup()
 
     def test_initialization(self):
         """Test warm-up phase."""

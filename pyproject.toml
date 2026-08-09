@@ -100,7 +100,7 @@ lightning = [
     "pytorch_lightning>=1.7.2",
 ]
 biomedicine = ["bioregistry", "pyobo>=0.8.7"]
-tests = ["unittest-templates>=0.0.5", "coverage", "pytest"]
+tests = ["unittest-templates>=0.0.5", "coverage", "pytest", "pytest-xdist"]
 docs = [
     "sphinx>=8.0",
     "sphinx-rtd-theme>=3.0",
