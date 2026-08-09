@@ -700,7 +700,7 @@ def get_readme() -> str:
         evaluators=_help_evaluators(tablefmt, link_fmt=api_link_fmt),
         n_evaluators=len(evaluator_resolver.lookup_dict),
         metrics=_help_metrics(tablefmt),
-        n_metrics=len(get_metric_list()),
+        n_metrics=sum(1 for _ in _get_metrics_lines(tablefmt)),
         trackers=_help_trackers(tablefmt, link_fmt=api_link_fmt),
         n_trackers=len(tracker_resolver.lookup_dict),
     )

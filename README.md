@@ -54,7 +54,7 @@
 
 ## Installation ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pykeen) ![PyPI](https://img.shields.io/pypi/v/pykeen)
 
-The latest stable version of PyKEEN requires Python 3.9+. It can be downloaded
+The latest stable version of PyKEEN requires Python 3.10+. It can be downloaded
 and installed from [PyPI](https://pypi.org/project/pykeen) with:
 
 ```shell
@@ -366,7 +366,7 @@ The following 5 evaluators are implemented in PyKEEN.
 
 ### Metrics
 
-The following 44 metrics are implemented in PyKEEN.
+The following 40 metrics are implemented in PyKEEN.
 
 | Name                                                                                                                                           | Interval                    | Direction   | Description                                                             | Type           |
 |------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------|-------------|-------------------------------------------------------------------------|----------------|
