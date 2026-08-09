@@ -168,7 +168,7 @@ def _check_score_pack(pack: pykeen.predict.ScorePack, model: pykeen.models.Model
     assert pack.result[:, 1].max() < model.num_relations
 
 
-@pytest.mark.parametrize(("model", "k", "target", "batch_size"), _iter_predict_all_inputs())
+@pytest.mark.parametrize(("model", "k", "target", "batch_size"), list(_iter_predict_all_inputs()))
 def test_predict_all(model: pykeen.models.Model, k: int | None, target: pykeen.typing.Target, batch_size: int):
     """Test the predict method."""
     pack = pykeen.predict.predict_all(model=model, k=k, target=target, batch_size=batch_size)
@@ -222,7 +222,7 @@ def _iter_predict_triples_inputs() -> Iterable[
     yield model, factory.mapped_triples[:3], None, None
 
 
-@pytest.mark.parametrize(("model", "triples", "triples_factory", "batch_size"), _iter_predict_triples_inputs())
+@pytest.mark.parametrize(("model", "triples", "triples_factory", "batch_size"), list(_iter_predict_triples_inputs()))
 def test_predict_triples(
     model: pykeen.models.Model,
     triples: AnyTriples,
@@ -267,7 +267,7 @@ def _iter_get_input_batch_inputs() -> Iterable[
     yield factory, None, 1, "uk", pykeen.typing.LABEL_HEAD
 
 
-@pytest.mark.parametrize(("factory", "head", "relation", "tail", "exp_target"), _iter_get_input_batch_inputs())
+@pytest.mark.parametrize(("factory", "head", "relation", "tail", "exp_target"), list(_iter_get_input_batch_inputs()))
 def test_get_input_batch(
     factory: CoreTriplesFactory | None,
     head: None | int | str,
@@ -355,7 +355,9 @@ def _iter_predict_target_inputs() -> Iterable[
         yield model, 0, 1, None, factory_, [0, 3, 7]
 
 
-@pytest.mark.parametrize(("model", "head", "relation", "tail", "factory", "targets"), _iter_predict_target_inputs())
+@pytest.mark.parametrize(
+    ("model", "head", "relation", "tail", "factory", "targets"), list(_iter_predict_target_inputs())
+)
 def test_predict_target(
     model: pykeen.models.Model,
     head: None | int | str,

@@ -61,10 +61,10 @@ MODEL_CONFIGURATIONS = {
     models.TuckER: {"embedding_dim": EMBEDDING_DIM},
     models.UM: {"embedding_dim": EMBEDDING_DIM},
 }
-TEST_CONFIGURATIONS = (
+TEST_CONFIGURATIONS = [
     (model, model_config, lit)
     for (model, model_config), lit in itertools.product(MODEL_CONFIGURATIONS.items(), LIT_MODULES)
-)
+]
 
 
 # test combinations of models with training loops
