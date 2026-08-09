@@ -11,6 +11,7 @@ import torch
 
 import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
+from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.evaluation import Evaluator
 from pykeen.models import ERModel, FixedModel, Model
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
@@ -495,6 +496,38 @@ def test_deferred_evaluate():
     assert isinstance(result_b, PipelineResult)
     # results should differ because the evaluation sets differ
     assert result_a.metric_results.to_dict() != result_b.metric_results.to_dict()
+
+
+def test_inductive_pipeline_evaluation_uses_local_entity_ids():
+    """Test that filtered inductive evaluation does not mix transductive entity IDs."""
+    dataset = create_inductive_dataset(
+        num_relations=3,
+        num_entities_transductive=13,
+        num_triples_training=33,
+        num_entities_inductive=5,
+        num_triples_inference=20,
+        num_triples_testing=20,
+        create_inverse_triples=True,
+    )
+
+    result = pipeline(
+        training=dataset.transductive_training,
+        testing=dataset.inductive_testing,
+        model="InductiveNodePiece",
+        model_kwargs={
+            "inference_factory": dataset.inductive_inference,
+            "embedding_dim": 4,
+            "num_tokens": 2,
+        },
+        training_kwargs={"num_epochs": 0, "use_tqdm": False},
+        training_loop_kwargs={"mode": "training"},
+        evaluator_kwargs={"mode": "validation"},
+        evaluation_kwargs={"use_tqdm": False},
+        device="cpu",
+        random_seed=42,
+    )
+
+    assert result.metric_results is not None
 
 
 @pytest.mark.parametrize("tf_cls", [CoreTriplesFactory, TriplesFactory])

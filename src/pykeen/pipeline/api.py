@@ -211,7 +211,7 @@ from ..evaluation import Evaluator, MetricResults, evaluator_resolver
 from ..evaluation.evaluator import normalize_flattened_metric_results
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
-from ..models import Model, make_model_cls, model_resolver
+from ..models import InductiveERModel, Model, make_model_cls, model_resolver
 from ..nn.modules import Interaction
 from ..optimizers import optimizer_resolver
 from ..regularizers import Regularizer, regularizer_resolver
@@ -1398,10 +1398,10 @@ def _handle_evaluation(
     # Build up a list of triples if we want to be in the filtered setting
     additional_filter_triples_names = {}
     if evaluator_instance.filtered:
-        additional_filter_triples: list[MappedTriples] = [
-            training.mapped_triples,
-        ]
-        additional_filter_triples_names["training"] = triple_hash(training.mapped_triples)
+        additional_filter_triples: list[MappedTriples] = []
+        if not isinstance(model_instance, InductiveERModel):
+            additional_filter_triples.append(training.mapped_triples)
+            additional_filter_triples_names["training"] = triple_hash(training.mapped_triples)
 
         # If the user gave custom "additional_filter_triples"
         popped_additional_filter_triples = evaluation_kwargs.pop("additional_filter_triples", [])
@@ -1418,7 +1418,12 @@ def _handle_evaluation(
             )
 
         # Determine whether the validation triples should also be filtered while performing test evaluation
-        if use_testing_data and filter_validation_when_testing and validation is not None:
+        if (
+            not isinstance(model_instance, InductiveERModel)
+            and use_testing_data
+            and filter_validation_when_testing
+            and validation is not None
+        ):
             if isinstance(stopper_instance, EarlyStopper):
                 logger.info(
                     "When evaluating the test dataset after running the pipeline with early stopping, the validation"
