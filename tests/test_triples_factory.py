@@ -630,7 +630,7 @@ def _iter_get_mapped_triples_inputs() -> Iterable[tuple[Any, Mapping[str, Any]]]
     yield None, {"triples": np.asarray(labeled), "factory": factory}
 
 
-@pytest.mark.parametrize(("x", "inputs"), _iter_get_mapped_triples_inputs())
+@pytest.mark.parametrize(("x", "inputs"), list(_iter_get_mapped_triples_inputs()))
 def test_get_mapped_triples(x, inputs: Mapping[str, Any]):
     """Test get_mapped_triples."""
     mapped_triples = get_mapped_triples(x, **inputs)
@@ -651,7 +651,7 @@ def tf_one_hole() -> CoreTriplesFactory:
     return tf
 
 
-@pytest.mark.parametrize(("entities", "relations"), itt.product((False, True), repeat=2))
+@pytest.mark.parametrize(("entities", "relations"), list(itt.product((False, True), repeat=2)))
 def test_condense(tf_one_hole: CoreTriplesFactory, entities: bool, relations: bool) -> None:
     """Test condensation."""
     tf_new = tf_one_hole.condense(entities=entities, relations=relations)
