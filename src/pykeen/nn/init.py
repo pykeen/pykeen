@@ -482,7 +482,7 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
 
 
 # TODO: replace by automatically generated list
-#: A resolver for initializers, including elements from :mod:`~pykeen.nn.init`
+#: A resolver for initializers, including elements from :mod:`pykeen.nn.init`
 #:
 #: - :func:`~pykeen.nn.init.init_phases`
 #: - ``init_quaternions``

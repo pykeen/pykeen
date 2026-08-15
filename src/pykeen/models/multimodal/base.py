@@ -22,7 +22,7 @@ class LiteralModel(
     ERModel[tuple[FloatTensor, FloatTensor], FloatTensor, tuple[FloatTensor, FloatTensor]],
     autoreset=False,
 ):
-    """Base class for models with entity literals that uses combinations from :mod:`~pykeen.nn.combination`."""
+    """Base class for models with entity literals that uses combinations from :mod:`pykeen.nn.combination`."""
 
     #: the interaction class (for generating the overview table)
     interaction_cls: ClassVar[type[Interaction]]

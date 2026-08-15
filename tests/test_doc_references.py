@@ -4,7 +4,9 @@ This scans ``src/pykeen`` and ``docs/source`` for roles like ``:class:`pykeen.mo
 things for every fully-qualified ``pykeen.*`` target:
 
 1. It uses the short-form ``~`` prefix (``:class:`~pykeen.models.TransE```), so rendered prose shows just
-   ``TransE`` instead of the full dotted path.
+   ``TransE`` instead of the full dotted path. ``:mod:`` is exempt from this: module paths are kept in their
+   long form (``:mod:`pykeen.triples.splitting```) since the short name alone (``splitting``) is often
+   ambiguous or uninformative out of context.
 2. The target actually resolves via a plain Python import + attribute lookup.
 
 The second check is a cheap proxy, *not* a substitute for an actual ``sphinx -n`` (nitpicky) build. A target can
@@ -90,10 +92,13 @@ PYKEEN_TARGETS = _collect_pykeen_targets()
     ids=[f"{path}:{lineno}:{target}" for target, role, path, lineno, tilde in PYKEEN_TARGETS],
 )
 def test_pykeen_reference_prefers_short_form(target, role, path, lineno, tilde):
-    """A fully-qualified pykeen.* role should use ``~`` so prose renders the short name."""
-    assert tilde == "~", (
-        f"{path}:{lineno}: :{role}:`{target}` should be :{role}:`~{target}` so it renders as the short name"
-    )
+    """A fully-qualified pykeen.* role should use ``~`` so prose renders the short name (except ``:mod:``)."""
+    if role == "mod":
+        assert tilde == "", f"{path}:{lineno}: :mod:`~{target}` should be :mod:`{target}` (long form)"
+    else:
+        assert tilde == "~", (
+            f"{path}:{lineno}: :{role}:`{target}` should be :{role}:`~{target}` so it renders as the short name"
+        )
 
 
 @pytest.mark.parametrize(

@@ -50,7 +50,7 @@ class NegativeSampler(nn.Module):
         :param filtered: Whether proposed corrupted triples that are in the training data should be filtered. Defaults
             to False, since filtering is comparatively expensive and the effect on training is usually small.
         :param filterer: If filtered is set to True, this can be used to choose which filter module from
-            :mod:`~pykeen.sampling.filtering` is used.
+            :mod:`pykeen.sampling.filtering` is used.
         :param filterer_kwargs: Additional keyword-based arguments passed to the filterer upon construction.
         """
         super().__init__()

@@ -84,7 +84,7 @@ execute the code like:
 The above code will load the saved state after finishing `1000` epochs and continue to train to `2000` epochs, giving
 the exact same results as if you would have run it for `2000` epochs in the first place.
 
-By default, your checkpoints will be saved in the ``PYKEEN_HOME`` directory that is defined in :mod:`~pykeen.constants`,
+By default, your checkpoints will be saved in the ``PYKEEN_HOME`` directory that is defined in :mod:`pykeen.constants`,
 which is a subdirectory in your home directory, e.g. ``~/.data/pykeen/checkpoints`` (configured via :mod:`pystow`).
 Optionally, you can set the path to where you want the checkpoints to be saved by setting the ``checkpoint_directory``
 argument with a string or a :class:`pathlib.Path` object containing your desired root path, as shown in this example:
@@ -324,7 +324,7 @@ setting the argument ``checkpoint_frequency`` with an integer. The default frequ
 Optionally, you can set the path to where you want the checkpoints to be saved by setting the ``checkpoint_directory``
 argument with a string or a :class:`pathlib.Path` object containing your desired root path. If you didn't set the
 ``checkpoint_directory`` argument, your checkpoints will be saved in the ``PYKEEN_HOME`` directory that is defined in
-:mod:`~pykeen.constants`, which is a subdirectory in your home directory, e.g. ``~/.data/pykeen/checkpoints``.
+:mod:`pykeen.constants`, which is a subdirectory in your home directory, e.g. ``~/.data/pykeen/checkpoints``.
 
 Here is an example:
 
