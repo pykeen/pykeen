@@ -37,7 +37,7 @@ http://localhost:6006/
 Minimal Pipeline Example
 ------------------------
 
-The tensorboard tracker can be used during training with the :func:`pykeen.pipeline.pipeline` as follows:
+The tensorboard tracker can be used during training with the :func:`~pykeen.pipeline.pipeline` as follows:
 
 .. code-block:: python
 

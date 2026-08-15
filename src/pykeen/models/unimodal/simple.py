@@ -88,7 +88,7 @@ class SimplE(
             the regularizer, defaults to ``regularizer_default``
         :param regularizer_kwargs:
             additional keyword-based parameters passed to the regularizer, defaults to
-            ``regularizer_default_kwargs``
+            :attr:`~pykeen.models.SimplE.regularizer_default_kwargs`
         :param kwargs:
             additional keyword-based parameters passed to :meth:`ERModel.__init__`
         """

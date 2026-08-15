@@ -9,7 +9,7 @@ Loading a pre-trained Model
 ---------------------------
 
 Many of the previous examples ended with saving the results using the
-:meth:`pykeen.pipeline.PipelineResult.save_to_directory`. One of the artifacts written to the given directory is the
+:meth:`~pykeen.pipeline.PipelineResult.save_to_directory`. One of the artifacts written to the given directory is the
 ``trained_model.pkl`` file. Because all PyKEEN models inherit from :class:`torch.nn.Module`, we use the PyTorch
 mechanisms for saving and loading them. This means that you can use :func:`torch.load` to load a model like:
 
@@ -54,18 +54,18 @@ representations, so they are respectively stored as sequences in the ``entity_re
 ``relation_representations`` attributes of each model. While the exact contents of these sequences are model-dependent,
 the first element of each is usually the "primary" representation for either the entities or relations.
 
-Typically, the values in these sequences are instances of the :class:`pykeen.nn.representation.Embedding`. This
+Typically, the values in these sequences are instances of the :class:`~pykeen.nn.representation.Embedding`. This
 implements a similar, but more powerful, interface to the built-in :class:`torch.nn.Embedding` class. However, the
 values in these sequences can more generally be instances of any subclasses of
-:class:`pykeen.nn.representation.Representation`. This allows for more powerful encoders those in GNNs such as
-:class:`pykeen.models.RGCN` to be implemented and used.
+:class:`~pykeen.nn.representation.Representation`. This allows for more powerful encoders those in GNNs such as
+:class:`~pykeen.models.RGCN` to be implemented and used.
 
 The entity representations and relation representations can be accessed like this:
 
 .. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
     :lines: 4-14
 
-Most models, like :class:`pykeen.models.TransE`, only have one representation for entities and one for relations. This
+Most models, like :class:`~pykeen.models.TransE`, only have one representation for entities and one for relations. This
 means that the ``entity_representations`` and ``relation_representations`` lists both have a length of 1. All of the
 entity embeddings can be accessed like:
 
@@ -78,7 +78,7 @@ Since all representations are subclasses of :class:`torch.nn.Module`, you need t
 .. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
     :lines: 28-29
 
-The `forward()` function of all :class:`pykeen.nn.representation.Representation` takes an ``indices`` parameter. By
+The `forward()` function of all :class:`~pykeen.nn.representation.Representation` takes an ``indices`` parameter. By
 default, it is ``None`` and returns all values. More explicitly, this looks like:
 
 .. literalinclude:: ../examples/first_steps/using_learned_embeddings.py

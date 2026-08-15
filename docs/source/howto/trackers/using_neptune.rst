@@ -22,7 +22,7 @@ Preparation
 Pipeline Example
 ----------------
 
-This example shows using Neptune with the :func:`pykeen.pipeline.pipeline` function. Minimally, the
+This example shows using Neptune with the :func:`~pykeen.pipeline.pipeline` function. Minimally, the
 ``project_qualified_name`` and ``experiment_name`` must be set.
 
 .. code-block:: python
@@ -95,4 +95,4 @@ For example, if you're using custom input, you might want to add some labels abo
     )
 
 Additional documentation of the valid keyword arguments can be found under
-:class:`pykeen.trackers.NeptuneResultTracker`.
+:class:`~pykeen.trackers.NeptuneResultTracker`.

@@ -155,7 +155,7 @@ transforms entity and relation representations, we must first construct a
 PyTorch Geometric
 ~~~~~~~~~~~~~~~~~
 
-Another way to utilize message passing is via the modules provided in :mod:`pykeen.nn.pyg`, which allow to use the
+Another way to utilize message passing is via the modules provided in :mod:`~pykeen.nn.pyg`, which allow to use the
 message passing layers from PyTorch Geometric to enrich base representations via message passing. We include the
 following templates to easily create custom transformations:
 

@@ -24,7 +24,7 @@ gradient, but rather re-scale its length.
 Normalizers are strict, i.e. the normalized variable is guaranteed to satisfy the constraint.
 
 Since normalizers are part of the computational graph, they are usually implemented directly as part of a module, e.g.,
-in :class:`pykeen.nn.representation.Embedding`.
+in :class:`~pykeen.nn.representation.Embedding`.
 
 Constrainer
 -----------
@@ -39,12 +39,12 @@ constraint set.
 
 Constrainers guarantee the constraint *after each gradient step*, but may violate the constaints in between.
 
-Constrainers are applied in :meth:`pykeen.nn.representation.Representation.post_parameter_update`.
+Constrainers are applied in :meth:`~pykeen.nn.representation.Representation.post_parameter_update`.
 
 .. warning::
 
     If you use PyKEEN modules outside of PyKEEN's training methods, you need to make sure to call
-    :meth:`pykeen.nn.representation.Representation.post_parameter_update` yourself after each parameter update.
+    :meth:`~pykeen.nn.representation.Representation.post_parameter_update` yourself after each parameter update.
 
 .. seealso::
 
@@ -59,7 +59,7 @@ when the original loss term is still high and thus the relative contribution of 
 However, once the optimization has found a sufficiently good solution for the original loss term, it can only further
 improve the total loss by also respecting the regularization term.
 
-You can find implementations of regularizers by looking at subclasses of :class:`pykeen.regularizers.Regularizer`.
+You can find implementations of regularizers by looking at subclasses of :class:`~pykeen.regularizers.Regularizer`.
 
 .. seealso::
 

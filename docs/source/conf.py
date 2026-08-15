@@ -296,6 +296,12 @@ nitpick_ignore_regex = [
 ]
 
 nitpick_ignore = [
+    # `pykeen.lr_schedulers.LRScheduler` is a direct re-export of `torch.optim.lr_scheduler.LRScheduler`
+    # (`src/pykeen/lr_schedulers/__init__.py`), so automodapi pulls in torch's own method docstrings. Those
+    # reference targets are broken in torch's own docs (version-dependent) and outside pykeen's control.
+    ("py:attr", "torch.optim.Optimizer.param_groups"),
+    ("py:attr", "last_epoch"),
+    ("py:meth", "_get_closed_form_lr"),
     # TypeVars and type aliases: Sphinx cannot resolve these as `py:class`/`py:obj` targets unless each is
     # individually documented, which none of these (from `pykeen.typing`, `pykeen.utils`, or re-exported from
     # `class_resolver`) are.

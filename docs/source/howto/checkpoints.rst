@@ -14,7 +14,7 @@ For fixing possible errors and safety fallbacks please also look at :ref:`word_o
 
 Regular Checkpoints
 -------------------
-The tutorial :ref:`first_steps` showed how the :func:`pykeen.pipeline.pipeline` function can be used to set up an entire
+The tutorial :ref:`first_steps` showed how the :func:`~pykeen.pipeline.pipeline` function can be used to set up an entire
 KGEM for training and evaluation in just two lines of code. A slightly extended example is shown below:
 
 >>> from pykeen.pipeline import pipeline
@@ -84,7 +84,7 @@ execute the code like:
 The above code will load the saved state after finishing `1000` epochs and continue to train to `2000` epochs, giving
 the exact same results as if you would have run it for `2000` epochs in the first place.
 
-By default, your checkpoints will be saved in the ``PYKEEN_HOME`` directory that is defined in :mod:`pykeen.constants`,
+By default, your checkpoints will be saved in the ``PYKEEN_HOME`` directory that is defined in :mod:`~pykeen.constants`,
 which is a subdirectory in your home directory, e.g. ``~/.data/pykeen/checkpoints`` (configured via :mod:`pystow`).
 Optionally, you can set the path to where you want the checkpoints to be saved by setting the ``checkpoint_directory``
 argument with a string or a :class:`pathlib.Path` object containing your desired root path, as shown in this example:
@@ -295,7 +295,7 @@ The reason for this behavior is three-fold:
 Checkpoints beyond the Pipeline and Technicalities
 --------------------------------------------------
 Currently, PyKEEN only supports checkpoints for training loops, implemented in the class
-:class:`pykeen.training.TrainingLoop`. When using the :func:`pykeen.pipeline.pipeline` function as defined above, the
+:class:`~pykeen.training.TrainingLoop`. When using the :func:`~pykeen.pipeline.pipeline` function as defined above, the
 pipeline actually uses the training loop functionality. Accordingly, those checkpoints save the states of the
 training loop and not the pipeline itself. Therefore, the checkpoints won't contain evaluation results that reside in
 the pipeline. However, PyKEEN makes sure the final results of the pipeline using training loop checkpoints are exactly
@@ -316,7 +316,7 @@ To show how to use the checkpoint functionality without the pipeline, we define 
 >>> training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
 
 At this point we have a model, dataset and optimizer all setup in a training loop and are ready to train the model with
-the ``training_loop``'s method :func:`pykeen.training.TrainingLoop.train`. To enable checkpoints all you have to do is
+the ``training_loop``'s method :func:`~pykeen.training.TrainingLoop.train`. To enable checkpoints all you have to do is
 setting the function argument ``checkpoint_name`` to the name you would like it to have.
 Furthermore, you can set the checkpoint frequency, i.e. how often checkpoints should be saved given in minutes, by
 setting the argument ``checkpoint_frequency`` with an integer. The default frequency is 30 minutes and setting it to
@@ -324,7 +324,7 @@ setting the argument ``checkpoint_frequency`` with an integer. The default frequ
 Optionally, you can set the path to where you want the checkpoints to be saved by setting the ``checkpoint_directory``
 argument with a string or a :class:`pathlib.Path` object containing your desired root path. If you didn't set the
 ``checkpoint_directory`` argument, your checkpoints will be saved in the ``PYKEEN_HOME`` directory that is defined in
-:mod:`pykeen.constants`, which is a subdirectory in your home directory, e.g. ``~/.data/pykeen/checkpoints``.
+:mod:`~pykeen.constants`, which is a subdirectory in your home directory, e.g. ``~/.data/pykeen/checkpoints``.
 
 Here is an example:
 

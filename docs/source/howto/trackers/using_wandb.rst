@@ -20,7 +20,7 @@ Now you can simply specify this project name when initializing a pipeline, and e
 Pipeline Example
 ----------------
 
-This example shows using WANDB with the :func:`pykeen.pipeline.pipeline` function.
+This example shows using WANDB with the :func:`~pykeen.pipeline.pipeline` function.
 
 .. code-block:: python
 
@@ -58,7 +58,7 @@ further keyword arguments are passed to :func:`wandb.init`.
 HPO Example
 -----------
 
-This example shows using WANDB with the :func:`pykeen.hpo.hpo_pipeline` function.
+This example shows using WANDB with the :func:`~pykeen.hpo.hpo_pipeline` function.
 
 .. code-block:: python
 
@@ -78,4 +78,4 @@ This example shows using WANDB with the :func:`pykeen.hpo.hpo_pipeline` function
 It's safe to specify the experiment name during HPO. Several runs will be sent to the same experiment under different
 hashes. However, specifying the experiment name is advisable more for single runs and not for batches of multiple runs.
 
-Additional documentation of the valid keyword arguments can be found under :class:`pykeen.trackers.WANDBResultTracker`.
+Additional documentation of the valid keyword arguments can be found under :class:`~pykeen.trackers.WANDBResultTracker`.

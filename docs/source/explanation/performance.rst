@@ -15,11 +15,11 @@ need a mapping from the string representations to vectors. Moreover, for computa
 store all entity/relation embeddings in matrices. Thus, the mapping process comprises two parts: Mapping strings to IDs,
 and using the IDs to access the embeddings (=row indices).
 
-In PyKEEN, the mapping process takes place in :class:`pykeen.triples.TriplesFactory`. The triples factory maintains the
+In PyKEEN, the mapping process takes place in :class:`~pykeen.triples.TriplesFactory`. The triples factory maintains the
 sets of unique entity and relation labels and ensures that they are mapped to unique integer IDs on
 $[0,\text{num\_unique\_entities})$ for entities and $[0, \text{num\_unique\_relations})$. The mappings are respectively
-accessible via the attributes :attr:`pykeen.triples.TriplesFactory.entity_to_id` and
-:attr:`pykeen.triples.TriplesFactory.relation_to_id`.
+accessible via the attributes :attr:`~pykeen.triples.TriplesFactory.entity_to_id` and
+:attr:`~pykeen.triples.TriplesFactory.relation_to_id`.
 
 To improve the performance, the mapping process takes place only once, and the ID-based triples are stored in a tensor
 ``mapped_triples``.
@@ -31,19 +31,19 @@ Tuple Broadcasting
 
 Interaction functions are usually only given for the standard case of scoring a single triple $(h, r, t)$. This function
 is implemented in PyKEEN in the ``score_hrt`` method of each model, e.g.
-``DistMult.score_hrt`` for :class:`pykeen.models.DistMult`. When training under the local closed world
+``DistMult.score_hrt`` for :class:`~pykeen.models.DistMult`. When training under the local closed world
 assumption (LCWA), evaluating a model, and performing the link prediction task, the goal is to score all
 entities/relations for a given tuple, i.e. $(h, r)$, $(r, t)$ or $(h, t)$. In these cases a single tuple is used many
 times for different entities/relations.
 
-For example, we want to rank all entities for a single tuple $(h, r)$ with :class:`pykeen.models.DistMult` for the
-:class:`pykeen.datasets.FB15k237`. This dataset contains 14,505 entities, which means that there are 14,505 $(h, r, t)$
-combinations, whereas $h$ and $r$ are constant. Looking at the interaction function of :class:`pykeen.models.DistMult`,
+For example, we want to rank all entities for a single tuple $(h, r)$ with :class:`~pykeen.models.DistMult` for the
+:class:`~pykeen.datasets.FB15k237`. This dataset contains 14,505 entities, which means that there are 14,505 $(h, r, t)$
+combinations, whereas $h$ and $r$ are constant. Looking at the interaction function of :class:`~pykeen.models.DistMult`,
 we can observe that the :math:`h \odot r` part causes half of the mathematical operations to calculate :math:`h \odot r
 \odot t`. Therefore, calculating the :math:`h \odot r` part only once and reusing it spares us half of the mathematical
 operations for the other 14,504 remaining entities, making the calculations roughly twice as fast in total. The speed-up
 might be significantly higher in cases where the broadcasted part has a high relative complexity compared to the overall
-interaction function, e.g. :class:`pykeen.models.ConvE`.
+interaction function, e.g. :class:`~pykeen.models.ConvE`.
 
 To make this technique possible, PyKEEN models have to provide an explicit broadcasting function via following methods
 in the model class:
@@ -85,7 +85,7 @@ train dataset. Therefore, their definitions could be amended like:
 While this easily defined theoretically, it poses several practical challenges. For example, it leads to the
 computational challenge that all new possible triples $(h, r, t') \in T_{h,r}$ and $(h', r, t) \in H_{r,t}$ must be
 enumerated and then checked for existence in $\mathcal{K}_{train}$. Considering a dataset like
-:class:`pykeen.datasets.FB15k237` that has almost 15,000 entities, each test triple $(h,r,t) \in \mathcal{K}_{test}$
+:class:`~pykeen.datasets.FB15k237` that has almost 15,000 entities, each test triple $(h,r,t) \in \mathcal{K}_{test}$
 leads to $2 * | \mathcal{E} | = 30,000$ possible new triples, which have to be checked against the train dataset and
 then removed.
 
@@ -150,7 +150,7 @@ For some large configurations, even after applying the sub-batching trick, out-o
 case, PyKEEN implements another technique, called *slicing*. Note that we often compute more than one score for each
 batch element: in sLCWA, we have :math:`1 + \text{num\_negative\_samples}` scores, and in LCWA, we have
 :math:`\text{num\_entities}` scores for each batch element. In slicing, we do not compute all of these scores at once,
-but rather in smaller "batches". All models derive from :class:`pykeen.models.nbase.ERModel`, which has a generic
+but rather in smaller "batches". All models derive from :class:`~pykeen.models.nbase.ERModel`, which has a generic
 implementation enabling slicing for *all* interactions.
 
 .. note::

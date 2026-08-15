@@ -21,7 +21,7 @@ providing appropriate inputs to the parameters
 - ``entity_representations`` / ``entity_representations_kwargs`` for entity representations, or
 - ``relation_representations`` / ``relation_representations_kwargs`` for relation representations.
 
-These inputs are then used to instantiate the representations using :meth:`pykeen.nn.representation_resolver.make_many`.
+These inputs are then used to instantiate the representations using :meth:`~pykeen.nn.representation_resolver.make_many`.
 Notice that :class:`~pykeen.models.ERModel`, takes care of filling in the ``max_id`` parameter into the ``..._kwargs``.
 The default is to use a single :class:`~pykeen.nn.representation.Embedding` for entities and relations, as encountered
 in many publications.
@@ -78,11 +78,11 @@ Its core method is :meth:`~pykeen.nn.modules.Interaction.forward`, which receive
 representations and calculates the corresponding triple scores.
 
 As with the representations, interactions passed to :class:`~pykeen.models.ERModel` are resolved, this time using
-:meth:`pykeen.nn.interaction_resolver.make`. Hence, we can provide, e.g., strings corresponding to the interaction
+:meth:`~pykeen.nn.interaction_resolver.make`. Hence, we can provide, e.g., strings corresponding to the interaction
 function instead of an instantiated class. Further information can be found at :ref:`using_resolvers`.
 
 .. note::
 
     Interaction functions can require different numbers or shapes of entity and relation representations. A symbolic
     description of the expected number of representations and their shape can be accessed by
-    ``entity_shape`` and ``relation_shape`` on :class:`pykeen.nn.modules.Interaction`.
+    :attr:`~pykeen.nn.modules.Interaction.entity_shape` and :attr:`~pykeen.nn.modules.Interaction.relation_shape`.

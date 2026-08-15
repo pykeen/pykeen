@@ -1,4 +1,4 @@
-"""The easiest way to train and evaluate a model is with the :func:`pykeen.pipeline.pipeline` function.
+"""The easiest way to train and evaluate a model is with the :func:`~pykeen.pipeline.pipeline` function.
 
 It provides a high-level entry point into the extensible functionality of
 this package. Full reference documentation for the pipeline and related functions
@@ -10,7 +10,7 @@ The following example shows how to train and evaluate the :class:`pykeen.models.
 on the :class:`pykeen.datasets.Nations` dataset. Throughout the documentation, you'll notice
 that each asset has a corresponding class in PyKEEN. You can follow the links to learn more
 about each and see the reference on how to use them specifically. Don't worry, in this part of
-the tutorial, the :func:`pykeen.pipeline.pipeline` function will take care of everything for you.
+the tutorial, the :func:`~pykeen.pipeline.pipeline` function will take care of everything for you.
 
 >>> from pykeen.pipeline import pipeline
 >>> pipeline_result = pipeline(
@@ -174,7 +174,7 @@ best reported values from the paper originally publishing the model unless other
 reference page.
 
 Because the pipeline takes care of looking up classes and instantiating them,
-there are several other parameters to :func:`pykeen.pipeline.pipeline` that
+there are several other parameters to :func:`~pykeen.pipeline.pipeline` that
 can be used to specify the parameters during their respective instantiations.
 
 Arguments can be given to the dataset with ``dataset_kwargs``. These are passed on to
@@ -259,7 +259,7 @@ def triple_hash(*triples: MappedTriples) -> Mapping[str, str]:
 @fix_dataclass_init_docs
 @dataclass
 class PipelineResult(Result):
-    """A dataclass containing the results of running :func:`pykeen.pipeline.pipeline`."""
+    """A dataclass containing the results of running :func:`~pykeen.pipeline.pipeline`."""
 
     #: The random seed used at the beginning of the pipeline
     random_seed: int

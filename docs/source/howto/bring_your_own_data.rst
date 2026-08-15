@@ -3,9 +3,9 @@
 Bring Your Own Data
 ===================
 As an alternative to using a pre-packaged dataset, the training and testing can be set explicitly
-by file path or with instances of :class:`pykeen.triples.TriplesFactory`. Throughout this
+by file path or with instances of :class:`~pykeen.triples.TriplesFactory`. Throughout this
 tutorial, the paths to the training, testing, and validation sets for built-in
-:class:`pykeen.datasets.Nations` will be used as examples.
+:class:`~pykeen.datasets.Nations` will be used as examples.
 
 Pre-stratified Dataset
 ----------------------
@@ -28,8 +28,8 @@ PyKEEN will take care of making sure that the entities are mapped from their lab
 (technically, 0-dimensional :class:`torch.LongTensor`) indexes and that the different sets of triples
 share the same mapping.
 
-This is equally applicable for the :func:`pykeen.hpo.hpo_pipeline`, which has a similar interface to
-the :func:`pykeen.pipeline.pipeline` as in:
+This is equally applicable for the :func:`~pykeen.hpo.hpo_pipeline`, which has a similar interface to
+the :func:`~pykeen.pipeline.pipeline` as in:
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH, NATIONS_VALIDATE_PATH
@@ -43,11 +43,11 @@ the :func:`pykeen.pipeline.pipeline` as in:
 ... )
 >>> result.save_to_directory('doctests/test_hpo_pre_stratified_transe')
 
-The remainder of the examples will be for :func:`pykeen.pipeline.pipeline`, but all work exactly the same
-for :func:`pykeen.hpo.hpo_pipeline`.
+The remainder of the examples will be for :func:`~pykeen.pipeline.pipeline`, but all work exactly the same
+for :func:`~pykeen.hpo.hpo_pipeline`.
 
 If you want to add dataset-wide arguments, you can use the ``dataset_kwargs`` argument
-to the :class:`pykeen.pipeline.pipeline` to enable options like ``create_inverse_triples=True``.
+to the :class:`~pykeen.pipeline.pipeline` to enable options like ``create_inverse_triples=True``.
 
 >>> from pykeen.pipeline import pipeline
 >>> from pykeen.datasets.nations import NATIONS_TRAIN_PATH, NATIONS_TEST_PATH
@@ -61,7 +61,7 @@ to the :class:`pykeen.pipeline.pipeline` to enable options like ``create_inverse
 >>> result.save_to_directory('doctests/test_pre_stratified_transe')
 
 If you want finer control over how the triples are created, for example, if they are not all coming from
-TSV files, you can use the :class:`pykeen.triples.TriplesFactory` interface.
+TSV files, you can use the :class:`~pykeen.triples.TriplesFactory` interface.
 
 >>> from pykeen.triples import TriplesFactory
 >>> from pykeen.pipeline import pipeline
@@ -88,7 +88,7 @@ TSV files, you can use the :class:`pykeen.triples.TriplesFactory` interface.
     set, so we just reuse it. If we didn't have the same identifiers, then the testing set would get mixed up with
     the wrong identifiers in the training set during evaluation, and we'd get nonsense results.
 
-The ``dataset_kwargs`` argument is ignored when passing your own :class:`pykeen.triples.TriplesFactory`, so be
+The ``dataset_kwargs`` argument is ignored when passing your own :class:`~pykeen.triples.TriplesFactory`, so be
 sure to include the ``create_inverse_triples=True`` in the instantiation of those classes if that's your
 desired behavior as in:
 

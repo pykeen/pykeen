@@ -4,11 +4,11 @@ Extending the Models
 You should first read the tutorial on bringing your own interaction module. This tutorial is about how to wrap a custom
 interaction module with a model module for general reuse and application.
 
-Implementing a model by subclassing :class:`pykeen.models.ERModel`
-------------------------------------------------------------------
+Implementing a model by subclassing :class:`~pykeen.models.ERModel`
+-------------------------------------------------------------------
 
 The following code block demonstrates how an interaction model can be used to define a full KGEM using the
-:class:`pykeen.models.ERModel` base class.
+:class:`~pykeen.models.ERModel` base class.
 
 .. code-block:: python
 
@@ -58,7 +58,7 @@ The following code block demonstrates how an interaction model can be used to de
                 **kwargs,
             )
 
-The actual implementation of DistMult can be found in :class:`pykeen.models.DistMult`. Note that it additionally
+The actual implementation of DistMult can be found in :class:`~pykeen.models.DistMult`. Note that it additionally
 contains configuration for the initializers, constrainers, and regularizers for each of the embeddings as well as
 class-level defaults for hyper-parameters and hyper-parameter optimization. Modifying these is covered in other
 tutorials.
@@ -81,13 +81,13 @@ the loss class.
         loss_default: ClassVar[Type[Loss]] = NSSALoss
         ...
 
-Now, when using the pipeline, the :class:`pykeen.losses.NSSALoss`. loss is used by default if none is given. The same
+Now, when using the pipeline, the :class:`~pykeen.losses.NSSALoss`. loss is used by default if none is given. The same
 kind of modifications can be made to set a default regularizer with ``regularizer_default``.
 
 Specifying Hyper-parameter Optimization Default Ranges
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-All subclasses of :class:`pykeen.models.Model` can specify the default ranges or values used during hyper-parameter
+All subclasses of :class:`~pykeen.models.Model` can specify the default ranges or values used during hyper-parameter
 optimization (HPO). PyKEEN implements a simple dictionary-based configuration that is interpreted by
 ``suggest_kwargs`` in the HPO pipeline.
 
@@ -156,10 +156,10 @@ With ``bool``, you can simply use ``dict(type=bool)`` or ``dict(type='bool')``.
     The HPO rules are subject to change as they are tightly coupled to :mod:`optuna`, which since version 2.0.0 has
     introduced several new possibilities.
 
-Implementing a model by instantiating :class:`pykeen.models.ERModel`
---------------------------------------------------------------------
+Implementing a model by instantiating :class:`~pykeen.models.ERModel`
+---------------------------------------------------------------------
 
-Instead of creating a new class, you can also directly use the :class:`pykeen.models.ERModel`, e.g.
+Instead of creating a new class, you can also directly use the :class:`~pykeen.models.ERModel`, e.g.
 
 .. code-block:: python
 
@@ -178,7 +178,7 @@ Using a Custom Model with the Pipeline
 --------------------------------------
 
 We can use this new model with all available losses, evaluators, training pipelines, inverse triple modeling, via the
-:func:`pykeen.pipeline.pipeline`, since in addition to the names of models (given as strings), it can also take model
+:func:`~pykeen.pipeline.pipeline`, since in addition to the names of models (given as strings), it can also take model
 classes in the ``model`` argument.
 
 .. code-block:: python
