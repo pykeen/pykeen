@@ -13,10 +13,10 @@ functions as an example. Its signature is given as
 .. literalinclude:: /../../src/pykeen/models/base.py
     :lines: 75-83
 
-Notice the two related parameters `loss: HintOrType[Loss] = None` and `loss_kwargs: Mapping[str, Any] | None =
-None`. Throughout the rest of PyKEEN, this `..._kwargs` pattern is abbreviated as the `OptionalKwargs` type alias,
-i.e., `Union[None, Mapping[str, Any]]`. Hence, we can either pass a mapping of string keys to some values, or
-`None`. In the latter case of passing `None`, this is interpreted as an empty dictionary.
+Notice the two related parameters `loss: HintOrType[Loss] = None` and `loss_kwargs: Mapping[str, Any] | None = None`.
+Throughout the rest of PyKEEN, this `..._kwargs` pattern is abbreviated as the `OptionalKwargs` type alias, i.e.,
+`Union[None, Mapping[str, Any]]`. Hence, we can either pass a mapping of string keys to some values, or `None`. In the
+latter case of passing `None`, this is interpreted as an empty dictionary.
 
 The `loss` parameter takes inputs of type `HintOrType[Loss]`. `HintOrType[Loss]` is a abbreviation of `Union[None, str,
 Type[Loss], Loss]`. Thus, we can either pass

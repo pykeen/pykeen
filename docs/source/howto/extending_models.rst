@@ -88,8 +88,8 @@ Specifying Hyper-parameter Optimization Default Ranges
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 All subclasses of :class:`~pykeen.models.Model` can specify the default ranges or values used during hyper-parameter
-optimization (HPO). PyKEEN implements a simple dictionary-based configuration that is interpreted by
-``suggest_kwargs`` in the HPO pipeline.
+optimization (HPO). PyKEEN implements a simple dictionary-based configuration that is interpreted by ``suggest_kwargs``
+in the HPO pipeline.
 
 HPO default ranges can be applied to all keyword arguments appearing in the ``__init__()`` function of your model by
 setting a class-level variable called ``hpo_default``.
@@ -107,9 +107,7 @@ A step size can be imposed with ``q``:
 .. code-block:: python
 
     class DistMult(ERModel):
-        hpo_default = {
-            "embedding_dim": dict(type=int, low=100, high=150, q=5)
-        }
+        hpo_default = {"embedding_dim": dict(type=int, low=100, high=150, q=5)}
         ...
 
 An alternative scale can be imposed with ``scale``. Right now, the default is linear, and ``scale`` can optionally be
