@@ -50,7 +50,7 @@ def xavier_uniform_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     sampled from :math:`\mathcal{U}(-a, a)` where
 
     .. math::
-        a = \text{gain} \times \sqrt{\frac{6}{\text{fan_out}}}
+        a = \text{gain} \times \sqrt{\frac{6}{\text{fan\_out}}}
 
     Example usage:
 
@@ -84,7 +84,7 @@ def xavier_normal_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     sampled from :math:`\mathcal{N}(0, \text{std}^2)` where
 
     .. math::
-        \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan_out}}}
+        \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan\_out}}}
 
     Example usage:
 
