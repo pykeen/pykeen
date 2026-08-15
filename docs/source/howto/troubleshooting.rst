@@ -26,12 +26,12 @@ In this case, try to instantiate the model class directly and only load the stat
 1. Save the model's ``state_dict`` using the version of PyKEEN used for training:
 
        .. literalinclude:: /examples/howto/troubleshooting.py
-           :lines: 6-11
+           :lines: 4-9
 
 2. Load the model using the version of PyKEEN you want to use. First instantiate the model, then load the state dict:
 
        .. literalinclude:: /examples/howto/troubleshooting.py
-           :lines: 15-21
+           :lines: 12-18
 
 If the model weight names have changed
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -48,7 +48,7 @@ In this case, you need to inspect the state-dict dictionaries in the different v
 modify the state dict accordingly before loading it. For example:
 
 .. literalinclude:: /examples/howto/troubleshooting.py
-    :lines: 26-42
+    :lines: 21-37
 
 .. warning::
 

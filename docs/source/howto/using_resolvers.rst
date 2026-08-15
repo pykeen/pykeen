@@ -28,12 +28,12 @@ Type[Loss], Loss]`. Thus, we can either pass
    is instantiated with the given `loss_kwargs` as (keyword-based) parameters. For instance,
 
    .. literalinclude:: /examples/howto/using_resolvers.py
-       :lines: 8-12
+       :lines: 4-10
 
    translates to `MarginRankingLoss()`. We can also choose different instantiation parameters by
 
    .. literalinclude:: /examples/howto/using_resolvers.py
-       :lines: 16-19
+       :lines: 13-16
 
    which translates to `MarginRankingLoss(margin=2)`
 

@@ -13,7 +13,7 @@ about each and see the reference on how to use them specifically. Don't worry, i
 the tutorial, the :func:`~pykeen.pipeline.pipeline` function will take care of everything for you.
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
-    :lines: 9-15
+    :lines: 4-10
 
 The results are returned in a :class:`~pykeen.pipeline.PipelineResult` instance, which has
 attributes for the trained model, the training loop, and the evaluation.
@@ -23,21 +23,21 @@ In this example, the model was given as a string. A list of available models can
 could be used as in:
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
-    :lines: 23-29
+    :lines: 13-19
 
 In this example, the dataset was given as a string. A list of available datasets can be found in
 :mod:`pykeen.datasets`. Alternatively, a subclass of :class:`~pykeen.datasets.Dataset` could be
 used as in:
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
-    :lines: 34-40
+    :lines: 22-28
 
 In each of the previous three examples, the training approach, optimizer, and evaluation scheme
 were omitted. By default, the model is trained under the stochastic local closed world assumption (sLCWA;
 :class:`~pykeen.training.SLCWATrainingLoop`). This can be explicitly given as a string:
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
-    :lines: 46-51
+    :lines: 31-36
 
 Alternatively, the model can be trained under the  local closed world assumption (LCWA;
 :class:`~pykeen.training.LCWATrainingLoop`) by giving ``'LCWA'``.
@@ -45,20 +45,20 @@ No additional configuration is necessary, but it's worth reading up on the diffe
 approaches. A list of available training assumptions can be found in :mod:`pykeen.training`.
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
-    :lines: 58-63
+    :lines: 39-44
 
 One of these differences is that the sLCWA relies on *negative sampling*. The type of negative sampling
 can be given as in:
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
-    :lines: 68-74
+    :lines: 47-53
 
 In this example, the negative sampler was given as a string. A list of available negative samplers
 can be found in :mod:`pykeen.sampling`. Alternatively, the class corresponding to the implementation
 of the negative sampler could be used as in:
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
-    :lines: 85-93
+    :lines: 56-64
 
 .. warning ::
 
@@ -69,34 +69,34 @@ The type of evaluation perfomed can be specified with the ``evaluator`` keyword.
 rank-based evaluation is used. It can be given explictly as in:
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
-    :lines: 98-103
+    :lines: 67-72
 
 In this example, the evaluator string. A list of available evaluators can be found in
 :mod:`pykeen.evaluation`. Alternatively, the class corresponding to the implementation
 of the evaluator could be used as in:
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
-    :lines: 109-116
+    :lines: 75-82
 
 PyKEEN implements early stopping, which can be turned on with the ``stopper`` keyword
 argument as in:
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
-    :lines: 120-125
+    :lines: 85-90
 
 In PyKEEN you can also use the learning rate schedulers provided by PyTorch, which can be
 turned on with the ``lr_scheduler`` keyword argument together with the ``lr_scheduler_kwargs``
 keyword argument to specify arguments for the learning rate scheduler as in:
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
-    :lines: 131-139
+    :lines: 93-101
 
 Deeper Configuration
 ~~~~~~~~~~~~~~~~~~~~
 Arguments for the model can be given as a dictionary using ``model_kwargs``.
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
-    :lines: 145-152
+    :lines: 104-111
 
 The entries in ``model_kwargs`` correspond to the arguments given to ``TransE.__init__``. For a
 complete listing of models, see :mod:`pykeen.models`, where there are links to the reference for each

@@ -22,7 +22,7 @@ subclass of :class:`torch.nn.Module`, which means that you need to provide an im
 the representations of the head, relation, and tail, respectively.
 
 .. literalinclude:: /examples/howto/bring_your_own_interaction.py
-    :lines: 8-16
+    :lines: 4-12
 
 Note the ``dim=-1`` because this operation is actually defined over an entire batch of head, relation, and tail
 representations.
@@ -43,7 +43,7 @@ where $\mathbf{e}_i$ is the $d$-dimensional representation for entity $i$, $\mat
 representation for relation $j$.
 
 .. literalinclude:: /examples/howto/bring_your_own_interaction.py
-    :lines: 23-28
+    :lines: 16-21
 
 .. seealso::
 
@@ -62,7 +62,7 @@ This could be incorporated into the interaction definition by using the ``__init
 instance, then accessing it in ``forward()``.
 
 .. literalinclude:: /examples/howto/bring_your_own_interaction.py
-    :lines: 35-45
+    :lines: 25-35
 
 In general, you can put whatever you want in ``__init__()`` to support the calculation of scores.
 
@@ -87,7 +87,7 @@ However, like hyper-parameters, they can also be defined in the `__init__` funct
 training.
 
 .. literalinclude:: /examples/howto/bring_your_own_interaction.py
-    :lines: 54-73
+    :lines: 39-58
 
 Note that this simplified example assumes ``h``, ``r``, and ``t`` already share the same shape; PyKEEN's built-in
 :class:`~pykeen.nn.modules.ERMLPInteraction` additionally handles the case where they don't.
@@ -120,7 +120,7 @@ where $\mathbf{e}_i$ is the $d$-dimensional representation for entity $i$, $\mat
 d$-dimensional representation for relation $j$, and $\|...\|_2$ is the $L_2$ norm.
 
 .. literalinclude:: /examples/howto/bring_your_own_interaction.py
-    :lines: 80-89
+    :lines: 62-71
 
 Note the definition of the ``relation_shape``. By default, the ``entity_shape`` and ``relation_shape`` are both equal to
 ``('d', )``, which uses eigen-notation to show that they both are 1-tensors with the same shape. In this simplified
@@ -140,7 +140,7 @@ and/or relations. To specify this, you just need to extend the tuple for ``relat
 corresponding to the sequence of representations.
 
 .. literalinclude:: /examples/howto/bring_your_own_interaction.py
-    :lines: 96-111
+    :lines: 75-90
 
 Interactions with Different Dimension Vectors
 ---------------------------------------------
@@ -155,7 +155,7 @@ your interaction module via its ``interaction`` argument) to instantiate a model
 pipeline using your custom interaction module (respectively).
 
 .. literalinclude:: /examples/howto/bring_your_own_interaction.py
-    :lines: 118-142
+    :lines: 94-118
 
 .. note::
 

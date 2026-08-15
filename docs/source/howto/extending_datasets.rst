@@ -20,7 +20,7 @@ There's a base class called :class:`~pykeen.datasets.base.UnpackedRemoteDataset`
 following:
 
 .. literalinclude:: /examples/howto/extending_datasets.py
-    :lines: 8-25
+    :lines: 4-21
 
 Unsplit Datasets
 ----------------
@@ -30,7 +30,7 @@ testing, and validation. A good example can be found at https://github.com/hetio
 a base class called :class:`~pykeen.datasets.base.SingleTabbedDataset` that can be used to wrap it like the following:
 
 .. literalinclude:: /examples/howto/extending_datasets.py
-    :lines: 33-42
+    :lines: 25-35
 
 The value for `URL` can be anything that can be read by :func:`pandas.read_csv`. Additional options can be passed
 through to the reading function, such as ``sep=','``, with the keyword argument ``read_csv_kwargs=dict(sep=',')``. Note

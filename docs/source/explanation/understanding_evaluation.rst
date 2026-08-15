@@ -42,7 +42,7 @@ number.
 As an example, consider we trained a KGEM on the countries dataset, e.g., using
 
 .. literalinclude:: /examples/explanation/understanding_evaluation.py
-    :lines: 5-6,9-10
+    :lines: 4-9
 
 During evaluation time, we now evaluate head and tail prediction, i.e., whether we can predict the correct
 head/tail entity from the remainder of a triple. The first triple in the test split of this dataset is
@@ -50,7 +50,7 @@ head/tail entity from the remainder of a triple. The first triple in the test sp
 We can see the results using the prediction workflow:
 
 .. literalinclude:: /examples/explanation/understanding_evaluation.py
-    :lines: 17-24
+    :lines: 12-19
 
 which returns a dataframe of all tail candidate entities sorted according to the predicted score.
 The index in this sorted list is essentially the *rank* of the correct answer.
@@ -122,7 +122,7 @@ As an example, we can inspect the :class:`~pykeen.datasets.WD50KT` dataset, wher
 is present in 699 evaluation triples.
 
 .. literalinclude:: /examples/explanation/understanding_evaluation.py
-    :lines: 29-36
+    :lines: 22-29
 
 There are arguments that we want these entities to have a strong effect on evaluation: since they occur often, they
 are seemingly important, and thus evaluation should reflect that. However, sometimes we also do *not* want to have
@@ -185,7 +185,7 @@ the training triples. With the [bordes2013]_ technique where the testing set is 
 example:
 
 .. literalinclude:: /examples/explanation/understanding_evaluation.py
-    :lines: 41-70
+    :lines: 32-61
 
 Entity and Relation Restriction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -218,11 +218,11 @@ but we will focus on only the compound treat disease (CtD) and compound palliate
 evaluation. This can be done with the following:
 
 .. literalinclude:: /examples/explanation/understanding_evaluation.py
-    :lines: 77-82
+    :lines: 64-69
 
 By restricting evaluation to the edges of interest, models more appropriate for drug repositioning can
 be identified during hyper-parameter optimization instead of models that are good at predicting all
 types of relations. The HPO pipeline accepts the same arguments:
 
 .. literalinclude:: /examples/explanation/understanding_evaluation.py
-    :lines: 86-93
+    :lines: 72-79

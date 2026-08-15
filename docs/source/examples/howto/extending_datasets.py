@@ -1,10 +1,6 @@
 """Extending the datasets."""
 
 # %%
-# Unpacked Remote Dataset
-# ------------------------
-# Use this pattern if you have three separate URLs for the respective training, testing, and validation sets that
-# are each 3 column TSV files.
 from pykeen.datasets.base import UnpackedRemoteDataset
 
 TEST_URL = "https://raw.githubusercontent.com/ZhenfengLei/KGDatasets/master/DBpedia50/test.txt"
@@ -26,10 +22,6 @@ class DBpedia50(UnpackedRemoteDataset):
 
 
 # %%
-# Unsplit Datasets
-# -----------------
-# Use this pattern if you have a single URL for a TSV dataset that needs to be automatically split into training,
-# testing, and validation.
 from pykeen.datasets.base import SingleTabbedDataset
 
 URL = "https://github.com/hetio/hetionet/raw/master/hetnet/tsv/hetionet-v1.0-edges.sif.gz"

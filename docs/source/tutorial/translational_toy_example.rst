@@ -16,7 +16,7 @@ EU       hasCapital Brussels
 ======== ========== ========
 
 .. literalinclude:: /examples/tutorial/translational_toy_example.py
-    :lines: 6-27
+    :lines: 4-25
 
 .. image:: ../img/toy_1.png
     :alt: Troubleshooting Image 1
@@ -29,7 +29,7 @@ For example, you can decrease the optimizer's learning rate to make the loss cur
 the number of epochs during training.
 
 .. literalinclude:: /examples/tutorial/translational_toy_example.py
-    :lines: 36-47
+    :lines: 28-39
 
 .. image:: ../img/toy_2.png
     :alt: Troubleshooting Image 2
@@ -46,7 +46,7 @@ function which does not use a margin, e.g. the softplus loss. You can do this by
 pipeline.
 
 .. literalinclude:: /examples/tutorial/translational_toy_example.py
-    :lines: 60-72
+    :lines: 42-54
 
 .. image:: ../img/toy_3.png
     :alt: Troubleshooting Image 3
