@@ -34,7 +34,7 @@ result = pipeline(
     model="TransE",
     epochs=5,  # short epochs for testing - you should go higher
 )
-result.save_to_directory("doctests/test_pre_stratified_transe")
+result.save_to_directory("doctests/test_pre_stratified_transe_inverse")
 
 # %%
 training = TriplesFactory.from_path(NATIONS_TRAIN_PATH)
@@ -49,7 +49,7 @@ result = pipeline(
     model="TransE",
     epochs=5,  # short epochs for testing - you should go higher
 )
-result.save_to_directory("doctests/test_pre_stratified_transe")
+result.save_to_directory("doctests/test_pre_stratified_transe_factory")
 
 # %%
 training = TriplesFactory.from_path(
@@ -68,7 +68,7 @@ result = pipeline(
     model="TransE",
     epochs=5,  # short epochs for testing - you should go higher
 )
-result.save_to_directory("doctests/test_pre_stratified_transe")
+result.save_to_directory("doctests/test_pre_stratified_transe_factory_inverse")
 
 # %%
 tf = TriplesFactory.from_path(NATIONS_TRAIN_PATH)
