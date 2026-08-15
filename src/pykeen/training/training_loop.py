@@ -114,7 +114,7 @@ def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
     }
 
 
-class TrainingLoop(Generic[BatchType], ABC):
+class TrainingLoop(ABC, Generic[BatchType]):
     """A training loop."""
 
     lr_scheduler: LRScheduler | None

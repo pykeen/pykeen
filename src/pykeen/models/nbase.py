@@ -277,8 +277,8 @@ def iter_slices(
 
 
 class ERModel(
-    Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
     _NewAbstractModel,
+    Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
 ):
     """A commonly useful base for KGEMs using embeddings and interaction modules.
 
