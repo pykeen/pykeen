@@ -4,45 +4,28 @@ PyKEEN
 .. automodule:: pykeen
 
 .. toctree::
-    :caption: Getting Started
+    :caption: Tutorials
     :name: quickstart
     :maxdepth: 2
 
     installation
     tutorial/first_steps
-    tutorial/models
-    tutorial/representations
-    tutorial/interactions
-    tutorial/trackers/index
-    tutorial/checkpoints
     tutorial/translational_toy_example
-    tutorial/understanding_evaluation
-    tutorial/running_hpo
-    tutorial/running_ablation
-    tutorial/performance
-    tutorial/node_piece
     tutorial/inductive_lp
-    tutorial/splitting
-    contrib/lightning
-    tutorial/using_resolvers
-    tutorial/normalizer_constrainer_regularizer
-    tutorial/troubleshooting
 
 .. toctree::
-    :caption: Bring Your Own
-    :name: byo
+    :caption: How-to Guides
+    :name: howto
     :maxdepth: 2
 
-    byo/data
-    byo/interaction
+    howto/index
 
 .. toctree::
-    :caption: Extending PyKEEN
-    :name: extending
+    :caption: Explanation
+    :name: explanation
     :maxdepth: 2
 
-    extending/datasets
-    extending/models
+    explanation/index
 
 .. toctree::
     :caption: Reference
@@ -71,6 +54,7 @@ PyKEEN
     reference/constants
     reference/checkpoints
     reference/nn/index
+    reference/lightning
     reference/utils
 
 .. toctree::
@@ -78,7 +62,6 @@ PyKEEN
     :name: appendix
     :maxdepth: 2
 
-    analysis/index
     references
 
 Indices and Tables

@@ -13,7 +13,7 @@ and all available entities $e \in \mathcal{E}$.
 .. note::
 
     The implementations of the knowledge graph embedding models provided here all operate on entity / relation indices
-    rather than string representations, cf. `here <../tutorial/performance.html#entity-and-relation-ids>`_.
+    rather than string representations, cf. `here <../explanation/performance.html#entity-and-relation-ids>`_.
 
 On top of these scoring methods, there are also corresponding prediction methods, e.g., :meth:`Model.predict_hrt`. These
 methods extend the scoring ones, by ensuring the model is in evaluation mode, cf. :meth:`torch.nn.Module.eval`, and
@@ -35,8 +35,8 @@ tail entities as input and computes a scalar plausibility score for triples.
 
 .. note::
 
-    An in-depth discussion of representation modules can be found in `the corresponding tutorial
-    <../tutorial/representations.html>`_.
+    An in-depth discussion of representation modules can be found in `the corresponding explanation
+    <../explanation/representations.html>`_.
 
 .. note::
 

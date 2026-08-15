@@ -153,7 +153,7 @@ plugins = []
 max-line-length = 120
 ignore-path-errors = [
     "docs/source/tutorial/inductive_lp.rst; D000",
-    "docs/source/tutorial/understanding_evaluation.rst; D000",
+    "docs/source/explanation/understanding_evaluation.rst; D000",
     # TODO reinvestigate after upgrading to sphinx 7+
 ]
 
