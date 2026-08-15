@@ -11,3 +11,17 @@ repos:
       args: [ --fix ]
     # Run the formatter.
     - id: ruff-format
+# cf. https://github.com/sphinx-contrib/sphinx-lint
+- repo: https://github.com/sphinx-contrib/sphinx-lint
+  rev: v1.0.2
+  hooks:
+    - id: sphinx-lint
+      files: ^docs/
+# cf. https://github.com/LilSpazJoekp/docstrfmt
+- repo: https://github.com/LilSpazJoekp/docstrfmt
+  rev: v2.2.0
+  hooks:
+    - id: docstrfmt
+      args: [ --line-length, "120", --preserve-adornments ]
+      types: [ rst ]
+      files: ^docs/
