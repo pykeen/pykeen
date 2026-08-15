@@ -20,7 +20,7 @@ pipeline_result.save_to_directory("nations_transe")
 #
 # In this example, the model was given as a string. A list of available models can be found in :mod:`pykeen.models`.
 # Alternatively, the class corresponding to the implementation of the model could be used as in:
-from pykeen.models import TransE  # noqa: E402
+from pykeen.models import TransE
 
 pipeline_result = pipeline(
     dataset="Nations",
@@ -31,7 +31,7 @@ pipeline_result.save_to_directory("nations_transe")
 # %%
 # In this example, the dataset was given as a string. A list of available datasets can be found in
 # :mod:`pykeen.datasets`. Alternatively, a subclass of :class:`~pykeen.datasets.Dataset` could be used as in:
-from pykeen.datasets import Nations  # noqa: E402
+from pykeen.datasets import Nations
 
 pipeline_result = pipeline(
     dataset=Nations,
@@ -82,7 +82,7 @@ pipeline_result.save_to_directory("nations_transe")
 #
 #    The ``negative_sampler`` keyword argument should not be used if the LCWA is being used. In general, all other
 #    options are available under either training approach.
-from pykeen.sampling import BasicNegativeSampler  # noqa: E402
+from pykeen.sampling import BasicNegativeSampler
 
 pipeline_result = pipeline(
     dataset="Nations",
@@ -106,7 +106,7 @@ pipeline_result.save_to_directory("nations_transe")
 # In this example, the evaluator was given as a string. A list of available evaluators can be found in
 # :mod:`pykeen.evaluation`. Alternatively, the class corresponding to the implementation of the evaluator could be
 # used as in:
-from pykeen.evaluation import RankBasedEvaluator  # noqa: E402
+from pykeen.evaluation import RankBasedEvaluator
 
 pipeline_result = pipeline(
     dataset="Nations",
