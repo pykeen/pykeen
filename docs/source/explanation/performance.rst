@@ -31,8 +31,9 @@ Tuple Broadcasting
 
 Interaction functions are usually only given for the standard case of scoring a single triple $(h, r, t)$. This function
 is implemented in PyKEEN in the :meth:`~pykeen.models.Model.score_hrt` method of each model, e.g. via
-:meth:`~pykeen.models.ERModel.score_hrt` for :class:`~pykeen.models.DistMult`. When training under the local closed world
-assumption (LCWA), evaluating a model, and performing the link prediction task, the goal is to score all
+:meth:`~pykeen.models.ERModel.score_hrt` for :class:`~pykeen.models.DistMult`. When training under the local
+closed world assumption (LCWA), evaluating a model, and performing the link prediction task, the goal is to score
+all
 entities/relations for a given tuple, i.e. $(h, r)$, $(r, t)$ or $(h, t)$. In these cases a single tuple is used many
 times for different entities/relations.
 

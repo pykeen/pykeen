@@ -147,7 +147,7 @@ We showed how to run an ablation study with a PyKEEN integrated dataset. Now you
 run ablations studies with your own data? Yes, you can! It requires a minimal change compared to the previous
 configuration:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> datasets = [
     ...    {
