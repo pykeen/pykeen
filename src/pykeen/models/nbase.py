@@ -408,7 +408,7 @@ class ERModel(
         :param default_regularizer:
             the default regularizer; if None, use :attr:`regularizer_default`
         :param default_regularizer_kwargs:
-            the default regularizer kwargs; if None, use :attr:`regularizer_default_kwargs`
+            the default regularizer kwargs; if None, use :attr:`~pykeen.models.nbase.ERModel.regularizer_default_kwargs`
 
         :raises KeyError: If an invalid parameter name was given
         """

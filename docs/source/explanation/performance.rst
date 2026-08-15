@@ -18,11 +18,11 @@ and using the IDs to access the embeddings (=row indices).
 In PyKEEN, the mapping process takes place in :class:`pykeen.triples.TriplesFactory`. The triples factory maintains the
 sets of unique entity and relation labels and ensures that they are mapped to unique integer IDs on
 $[0,\text{num\_unique\_entities})$ for entities and $[0, \text{num\_unique\_relations})$. The mappings are respectively
-accessible via the attributes :data:``pykeen.triples.TriplesFactory.entity_label_to_id`` and
-:data:``pykeen.triples.TriplesFactory.relation_label_to_id``.
+accessible via the attributes :attr:`pykeen.triples.TriplesFactory.entity_to_id` and
+:attr:`pykeen.triples.TriplesFactory.relation_to_id`.
 
 To improve the performance, the mapping process takes place only once, and the ID-based triples are stored in a tensor
-:data:``pykeen.triples.TriplesFactory.mapped_triples``.
+:attr:`pykeen.triples.TriplesFactory.mapped_triples`.
 
 .. _tuple_broadcasting:
 
@@ -150,10 +150,8 @@ For some large configurations, even after applying the sub-batching trick, out-o
 case, PyKEEN implements another technique, called *slicing*. Note that we often compute more than one score for each
 batch element: in sLCWA, we have :math:`1 + \text{num\_negative\_samples}` scores, and in LCWA, we have
 :math:`\text{num\_entities}` scores for each batch element. In slicing, we do not compute all of these scores at once,
-but rather in smaller "batches". For old-style models, i.e., those subclassing from
-:class:`pykeen.models.base._OldAbstractModel`, this has to be implemented individually for each of them. New-style
-models, i.e., those deriving from :class:`pykeen.models.nbase.ERModel` have a generic implementation enabling slicing
-for *all* interactions.
+but rather in smaller "batches". All models derive from :class:`pykeen.models.nbase.ERModel`, which has a generic
+implementation enabling slicing for *all* interactions.
 
 .. note::
 

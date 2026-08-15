@@ -73,7 +73,7 @@ class ConvKB(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
         :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
         :param kwargs:
-            Remaining keyword arguments passed through to :class:`pykeen.models.EntityRelationEmbeddingModel`.
+            Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
 
         To be consistent with the paper, pass entity and relation embeddings pre-trained from TransE.
         """

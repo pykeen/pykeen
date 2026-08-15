@@ -27,7 +27,7 @@ YAGO310_COEFFICIENTS: Sequence[tuple[int, int, int, Sign]] = [
 class AutoSF(ERModel[Representation, Representation, Representation]):
     r"""An implementation of AutoSF from [zhang2020]_.
 
-    The AutoSF model combines one or more :class:`pykeen.nn.Embedding`s for entities and relations with a
+    The AutoSF model combines one or more :class:`pykeen.nn.Embedding`\ s for entities and relations with a
     :class:`pykeen.nn.AutoSFInteraction` describing the interaction thereof.
 
     ---

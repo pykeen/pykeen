@@ -46,7 +46,7 @@ triples. As an example, we will calculate scores for all validation triples from
 >>> dataset = get_dataset(dataset="nations")
 >>> pack = predict_triples(model=result.model, triples=dataset.validation)
 
-The variable :data:`pack` now contains a :class:`pykeen.predict.ScorePack`, which essentially is a pair of
+The variable ``pack`` now contains a :class:`pykeen.predict.ScorePack`, which essentially is a pair of
 ID-based triples with their predicted scores. For interpretation, it can be helpful to add their corresponding labels,
 which the `"nations"` dataset offers, and convert them to a pandas dataframe:
 

@@ -197,6 +197,10 @@ References
 .. [wang2014] Wang, Z., *et al.* (2014). `Knowledge Graph Embedding by Translating on Hyperplanes
               <https://www.aaai.org/ocs/index.php/AAAI/AAAI14/paper/viewFile/8531/8546>`_. AAAI. Vol. 14.
 
+.. [wang2018] Wang, Z., *et al.* (2018). `Cross-lingual Knowledge Graph Alignment via Graph Convolutional Networks
+   <https://doi.org/10.18653/v1/D18-1032>`_. Proceedings of the 2018 Conference on Empirical Methods in
+   Natural Language Processing, 349–357.
+
 .. [wang2019] Wang, X., *et al* (2019). `KEPLER: A Unified Model for Knowledge Embedding and Pre-trained Language
    Representation <https://arxiv.org/pdf/1911.06136.pdf>`_. *arXiv*, 1911.06136.
 

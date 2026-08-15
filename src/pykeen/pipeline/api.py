@@ -1814,7 +1814,7 @@ def pipeline(  # noqa: C901
         :func:`pykeen.utils.resolve_device`.
     :param random_seed: The random seed to use. If none is specified, one will be assigned before any code
         is run for reproducibility purposes. In the returned :class:`PipelineResult` instance, it can be accessed
-        through :data:`PipelineResult.random_seed`.
+        through :attr:`~pykeen.pipeline.api.PipelineResult.random_seed`.
     :param evaluation_fallback:
         If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
         in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.

@@ -85,4 +85,4 @@ function instead of an instantiated class. Further information can be found at :
 
     Interaction functions can require different numbers or shapes of entity and relation representations. A symbolic
     description of the expected number of representations and their shape can be accessed by
-    :attr:`pykeen.nn.Interaction.entity_shape` and :attr:`pykeen.nn.Interaction.relation_shape`.
+    ``entity_shape`` and ``relation_shape`` on :class:`pykeen.nn.Interaction`.
