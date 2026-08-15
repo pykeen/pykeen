@@ -25,19 +25,8 @@ Pipeline Example
 This example shows using Neptune with the :func:`~pykeen.pipeline.pipeline` function. Minimally, the
 ``project_qualified_name`` and ``experiment_name`` must be set.
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    pipeline_result = pipeline(
-        model="RotatE",
-        dataset="Kinships",
-        result_tracker="neptune",
-        result_tracker_kwargs=dict(
-            project_qualified_name="cthoyt/sandbox",
-            experiment_name="Tutorial Training of RotatE on Kinships",
-        ),
-    )
+.. literalinclude:: /examples/howto/using_neptune.py
+    :lines: 4-14
 
 .. warning::
 
@@ -49,20 +38,8 @@ Reusing Experiments
 In the Neptune web application, you'll see that experiments are assigned an ID. This means you can re-use the same ID to
 group different sub-experiments together using the ``experiment_id`` keyword argument instead of ``experiment_name``.
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    experiment_id = 4  # if doesn't already exist, will throw an error!
-    pipeline_result = pipeline(
-        model='RotatE',
-        dataset='Kinships',
-        result_tracker='neptune'
-        result_tracker_kwargs=dict(
-            project_qualified_name='cthoyt/sandbox',
-            experiment_id=4,
-        ),
-    )
+.. literalinclude:: /examples/howto/using_neptune.py
+    :lines: 17-25
 
 Don't worry - you can keep using the ``experiment_name`` argument and the experiment's identifier will be automatically
 looked up eah time.
