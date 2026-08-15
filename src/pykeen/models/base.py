@@ -43,7 +43,7 @@ class Model(nn.Module, ABC):
     Subclasses of :class:`Model` can decide however they want on how to store entities' and
     relations' representations, how they want to be looked up, and how they should
     be scored. The :class:`OModel` provides a commonly used interface for models storing entity
-    and relation representations in the form of :class:`pykeen.nn.representation.Embedding`.
+    and relation representations in the form of :class:`~pykeen.nn.representation.Embedding`.
     """
 
     #: The default strategy for optimizing the model's hyper-parameters

@@ -27,8 +27,8 @@ YAGO310_COEFFICIENTS: Sequence[tuple[int, int, int, Sign]] = [
 class AutoSF(ERModel[Representation, Representation, Representation]):
     r"""An implementation of AutoSF from [zhang2020]_.
 
-    The AutoSF model combines one or more :class:`pykeen.nn.representation.Embedding`\ s for entities and relations
-    with a :class:`pykeen.nn.modules.AutoSFInteraction` describing the interaction thereof.
+    The AutoSF model combines one or more :class:`~pykeen.nn.representation.Embedding`\ s for entities and relations
+    with a :class:`~pykeen.nn.modules.AutoSFInteraction` describing the interaction thereof.
 
     ---
     name: AutoSF
@@ -53,7 +53,7 @@ class AutoSF(ERModel[Representation, Representation, Representation]):
         embedding_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
-        r"""Initialize AutoSF via the :class:`pykeen.nn.modules.AutoSFInteraction` interaction.
+        r"""Initialize AutoSF via the :class:`~pykeen.nn.modules.AutoSFInteraction` interaction.
 
         .. note::
             this variant uses `num_components` entity and relation representations with shared configuration.
@@ -64,11 +64,11 @@ class AutoSF(ERModel[Representation, Representation, Representation]):
         :param num_components:
             the number of components/blocks.
         :param coefficients:
-            the coefficients determining the block structure, cf. :class:`pykeen.nn.modules.AutoSFInteraction`.
+            the coefficients determining the block structure, cf. :class:`~pykeen.nn.modules.AutoSFInteraction`.
         :param embedding_kwargs:
             keyword arguments passed to the entity and relation representation
         :param kwargs:
-            remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
+            remaining keyword arguments passed through to :class:`~pykeen.models.ERModel`.
         """
         embedding_kwargs = embedding_kwargs or {}
         super().__init__(

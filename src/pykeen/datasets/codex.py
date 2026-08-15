@@ -53,7 +53,7 @@ class CoDExSmall(UnpackedRemoteDataset):
     def __init__(self, **kwargs: Any) -> None:
         """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ small dataset from [safavi2020]_.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             training_url=SMALL_TRAIN_URL,
@@ -86,7 +86,7 @@ class CoDExMedium(UnpackedRemoteDataset):
     def __init__(self, **kwargs: Any) -> None:
         """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ medium dataset from [safavi2020]_.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             training_url=MEDIUM_TRAIN_URL,
@@ -119,7 +119,7 @@ class CoDExLarge(UnpackedRemoteDataset):
     def __init__(self, **kwargs: Any) -> None:
         """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ large dataset from [safavi2020]_.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             training_url=LARGE_TRAIN_URL,

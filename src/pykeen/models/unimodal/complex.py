@@ -22,8 +22,8 @@ __all__ = [
 class ComplEx(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of ComplEx [trouillon2016]_.
 
-    The ComplEx model combines complex-valued :class:`pykeen.nn.representation.Embedding` entity and relation
-    representations with a :class:`pykeen.nn.modules.ComplExInteraction`.
+    The ComplEx model combines complex-valued :class:`~pykeen.nn.representation.Embedding` entity and relation
+    representations with a :class:`~pykeen.nn.modules.ComplExInteraction`.
 
     ---
     citation:
@@ -74,7 +74,7 @@ class ComplEx(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param regularizer_kwargs:
             additional keyword arguments passed to the regularizer. Defaults to `ComplEx.regularizer_default_kwargs`.
         :param kwargs:
-            remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
+            remaining keyword arguments to forward to :class:`~pykeen.models.ERModel`
         """
         regularizer_kwargs = regularizer_kwargs or ComplEx.regularizer_default_kwargs
         super().__init__(

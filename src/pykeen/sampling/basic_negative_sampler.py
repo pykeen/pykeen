@@ -67,7 +67,7 @@ class BasicNegativeSampler(NegativeSampler):
         """Initialize the basic negative sampler with the given entities.
 
         :param corruption_scheme: What sides ('h', 'r', 't') should be corrupted. Defaults to head and tail ('h', 't').
-        :param kwargs: Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
+        :param kwargs: Additional keyword based arguments passed to :class:`~pykeen.sampling.NegativeSampler`.
         """
         super().__init__(**kwargs)
         self.corruption_scheme = corruption_scheme or (LABEL_HEAD, LABEL_TAIL)

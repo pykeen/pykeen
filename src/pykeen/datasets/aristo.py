@@ -42,7 +42,7 @@ class AristoV4(PackedZipRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the Aristo-v4 dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PackedZipRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PackedZipRemoteDataset`.
         """
         super().__init__(
             url="https://zenodo.org/record/5942560/files/aristo-v4.zip",

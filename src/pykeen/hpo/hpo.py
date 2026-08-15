@@ -579,8 +579,8 @@ def hpo_pipeline(
     """Train a model on the given dataset.
 
     :param dataset:
-        The name of the dataset (a key for the :data:`pykeen.datasets.dataset_resolver`) or the
-        :class:`pykeen.datasets.Dataset` instance. Alternatively, the training triples factory (``training``), testing
+        The name of the dataset (a key for the :data:`~pykeen.datasets.dataset_resolver`) or the
+        :class:`~pykeen.datasets.Dataset` instance. Alternatively, the training triples factory (``training``), testing
         triples factory (``testing``), and validation triples factory (``validation``; optional) can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
@@ -593,14 +593,14 @@ def hpo_pipeline(
     :param evaluation_entity_whitelist:
         Optional restriction of evaluation to triples containing *only* these entities. Useful if the downstream task
         is only interested in certain entities, but the relational patterns with other entities improve the entity
-        embedding quality. Passed to :func:`pykeen.pipeline.pipeline`.
+        embedding quality. Passed to :func:`~pykeen.pipeline.pipeline`.
     :param evaluation_relation_whitelist:
         Optional restriction of evaluation to triples containing *only* these relations. Useful if the downstream task
         is only interested in certain relation, but the relational patterns with other relations improve the entity
-        embedding quality. Passed to :func:`pykeen.pipeline.pipeline`.
+        embedding quality. Passed to :func:`~pykeen.pipeline.pipeline`.
 
     :param model:
-        The name of the model or the model class to pass to :func:`pykeen.pipeline.pipeline`
+        The name of the model or the model class to pass to :func:`~pykeen.pipeline.pipeline`
     :param model_kwargs:
         Keyword arguments to pass to the model class on instantiation
     :param model_kwargs_ranges:
@@ -608,7 +608,7 @@ def hpo_pipeline(
         the defaults
 
     :param loss:
-        The name of the loss or the loss class to pass to :func:`pykeen.pipeline.pipeline`
+        The name of the loss or the loss class to pass to :func:`~pykeen.pipeline.pipeline`
     :param loss_kwargs:
         Keyword arguments to pass to the loss on instantiation
     :param loss_kwargs_ranges:
@@ -616,7 +616,7 @@ def hpo_pipeline(
         the defaults
 
     :param regularizer:
-        The name of the regularizer or the regularizer class to pass to :func:`pykeen.pipeline.pipeline`
+        The name of the regularizer or the regularizer class to pass to :func:`~pykeen.pipeline.pipeline`
     :param regularizer_kwargs:
         Keyword arguments to pass to the regularizer on instantiation
     :param regularizer_kwargs_ranges:
@@ -640,12 +640,12 @@ def hpo_pipeline(
 
     :param training_loop:
         The name of the training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class
-        to pass to :func:`pykeen.pipeline.pipeline`
+        to pass to :func:`~pykeen.pipeline.pipeline`
     :param training_loop_kwargs:
         additional keyword-based parameters passed to the training loop upon instantiation.
     :param negative_sampler:
         The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class
-        to pass to :func:`pykeen.pipeline.pipeline`. Only allowed when training with sLCWA.
+        to pass to :func:`~pykeen.pipeline.pipeline`. Only allowed when training with sLCWA.
     :param negative_sampler_kwargs:
         Keyword arguments to pass to the negative sampler class on instantiation
     :param negative_sampler_kwargs_ranges:
@@ -666,7 +666,7 @@ def hpo_pipeline(
         Keyword arguments to pass to the stopper upon instantiation.
 
     :param evaluator:
-        The name of the evaluator or an evaluator class. Defaults to :class:`pykeen.evaluation.RankBasedEvaluator`.
+        The name of the evaluator or an evaluator class. Defaults to :class:`~pykeen.evaluation.RankBasedEvaluator`.
     :param evaluator_kwargs:
         Keyword arguments to pass to the evaluator on instantiation
     :param evaluation_kwargs:

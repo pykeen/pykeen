@@ -151,7 +151,7 @@ class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
         return -result
 
 
-#: A resolver for similarities for :class:`pykeen.nn.modules.KG2EInteraction`
+#: A resolver for similarities for :class:`~pykeen.nn.modules.KG2EInteraction`
 kg2e_similarity_resolver: ClassResolver[KG2ESimilarity] = ClassResolver.from_subclasses(
     base=KG2ESimilarity,
     synonyms={"kl": NegativeKullbackLeiblerDivergence, "el": ExpectedLikelihood},

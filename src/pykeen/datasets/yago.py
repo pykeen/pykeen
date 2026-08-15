@@ -33,7 +33,7 @@ class YAGO310(TarFileRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the YAGO3-10 dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileRemoteDataset`.
         """
         super().__init__(
             url="https://github.com/TimDettmers/ConvE/raw/master/YAGO3-10.tar.gz",

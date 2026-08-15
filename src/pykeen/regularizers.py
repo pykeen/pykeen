@@ -178,11 +178,11 @@ class LpRegularizer(Regularizer):
         :param apply_only_once:
             Should the regularization be applied more than once after reset?
         :param dim:
-            the dimension along which to calculate the Lp norm, cf. :func:`pykeen.utils.lp_norm`
+            the dimension along which to calculate the Lp norm, cf. :func:`~pykeen.utils.lp_norm`
         :param normalize:
-            whether to normalize the norm by the dimension, cf. :func:`pykeen.utils.lp_norm`
+            whether to normalize the norm by the dimension, cf. :func:`~pykeen.utils.lp_norm`
         :param p:
-            the parameter $p$ of the Lp norm, cf. :func:`pykeen.utils.lp_norm`
+            the parameter $p$ of the Lp norm, cf. :func:`~pykeen.utils.lp_norm`
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Regularizer.__init__`
         """
@@ -222,11 +222,11 @@ class PowerSumRegularizer(Regularizer):
         :param apply_only_once:
             Should the regularization be applied more than once after reset?
         :param dim:
-            the dimension along which to calculate the Lp norm, cf. :func:`pykeen.utils.powersum_norm`
+            the dimension along which to calculate the Lp norm, cf. :func:`~pykeen.utils.powersum_norm`
         :param normalize:
-            whether to normalize the norm by the dimension, cf. :func:`pykeen.utils.powersum_norm`
+            whether to normalize the norm by the dimension, cf. :func:`~pykeen.utils.powersum_norm`
         :param p:
-            the parameter $p$ of the Lp norm, cf. :func:`pykeen.utils.powersum_norm`
+            the parameter $p$ of the Lp norm, cf. :func:`~pykeen.utils.powersum_norm`
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Regularizer.__init__`
         """
@@ -265,9 +265,9 @@ class NormLimitRegularizer(Regularizer):
         :param apply_only_once:
             Should the regularization be applied more than once after reset?
         :param dim:
-            the dimension along which to calculate the Lp norm, cf. :func:`pykeen.utils.powersum_norm`
+            the dimension along which to calculate the Lp norm, cf. :func:`~pykeen.utils.powersum_norm`
         :param p:
-            the parameter $p$ of the Lp norm, cf. :func:`pykeen.utils.powersum_norm`
+            the parameter $p$ of the Lp norm, cf. :func:`~pykeen.utils.powersum_norm`
         :param power_norm:
             whether to use the $p$ power of the norm instead
         :param max_norm:

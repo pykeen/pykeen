@@ -90,7 +90,7 @@ class TransH(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
             and numerically more stable.
 
         :param entity_initializer:
-            The entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_normal_`.
+            The entity initializer function. Defaults to :func:`~pykeen.nn.init.xavier_normal_`.
         :param regularizer:
             The entity regularizer. Defaults to ``regularizer_default``.
         :param regularizer_kwargs:
@@ -98,7 +98,7 @@ class TransH(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
             the default from :attr:`~pykeen.models.TransH.regularizer_default_kwargs` will be used instead
 
         :param relation_initializer:
-            The relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_normal_`.
+            The relation initializer function. Defaults to :func:`~pykeen.nn.init.xavier_normal_`.
         :param relation_regularizer:
             The relation regularizer. Defaults to ``relation_regularizer_default``.
         :param relation_regularizer_kwargs:

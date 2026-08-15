@@ -22,16 +22,16 @@ optionally applying a sigmoid activation on the scores to ensure a value range o
 .. warning::
 
     Depending on the model at hand, directly applying sigmoid might not always be sensible. For instance, distance-based
-    interaction functions, such as :class:`pykeen.nn.modules.TransEInteraction`, result in non-positive scores (since
+    interaction functions, such as :class:`~pykeen.nn.modules.TransEInteraction`, result in non-positive scores (since
     they use the *negative* distance as scoring function), and thus the output of the sigmoid only covers the interval
     $[0.5, 1]$.
 
 Most models derive from :class:`ERModel`, which is a generic implementation of a knowledge graph embedding model. It
 combines a variable number of *representations* for entities and relations, cf.
-:class:`pykeen.nn.representation.Representation`, and an interaction function, cf.
-:class:`pykeen.nn.modules.Interaction`. The representation modules convert integer entity or relation indices to numeric
-representations, e.g., vectors. The interaction function takes the representations of the head entities, relations and
-tail entities as input and computes a scalar plausibility score for triples.
+:class:`~pykeen.nn.representation.Representation`, and an interaction function, cf.
+:class:`~pykeen.nn.modules.Interaction`. The representation modules convert integer entity or relation indices to
+numeric representations, e.g., vectors. The interaction function takes the representations of the head entities,
+relations and tail entities as input and computes a scalar plausibility score for triples.
 
 .. note::
 

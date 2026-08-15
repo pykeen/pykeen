@@ -111,7 +111,7 @@ def get_dataset(
     :returns: An instantiated dataset
 
     :raises ValueError: for incorrect usage of the input of the function
-    :raises TypeError: If a type is given for ``dataset`` but it's not a subclass of :class:`pykeen.datasets.Dataset`
+    :raises TypeError: If a type is given for ``dataset`` but it's not a subclass of :class:`~pykeen.datasets.Dataset`
     """
     from . import dataset_resolver, has_dataset
 

@@ -244,7 +244,7 @@ class PretrainedInitializer:
     def as_embedding(self, **kwargs: Any):
         """Get a static embedding from this pre-trained initializer.
 
-        :param kwargs: Keyword arguments to pass to :class:`pykeen.nn.representation.Embedding`
+        :param kwargs: Keyword arguments to pass to :class:`~pykeen.nn.representation.Embedding`
         :returns: An embedding
         :rtype: pykeen.nn.representation.Embedding
         """
@@ -482,16 +482,16 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
 
 
 # TODO: replace by automatically generated list
-#: A resolver for initializers, including elements from :mod:`pykeen.nn.init`
+#: A resolver for initializers, including elements from :mod:`~pykeen.nn.init`
 #:
-#: - :func:`pykeen.nn.init.init_phases`
+#: - :func:`~pykeen.nn.init.init_phases`
 #: - ``init_quaternions``
-#: - :func:`pykeen.nn.init.normal_norm_`
-#: - :func:`pykeen.nn.init.uniform_norm_`
-#: - :func:`pykeen.nn.init.xavier_uniform_`
-#: - :func:`pykeen.nn.init.xavier_uniform_norm_`
-#: - :func:`pykeen.nn.init.xavier_normal_`
-#: - :func:`pykeen.nn.init.xavier_normal_norm_`
+#: - :func:`~pykeen.nn.init.normal_norm_`
+#: - :func:`~pykeen.nn.init.uniform_norm_`
+#: - :func:`~pykeen.nn.init.xavier_uniform_`
+#: - :func:`~pykeen.nn.init.xavier_uniform_norm_`
+#: - :func:`~pykeen.nn.init.xavier_normal_`
+#: - :func:`~pykeen.nn.init.xavier_normal_norm_`
 #:
 #: as well as initializers from :mod:`torch.nn.init`.
 initializer_resolver: FunctionResolver[[FloatTensor], FloatTensor] = FunctionResolver(

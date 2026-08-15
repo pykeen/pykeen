@@ -743,9 +743,9 @@ class CoreTriplesFactory(KGInfo):
         :param random_state:
             The random state used to shuffle and split the triples.
         :param randomize_cleanup:
-            This parameter is forwarded to the underlying :func:`pykeen.triples.splitting.split`.
+            This parameter is forwarded to the underlying :func:`~pykeen.triples.splitting.split`.
         :param method:
-            This parameter is forwarded to the underlying :func:`pykeen.triples.splitting.split`.
+            This parameter is forwarded to the underlying :func:`~pykeen.triples.splitting.split`.
 
 
         :return:
@@ -753,7 +753,7 @@ class CoreTriplesFactory(KGInfo):
             which share everything else with this root triples factory.
 
         .. seealso::
-            :func:`pykeen.triples.splitting.split`
+            :func:`~pykeen.triples.splitting.split`
 
         .. code-block:: python
 
@@ -1259,7 +1259,7 @@ class TriplesFactory(CoreTriplesFactory):
             Arbitrary key/value pairs to store as metadata with the triples factory. Do not
             include ``path`` as a key because it is automatically taken from the ``path``
             kwarg to this function.
-        :param load_triples_kwargs: Optional keyword arguments to pass to :func:`pykeen.triples.utils.load_triples`.
+        :param load_triples_kwargs: Optional keyword arguments to pass to :func:`~pykeen.triples.utils.load_triples`.
             Could include the ``delimiter`` or a ``column_remapping``.
         :param kwargs:
             additional keyword-based parameters, which are ignored.

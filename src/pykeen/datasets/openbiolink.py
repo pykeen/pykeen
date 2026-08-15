@@ -46,7 +46,7 @@ class OpenBioLink(PackedZipRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the OpenBioLink dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PackedZipRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PackedZipRemoteDataset`.
         """
         super().__init__(
             url=HQ_URL,
@@ -81,7 +81,7 @@ class OpenBioLinkLQ(PackedZipRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the OpenBioLink (low quality) dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PackedZipRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PackedZipRemoteDataset`.
         """
         super().__init__(
             url=LQ_URL,

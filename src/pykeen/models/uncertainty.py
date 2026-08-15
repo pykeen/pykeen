@@ -193,7 +193,7 @@ def predict_hrt_uncertain(
         correspond to less certain predictions.
 
         This function delegates to :func:`predict_uncertain_helper` by using
-        :func:`pykeen.models.Model.score_hrt` as the ``score_method``.
+        :func:`~pykeen.models.Model.score_hrt` as the ``score_method``.
 
     .. warning::
         This function sets the model to evaluation mode and all dropout layers
@@ -254,7 +254,7 @@ def predict_h_uncertain(
         For each r-t pair, the scores for all possible heads.
 
         This function delegates to :func:`predict_uncertain_helper` by using
-        :func:`pykeen.models.Model.score_h` (or :func:`pykeen.models.Model.score_h_inverse`
+        :func:`~pykeen.models.Model.score_h` (or :func:`~pykeen.models.Model.score_h_inverse`
         if the model uses inverse triples) as the ``score_method``.
 
     .. warning::
@@ -300,7 +300,7 @@ def predict_r_uncertain(
         For each h-t pair, the scores for all possible relations.
 
         This function delegates to :func:`predict_uncertain_helper` by using
-        :func:`pykeen.models.Model.score_r` as the ``score_method``.
+        :func:`~pykeen.models.Model.score_r` as the ``score_method``.
 
     .. warning::
         This function sets the model to evaluation mode and all dropout layers
@@ -354,7 +354,7 @@ def predict_t_uncertain(
         For each h-r pair, the scores for all possible tails.
 
         This function delegates to :func:`predict_uncertain_helper` by using
-        :func:`pykeen.models.Model.score_t` as the ``score_method``.
+        :func:`~pykeen.models.Model.score_t` as the ``score_method``.
 
     .. warning::
         This function sets the model to evaluation mode and all dropout layers

@@ -56,7 +56,7 @@ class LitModule(pytorch_lightning.LightningModule, ABC):
 
     .. seealso::
 
-        :class:`pykeen.training.training_loop.TrainingLoop`
+        :class:`~pykeen.training.training_loop.TrainingLoop`
     """
 
     def __init__(
@@ -167,9 +167,9 @@ class SLCWALitModule(LitModule):
     ):
         """Initialize the lightning module.
 
-        :param negative_sampler: the negative sampler, cf. :class:`pykeen.training.SLCWATrainingLoop`
+        :param negative_sampler: the negative sampler, cf. :class:`~pykeen.training.SLCWATrainingLoop`
         :param negative_sampler_kwargs: keyword-based parameters passed to the negative sampler, cf.
-            :class:`pykeen.training.SLCWATrainingLoop`
+            :class:`~pykeen.training.SLCWATrainingLoop`
         :param kwargs: additional keyword-based parameters passed to :meth:`LitModule.__init__`
         """
         super().__init__(**kwargs)

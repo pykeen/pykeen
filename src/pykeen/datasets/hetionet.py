@@ -50,7 +50,7 @@ class Hetionet(SingleTabbedDataset):
         """Initialize the `Hetionet <https://github.com/hetio/hetionet>`_ dataset from [himmelstein2017]_.
 
         :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.SingleTabbedDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.SingleTabbedDataset`.
         """
         super().__init__(
             url=URL,

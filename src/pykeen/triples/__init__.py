@@ -38,22 +38,22 @@ settings, we need to be more careful.
 For example, to evaluate models in a transductive setting, we need to make sure that all entities and relations of the
 triples used in the evaluation are also present in the training triples. PyKEEN includes methods to construct splits
 that ensure the presence of all entities and relations in the training part. Those can be found in
-:mod:`pykeen.triples.splitting`.
+:mod:`~pykeen.triples.splitting`.
 
 In addition, knowledge graphs may contain inverse relationships, such as a *predecessor* and *successor* relationship.
 In this case, careless splitting can lead to test leakage, where models that only check whether the inverse relationship
 exists in training can produce significantly strong results, inflating scores without learning meaningful relationship
 patterns. PyKEEN includes methods to check knowledge graph splits for leakage, which can be found in
-:mod:`pykeen.triples.leakage`.
+:mod:`~pykeen.triples.leakage`.
 
-In :mod:`pykeen.triples.remix`, we offer methods to examine the effects of a particular choice of splits.
+In :mod:`~pykeen.triples.remix`, we offer methods to examine the effects of a particular choice of splits.
 
 Analysis
 ========
 
 We also provide methods for analyzing knowledge graphs. These include simple statistics such as the number of entities
-or relations (in :mod:`pykeen.triples.analysis`), as well as advanced analysis of relational patterns
-(:mod:`pykeen.triples.analysis`).
+or relations (in :mod:`~pykeen.triples.analysis`), as well as advanced analysis of relational patterns
+(:mod:`~pykeen.triples.analysis`).
 """
 
 from .instances import (

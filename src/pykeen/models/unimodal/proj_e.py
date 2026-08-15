@@ -64,7 +64,7 @@ class ProjE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param embedding_dim:
             the embedding dimension
         :param inner_non_linearity:
-            the inner non-linearity, of a hint thereof. cf. :class:`pykeen.nn.modules.ProjEInteraction`
+            the inner non-linearity, of a hint thereof. cf. :class:`~pykeen.nn.modules.ProjEInteraction`
         :param inner_non_linearity_kwargs:
             additional keyword-based parameters used to instantiate the non-linearity.
         :param entity_initializer:

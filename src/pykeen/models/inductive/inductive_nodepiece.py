@@ -32,8 +32,8 @@ logger = logging.getLogger(__name__)
 class InductiveNodePiece(InductiveERModel):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
-    This model uses the :class:`pykeen.nn.node_piece.representation.NodePieceRepresentation` instead of a typical
-    :class:`pykeen.nn.representation.Embedding` to more efficiently store representations.
+    This model uses the :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation` instead of a typical
+    :class:`~pykeen.nn.representation.Embedding` to more efficiently store representations.
     ---
     citation:
         author: Galkin
@@ -73,7 +73,7 @@ class InductiveNodePiece(InductiveERModel):
             the triples factory of testing triples. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
-            :class:`pykeen.nn.node_piece.representation.NodePieceRepresentation`.
+            :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation`.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
         :param relation_representations_kwargs:
