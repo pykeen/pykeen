@@ -28,19 +28,19 @@ Now, let's start with defining the minimal requirements, i.e., the dataset(s), i
 function(s), training approach(es), and the optimizer(s) in order to run the ablation study.
 
 .. literalinclude:: /examples/howto/running_ablation.py
-    :lines: 6-21
+    :lines: 4-19
 
 We can provide arbitrary additional information about our study with the ``metadata`` keyword. Some keys, such as
 ``title`` are special and used by PyKEEN and :mod:`optuna`.
 
 .. literalinclude:: /examples/howto/running_ablation.py
-    :lines: 26-41
+    :lines: 22-37
 
 As mentioned above, we also want to measure the effect of explicitly modeling inverse relations on the model's
 performance. Therefore, we extend the ablation study by including the ``create_inverse_triples`` argument:
 
 .. literalinclude:: /examples/howto/running_ablation.py
-    :lines: 48-61
+    :lines: 40-53
 
 .. note::
 
@@ -51,7 +51,7 @@ If there is only one value for either the ``models``, ``datasets``, ``losses``, 
 ``create_inverse_triples`` argument, it can be given as a single value instead of the list.
 
 .. literalinclude:: /examples/howto/running_ablation.py
-    :lines: 67-79
+    :lines: 56-68
 
 .. note::
 
@@ -64,7 +64,7 @@ are dataset-dependent, users can/should define their own HPO ranges. We will sho
 finalize the ablation study, we recommend defining early stopping for your ablation study, which is done as follows:
 
 .. literalinclude:: /examples/howto/running_ablation.py
-    :lines: 89-107
+    :lines: 71-89
 
 We define the early stopper using the argument ``stopper``, and through ``stopper_kwargs``, we provide instantiation
 arguments to the early stopper. We define that the early stopper should evaluate every 5 epochs with a patience of 20
@@ -79,7 +79,7 @@ for the Optuna related arguments. However, they define a very limited HPO search
 Therefore, we define the arguments required by Optuna by ourselves:
 
 .. literalinclude:: /examples/howto/running_ablation.py
-    :lines: 117-134
+    :lines: 92-109
 
 We set the number of HPO iterations for each experiment to 2 using the argument ``n_trials``, set a ``timeout`` of 300
 seconds (the HPO will be terminated after ``n_trials`` or ``timeout`` seconds depending on what occurs first), the
@@ -91,7 +91,7 @@ To measure the variance in performance, we can additionally define how often we 
 best model of each ablation-experiment using the argument ``best_replicates``:
 
 .. literalinclude:: /examples/howto/running_ablation.py
-    :lines: 139-165
+    :lines: 112-138
 
 Eager to check out the results? Then navigate to your output directory ``path/to/output/directory``. Within your output
 directory, you will find subdirectories, e.g., ``0000_nations_complex`` which contains all experimental artifacts of one
@@ -126,12 +126,12 @@ as an optimizer, and define a ``log`` ``scale`` for the learning rate, i.e., the
 interval :math:`[0.001, 0.1)`.
 
 .. literalinclude:: /examples/howto/running_ablation.py
-    :lines: 189-238
+    :lines: 141-190
 
 Now that we defined our own hyper-parameter values/ranges, let's have a look at the overall configuration:
 
 .. literalinclude:: /examples/howto/running_ablation.py
-    :lines: 246-272
+    :lines: 193-219
 
 We are expected to provide the arguments ``datasets``, ``models``, ``losses``, ``optimizers``, and ``training_loops`` to
 :func:`~pykeen.ablation.ablation_pipeline`. For all other components and hype-parameters, PyKEEN provides default

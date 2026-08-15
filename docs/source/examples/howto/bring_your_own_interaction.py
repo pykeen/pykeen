@@ -1,10 +1,6 @@
 """Implementing your own interaction modules."""
 
 # %%
-# To implement TransE in PyKEEN, you need to subclass the :class:`~pykeen.nn.modules.Interaction`. This class is
-# itself a subclass of :class:`torch.nn.Module`, which means that you need to provide an implementation of
-# :meth:`torch.nn.Module.forward`. However, the arguments are predefined as ``h``, ``r``, and ``t``, which
-# correspond to the representations of the head, relation, and tail, respectively.
 from pykeen.nn.modules import Interaction
 
 
@@ -17,9 +13,6 @@ class TransEInteraction(Interaction):
 
 
 # %%
-# As a researcher who just invented TransE, you might wonder what would happen if you replaced the addition ``+``
-# with multiplication ``*``. You might then end up with a new interaction like this (which just happens to be
-# DistMult, which was published just a year after TransE):
 class DistMultInteraction(Interaction):
     """A simplified re-implementation of DistMult."""
 
@@ -29,9 +22,6 @@ class DistMultInteraction(Interaction):
 
 
 # %%
-# While we previously defined TransE with the L2 norm, it could be calculated with a different value for p. This
-# could be incorporated into the interaction definition by using ``__init__()``, storing the value for p in the
-# instance, then accessing it in ``forward()``.
 class TransEInteractionWithNorm(Interaction):
     """A simplified re-implementation of TransE with a configurable norm."""
 
@@ -46,11 +36,6 @@ class TransEInteractionWithNorm(Interaction):
 
 
 # %%
-# In ER-MLP, the multi-layer perceptron consists of an input layer, a hidden layer, and an output layer. The input
-# is represented by the concatenation embeddings of the heads, relations and tail embeddings. Global trainable
-# parameters, unlike hyper-parameters, can also be defined in the ``__init__()`` function of your
-# :class:`~pykeen.nn.modules.Interaction` class. They are trained jointly with the entity and relation embeddings
-# during training.
 import torch.nn
 
 
@@ -74,9 +59,6 @@ class ERMLPInteraction(Interaction):
 
 
 # %%
-# The Structured Embedding uses a 2-tensor for representing each relation. For the purposes of this tutorial, we
-# will propose a simplification to Structured Embedding (also similar to TransR) where the same relation 2-tensor
-# is used to project both the head and tail entities.
 class SimplifiedStructuredEmbeddingInteraction(Interaction):
     """A simplified re-implementation of Structured Embedding."""
 
@@ -90,9 +72,6 @@ class SimplifiedStructuredEmbeddingInteraction(Interaction):
 
 
 # %%
-# Sometimes, like in the canonical version of Structured Embedding, you need more than one representation for
-# entities and/or relations. To specify this, you just need to extend the tuple for ``relation_shape`` with more
-# entries, each corresponding to the sequence of representations.
 class StructuredEmbeddingInteraction(Interaction):
     """A re-implementation of Structured Embedding."""
 
@@ -112,9 +91,6 @@ class StructuredEmbeddingInteraction(Interaction):
 
 
 # %%
-# TransD is an example of an interaction module that not only uses two different representations for each entity
-# and two representations for each relation, but they are of different dimensions. It can be implemented by
-# choosing a different letter for use in the ``entity_shape`` and/or ``relation_shape``.
 from pykeen.utils import project_entity
 
 
