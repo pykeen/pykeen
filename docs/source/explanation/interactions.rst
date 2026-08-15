@@ -33,7 +33,7 @@ interactions with a restricted range of values, such as norm-based interactions,
 decision thresholds, such as point-wise losses, e.g., :class:`~pykeen.losses.BCEWithLogitsLoss`.
 
 The :class:`~pykeen.nn.modules.ClampedInteraction` constrains the scores to a given range of values. While this ensures
-that scores cannot exceed the bounds, using :func:`torch.clamp()` also means that no gradients are propagated for inputs
+that scores cannot exceed the bounds, using :func:`torch.clamp` also means that no gradients are propagated for inputs
 with out-of-bounds scores. It can also lead to tied scores during evaluation, which can cause problems with some
 variants of the score functions, see :ref:`understanding-evaluation`.
 
