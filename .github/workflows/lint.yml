@@ -60,6 +60,9 @@ jobs:
     - name: Check RST markup with sphinx-lint
       run: tox -e sphinx-lint
 
+    - name: Check RST formatting with docstrfmt
+      run: tox -e docstrfmt
+
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
