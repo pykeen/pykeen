@@ -12,12 +12,8 @@ that each asset has a corresponding class in PyKEEN. You can follow the links to
 about each and see the reference on how to use them specifically. Don't worry, in this part of
 the tutorial, the :func:`~pykeen.pipeline.pipeline` function will take care of everything for you.
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 9-15
 
 The results are returned in a :class:`~pykeen.pipeline.PipelineResult` instance, which has
 attributes for the trained model, the training loop, and the evaluation.
@@ -26,77 +22,43 @@ In this example, the model was given as a string. A list of available models can
 :mod:`pykeen.models`. Alternatively, the class corresponding to the implementation of the model
 could be used as in:
 
->>> from pykeen.pipeline import pipeline
->>> from pykeen.models import TransE
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model=TransE,
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 23-29
 
 In this example, the dataset was given as a string. A list of available datasets can be found in
 :mod:`pykeen.datasets`. Alternatively, a subclass of :class:`~pykeen.datasets.Dataset` could be
 used as in:
 
->>> from pykeen.pipeline import pipeline
->>> from pykeen.models import TransE
->>> from pykeen.datasets import Nations
->>> pipeline_result = pipeline(
-...     dataset=Nations,
-...     model=TransE,
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 34-40
 
 In each of the previous three examples, the training approach, optimizer, and evaluation scheme
 were omitted. By default, the model is trained under the stochastic local closed world assumption (sLCWA;
 :class:`~pykeen.training.SLCWATrainingLoop`). This can be explicitly given as a string:
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     training_loop='sLCWA',
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 46-51
 
 Alternatively, the model can be trained under the  local closed world assumption (LCWA;
 :class:`~pykeen.training.LCWATrainingLoop`) by giving ``'LCWA'``.
 No additional configuration is necessary, but it's worth reading up on the differences between these training
 approaches. A list of available training assumptions can be found in :mod:`pykeen.training`.
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     training_loop='LCWA',
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 58-63
 
 One of these differences is that the sLCWA relies on *negative sampling*. The type of negative sampling
 can be given as in:
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     training_loop='sLCWA',
-...     negative_sampler='basic',
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 68-74
 
 In this example, the negative sampler was given as a string. A list of available negative samplers
 can be found in :mod:`pykeen.sampling`. Alternatively, the class corresponding to the implementation
 of the negative sampler could be used as in:
 
->>> from pykeen.pipeline import pipeline
->>> from pykeen.sampling import BasicNegativeSampler
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     training_loop='sLCWA',
-...     negative_sampler=BasicNegativeSampler,
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 85-93
 
 .. warning ::
 
@@ -106,66 +68,35 @@ of the negative sampler could be used as in:
 The type of evaluation perfomed can be specified with the ``evaluator`` keyword. By default,
 rank-based evaluation is used. It can be given explictly as in:
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     evaluator='RankBasedEvaluator',
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 98-103
 
 In this example, the evaluator string. A list of available evaluators can be found in
 :mod:`pykeen.evaluation`. Alternatively, the class corresponding to the implementation
 of the evaluator could be used as in:
 
->>> from pykeen.pipeline import pipeline
->>> from pykeen.evaluation import RankBasedEvaluator
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     evaluator=RankBasedEvaluator,
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 109-116
 
 PyKEEN implements early stopping, which can be turned on with the ``stopper`` keyword
 argument as in:
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     stopper='early',
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 120-125
 
 In PyKEEN you can also use the learning rate schedulers provided by PyTorch, which can be
 turned on with the ``lr_scheduler`` keyword argument together with the ``lr_scheduler_kwargs``
 keyword argument to specify arguments for the learning rate scheduler as in:
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     lr_scheduler='ExponentialLR',
-...     lr_scheduler_kwargs=dict(
-...         gamma=0.99,
-...     ),
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 131-139
 
 Deeper Configuration
 ~~~~~~~~~~~~~~~~~~~~
 Arguments for the model can be given as a dictionary using ``model_kwargs``.
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     model_kwargs=dict(
-...         scoring_fct_norm=2,
-...     ),
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 145-152
 
 The entries in ``model_kwargs`` correspond to the arguments given to :class:`~pykeen.models.TransE`'s ``__init__``. For
 a complete listing of models, see :mod:`pykeen.models`, where there are links to the reference for each
@@ -178,7 +109,7 @@ there are several other parameters to :func:`~pykeen.pipeline.pipeline` that
 can be used to specify the parameters during their respective instantiations.
 
 Arguments can be given to the dataset with ``dataset_kwargs``. These are passed on to
-the :class:`~pykeen.datasets.Nations`
+the :class:`~pykeen.datasets.Nations` constructor.
 """
 
 from __future__ import annotations
