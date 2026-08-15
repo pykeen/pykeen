@@ -14,8 +14,8 @@ For fixing possible errors and safety fallbacks please also look at :ref:`word_o
 
 Regular Checkpoints
 -------------------
-The tutorial :ref:`first_steps` showed how the :func:`~pykeen.pipeline.pipeline` function can be used to set up an entire
-KGEM for training and evaluation in just two lines of code. A slightly extended example is shown below:
+The tutorial :ref:`first_steps` showed how the :func:`~pykeen.pipeline.pipeline` function can be used to set up an
+entire KGEM for training and evaluation in just two lines of code. A slightly extended example is shown below:
 
 >>> from pykeen.pipeline import pipeline
 >>> pipeline_result = pipeline(

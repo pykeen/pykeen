@@ -86,8 +86,8 @@ model.
 
 NodePiece
 ~~~~~~~~~
-The :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation` can be used in the most basic cases where unseen
-entities arrive without any feature or descriptions. Since the set of relations at training and
+The :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation` can be used in the most basic cases where
+unseen entities arrive without any feature or descriptions. Since the set of relations at training and
 inference time is the same, it will *tokenize* each entity through a subset of incident relation types.
 
 Combination

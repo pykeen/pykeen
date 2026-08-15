@@ -170,17 +170,18 @@ pipeline using your custom interaction module (respectively).
 Differences between :class:`~pykeen.nn.modules.Interaction` and :class:`~pykeen.models.Model`
 ---------------------------------------------------------------------------------------------
 
-The high-level :func:`~pykeen.pipeline.pipeline` function allows you to pass pre-defined subclasses of :class:`~pykeen.models.Model` such
-as :class:`~pykeen.models.TransE` or :class:`~pykeen.models.DistMult`. These classes are high-level wrappers around the
-interaction functions :class:`~pykeen.nn.modules.TransEInteraction` and :class:`~pykeen.nn.modules.DistMultInteraction` that are
-more suited for running benchmarking experiments or practical applications of knowledge graph embeddings that include
-lots of information about default hyper-parameters, recommended hyper-parameter optimization strategies, and more
-complex applications of regularization schemas.
+The high-level :func:`~pykeen.pipeline.pipeline` function allows you to pass pre-defined subclasses of
+:class:`~pykeen.models.Model` such as :class:`~pykeen.models.TransE` or :class:`~pykeen.models.DistMult`. These
+classes are high-level wrappers around the interaction functions :class:`~pykeen.nn.modules.TransEInteraction` and
+:class:`~pykeen.nn.modules.DistMultInteraction` that are more suited for running benchmarking experiments or
+practical applications of knowledge graph embeddings that include lots of information about default
+hyper-parameters, recommended hyper-parameter optimization strategies, and more complex applications of
+regularization schemas.
 
-As a researcher, the :class:`~pykeen.nn.modules.Interaction` is a way to quickly translate ideas into new models that can
-be used without all of the overhead of defining a :class:`~pykeen.models.Model`. These components are also completely
-reusable throughout PyKEEN (e.g., in self-rolled training loops) and can be used as standalone components outside of
-PyKEEN.
+As a researcher, the :class:`~pykeen.nn.modules.Interaction` is a way to quickly translate ideas into new models
+that can be used without all of the overhead of defining a :class:`~pykeen.models.Model`. These components are also
+completely reusable throughout PyKEEN (e.g., in self-rolled training loops) and can be used as standalone
+components outside of PyKEEN.
 
 If you are happy with your interaction module and would like to go the next step to making it generally reusable, check
 the "Extending the Models" tutorial.

@@ -21,8 +21,9 @@ We'll use :class:`~pykeen.datasets.FB15k237` for illustrating purposes throughou
 In the simplest usage of :class:`~pykeen.models.NodePiece`, we'll only use relations for tokenization. We can do this by
 with the following arguments:
 
-1. Set the ``tokenizers="RelationTokenizer"`` to :class:`~pykeen.nn.node_piece.RelationTokenizer`. We can simply refer to
-   the class name and it gets automatically resolved to the correct subclass of :class:`~pykeen.nn.node_piece.Tokenizer`
+1. Set the ``tokenizers="RelationTokenizer"`` to :class:`~pykeen.nn.node_piece.RelationTokenizer`. We can simply
+   refer to the class name and it gets automatically resolved to the correct subclass of
+   :class:`~pykeen.nn.node_piece.Tokenizer`
    by the :mod:`class_resolver`.
 2. Set the ``num_tokens=12`` to sample 12 unique relations per node. If, for some entities, there are less than 12
    unique relations, the difference will be padded with the auxiliary padding token.
@@ -52,9 +53,9 @@ relational context. It's as easy as sending a list of tokenizers to ``tokenizers
         embedding_dim=64,
     )
 
-Class resolver will automatically instantiate :class:`~pykeen.nn.node_piece.AnchorTokenizer` with 20 anchors per node and
-:class:`~pykeen.nn.node_piece.RelationTokenizer` with 12 relations per node, so the order of specifying ``tokenizers``
-and ``num_tokens`` matters here.
+Class resolver will automatically instantiate :class:`~pykeen.nn.node_piece.AnchorTokenizer` with 20 anchors per
+node and :class:`~pykeen.nn.node_piece.RelationTokenizer` with 12 relations per node, so the order of specifying
+``tokenizers`` and ``num_tokens`` matters here.
 
 Anchor Selection and Searching
 ------------------------------
@@ -354,8 +355,8 @@ both) to a single vector:
 
     f([a_1, a_2, ...., a_k, r_1, r_2, ..., r_m]) \in \mathbb{R}^{(k+m) \times d} \rightarrow  \mathbb{R}^{d}
 
-Right now, by default we use a simple 2-layer MLP (:class:`~pykeen.nn.perceptron.ConcatMLP`) that concatenates all tokens
-to one long vector and projects it down to model's embedding dimension:
+Right now, by default we use a simple 2-layer MLP (:class:`~pykeen.nn.perceptron.ConcatMLP`) that concatenates all
+tokens to one long vector and projects it down to model's embedding dimension:
 
 .. code-block:: python
 
