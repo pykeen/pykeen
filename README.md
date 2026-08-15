@@ -93,8 +93,8 @@ result = pipeline(
 
 The results are returned in an instance of the [PipelineResult](https://pykeen.readthedocs.io/en/latest/reference/pipeline.html#pykeen.pipeline.PipelineResult)
 dataclass that has attributes for the trained model, the training loop, the evaluation, and more. See the tutorials
-on [using your own dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html),
-[understanding the evaluation](https://pykeen.readthedocs.io/en/latest/tutorial/understanding_evaluation.html),
+on [using your own dataset](https://pykeen.readthedocs.io/en/latest/howto/bring_your_own_data.html),
+[understanding the evaluation](https://pykeen.readthedocs.io/en/latest/explanation/understanding_evaluation.html),
 and [making novel link predictions](https://pykeen.readthedocs.io/en/latest/tutorial/making_predictions.html).
 
 PyKEEN is extensible such that:
@@ -115,7 +115,7 @@ in ``pykeen``.
 The following 37 datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
 describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
 or the URL for the dataset if neither of the first two are available. If you want to use a custom dataset,
-see the [Bring Your Own Dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html) tutorial. If you
+see the [Bring Your Own Dataset](https://pykeen.readthedocs.io/en/latest/howto/bring_your_own_data.html) tutorial. If you
 have a suggestion for another dataset to include in PyKEEN, please let us know
 [here](https://github.com/pykeen/pykeen/issues/new?assignees=cthoyt&labels=New+Dataset&template=dataset-request.md&title=Add+%5BDATASET+NAME%5D).
 
@@ -399,11 +399,11 @@ The following 40 metrics are implemented in PyKEEN.
 | [Adjusted Inverse Harmonic Mean Rank](https://arxiv.org/abs/2203.07544)                                                                        | $(\frac{-E[f]}{1-E[f]}, 1]$ | 📈           | The re-indexed adjusted MRR                                             | Ranking        |
 | [Geometric Mean Rank (GMR)](https://arxiv.org/abs/2203.07544)                                                                                  | $[1, ∞)$                    | 📉           | The geometric mean over all ranks.                                      | Ranking        |
 | [Harmonic Mean Rank (HMR)](https://arxiv.org/abs/2203.07544)                                                                                   | $[1, ∞)$                    | 📉           | The harmonic mean over all ranks.                                       | Ranking        |
-| [Hits @ K](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#hits-k)                                              | $[0, 1]$                    | 📈           | The relative frequency of ranks not larger than a given k.              | Ranking        |
+| [Hits @ K](https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html#hits-k)                                              | $[0, 1]$                    | 📈           | The relative frequency of ranks not larger than a given k.              | Ranking        |
 | [Inverse Arithmetic Mean Rank (IAMR)](https://arxiv.org/abs/2203.07544)                                                                        | $(0, 1]$                    | 📈           | The inverse of the arithmetic mean over all ranks.                      | Ranking        |
 | [Inverse Geometric Mean Rank (IGMR)](https://arxiv.org/abs/2203.07544)                                                                         | $(0, 1]$                    | 📈           | The inverse of the geometric mean over all ranks.                       | Ranking        |
 | [Inverse Median Rank](https://arxiv.org/abs/2203.07544)                                                                                        | $(0, 1]$                    | 📈           | The inverse of the median over all ranks.                               | Ranking        |
-| [Mean Rank (MR)](https://pykeen.readthedocs.io/en/stable/tutorial/understanding_evaluation.html#mean-rank)                                     | $[1, ∞)$                    | 📉           | The arithmetic mean over all ranks.                                     | Ranking        |
+| [Mean Rank (MR)](https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html#mean-rank)                                     | $[1, ∞)$                    | 📉           | The arithmetic mean over all ranks.                                     | Ranking        |
 | [Mean Reciprocal Rank (MRR)](https://en.wikipedia.org/wiki/Mean_reciprocal_rank)                                                               | $(0, 1]$                    | 📈           | The inverse of the harmonic mean over all ranks.                        | Ranking        |
 | [Median Rank](https://arxiv.org/abs/2203.07544)                                                                                                | $[1, ∞)$                    | 📉           | The median over all ranks.                                              | Ranking        |
 | [z-Geometric Mean Rank (zGMR)](https://arxiv.org/abs/2203.07544)                                                                               | $(-∞, ∞)$                   | 📈           | The z-scored geometric mean rank                                        | Ranking        |
