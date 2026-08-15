@@ -108,7 +108,7 @@ A step size can be imposed with ``q``:
 
     class DistMult(ERModel):
         hpo_default = {
-            'embedding_dim': dict(type=int, low=100, high=150 q=5)
+            "embedding_dim": dict(type=int, low=100, high=150, q=5)
         }
         ...
 

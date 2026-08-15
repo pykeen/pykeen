@@ -19,23 +19,8 @@ each 3 column TSV files. A good example can be found at https://github.com/Zhenf
 There's a base class called :class:`~pykeen.datasets.base.UnpackedRemoteDataset` that can be used to wrap it like the
 following:
 
-.. code-block:: python
-
-    from pykeen.datasets.base import UnpackedRemoteDataset
-
-    TEST_URL = "https://raw.githubusercontent.com/ZhenfengLei/KGDatasets/master/DBpedia50/test.txt"
-    TRAIN_URL = "https://raw.githubusercontent.com/ZhenfengLei/KGDatasets/master/DBpedia50/train.txt"
-    VALID_URL = "https://raw.githubusercontent.com/ZhenfengLei/KGDatasets/master/DBpedia50/valid.txt"
-
-
-    class DBpedia50(UnpackedRemoteDataset):
-        def __init__(self, **kwargs):
-            super().__init__(
-                training_url=TRAIN_URL,
-                testing_url=TEST_URL,
-                validation_url=VALID_URL,
-                **kwargs,
-            )
+.. literalinclude:: /examples/howto/extending_datasets.py
+    :lines: 8-25
 
 Unsplit Datasets
 ----------------
@@ -44,16 +29,8 @@ Use this tutorial if you have a single URL for a TSV dataset that needs to be au
 testing, and validation. A good example can be found at https://github.com/hetio/hetionet/raw/master/hetnet/tsv. There's
 a base class called :class:`~pykeen.datasets.base.SingleTabbedDataset` that can be used to wrap it like the following:
 
-.. code-block:: python
-
-    from pykeen.datasets.base import SingleTabbedDataset
-
-    URL = "https://github.com/hetio/hetionet/raw/master/hetnet/tsv/hetionet-v1.0-edges.sif.gz"
-
-
-    class Hetionet(SingleTabbedDataset):
-        def __init__(self, **kwargs):
-            super().__init__(url=URL, **kwargs)
+.. literalinclude:: /examples/howto/extending_datasets.py
+    :lines: 33-42
 
 The value for `URL` can be anything that can be read by :func:`pandas.read_csv`. Additional options can be passed
 through to the reading function, such as ``sep=','``, with the keyword argument ``read_csv_kwargs=dict(sep=',')``. Note

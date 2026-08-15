@@ -21,14 +21,8 @@ subclass of :class:`torch.nn.Module`, which means that you need to provide an im
 :meth:`torch.nn.Module.forward`. However, the arguments are predefined as ``h``, ``r``, and ``t``, which correspond to
 the representations of the head, relation, and tail, respectively.
 
-.. code-block:: python
-
-    from pykeen.nn.modules import Interaction
-
-
-    class TransEInteraction(Interaction):
-        def forward(self, h, r, t):
-            return -(h + r - t).norm(p=2, dim=-1)
+.. literalinclude:: /examples/howto/bring_your_own_interaction.py
+    :lines: 8-16
 
 Note the ``dim=-1`` because this operation is actually defined over an entire batch of head, relation, and tail
 representations.
@@ -48,14 +42,8 @@ was published just a year after TransE):
 where $\mathbf{e}_i$ is the $d$-dimensional representation for entity $i$, $\mathbf{r}_j$ is the $d$-dimensional
 representation for relation $j$.
 
-.. code-block:: python
-
-    from pykeen.nn.modules import Interaction
-
-
-    class DistMultInteraction(Interaction):
-        def forward(self, h, r, t):
-            return (h * r * t).sum(dim=-1)
+.. literalinclude:: /examples/howto/bring_your_own_interaction.py
+    :lines: 23-28
 
 .. seealso::
 
@@ -73,18 +61,8 @@ While we previously defined TransE with the $L_2$ norm, it could be calculated w
 This could be incorporated into the interaction definition by using the ``__init__()``, storing the value for $p$ in the
 instance, then accessing it in ``forward()``.
 
-.. code-block:: python
-
-    from pykeen.nn.modules import Interaction
-
-
-    class TransEInteraction(Interaction):
-        def __init__(self, p: int):
-            super().__init__()
-            self.p = p
-
-        def forward(self, h, r, t):
-            return -(h + r - t).norm(p=self.p, dim=-1)
+.. literalinclude:: /examples/howto/bring_your_own_interaction.py
+    :lines: 35-45
 
 In general, you can put whatever you want in ``__init__()`` to support the calculation of scores.
 
@@ -108,25 +86,8 @@ However, like hyper-parameters, they can also be defined in the `__init__` funct
 :class:`~pykeen.nn.modules.Interaction` class. They are trained jointly with the entity and relation embeddings during
 training.
 
-.. code-block:: python
-
-    import torch.nn
-    from pykeen.nn.modules import Interaction
-
-
-    class ERMLPInteraction(Interaction):
-        def __init__(self, embedding_dim: int, hidden_dim: int):
-            super().__init__()
-            # The weights of this MLP will be learned.
-            self.mlp = torch.nn.Sequential(
-                torch.nn.Linear(in_features=3 * embedding_dim, out_features=hidden_dim, bias=True),
-                torch.nn.ReLU(),
-                torch.nn.Linear(in_features=hidden_dim, out_features=1, bias=True),
-            )
-
-        def forward(self, h, r, t):
-            x = torch.cat([h, r, t], dim=-1)
-            return self.mlp(x)
+.. literalinclude:: /examples/howto/bring_your_own_interaction.py
+    :lines: 54-73
 
 Note that this simplified example assumes ``h``, ``r``, and ``t`` already share the same shape; PyKEEN's built-in
 :class:`~pykeen.nn.modules.ERMLPInteraction` additionally handles the case where they don't.
@@ -158,18 +119,8 @@ where the same relation 2-tensor is used to project both the head and tail entit
 where $\mathbf{e}_i$ is the $d$-dimensional representation for entity $i$, $\mathbf{M}_j$ is the $d \times
 d$-dimensional representation for relation $j$, and $\|...\|_2$ is the $L_2$ norm.
 
-.. code-block:: python
-
-    from pykeen.nn.modules import Interaction
-
-
-    class SimplifiedStructuredEmbeddingInteraction(Interaction):
-        relation_shape = ("dd",)
-
-        def forward(self, h, r, t):
-            h_proj = r @ h.unsqueeze(dim=-1)
-            t_proj = r @ t.unsqueeze(dim=-1)
-            return -(h_proj - t_proj).squeeze(dim=-1).norm(p=2, dim=-1)
+.. literalinclude:: /examples/howto/bring_your_own_interaction.py
+    :lines: 80-89
 
 Note the definition of the ``relation_shape``. By default, the ``entity_shape`` and ``relation_shape`` are both equal to
 ``('d', )``, which uses eigen-notation to show that they both are 1-tensors with the same shape. In this simplified
@@ -188,24 +139,8 @@ Sometimes, like in the canonical version of Structured Embedding, you need more 
 and/or relations. To specify this, you just need to extend the tuple for ``relation_shape`` with more entries, each
 corresponding to the sequence of representations.
 
-.. code-block:: python
-
-    from pykeen.nn.modules import Interaction
-
-
-    class StructuredEmbeddingInteraction(Interaction):
-        relation_shape = (
-            "dd",  # Corresponds to $\mathbf{M}^{head}_j$
-            "dd",  # Corresponds to $\mathbf{M}^{tail}_j$
-        )
-
-        def forward(self, h, r, t):
-            # Since the relation_shape is more than length 1, the r value is given as a sequence
-            # of the representations defined there. You can use tuple unpacking to get them out
-            r_h, r_t = r
-            h_proj = r_h @ h.unsqueeze(dim=-1)
-            t_proj = r_t @ t.unsqueeze(dim=-1)
-            return -(h_proj - t_proj).squeeze(dim=-1).norm(p=2, dim=-1)
+.. literalinclude:: /examples/howto/bring_your_own_interaction.py
+    :lines: 96-111
 
 Interactions with Different Dimension Vectors
 ---------------------------------------------
@@ -219,31 +154,8 @@ dictionary. Ultimately, the letters used are arbitrary, but you need to remember
 your interaction module via its ``interaction`` argument) to instantiate a model, make a model class, or run the
 pipeline using your custom interaction module (respectively).
 
-.. code-block:: python
-
-    from pykeen.nn.modules import Interaction
-    from pykeen.utils import project_entity
-
-
-    class TransDInteraction(Interaction):
-        entity_shape = ("d", "d")
-        relation_shape = ("e", "e")
-
-        def forward(self, h, r, t):
-            h, h_proj = h
-            r, r_proj = r
-            t, t_proj = t
-            h_bot = project_entity(
-                e=h,
-                e_p=h_p,
-                r_p=r_p,
-            )
-            t_bot = project_entity(
-                e=t,
-                e_p=t_p,
-                r_p=r_p,
-            )
-            return -(h_bot + r - t_bot).norm(p=2, dim=-1)
+.. literalinclude:: /examples/howto/bring_your_own_interaction.py
+    :lines: 118-142
 
 .. note::
 
