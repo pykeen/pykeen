@@ -1,6 +1,7 @@
 """Example for message passing with type information.
 
 Here, we use a one-layer RGCN using the basis decomposition.
+
 """
 
 from pykeen.datasets import get_dataset

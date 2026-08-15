@@ -25,8 +25,8 @@ Mapping Entity and Relation Identifiers to their Names
 While PyKEEN internally maps entities and relations to contiguous identifiers, it's still useful to be able to interact
 with datasets, triples factories, and models using the labels of the entities and relations.
 
-We can map a triples factory's entities to identifiers using
-:func:`~pykeen.triples.TriplesFactory.entities_to_ids` like in the following example:
+We can map a triples factory's entities to identifiers using :func:`~pykeen.triples.TriplesFactory.entities_to_ids` like
+in the following example:
 
 .. literalinclude:: ../examples/first_steps/entity_and_relation_mapping.py
     :lines: 4-11,38-39

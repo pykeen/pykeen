@@ -1,6 +1,7 @@
 """An example for using simple message passing, ignoring edge types.
 
 We create a two-layer GCN on top of an Embedding.
+
 """
 
 from pykeen.datasets import get_dataset

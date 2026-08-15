@@ -22,10 +22,9 @@ providing appropriate inputs to the parameters
 - ``relation_representations`` / ``relation_representations_kwargs`` for relation representations.
 
 These inputs are then used to instantiate the representations using
-:meth:`~pykeen.nn.representation_resolver.make_many`. Notice that :class:`~pykeen.models.ERModel`, takes care of
-filling in the ``max_id`` parameter into the ``..._kwargs``.
-The default is to use a single :class:`~pykeen.nn.representation.Embedding` for entities and relations, as encountered
-in many publications.
+:meth:`~pykeen.nn.representation_resolver.make_many`. Notice that :class:`~pykeen.models.ERModel`, takes care of filling
+in the ``max_id`` parameter into the ``..._kwargs``. The default is to use a single
+:class:`~pykeen.nn.representation.Embedding` for entities and relations, as encountered in many publications.
 
 The following examples are for entity representations, but can be equivalently used for relation representations.
 
