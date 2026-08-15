@@ -57,6 +57,9 @@ jobs:
     - name: Check RST conformity with doc8
       run: tox -e doc8
 
+    - name: Check RST markup with sphinx-lint
+      run: tox -e sphinx-lint
+
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -137,8 +137,8 @@ We are expected to provide the arguments ``datasets``, ``models``, ``losses``, `
 :func:`~pykeen.ablation.ablation_pipeline`. For all other components and hype-parameters, PyKEEN provides default
 values/ranges. However, for achieving optimal performance, we should carefully define the hyper-parameter values/ranges
 ourselves, as explained above. Note that there are many more ranges to configure such hyper-parameters for the loss
-functions or the negative samplers. Check out the examples provided in `tests/resources/hpo_complex_nations.json`` how
-to define the ranges for other components.
+functions or the negative samplers. Check out the examples provided in ``tests/resources/hpo_complex_nations.json``
+how to define the ranges for other components.
 
 Run an Ablation Study With Your Own Data
 ----------------------------------------
