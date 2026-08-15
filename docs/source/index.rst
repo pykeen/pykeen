@@ -18,14 +18,31 @@ PyKEEN
     :name: howto
     :maxdepth: 2
 
-    howto/index
+    howto/bring_your_own_data
+    howto/bring_your_own_interaction
+    howto/extending_datasets
+    howto/extending_models
+    howto/splitting
+    howto/node_piece
+    howto/using_resolvers
+    howto/checkpoints
+    howto/running_hpo
+    howto/running_ablation
+    howto/trackers/index
+    howto/troubleshooting
 
 .. toctree::
     :caption: Explanation
     :name: explanation
     :maxdepth: 2
 
-    explanation/index
+    explanation/models
+    explanation/interactions
+    explanation/representations
+    explanation/normalizer_constrainer_regularizer
+    explanation/understanding_evaluation
+    explanation/performance
+    explanation/dataset_degree_distributions
 
 .. toctree::
     :caption: Reference
