@@ -63,7 +63,7 @@ class OGBEvaluator(SampledRankBasedEvaluator):
         pre_filtered_triples: bool = True,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
     ) -> MetricResults:
-        """Run :func:`evaluate_ogb` with this evaluator."""
+        """Run ``evaluate_ogb`` with this evaluator."""
         if (
             {restrict_relations_to, restrict_entities_to, additional_filter_triples} != {None}
             or do_time_consuming_checks is False

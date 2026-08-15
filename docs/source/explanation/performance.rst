@@ -22,7 +22,7 @@ accessible via the attributes :attr:`pykeen.triples.TriplesFactory.entity_to_id`
 :attr:`pykeen.triples.TriplesFactory.relation_to_id`.
 
 To improve the performance, the mapping process takes place only once, and the ID-based triples are stored in a tensor
-:attr:`pykeen.triples.TriplesFactory.mapped_triples`.
+``mapped_triples``.
 
 .. _tuple_broadcasting:
 
@@ -30,8 +30,8 @@ Tuple Broadcasting
 ------------------
 
 Interaction functions are usually only given for the standard case of scoring a single triple $(h, r, t)$. This function
-is implemented in PyKEEN in the :func:`pykeen.models.base.Model.score_hrt` method of each model, e.g.
-:func:`pykeen.models.DistMult.score_hrt` for :class:`pykeen.models.DistMult`. When training under the local closed world
+is implemented in PyKEEN in the ``score_hrt`` method of each model, e.g.
+``DistMult.score_hrt`` for :class:`pykeen.models.DistMult`. When training under the local closed world
 assumption (LCWA), evaluating a model, and performing the link prediction task, the goal is to score all
 entities/relations for a given tuple, i.e. $(h, r)$, $(r, t)$ or $(h, t)$. In these cases a single tuple is used many
 times for different entities/relations.
@@ -48,9 +48,9 @@ interaction function, e.g. :class:`pykeen.models.ConvE`.
 To make this technique possible, PyKEEN models have to provide an explicit broadcasting function via following methods
 in the model class:
 
-    - :func:`pykeen.models.base.Model.score_h` - Scoring all possible head entities for a given $(r, t)$ tuple
-    - :func:`pykeen.models.base.Model.score_r` - Scoring all possible relations for a given $(h, t)$ tuple
-    - :func:`pykeen.models.base.Model.score_t` - Scoring all possible tail entities for a given $(h, r)$ tuple
+    - ``score_h`` - Scoring all possible head entities for a given $(r, t)$ tuple
+    - ``score_r`` - Scoring all possible relations for a given $(h, t)$ tuple
+    - ``score_t`` - Scoring all possible tail entities for a given $(h, r)$ tuple
 
 The PyKEEN architecture natively supports these methods and makes use of this technique wherever possible without any
 additional modifications. Providing these methods is completely optional and not required when implementing new models.
@@ -96,8 +96,8 @@ speed for the filtered evaluation compared to the mechanisms used in previous ve
 As a starting point, PyKEEN will always compute scores for all triples in $H_{r,t}$ and $T_{h,r}$, even in the filtered
 setting. Because the number of positive triples on average is very low, few results have to be removed. Additionally,
 due to the technique presented in :ref:`tuple_broadcasting`, scoring extra entities has a marginally low cost.
-Therefore, we start with the score vectors from :func:`pykeen.models.base.Model.score_t` for all triples $(h, r, t') \in
-H_{r,t}$ and from :func:`pykeen.models.base.Model.score_h` for all triples $(h', r, t) \in T_{h,r}$.
+Therefore, we start with the score vectors from ``score_t`` for all triples $(h, r, t') \in
+H_{r,t}$ and from ``score_h`` for all triples $(h', r, t) \in T_{h,r}$.
 
 Following, the sparse filters $\mathbf{f}_t \in \mathbb{B}^{| \mathcal{E}|}$ and $\mathbf{f}_h \in \mathbb{B}^{|
 \mathcal{E}|}$ are created, which state which of the entities would lead to triples found in the train dataset. To
@@ -117,7 +117,7 @@ $T_{h,r}$ in order to obtain $T^{\text{filtered}}_{h,r}$. This is achieved by pe
 5. The index vector is now applied on the tail entity column of the train dataset, returning all tail entity IDs $t'$
    that combined with $h$ and $r$ lead to triples contained in the train dataset
 6. Finally, the $t'$ tail entity ID index vector is applied on the initially mentioned vector returned by
-   :func:`pykeen.models.base.Model.score_t` for all possible triples $(h, r, t')$ and all affected scores are set to
+   ``score_t`` for all possible triples $(h, r, t')$ and all affected scores are set to
    ``float('nan')`` following the IEEE-754 specification, which makes these scores non-comparable, effectively leading
    to the score vector for all possible novel triples $(h, r, t') \in T^{\text{filtered}}_{h,r}$.
 

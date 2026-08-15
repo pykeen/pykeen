@@ -167,7 +167,7 @@ Arguments for the model can be given as a dictionary using ``model_kwargs``.
 ... )
 >>> pipeline_result.save_to_directory('nations_transe')
 
-The entries in ``model_kwargs`` correspond to the arguments given to :func:`pykeen.models.TransE.__init__`. For a
+The entries in ``model_kwargs`` correspond to the arguments given to ``TransE.__init__``. For a
 complete listing of models, see :mod:`pykeen.models`, where there are links to the reference for each
 model that explain what kwargs are possible. Each model's default hyper-parameters were chosen based on the
 best reported values from the paper originally publishing the model unless otherwise noted on the model's
@@ -316,7 +316,7 @@ class PipelineResult(Result):
     def plot_losses(self, **kwargs):
         """Plot the losses per epoch.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_losses`.
+        :param kwargs: The keyword arguments passed to ``plot_losses``.
         :returns: The axis
         """
         from .plot_utils import plot_losses
@@ -326,7 +326,7 @@ class PipelineResult(Result):
     def plot_early_stopping(self, **kwargs):
         """Plot the evaluations during early stopping.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_early_stopping`
+        :param kwargs: The keyword arguments passed to ``plot_early_stopping``
         :returns: The axis
         """
         from .plot_utils import plot_early_stopping
@@ -336,7 +336,7 @@ class PipelineResult(Result):
     def plot_er(self, **kwargs):
         """Plot the reduced entities and relation vectors in 2D.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_er`
+        :param kwargs: The keyword arguments passed to ``plot_er``
         :returns: The axis
 
         .. warning::
@@ -351,7 +351,7 @@ class PipelineResult(Result):
     def plot(self, **kwargs):
         """Plot all plots.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot`
+        :param kwargs: The keyword arguments passed to ``pykeen.pipeline.plot_utils.plot``
         :returns: The axis
         """
         from .plot_utils import plot
@@ -544,9 +544,10 @@ class PipelineResult(Result):
 @fix_dataclass_init_docs
 @dataclass
 class TrainResult:
-    """Result of :func:`train_pipeline`, containing a trained model without post-training evaluation.
+    """Result of training, containing a trained model without post-training evaluation.
 
-    Call :meth:`evaluate` to run evaluation and obtain a full :class:`PipelineResult`.
+    Produced via :meth:`ResolutionResult.train`. Call :meth:`evaluate` to run evaluation and obtain a full
+    :class:`PipelineResult`.
     """
 
     #: The random seed used at the beginning of the pipeline
@@ -1523,9 +1524,8 @@ def resolve_pipeline(
 ) -> ResolutionResult:
     """Resolve all pipeline components into a :class:`ResolutionResult` without running training.
 
-    All parameters match :func:`train_pipeline`. Use :meth:`ResolutionResult.train` to run
-    training and :meth:`TrainResult.evaluate` to run evaluation, or use the higher-level
-    :func:`train_pipeline` or :func:`pipeline` convenience functions.
+    Use :meth:`ResolutionResult.train` to run training and :meth:`TrainResult.evaluate` to run
+    evaluation, or use the higher-level :func:`pipeline` convenience function.
 
     :returns: A :class:`ResolutionResult` holding all resolved components ready for training.
     """
@@ -1814,7 +1814,7 @@ def pipeline(  # noqa: C901
         :func:`pykeen.utils.resolve_device`.
     :param random_seed: The random seed to use. If none is specified, one will be assigned before any code
         is run for reproducibility purposes. In the returned :class:`PipelineResult` instance, it can be accessed
-        through :attr:`~pykeen.pipeline.api.PipelineResult.random_seed`.
+        through ``random_seed``.
     :param evaluation_fallback:
         If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
         in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.

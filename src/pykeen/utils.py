@@ -1535,10 +1535,15 @@ class ExtraReprMixin:
 try:
     from opt_einsum import contract
 
-    einsum = functools.partial(contract, backend="torch")
+    _einsum_impl = functools.partial(contract, backend="torch")
     logger.info("Using opt_einsum")
 except ImportError:
-    einsum = torch.einsum
+    _einsum_impl = torch.einsum
+
+
+def einsum(*args, **kwargs):
+    """Compute an Einstein summation, using ``opt_einsum`` as a backend if it is installed."""
+    return _einsum_impl(*args, **kwargs)
 
 
 def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> BoolTensor:

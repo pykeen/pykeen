@@ -17,9 +17,9 @@ Base
 ----
 
 The :class:`~pykeen.nn.representation.Representation` class defines a common interface for all representation modules.
-Each representation defines a :attr:`~pykeen.nn.representation.Representation.max_id` attribute. We can pass any integer
+Each representation defines a ``max_id`` attribute. We can pass any integer
 index $i \in [0, \text{max\_id})$ to a representation module to get a numeric representation of a fixed shape
-:attr:`~pykeen.nn.representation.Representation.shape`.
+``shape``.
 
 .. note::
 

@@ -67,6 +67,7 @@ from ..utils import (
 )
 
 __all__ = [
+    "MaxIDMismatchError",
     "Representation",
     "Embedding",
     "LowRankRepresentation",
@@ -96,9 +97,9 @@ logger = logging.getLogger(__name__)
 #: A resolver for constrainers.
 #:
 #: - :func:`torch.nn.functional.normalize`
-#: - :func:`complex_normalize`
+#: - :func:`pykeen.utils.complex_normalize`
 #: - :func:`torch.clamp`
-#: - :func:`clamp_norm`
+#: - :func:`pykeen.utils.clamp_norm`
 constrainer_resolver: FunctionResolver[[FloatTensor], FloatTensor] = FunctionResolver(
     [functional.normalize, complex_normalize, torch.clamp, clamp_norm],
     location="pykeen.nn.representation.constrainer_resolver",
@@ -459,7 +460,8 @@ class Embedding(Representation):
         :param trainable:
             should the embedding be trainable? defaults to false, since this
             constructor is typically used for making a static embedding.
-        :param kwargs: Remaining keyword arguments to pass to the :class:`pykeen.nn.Embedding` constructor
+        :param kwargs: Remaining keyword arguments to pass to the :class:`pykeen.nn.representation.Embedding`
+            constructor
         :returns: An embedding representation
         """
         if not isinstance(tensor, PretrainedInitializer):
@@ -571,7 +573,7 @@ class LowRankRepresentation(Representation):
         :param kwargs:
             Additional keyword based arguments passed to :class:`~pykeen.nn.representation.Representation`.
 
-        :raises MaxIDMismatchError:
+        :raises pykeen.nn.representation.MaxIDMismatchError:
             if the ``max_id`` was given explicitly and does not match the ``max_id`` of the weight
             representation
         """
@@ -1191,7 +1193,7 @@ class TextRepresentation(Representation):
         :param kwargs:
             Additional keyword-based parameters passed to :class:`pykeen.nn.representation.Representation`
 
-        :raises MaxIDMismatchError:
+        :raises pykeen.nn.representation.MaxIDMismatchError:
             if the ``max_id`` was given explicitly and does not match the length of the labels
         """
         encoder = text_encoder_resolver.make(encoder, encoder_kwargs)
@@ -1337,7 +1339,7 @@ class CombinedRepresentation(Representation):
 
         :raises ValueError:
             If the `max_id` of the base representations are not all the same
-        :raises MaxIDMismatchError:
+        :raises pykeen.nn.representation.MaxIDMismatchError:
             if the ``max_id`` was given explicitly and does not match the bases' ``max_id``
         """
         # input normalization
@@ -1398,7 +1400,10 @@ class CombinedRepresentation(Representation):
 
 
 class CachedTextRepresentation(TextRepresentation):
-    """Textual representations for datasets with identifiers that can be looked up with a :class:`TextCache`."""
+    """Textual representations for datasets with identifiers that can be looked up with a cache.
+
+    :class:`pykeen.nn.text.cache.TextCache`.
+    """
 
     cache_cls: ClassVar[type[TextCache]]
 
@@ -1410,7 +1415,7 @@ class CachedTextRepresentation(TextRepresentation):
             the IDs to be resolved by the class, e.g., wikidata IDs. for :class:`WikidataTextRepresentation`,
             biomedical entities represented as compact URIs (CURIEs) for :class:`BiomedicalCURIERepresentation`
         :param cache:
-            a pre-instantiated text cache. If None, :attr:`cache_cls` is used to instantiate one.
+            a pre-instantiated text cache. If None, ``cache_cls`` is used to instantiate one.
         :param kwargs:
             additional keyword-based parameters passed to :meth:`TextRepresentation.__init__`
         """
@@ -1824,7 +1829,7 @@ class TransformedRepresentation(Representation):
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Representation.__init__`.
 
-        :raises MaxIDMismatchError:
+        :raises pykeen.nn.representation.MaxIDMismatchError:
             if the ``max_id`` was given explicitly and does not match the base's ``max_id``
         """
         # import here to avoid cyclic import
@@ -2154,8 +2159,9 @@ class EmbeddingBagRepresentation(Representation):
     r"""
     An embedding bag representation.
 
-    :class:`~torch.nn.EmbeddingBag` is similar to a :class:`~pykeen.nn.TokenRepresentation`
-    followed by an aggregation along the `num_tokens` dimension.
+    :class:`~torch.nn.EmbeddingBag` is similar to a
+    :class:`~pykeen.nn.node_piece.representation.TokenizationRepresentation` followed by an aggregation along the
+    `num_tokens` dimension.
 
     Its main differences are:
 
@@ -2164,7 +2170,7 @@ class EmbeddingBagRepresentation(Representation):
           :func:`~torch.sum`, :func:`~torch.mean`, or :func:`~torch.max`
         - It can handle sparse/variable number of tokens per input more naturally.
         - It always uses an :class:`~torch.nn.Embedding` layer instead of permitting an arbitrary
-          :class:`~pykeen.nn.Representation`
+          :class:`~pykeen.nn.representation.Representation`
 
     If you have a boolean feature vector, for example, from a chemical fingerprint, you
     can construct an embedding bag with the following
@@ -2213,7 +2219,7 @@ class EmbeddingBagRepresentation(Representation):
         :param mode:
             The aggregation mode for :class:`~torch.nn.EmbeddingBag`.
         :param kwargs:
-            Additional keyword-based parameters passed to :class:`~pykeen.nn.Representation`.
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`.
         """
         a_max_id, num_components = assignment.max(dim=0).values.tolist()
         # note: we use unique within _plain_forward anyway

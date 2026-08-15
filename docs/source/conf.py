@@ -256,9 +256,13 @@ intersphinx_mapping = {
     "bio2bel": ("https://bio2bel.readthedocs.io/en/latest", None),
     "boto3": ("https://boto3.amazonaws.com/v1/documentation/api/latest", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
-    # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "datasets": ("https://huggingface.co/docs/datasets/main/en", None),
     "transformers": ("https://huggingface.co/docs/transformers/main/en", None),
+    "pandas": ("https://pandas.pydata.org/docs", None),
+    "pystow": ("https://pystow.readthedocs.io/en/latest", None),
+    "IPython": ("https://ipython.readthedocs.io/en/stable", None),
+    "torch_ppr": ("https://torch-ppr.readthedocs.io/en/latest", None),
 }
 
 autoclass_content = "both"
@@ -268,3 +272,125 @@ autodoc_typehints = "both"
 
 # Output SVG inheritance diagrams
 graphviz_output_format = "svg"
+
+# -- Nitpicky mode exceptions -------------------------------------------------
+#
+# These are all cases where the referenced object genuinely exists in the codebase, but Sphinx has no way to
+# generate (or reach) an anchor for it, so a cross-reference to it can never resolve. They fall into a few
+# structural buckets:
+
+nitpick_ignore_regex = [
+    # `__init__`/`__repr__`/`extra_repr` are folded into their class' docs via `autoclass_content = "both"`, so
+    # autodoc never generates a separate, individually-linkable anchor for them.
+    (r"py:(meth|func)", r"(.*\.)?__init__$"),
+    (r"py:(meth|func)", r"(.*\.)?__repr__$"),
+    (r"py:(meth|func)", r"(.*\.)?extra_repr$"),
+    # `class_resolver`-based singleton resolver instances (`*_resolver`) report their `__module__` as
+    # `class_resolver.api`, not the pykeen module they are instantiated in, so autodoc can't anchor them there.
+    (r"py:(data|const)", r".*_resolver$"),
+    (r"py:meth", r".*_resolver\.make(_many)?$"),
+    # Generic aliases render their type parameters inline (e.g. `collections.abc.Mapping[str, ...]`), which
+    # never matches a plain `nitpick_ignore` string; match on the unparameterized prefix instead.
+    (r"py:class", r"collections\.abc\.Mapping\[.*"),
+    (r"py:class", r"class_resolver\.func\.FunctionResolver\[.*"),
+]
+
+nitpick_ignore = [
+    # TypeVars and type aliases: Sphinx cannot resolve these as `py:class`/`py:obj` targets unless each is
+    # individually documented, which none of these (from `pykeen.typing`, `pykeen.utils`, or re-exported from
+    # `class_resolver`) are.
+    ("py:class", "AdditionalFilterTriplesHint"),
+    ("py:class", "BatchNorm"),
+    ("py:class", "Clamp"),
+    ("py:class", "Dropout"),
+    ("py:class", "EdgeWeighting"),
+    ("py:class", "FloatTensor"),
+    ("py:class", "Hint"),
+    ("py:class", "HintOrType"),
+    ("py:class", "LongTensor"),
+    ("py:class", "LookupOrType"),
+    ("py:class", "MappedTriples"),
+    ("py:class", "MarginRankingLoss"),
+    ("py:class", "OModel"),
+    ("py:class", "OneOrManyHintOrType"),
+    ("py:class", "OneOrManyOptionalKwargs"),
+    ("py:class", "OneOrSequence"),
+    ("py:class", "Optimizer"),
+    ("py:class", "OptionalKwargs"),
+    ("py:class", "Representation"),
+    ("py:class", "TargetHint"),
+    ("py:class", "TrainingCallbackKwargsHint"),
+    ("py:class", "X"),
+    ("py:class", "class_resolver"),
+    ("py:class", "class_resolver.func.FunctionResolver"),
+    ("py:class", "class_resolver.utils.X"),
+    ("py:class", "collections.abc.Mapping"),
+    ("py:class", "dataclasses.dataclass"),
+    ("py:class", "pykeen.datasets.ea.combination.FactoryType"),
+    ("py:class", "pykeen.evaluation.evaluator.MetricKeyType"),
+    ("py:class", "pykeen.utils.K"),
+    ("py:class", "pykeen.utils.V"),
+    ("py:class", "pykeen.utils.X"),
+    ("py:obj", "-1"),
+    ("py:obj", "pykeen.datasets.ea.combination.FactoryType"),
+    ("py:obj", "pykeen.evaluation.evaluator.MetricKeyType"),
+    ("py:obj", "pykeen.training.training_loop.BatchType"),
+    ("py:obj", "pykeen.triples.instances.BatchType"),
+    ("py:obj", "pykeen.typing.Representation"),
+    ("py:obj", "pykeen.typing.X"),
+    # Third-party types that only ever appear via rendered type hints (`autodoc_typehints = "both"`), using
+    # shorthand/private paths that don't match any public, inventory-documented target.
+    ("py:class", "nn.Module"),
+    ("py:class", "nn.Parameter"),
+    ("py:class", "np.ndarray"),
+    ("py:class", "torch.FloatTensor"),
+    ("py:class", "torch.LongTensor"),
+    ("py:class", "torch._VariableFunctionsClass.tensor"),
+    ("py:class", "torch.nn.modules.loss._Loss"),
+    ("py:mod", "pykeen.nn.modules._Loss"),
+    ("py:func", "np.random.seed"),
+    # Third-party libraries with no reachable Sphinx inventory, or that don't document the referenced object at
+    # a public path.
+    ("py:class", "neptune.OfflineBackend"),
+    ("py:class", "optuna.storages._base.BaseStorage"),
+    ("py:class", "pandas.core.frame.DataFrame"),
+    ("py:class", "pytorch_lightning.core.module.LightningModule"),
+    ("py:class", "scipy.sparse.csgraph"),
+    ("py:func", "opt_einsum.contract"),
+    ("py:func", "torch_ppr.page_rank"),
+    ("py:func", "wandb.init"),
+    ("py:mod", "bio2bel.io.pykeen"),
+    ("py:mod", "pystow"),
+    ("py:mod", "tensorboard"),
+    ("py:mod", "torch_geometric.nn.conv"),
+    ("py:mod", "torch_max_mem"),
+    ("py:mod", "torch_sparse"),
+    ("py:mod", "torchvision.models"),
+    ("py:mod", "torchvision.transforms"),
+    ("py:mod", "tqdm"),
+    ("py:mod", "transformers"),
+    # Real, correctly-named pykeen objects that automodapi never exposes: either the referenced attribute is
+    # only a bare type annotation (never a documented class-level value), the object is deliberately excluded
+    # from its module's `__all__`, or its containing module is never pulled into any `automodapi::` directive.
+    ("py:class", "Partition"),
+    ("py:class", "pykeen.ablation.ablation.SplitToPathDict"),
+    ("py:class", "pykeen.datasets.ea.base.EADataset"),
+    ("py:class", "pykeen.datasets.ea.wk3l.MTransEDataset"),
+    ("py:class", "pykeen.datasets.ogb.BioKGEvalDict"),
+    ("py:class", "pykeen.datasets.ogb.BioKGTrainDict"),
+    ("py:class", "pykeen.datasets.ogb.OGBLoader"),
+    ("py:class", "pykeen.datasets.ogb.WikiKG2EvalDict"),
+    ("py:class", "pykeen.datasets.ogb.WikiKG2TrainDict"),
+    ("py:class", "pykeen.evaluation.classification_evaluator.ClassificationMetricKey"),
+    ("py:class", "pykeen.evaluation.classification_evaluator.ScorePack"),
+    ("py:class", "pykeen.evaluation.evaluation_loop.EvaluationLoop"),
+    ("py:class", "pykeen.evaluation.rank_based_evaluator.RankBasedMetricKey"),
+    ("py:class", "pykeen.evaluation.rank_based_evaluator.RankPack"),
+    ("py:class", "pykeen.hpo.hpo.Objective"),
+    ("py:class", "pykeen.metrics.ranking.MedianAbsoluteDeviation"),
+    ("py:class", "pykeen.models.nbase._NewAbstractModel"),
+    ("py:class", "pykeen.nn.representation.Partition"),
+    ("py:class", "pykeen.nn.vision.cache.WikidataImageCache"),
+    ("py:class", "pykeen.training.TrainingCallback"),
+    ("py:class", "pykeen.triples.triples_factory.TripleCondenser"),
+]

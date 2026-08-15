@@ -1,7 +1,7 @@
 r"""Loss functions integrated in PyKEEN.
 
 Rather than re-using the built-in loss functions in PyTorch, we have elected to re-implement
-some of the code from :mod:`pytorch.nn.modules.loss` in order to encode the three different
+some of the code from :mod:`torch.nn.modules.loss` in order to encode the three different
 links of loss functions accepted by PyKEEN in a class hierarchy. This allows for PyKEEN to more
 dynamically handle different kinds of loss functions as well as share code. Further, it gives
 more insight to potential users.
@@ -934,7 +934,7 @@ class DoubleMarginLoss(PointwiseLoss):
 
         .. note ::
             There are multiple variants to set the pair of margins. A full documentation is provided in
-            :func:`DoubleMarginLoss.resolve_margins`.
+            :func:`~pykeen.losses.DoubleMarginLoss.resolve_margin`.
 
         :param positive_margin:
             The (absolute) margin for the positive scores. Should be larger than the negative one.

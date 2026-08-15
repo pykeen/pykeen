@@ -110,10 +110,10 @@ def plot_er(  # noqa: C901
     :param annotation_x_offset: X offset of label from entity position
     :param annotation_y_offset: Y offset of label from entity position
     :param entity_embedding_getter: A function that takes a model and returns its entity embeddings. If none, defaults
-        to :func:`_default_entity_embedding_getter`, which just gets ``model.entity_embeddings``. Note, the default only
+        to ``_default_entity_embedding_getter``, which just gets ``model.entity_embeddings``. Note, the default only
         works with old-style PyKEEN models.
     :param relation_embedding_getter: A function that takes a model and returns its relation embeddings. If none,
-        defaults to :func:`_default_relation_embedding_getter`, which just gets ``model.relation_embeddings``. Note, the
+        defaults to ``_default_relation_embedding_getter``, which just gets ``model.relation_embeddings``. Note, the
         default only works with old-style PyKEEN models.
     :param ax: The matplotlib axis, if pre-defined
     :param subtitle: A user-defined subtitle. Is inferred if not given. Pass an empty string to not use a subtitle.

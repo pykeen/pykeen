@@ -313,7 +313,7 @@ def _prepare_cleanup(
 class RandomizedCleaner(Cleaner):
     """Cleanup a triples array by randomly selecting testing triples and recalculate to minimize moves.
 
-    1. Calculate ``move_id_mask`` as in :func:`_prepare_cleanup`
+    1. Calculate ``move_id_mask`` as in ``_prepare_cleanup``
     2. Choose a triple to move, recalculate ``move_id_mask``
     3. Continue until ``move_id_mask`` has no true bits
     """
@@ -520,7 +520,7 @@ def split(
         it does not necessarily have to move all of them, but it might be significantly slower since it moves one
         triple at a time.
     :param method:
-        The name of the method to use, cf. :data:`splitter_resolver`. Defaults to "coverage", i.e.,
+        The name of the method to use, cf. ``splitter_resolver``. Defaults to "coverage", i.e.,
         :class:`CoverageSplitter`.
 
     :return:

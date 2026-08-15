@@ -349,7 +349,7 @@ class Dataset(ExtraReprMixin):
 
         .. seealso::
 
-            :func:`pykeen.triples.triples_factory.splits_similarity`.
+            ``splits_similarity``.
         """
         return dataset_similarity(self, other, metric=metric)
 
@@ -384,7 +384,7 @@ class Dataset(ExtraReprMixin):
 
         .. warning::
 
-            This is different to :meth:`pykeen.triples.triples_factory.CoreTriplesFactory.new_with_restriction` as it
+            This is different to :meth:`~pykeen.triples.CoreTriplesFactory.new_with_restriction` as it
             does modify the label to id mapping.
         """
         # early termination for simple case
@@ -609,8 +609,8 @@ class PathDataset(LazyDataset):
         :param validation_path: Path to the validation triples file or validation triples file.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path` and ultimately through
-            to :func:`pykeen.triples.utils.load_triples`.
+        :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
+            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
         """
         self.training_path = pathlib.Path(training_path)
         self.testing_path = pathlib.Path(testing_path)
@@ -687,8 +687,8 @@ class UnpackedRemoteDataset(PathDataset):
         :param force: If true, redownload any cached files
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path` and ultimately through
-            to :func:`pykeen.triples.utils.load_triples`.
+        :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
+            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
         """
         self.cache_root = self._help_cache(cache_root)

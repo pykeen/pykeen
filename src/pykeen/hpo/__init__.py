@@ -230,7 +230,7 @@ Custom Strategies
 -----------------
 While the default values for hyper-parameters are encoded with the python syntax
 for default values of the ``__init__()`` function of each model, the ranges/scales can be
-found in the class variable :py:attr:`pykeen.models.Model.hpo_default`. For
+found in the class variable ``hpo_default``. For
 example, the range for TransE's embedding dimension is set to optimize
 between 50 and 350 at increments of 25 in :py:attr:`pykeen.models.TransE.hpo_default`.
 TransE also has a scoring function norm that will be optimized by a categorical
@@ -303,8 +303,8 @@ constrainer and regularizer since there could be multiple representations for ei
 relation, or both. Check your desired model's documentation page for the kwargs that you can
 optimize over.
 
-Keys of :data:`pykeen.nn.representation.initializers` can be passed as initializers as strings and
-keys of :data:`pykeen.nn.representation.constrainers` can be passed as constrainers as strings.
+Keys of :data:`~pykeen.nn.representation.initializer_resolver` can be passed as initializers as strings and
+keys of :data:`~pykeen.nn.representation.constrainer_resolver` can be passed as constrainers as strings.
 
 The HPO pipeline does not support optimizing over the hyper-parameters for each
 initializer. If you are interested in this, consider rolling your own ablation
@@ -324,9 +324,9 @@ the same way as in :func:`pykeen.pipeline.pipeline`.
 ... )
 
 As stated in the documentation for :func:`pykeen.pipeline.pipeline`, each model
-specifies its own default loss function in :py:attr:`pykeen.models.Model.loss_default`.
+specifies its own default loss function in ``loss_default``.
 For example, the TransE model defines the margin ranking loss as its default in
-:py:attr:`pykeen.models.TransE.loss_default`.
+``loss_default``.
 
 Each model also specifies default hyper-parameters for the loss function in
 :py:attr:`pykeen.models.Model.loss_default_kwargs`. For example, DistMultLiteral
@@ -334,7 +334,7 @@ explicitly sets the margin to `0.0` in  :py:attr:`pykeen.models.DistMultLiteral.
 
 Unlike the model's hyper-parameters, the models don't store the strategies for
 optimizing the loss functions' hyper-parameters. The pre-configured strategies
-are stored in the loss function's class variable :py:attr:`pykeen.models.Loss.hpo_default`.
+are stored in the loss function's class variable :py:attr:`pykeen.losses.Loss.hpo_default`.
 
 However, similarily to how you would specify ``model_kwargs_ranges``, you can
 specify the ``loss_kwargs_ranges`` explicitly, as in the following example.

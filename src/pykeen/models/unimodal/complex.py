@@ -22,8 +22,8 @@ __all__ = [
 class ComplEx(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of ComplEx [trouillon2016]_.
 
-    The ComplEx model combines complex-valued :class:`pykeen.nn.Embedding` entity and relation representations with a
-    :class:`pykeen.nn.ComplExInteraction`.
+    The ComplEx model combines complex-valued :class:`pykeen.nn.representation.Embedding` entity and relation
+    representations with a :class:`pykeen.nn.modules.ComplExInteraction`.
 
     ---
     citation:

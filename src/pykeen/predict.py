@@ -94,7 +94,7 @@ The predictions object also exposes filtered / annotated dataframe through its `
 
 Full Scoring
 ------------
-Finally, we can use :func:`pykeen.predict.predict` to calculate scores for *all* possible triples. Notice that
+Finally, we can use :func:`pykeen.predict.predict_all` to calculate scores for *all* possible triples. Notice that
 this operation can be prohibitively expensive for reasonably sized knowledge graphs, and the model may produce
 additional ill-calibrated scores for entity/relation combinations it has never seen paired before during training.
 The next line calculates *and* stores all triples and scores

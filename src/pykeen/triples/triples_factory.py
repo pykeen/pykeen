@@ -1259,7 +1259,7 @@ class TriplesFactory(CoreTriplesFactory):
             Arbitrary key/value pairs to store as metadata with the triples factory. Do not
             include ``path`` as a key because it is automatically taken from the ``path``
             kwarg to this function.
-        :param load_triples_kwargs: Optional keyword arguments to pass to :func:`load_triples`.
+        :param load_triples_kwargs: Optional keyword arguments to pass to :func:`pykeen.triples.utils.load_triples`.
             Could include the ``delimiter`` or a ``column_remapping``.
         :param kwargs:
             additional keyword-based parameters, which are ignored.

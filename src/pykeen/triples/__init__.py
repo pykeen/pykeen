@@ -52,7 +52,7 @@ Analysis
 ========
 
 We also provide methods for analyzing knowledge graphs. These include simple statistics such as the number of entities
-or relations (in :mod:`pykeen.triples.stats`), as well as advanced analysis of relational patterns
+or relations (in :mod:`pykeen.triples.analysis`), as well as advanced analysis of relational patterns
 (:mod:`pykeen.triples.analysis`).
 """
 

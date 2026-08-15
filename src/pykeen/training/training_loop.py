@@ -264,8 +264,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         :param use_tqdm: Should a progress bar be shown for epochs?
         :param use_tqdm_batch: Should a progress bar be shown for batching (inside the epoch progress bar)?
         :param tqdm_kwargs: Keyword arguments passed to :mod:`tqdm` managing the progress bar.
-        :param stopper: An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking if training
-            should stop early
+        :param stopper: An instance of :class:`pykeen.stoppers.early_stopping.EarlyStopper` with settings for
+            checking if training should stop early
         :param sub_batch_size: If provided split each batch into sub-batches to avoid memory issues for large models /
             small GPUs.
         :param num_workers: The number of child CPU workers used for loading data. If None, data are loaded in the main
@@ -1096,8 +1096,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         """Save the state of the training loop.
 
         :param path: Path of the file where to store the state in.
-        :param stopper: An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking if training
-            should stop early
+        :param stopper: An instance of :class:`pykeen.stoppers.early_stopping.EarlyStopper` with settings for
+            checking if training should stop early
         :param best_epoch_model_checkpoint_file_path: The file path for the checkpoint of the best epoch model when
             using early stopping.
         :param triples_factory: The triples factory being used in the current training loop.

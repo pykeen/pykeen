@@ -499,7 +499,7 @@ Run an Ablation Study From The Command Line Interface
 -----------------------------------------------------
 
 If you want to start an ablation study from the command line interface, we provide the function
-:func:`pykeen.experiments.cli.ablation`, which expects as an argument the path to a JSON configuration file. The
+``pykeen experiments ablation``, which expects as an argument the path to a JSON configuration file. The
 configuration file consists of a dictionary with the sub-dictionaries ``ablation`` and ``optuna`` in which the ablation
 study and the Optuna related configuration are defined. Besides, similar to the programmatic interface, the ``metadata``
 dictionary can be provided. The configuration file corresponding to the ablation study that we previously defined within

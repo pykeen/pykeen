@@ -230,7 +230,8 @@ class HashDiversityInfo(NamedTuple):
     """
 
     #: A list with ratios per representation in their creation order,
-    #: e.g., ``[0.58, 0.82]`` for :class:`AnchorTokenization` and :class:`RelationTokenization`
+    #: e.g., ``[0.58, 0.82]`` for :class:`~pykeen.nn.node_piece.tokenization.AnchorTokenizer` and
+    #: :class:`~pykeen.nn.node_piece.tokenization.RelationTokenizer`
     uniques_per_representation: list[float]
 
     #: A scalar ratio of unique rows when combining all representations into one matrix, e.g. 0.95

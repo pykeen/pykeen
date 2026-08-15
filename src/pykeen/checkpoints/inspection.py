@@ -22,10 +22,10 @@ def simulate_checkpoints(
     :param num_epochs:
         the number of epochs
     :param schedule:
-        a checkpoint schedule instance or selection, cf. :const:`pykeen.checkpoints.scheduler_resolver`
+        a checkpoint schedule instance or selection, cf. :const:`~pykeen.checkpoints.schedule_resolver`
     :param schedule_kwargs:
         additional keyword-based parameters when the schedule needs to instantiated first from a selection,
-        cf. :const:`pykeen.checkpoints.scheduler_resolver`
+        cf. :const:`~pykeen.checkpoints.schedule_resolver`
     :param keeper:
         a checkpoint retention policy instance or selection, cf. :const:`pykeen.checkpoints.keeper_resolver`
         `None` corresponds to keeping everything that was checkpointed.
@@ -94,10 +94,10 @@ def final_checkpoints(
     :param num_epochs:
         the number of epochs
     :param schedule:
-        a checkpoint schedule instance or selection, cf. :const:`pykeen.checkpoints.scheduler_resolver`
+        a checkpoint schedule instance or selection, cf. :const:`~pykeen.checkpoints.schedule_resolver`
     :param schedule_kwargs:
         additional keyword-based parameters when the schedule needs to instantiated first from a selection,
-        cf. :const:`pykeen.checkpoints.scheduler_resolver`
+        cf. :const:`~pykeen.checkpoints.schedule_resolver`
     :param keeper:
         a checkpoint retention policy instance or selection, cf. :const:`pykeen.checkpoints.keeper_resolver`
         `None` corresponds to keeping everything that was checkpointed.

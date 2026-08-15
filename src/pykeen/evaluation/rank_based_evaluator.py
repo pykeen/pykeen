@@ -579,10 +579,10 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             the factory with evaluation triples
         :param additional_filter_triples:
             additional true triples to use for filtering; only relevant if not explicit negatives are given.
-            cf. :func:`pykeen.evaluation.rank_based_evaluator.sample_negatives`
+            cf. ``sample_negatives``
         :param num_negatives:
             the number of negatives to sample; only relevant if not explicit negatives are given.
-            cf. :func:`pykeen.evaluation.rank_based_evaluator.sample_negatives`
+            cf. ``sample_negatives``
         :param head_negatives: shape: (num_triples, num_negatives)
             the entity IDs of negative samples for head prediction for each evaluation triple
         :param tail_negatives: shape: (num_triples, num_negatives)

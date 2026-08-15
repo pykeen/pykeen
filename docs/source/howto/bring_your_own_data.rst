@@ -119,7 +119,7 @@ if you already have triples loaded in a :class:`numpy.ndarray`.
 Unstratified Dataset
 --------------------
 It's more realistic your real-world dataset is not already stratified into training and testing sets.
-PyKEEN has you covered with :func:`pykeen.triples.TriplesFactory.split`, which will allow you to create
+PyKEEN has you covered with ``TriplesFactory.split``, which will allow you to create
 a stratified dataset.
 
 >>> from pykeen.triples import TriplesFactory

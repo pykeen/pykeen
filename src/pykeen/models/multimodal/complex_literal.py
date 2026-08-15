@@ -22,7 +22,7 @@ class ComplExLiteral(LiteralModel):
     """An implementation of the LiteralE model with the ComplEx interaction from [kristiadi2018]_.
 
     This module is a configuration of the general :class:`pykeen.models.LiteralModel` with the
-    :class:`pykeen.nn.modules.ComplExInteraction` and :class:`pykeen.nn.combinations.ComplExLiteralCombination`.
+    :class:`pykeen.nn.modules.ComplExInteraction` and :class:`~pykeen.nn.combination.ComplexSeparatedCombination`.
     ---
     name: ComplEx Literal
     citation:

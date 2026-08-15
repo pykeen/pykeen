@@ -72,7 +72,7 @@ class MultiplicationCompositionModule(FunctionalCompositionModule):
 
 
 class CircularCorrelationCompositionModule(FunctionalCompositionModule):
-    """Composition by circular correlation via :func:`pykeen.nn.functional.circular_correlation`."""
+    """Composition by circular correlation via ``pykeen.utils.circular_correlation``."""
 
     func: ClassVar[Composition] = circular_correlation
 

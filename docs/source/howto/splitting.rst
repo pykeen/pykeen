@@ -9,8 +9,8 @@ difficult.
 
 One way to deal with this situation is to randomly select training triples, and then discard any entity or relation from
 the remaining triples that is not part of any training triple. You can do this in PyKEEN by creating a
-:class:`TriplesFactory` for the training triples, and then passing its entity and relation to the ID mapping to create a
-:class:`TriplesFactory` for the evaluation triples. This will filter out any triple with an unknown ID (and warn you
+:class:`pykeen.triples.TriplesFactory` for the training triples, and then passing its entity and relation to the ID mapping to create a
+:class:`pykeen.triples.TriplesFactory` for the evaluation triples. This will filter out any triple with an unknown ID (and warn you
 about it, so you know).
 
 PyKEEN also offers more advanced methods for creating splits that aim to preserve more of the underlying triples used to

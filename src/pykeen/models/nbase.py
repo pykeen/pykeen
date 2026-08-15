@@ -51,8 +51,8 @@ class _NewAbstractModel(Model, ABC):
     relations' representations, how they want to be looked up, and how they should
     be scored. The :class:`ERModel` provides a commonly useful implementation
     which allows for the specification of one or more entity representations and
-    one or more relation representations in the form of :class:`pykeen.nn.Embedding`
-    as well as a matching instance of a :class:`pykeen.nn.Interaction`.
+    one or more relation representations in the form of :class:`pykeen.nn.representation.Embedding`
+    as well as a matching instance of a :class:`pykeen.nn.modules.Interaction`.
     """
 
     #: The default regularizer class
@@ -406,9 +406,9 @@ class ERModel(
         :param regularizer_kwargs:
             additional keyword-based parameters for the regularizer's instantiation
         :param default_regularizer:
-            the default regularizer; if None, use :attr:`regularizer_default`
+            the default regularizer; if None, use ``regularizer_default``
         :param default_regularizer_kwargs:
-            the default regularizer kwargs; if None, use :attr:`~pykeen.models.nbase.ERModel.regularizer_default_kwargs`
+            the default regularizer kwargs; if None, use ``regularizer_default_kwargs``
 
         :raises KeyError: If an invalid parameter name was given
         """

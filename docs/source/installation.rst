@@ -41,7 +41,7 @@ change it slightly to check if PyKEEN is already installed:
 
 .. note::
 
-    Old versions of PyKEEN that used :mod:`class_resolve` version 0.3.4 and below loaded datasets via entrypoints. This
+    Old versions of PyKEEN that used :mod:`class_resolver` version 0.3.4 and below loaded datasets via entrypoints. This
     was unpredictable on Kaggle and Google Colab, so it was removed in https://github.com/pykeen/pykeen/pull/832. More
     information can also be found on `PyKEEN issue #373 <https://github.com/pykeen/pykeen/issues/373>`_.
 

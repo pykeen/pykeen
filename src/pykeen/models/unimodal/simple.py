@@ -85,10 +85,10 @@ class SimplE(
         :param relation_initializer:
             the relation representation initializer
         :param regularizer:
-            the regularizer, defaults to :attr:`SimplE.regularizer_default`
+            the regularizer, defaults to ``regularizer_default``
         :param regularizer_kwargs:
             additional keyword-based parameters passed to the regularizer, defaults to
-            :attr:`SimplE.regularizer_default_kwargs`
+            ``regularizer_default_kwargs``
         :param kwargs:
             additional keyword-based parameters passed to :meth:`ERModel.__init__`
         """

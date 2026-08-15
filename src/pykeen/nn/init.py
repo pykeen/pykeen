@@ -382,7 +382,7 @@ class WeisfeilerLehmanInitializer(PretrainedInitializer):
             the triples factory
 
         :param kwargs:
-            additional keyword-based parameters passed to :func:`pykeen.utils.iter_weisfeiler_lehman`
+            additional keyword-based parameters passed to ``iter_weisfeiler_lehman``
         """
         # normalize shape
         shape = upgrade_to_sequence(shape)
@@ -485,11 +485,11 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
 #: A resolver for initializers, including elements from :mod:`pykeen.nn.init`
 #:
 #: - :func:`pykeen.nn.init.init_phases`
-#: - :func:`pykeen.nn.init.init_quaternions`
+#: - ``init_quaternions``
 #: - :func:`pykeen.nn.init.normal_norm_`
 #: - :func:`pykeen.nn.init.uniform_norm_`
 #: - :func:`pykeen.nn.init.xavier_uniform_`
-#: - :func:`pykeen.nn.init.xavier_uniform_norm`
+#: - :func:`pykeen.nn.init.xavier_uniform_norm_`
 #: - :func:`pykeen.nn.init.xavier_normal_`
 #: - :func:`pykeen.nn.init.xavier_normal_norm_`
 #:

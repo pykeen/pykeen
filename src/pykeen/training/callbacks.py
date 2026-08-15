@@ -314,7 +314,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
         :param additional_filter_triples:
             additional filter triples to use for creating the filter
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`EvaluationLoop.evaluate`
+            additional keyword-based parameters passed to ``EvaluationLoop.evaluate``
         """
         super().__init__()
         self.frequency = frequency
@@ -348,7 +348,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
 
 
 class StopperTrainingCallback(TrainingCallback):
-    """An adapter for the :class:`pykeen.stopper.Stopper`."""
+    """An adapter for the :class:`pykeen.stoppers.stopper.Stopper`."""
 
     def __init__(
         self,
@@ -663,10 +663,10 @@ class CheckpointTrainingCallback(TrainingCallback):
         Create callback.
 
         :param schedule:
-            a selection of the checkpoint schedule, cf. :const:`pykeen.checkpoints.scheduler_resolver`
+            a selection of the checkpoint schedule, cf. :const:`~pykeen.checkpoints.schedule_resolver`
         :param schedule_kwargs:
             keyword-based parameters to instantiate the checkpoint schedule, if necessary,
-            cf. :const:`pykeen.checkpoints.scheduler_resolver`
+            cf. :const:`~pykeen.checkpoints.schedule_resolver`
         :param keeper:
             a selection of the checkpoint retention logic, cf. :const:`pykeen.checkpoints.keeper_resolver`.
             `None` corresponds to keeping all checkpoints (which were created).

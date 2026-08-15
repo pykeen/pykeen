@@ -89,7 +89,7 @@ Specifying Hyper-parameter Optimization Default Ranges
 
 All subclasses of :class:`pykeen.models.Model` can specify the default ranges or values used during hyper-parameter
 optimization (HPO). PyKEEN implements a simple dictionary-based configuration that is interpreted by
-:func:`pykeen.hpo.hpo.suggest_kwargs` in the HPO pipeline.
+``suggest_kwargs`` in the HPO pipeline.
 
 HPO default ranges can be applied to all keyword arguments appearing in the ``__init__()`` function of your model by
 setting a class-level variable called ``hpo_default``.

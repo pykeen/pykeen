@@ -39,7 +39,7 @@ The following examples are for entity representations, but can be equivalently u
               # equivalent to
               # entity_representations=[None],
               # equivalent to
-              # entity_representations=[pykeen.nn.Embedding],
+              # entity_representations=[pykeen.nn.representation.Embedding],
               entity_representations_kwargs=dict(shape=64),
               ...,
           )
@@ -72,7 +72,7 @@ An interaction function calculates scalar scores from head, relation, and tail r
 interpreted as the plausibility of a triple, i.e., the higher the score, the more plausible the triple is. Good models
 thus should output high scores for true triples and low scores for false triples.
 
-In PyKEEN, interactions are provided as subclasses of :class:`~pykeen.nn.Interaction`, which is a
+In PyKEEN, interactions are provided as subclasses of :class:`~pykeen.nn.modules.Interaction`, which is a
 :class:`torch.nn.Module`, i.e., it can hold additional (trainable) parameters, and can also be used outside of PyKEEN.
 Its core method is :meth:`~pykeen.nn.modules.Interaction.forward`, which receives batches of head, relation, and tail
 representations and calculates the corresponding triple scores.
@@ -85,4 +85,4 @@ function instead of an instantiated class. Further information can be found at :
 
     Interaction functions can require different numbers or shapes of entity and relation representations. A symbolic
     description of the expected number of representations and their shape can be accessed by
-    ``entity_shape`` and ``relation_shape`` on :class:`pykeen.nn.Interaction`.
+    ``entity_shape`` and ``relation_shape`` on :class:`pykeen.nn.modules.Interaction`.

@@ -161,7 +161,7 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
         :param triples_factory:
             the (training) triples factory
         :param threshold:
-            the threshold applied to the similarity matrix, cf. :func:`get_relation_similarity`
+            the threshold applied to the similarity matrix, cf. ``get_relation_similarity``
         """
         super().__init__(triples_factory=triples_factory)
         # compute relation similarity matrix
