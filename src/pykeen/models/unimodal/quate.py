@@ -99,7 +99,7 @@ class QuatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param relation_normalizer:
             The normalizer to use for the relation embeddings.
         :param kwargs:
-            Additional keyword based arguments passed to :class:`pykeen.models.ERModel`. Must not contain
+            Additional keyword based arguments passed to :class:`~pykeen.models.ERModel`. Must not contain
             "interaction", "entity_representations", or "relation_representations".
         """
         super().__init__(

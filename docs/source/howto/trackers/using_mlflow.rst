@@ -11,7 +11,7 @@ be running at http://localhost:5000 by default.
 Pipeline Example
 ----------------
 
-This example shows using MLflow with the :func:`pykeen.pipeline.pipeline` function. Minimally, the ``tracking_uri`` and
+This example shows using MLflow with the :func:`~pykeen.pipeline.pipeline` function. Minimally, the ``tracking_uri`` and
 ``experiment_name`` are required in the ``result_tracker_kwargs``.
 
 .. code-block:: python
@@ -41,7 +41,7 @@ If you click on the experiment, you'll see this:
 HPO Example
 -----------
 
-This example shows using MLflow with the :func:`pykeen.hpo.hpo_pipeline` function.
+This example shows using MLflow with the :func:`~pykeen.hpo.hpo_pipeline` function.
 
 .. code-block:: python
 

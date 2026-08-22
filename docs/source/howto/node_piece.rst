@@ -8,7 +8,7 @@ This page gives more practical examples on using and configuring NodePiece.
 Basic Usage
 -----------
 
-We'll use :class:`pykeen.datasets.FB15k237` for illustrating purposes throughout the following examples.
+We'll use :class:`~pykeen.datasets.FB15k237` for illustrating purposes throughout the following examples.
 
 .. code-block:: python
 
@@ -18,7 +18,7 @@ We'll use :class:`pykeen.datasets.FB15k237` for illustrating purposes throughout
     # inverses are necessary for the current version of NodePiece
     dataset = FB15k237(create_inverse_triples=True)
 
-In the simplest usage of :class:`pykeen.models.NodePiece`, we'll only use relations for tokenization. We can do this by
+In the simplest usage of :class:`~pykeen.models.NodePiece`, we'll only use relations for tokenization. We can do this by
 with the following arguments:
 
 1. Set the ``tokenizers="RelationTokenizer"`` to :class:`pykeen.nn.node_piece.RelationTokenizer`. We can simply refer to
@@ -38,8 +38,8 @@ Here's how the code looks:
         embedding_dim=64,
     )
 
-Next, we'll use a combination of tokenizers (:class:`pykeen.nn.node_piece.AnchorTokenizer` and
-:class:`pykeen.nn.node_piece.RelationTokenizer`) to replicate the full NodePiece tokenization with $k$ anchors and $m$
+Next, we'll use a combination of tokenizers (:class:`~pykeen.nn.node_piece.AnchorTokenizer` and
+:class:`~pykeen.nn.node_piece.RelationTokenizer`) to replicate the full NodePiece tokenization with $k$ anchors and $m$
 relational context. It's as easy as sending a list of tokenizers to ``tokenizers`` and sending a list of arguments to
 ``num_tokens``:
 
@@ -59,25 +59,25 @@ and ``num_tokens`` matters here.
 Anchor Selection and Searching
 ------------------------------
 
-The :class:`pykeen.nn.node_piece.AnchorTokenizer` has two fields:
+The :class:`~pykeen.nn.node_piece.AnchorTokenizer` has two fields:
 
 1. ``selection`` controls how we sample anchors from the graph (32 anchors by default)
 2. ``searcher`` controls how we tokenize nodes using selected anchors
-   (:class:`pykeen.nn.node_piece.CSGraphAnchorSearcher` by default)
+   (:class:`~pykeen.nn.node_piece.CSGraphAnchorSearcher` by default)
 
 By default, our models above use 32 anchors selected as top-degree nodes with
-:class:`pykeen.nn.node_piece.DegreeAnchorSelection` (those are default values for the anchor selection resolver) and
-nodes are tokenized using :class:`pykeen.nn.node_piece.CSGraphAnchorSearcher` - it uses :mod:`scipy.sparse` to
+:class:`~pykeen.nn.node_piece.DegreeAnchorSelection` (those are default values for the anchor selection resolver) and
+nodes are tokenized using :class:`~pykeen.nn.node_piece.CSGraphAnchorSearcher` - it uses :mod:`scipy.sparse` to
 explicitly compute shortest paths from all nodes in the graph to all anchors in the deterministic manner. We can afford
 that for relatively small graphs of FB15k237 size.
 
 For larger graphs, we recommend using the breadth-first search (BFS) procedure in
-:class:`pykeen.nn.node_piece.ScipySparseAnchorSearcher` - it applies BFS by iteratively expanding node neighborhood
+:class:`~pykeen.nn.node_piece.ScipySparseAnchorSearcher` - it applies BFS by iteratively expanding node neighborhood
 until it finds a desired number of anchors - this dramatically saves compute time on graphs of size like
-:class:`pykeen.datasets.OGBWikiKG2`.
+:class:`~pykeen.datasets.OGBWikiKG2`.
 
 32 unique anchors might be a bit too small for FB15k237 with 15k nodes - so let's create a
-:class:`pykeen.models.NodePiece` model with 100 anchors selected with the top degree strategy by sending the
+:class:`~pykeen.models.NodePiece` model with 100 anchors selected with the top degree strategy by sending the
 ``tokenizers_kwargs`` list:
 
 .. code-block:: python
@@ -129,7 +129,7 @@ Looks nice, but fasten your seatbelts 🚀 - we can use several anchor selection
 diverse anchors! Mindblowing 😍
 
 Let's create a model with 500 anchors where 50% of them will be top degree nodes and another 50% will be top PageRank
-nodes - for that we have a :class:`pykeen.nn.node_piece.MixtureAnchorSelection` class!
+nodes - for that we have a :class:`~pykeen.nn.node_piece.MixtureAnchorSelection` class!
 
 .. code-block:: python
 
@@ -261,7 +261,7 @@ Let's pack the last NodePiece model into the pipeline:
 Pre-Computed Vocabularies
 -------------------------
 
-We have a :class:`pykeen.nn.node_piece.PrecomputedPoolTokenizer` that can be instantiated with a precomputed vocabulary
+We have a :class:`~pykeen.nn.node_piece.PrecomputedPoolTokenizer` that can be instantiated with a precomputed vocabulary
 either from a local file or using a downloadable link.
 
 For a local file, specify ``path``:
@@ -282,9 +282,9 @@ For a remote file, specify the ``url``:
 
     precomputed_tokenizer = tokenizer_resolver.make("precomputedpool", url="http://link/to/vocab.pkl")
 
-Generally, :class:`pykeen.nn.node_piece.PrecomputedPoolTokenizer` can use any
-:class:`pykeen.nn.node_piece.PrecomputedTokenizerLoader` as a custom processor of vocabulary formats. Right now there is
-one such loader, :class:`pykeen.nn.node_piece.GalkinPrecomputedTokenizerLoader` that expects a dictionary of the
+Generally, :class:`~pykeen.nn.node_piece.PrecomputedPoolTokenizer` can use any
+:class:`~pykeen.nn.node_piece.PrecomputedTokenizerLoader` as a custom processor of vocabulary formats. Right now there is
+one such loader, :class:`~pykeen.nn.node_piece.GalkinPrecomputedTokenizerLoader` that expects a dictionary of the
 following format:
 
 ::
@@ -314,7 +314,7 @@ Configuring the Interaction Function
 ------------------------------------
 
 you can use literally any interaction function available in PyKEEN as a scoring function! By default, NodePiece uses
-DistMult, but it's easy to change as in any :class:`pykeen.models.ERModel`, let's use the RotatE interaction:
+DistMult, but it's easy to change as in any :class:`~pykeen.models.ERModel`, let's use the RotatE interaction:
 
 .. code-block:: python
 
@@ -409,7 +409,7 @@ from a set of inputs. Let's be fancy 😎 and create a `DeepSet <https://arxiv.o
     )
 
 We can even put a Transformer with pooling here. The only thing to keep in mind is the complexity of the encoder - we
-found :class:`pykeen.nn.perceptron.ConcatMLP` to be a good balance between speed and final performance, although at the
+found :class:`~pykeen.nn.perceptron.ConcatMLP` to be a good balance between speed and final performance, although at the
 cost of being not permutation invariant to the input set of tokens.
 
 The aggregation function resembles that of GNNs. Non-parametric avg/min/max did not work that well in the current
@@ -456,7 +456,7 @@ NodePiece + GNN
 
 It is also possible to add a message passing GNN on top of obtained NodePiece representations to further enrich node
 states - we found it shows even better results in inductive LP tasks. We have that implemented with
-:class:`pykeen.models.InductiveNodePieceGNN` that uses a 2-layer `CompGCN <https://arxiv.org/abs/1911.03082>`_ encoder -
+:class:`~pykeen.models.InductiveNodePieceGNN` that uses a 2-layer `CompGCN <https://arxiv.org/abs/1911.03082>`_ encoder -
 please check the Inductive Link Prediction tutorial.
 
 Tokenizing Large Graphs with METIS
@@ -473,12 +473,12 @@ partitioning algorithm with an efficient implementation available in `torch-spar
 <https://github.com/rusty1s/pytorch_sparse>`_. Along with METIS, we leverage `torch-sparse` to offer a new, faster BFS
 procedure that can run on a GPU.
 
-The main tokenizer class is :class:`pykeen.nn.node_piece.MetisAnchorTokenizer`. You can place it instead of the vanilla
+The main tokenizer class is :class:`~pykeen.nn.node_piece.MetisAnchorTokenizer`. You can place it instead of the vanilla
 ``AnchorTokenizer``. With the Metis-based tokenizer, we first partition the input training graph into `k` separate
 partitions and then run anchor selection and anchor search sequentially and independently **for each partition**.
 
 You can use any existing anchor selection and anchor search strategy described above although for larger graphs we
-recommend using a new :class:`pykeen.nn.node_piece.SparseBFSSearcher` as anchor searcher -- it implements faster sparse
+recommend using a new :class:`~pykeen.nn.node_piece.SparseBFSSearcher` as anchor searcher -- it implements faster sparse
 matrix multiplication kernels and can be run on a GPU. The only difference from the vanilla tokenizer is that now the
 ``num_anchors`` argument defines how many anchors will be mined **for each partition**.
 
@@ -491,7 +491,7 @@ The new tokenizer has two special arguments:
   We found ``device="cpu"`` works faster on larger graphs and does not require limited GPU memory, although you can keep
   the device to be resolved automatically or put ``device="cuda"`` to try running it on a GPU.
 
-It is still advisable to run large graph tokenization using :class:`pykeen.nn.node_piece.SparseBFSSearcher` on a GPU
+It is still advisable to run large graph tokenization using :class:`~pykeen.nn.node_piece.SparseBFSSearcher` on a GPU
 thanks to more efficient sparse CUDA kernels. If a GPU is available, it will be used automatically by default.
 
 Let's use the new tokenizer for the Wikidata5M graph of 5M nodes and 20M edges.

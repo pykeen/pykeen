@@ -68,7 +68,7 @@ class ERMLP(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param relation_initializer:
             the method to initialize the entity embeddings
         :param kwargs:
-            additional keyword-based parameters passed to :class:`pykeen.models.ERModel`
+            additional keyword-based parameters passed to :class:`~pykeen.models.ERModel`
         """
         super().__init__(
             interaction=ERMLPInteraction,

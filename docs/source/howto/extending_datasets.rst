@@ -15,7 +15,7 @@ Unpacked Remote Dataset
 
 Use this tutorial if you have three separate URLs for the respective training, testing, and validation sets that are
 each 3 column TSV files. A good example can be found at https://github.com/ZhenfengLei/KGDatasets/tree/master/DBpedia50.
-There's a base class called :class:`pykeen.datasets.base.UnpackedRemoteDataset` that can be used to wrap it like the
+There's a base class called :class:`~pykeen.datasets.base.UnpackedRemoteDataset` that can be used to wrap it like the
 following:
 
 .. code-block:: python
@@ -41,7 +41,7 @@ Unsplit Datasets
 
 Use this tutorial if you have a single URL for a TSV dataset that needs to be automatically split into training,
 testing, and validation. A good example can be found at https://github.com/hetio/hetionet/raw/master/hetnet/tsv. There's
-a base class called :class:`pykeen.datasets.base.SingleTabbedDataset` that can be used to wrap it like the following:
+a base class called :class:`~pykeen.datasets.base.SingleTabbedDataset` that can be used to wrap it like the following:
 
 .. code-block:: python
 
@@ -65,7 +65,7 @@ Updating the ``setup.cfg``
 
 Whether you're making a pull request against PyKEEN or implementing a dataset in your own package, you can use Python
 entrypoints to register your dataset with PyKEEN. Below is an example of the entrypoints that register
-:class:`pykeen.datasets.Hetionet`, :class:`pykeen.datasets.DRKG`, and others that appear in the PyKEEN `setup.cfg
+:class:`~pykeen.datasets.Hetionet`, :class:`~pykeen.datasets.DRKG`, and others that appear in the PyKEEN `setup.cfg
 <https://github.com/pykeen/pykeen/blob/master/setup.cfg>`_. Under the ``pykeen.datasets`` header, you can pick whatever
 name you want for the dataset as the key (appearing on the left side of the equals, e.g. ``hetionet``) and the path to
 the class (appearing on the right side of the equals, e.g., ``pykeen.datasets.hetionet:Hetionet``). The right side is

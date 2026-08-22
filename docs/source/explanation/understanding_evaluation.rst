@@ -3,7 +3,7 @@
 Understanding the Evaluation
 ============================
 This part of the tutorial is aimed to help you understand the evaluation of knowledge graph embeddings.
-In particular it explains rank-based evaluation metrics reported in :class:`pykeen.evaluation.RankBasedMetricResults`.
+In particular it explains rank-based evaluation metrics reported in :class:`~pykeen.evaluation.RankBasedMetricResults`.
 
 Knowledge graph embedding are usually evaluated on the task of link prediction. To this end, an evaluation set of
 triples :math:`\mathcal{T}_{eval} \subset \mathcal{E} \times \mathcal{R} \times \mathcal{E}` is provided, and for each
@@ -129,7 +129,7 @@ while the majority of nodes has only a few neighbors. This also impacts the eval
 occur in a large number of triples, they are also more likely to be part of evaluation triples.
 Thus, performing well on triples containing hub entities contributes strongly to the overall performance.
 
-As an example, we can inspect the :class:`pykeen.datasets.WD50KT` dataset, where a single (relation, tail)-combination,
+As an example, we can inspect the :class:`~pykeen.datasets.WD50KT` dataset, where a single (relation, tail)-combination,
 (`"instance of" <https://www.wikidata.org/wiki/Property:P31>`_, `"human" <https://www.wikidata.org/wiki/Q5>`_),
 is present in 699 evaluation triples.
 
@@ -151,7 +151,7 @@ are seemingly important, and thus evaluation should reflect that. However, somet
 this effect, but rather measure the performance evenly across nodes. A similar phenomenon also exists in multi-class
 classification with imbalanced classes, where frequent classes can dominate performance measures.
 In similar vein to the macro :math:`F_1`-score (cf. :func:`sklearn.metrics.f1_score`) known from this area, PyKEEN
-implements a :class:`pykeen.evaluation.MacroRankBasedEvaluator`, which ensure that triples are weighted such that each
+implements a :class:`~pykeen.evaluation.MacroRankBasedEvaluator`, which ensure that triples are weighted such that each
 unique ranking task, e.g., a (head, relation)-pair for tail prediction, contributes evenly.
 
 Technically, we solve the task by implemented variants of existing rank-based metrics which support weighting
@@ -172,7 +172,7 @@ Below, we present the philosophy from [bordes2013]_ and how it is implemented in
 
 HPO Scenario
 ************
-During training/optimization with :func:`pykeen.hpo.hpo_pipeline`, the set of known positive triples comprises the
+During training/optimization with :func:`~pykeen.hpo.hpo_pipeline`, the set of known positive triples comprises the
 training and validation sets. After optimization is finished and the final evaluation is done, the set of known
 positive triples comprises the training, validation, and testing set. PyKEEN explicitly does not use test triples
 for filtering during HPO to avoid any test leakage.
@@ -187,7 +187,7 @@ is being used to avoid any test leakage.
 
 Pipeline Scenario
 *****************
-During vanilla training with the :func:`pykeen.pipeline.pipeline` that has no optimization, no early stopping, nor
+During vanilla training with the :func:`~pykeen.pipeline.pipeline` that has no optimization, no early stopping, nor
 any *post-hoc* choices using the validation set, the set of known positive triples comprises the training and
 testing sets. This scenario is very atypical, and regardless, should be augmented with the validation triples
 to make it more comparable to other published results that do not consider this scenario.
@@ -195,13 +195,13 @@ to make it more comparable to other published results that do not consider this 
 Custom Training Loops
 *********************
 In case the validation triples should *not* be filtered when evaluating the test dataset, the argument
-``filter_validation_when_testing=False`` can be passed to either the :func:`pykeen.hpo.hpo_pipeline` or
-:func:`pykeen.pipeline.pipeline`.
+``filter_validation_when_testing=False`` can be passed to either the :func:`~pykeen.hpo.hpo_pipeline` or
+:func:`~pykeen.pipeline.pipeline`.
 
-If you're rolling your own pipeline, you should keep the following in mind: the :class:`pykeen.evaluation.Evaluator`
+If you're rolling your own pipeline, you should keep the following in mind: the :class:`~pykeen.evaluation.Evaluator`
 when in the filtered setting with ``filtered=True`` will always use the evaluation set (regardless of whether it is the
 testing set or validation set) for filtering. Any other triples that should be filtered should be passed to
-``additional_filter_triples`` in :func:`pykeen.evaluation.Evaluator.evaluate`. Typically, this minimally includes
+``additional_filter_triples`` in :func:`~pykeen.evaluation.Evaluator.evaluate`. Typically, this minimally includes
 the training triples. With the [bordes2013]_ technique where the testing set is used for evaluation, the
 ``additional_filter_triples`` should include both the training triples and validation triples as in the following
 example:
@@ -260,7 +260,7 @@ In order to restrict the evaluation, we proceed as follows:
 
 Example
 *******
-The :class:`pykeen.datasets.Hetionet` is a biomedical knowledge graph containing drugs, genes, diseases, other
+The :class:`~pykeen.datasets.Hetionet` is a biomedical knowledge graph containing drugs, genes, diseases, other
 biological entities, and their interrelations. It was described by Himmelstein *et al.* in `Systematic integration
 of biomedical knowledge prioritizes drugs for repurposing <https://doi.org/10.7554/eLife.26726>`_ to support
 drug repositioning, which translates to the link prediction task between drug and disease nodes.

@@ -585,7 +585,7 @@ class ComplExInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     .. note::
         this method generally expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
         `True`. However, for backwards compatibility and convenience in use, you can also pass real tensors whose shape
-        is compliant with :func:`torch.view_as_complex`, cf. :func:`pykeen.utils.ensure_complex`.
+        is compliant with :func:`torch.view_as_complex`, cf. :func:`~pykeen.utils.ensure_complex`.
 
     ---
     citation:
@@ -1392,10 +1392,10 @@ class TransRInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
     for head and tail entity representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$,
     relation representation $\mathbf{r} \in \mathbb{R}^k$,
     and a relation-specific projection matrix $\mathbf{M}_r \in \mathbb{R}^{k \times d}$.
-    $c$ enforces the constraint $\|\cdot\| \leq 1$, cf. :func:`pykeen.utils.clamp_norm`.
+    $c$ enforces the constraint $\|\cdot\| \leq 1$, cf. :func:`~pykeen.utils.clamp_norm`.
 
     .. note ::
-        :class:`pykeen.models.TransR` additionally also enforces $\|\cdot\| \leq 1$ on all embeddings.
+        :class:`~pykeen.models.TransR` additionally also enforces $\|\cdot\| \leq 1$ on all embeddings.
 
     ---
     citation:
@@ -1467,7 +1467,7 @@ class RotatEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
     .. note::
         this method generally expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
         `True`. However, for backwards compatibility and convenience in use, you can also pass real tensors whose shape
-        is compliant with :func:`torch.view_as_complex`, cf. :func:`pykeen.utils.ensure_complex`.
+        is compliant with :func:`torch.view_as_complex`, cf. :func:`~pykeen.utils.ensure_complex`.
 
     ---
     citation:
@@ -1669,11 +1669,11 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         :param outer_activation_kwargs:
             additional keyword-based parameters used to instantiate the outer activation function.
         :param bias_initializer:
-            the initializer to use for the biases; defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+            the initializer to use for the biases; defaults to :func:`~pykeen.nn.init.xavier_uniform_`.
         :param bias_initializer_kwargs:
             additional keyword-based parameters passed to the bias initializer.
         :param projection_initializer:
-            the initializer to use for the projection; defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+            the initializer to use for the projection; defaults to :func:`~pykeen.nn.init.xavier_uniform_`.
         :param projection_initializer_kwargs:
             additional keyword-based parameters passed to the projection initializer.
         """
@@ -2575,7 +2575,7 @@ class DirectionAverageInteraction(
     r"""The directional average interaction module.
 
     This can be considered as a generalization of the SimplE interaction module that can be parametrized
-    with any other interaction module, rather than just :class:`pykeen.nn.modules.DistMultInteraction`.
+    with any other interaction module, rather than just :class:`~pykeen.nn.modules.DistMultInteraction`.
 
     A separate representation is learned for each entity $e \in \mathcal{E}$ for when it appears as the
     subject of a triple $\mathbf{e}_h \in \mathbb{R}^d$ and as the object of a triple $\mathbf{e}_t \in \mathbb{R}^d$.
@@ -2591,8 +2591,8 @@ class DirectionAverageInteraction(
             + f(\mathbf{t}_{h}, \mathbf{r}_{\leftarrow}, \mathbf{h}_{t})
         }{2}
 
-    Where ``f`` is the interaction model used. If :class:`pykeen.nn.modules.DistMultInteraction` is used,
-    then this becomes :class:`pykeen.nn.modules.SimplEInteraction`.
+    Where ``f`` is the interaction model used. If :class:`~pykeen.nn.modules.DistMultInteraction` is used,
+    then this becomes :class:`~pykeen.nn.modules.SimplEInteraction`.
 
     .. todo:: can we generalize the type annotations for this from FloatTensor to HeadRepresentation, etc.?
     """
@@ -2646,7 +2646,7 @@ class DirectionAverageInteraction(
 class SimplEInteraction(DirectionAverageInteraction):
     r"""The SimplE interaction function.
 
-    SimplE can be regarded as extension of (a special case of) :class:`pykeen.nn.modules.CPInteraction`,
+    SimplE can be regarded as extension of (a special case of) :class:`~pykeen.nn.modules.CPInteraction`,
     an early tensor factorization approach in which each entity
     $e \in \mathcal{E}$ is represented by two vectors $\mathbf{e}_h, \mathbf{e}_t \in \mathbb{R}^d$ and each
     relation by a single vector $\mathbf{r} \in \mathbb{R}^d$. Depending whether an entity participates in a
@@ -2693,7 +2693,7 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
     relation-specific head projection, relation-specific tail projection, and tail entity, respectively.
 
     .. note ::
-        :class:`pykeen.models.PairRE` additionally enforces $\|\mathbf{h}\| = \|\mathbf{t}\| = 1$.
+        :class:`~pykeen.models.PairRE` additionally enforces $\|\mathbf{h}\| = \|\mathbf{t}\| = 1$.
 
     ---
     citation:
@@ -2746,7 +2746,7 @@ class QuatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
     .. warning ::
         In order to representation a rotation, $\mathbf{r}$ must be normalized to unit length,
-        cf. :func:`pykeen.nn.quaternion.normalize`.
+        cf. :func:`~pykeen.nn.quaternion.normalize`.
 
     .. seealso::
         - https://en.wikipedia.org/wiki/Quaternion

@@ -743,9 +743,9 @@ class CoreTriplesFactory(KGInfo):
         :param random_state:
             The random state used to shuffle and split the triples.
         :param randomize_cleanup:
-            This parameter is forwarded to the underlying :func:`pykeen.triples.splitting.split`.
+            This parameter is forwarded to the underlying :func:`~pykeen.triples.splitting.split`.
         :param method:
-            This parameter is forwarded to the underlying :func:`pykeen.triples.splitting.split`.
+            This parameter is forwarded to the underlying :func:`~pykeen.triples.splitting.split`.
 
 
         :return:
@@ -753,7 +753,7 @@ class CoreTriplesFactory(KGInfo):
             which share everything else with this root triples factory.
 
         .. seealso::
-            :func:`pykeen.triples.splitting.split`
+            :func:`~pykeen.triples.splitting.split`
 
         .. code-block:: python
 

@@ -912,7 +912,7 @@ class CombinedCompGCNRepresentations(nn.Module):
     """A sequence of CompGCN layers.
 
     .. seealso::
-        :class:`pykeen.nn.representation.CompGCNLayer`
+        :class:`~pykeen.nn.representation.CompGCNLayer`
 
     ---
     name: CompGCN (combine)
@@ -1067,7 +1067,7 @@ class SingleCompGCNRepresentation(Representation):
     """A wrapper around the combined representation module.
 
     .. seealso::
-        :class:`pykeen.nn.representation.CombinedCompGCNRepresentations`
+        :class:`~pykeen.nn.representation.CombinedCompGCNRepresentations`
 
     ---
     name: CompGCN
@@ -1097,7 +1097,7 @@ class SingleCompGCNRepresentation(Representation):
         :param shape:
             The shape of an individual representation.
         :param kwargs:
-            Additional keyword-based parameters passed to :class:`pykeen.nn.representation.Representation`.
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`.
 
         :raises ValueError:
             If an invalid value is given for the position.
@@ -1189,7 +1189,7 @@ class TextRepresentation(Representation):
             Which policy for handling nones in the given labels. If "error", raises an error
             on any nones. If "blank", replaces nones with an empty string.
         :param kwargs:
-            Additional keyword-based parameters passed to :class:`pykeen.nn.representation.Representation`
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`
 
         :raises MaxIDMismatchError:
             if the ``max_id`` was given explicitly and does not match the length of the labels
@@ -1224,7 +1224,7 @@ class TextRepresentation(Representation):
         :param for_entities:
             Whether to create the initializer for entities (or relations).
         :param kwargs:
-            Additional keyword-based arguments passed to :class:`pykeen.nn.representation.TextRepresentation`
+            Additional keyword-based arguments passed to :class:`~pykeen.nn.representation.TextRepresentation`
 
         :returns:
             a text representation from the triples factory
@@ -1246,7 +1246,7 @@ class TextRepresentation(Representation):
         :param for_entities:
             Whether to create the initializer for entities (or relations).
         :param kwargs:
-            Additional keyword-based arguments passed to :class:`pykeen.nn.representation.TextRepresentation`
+            Additional keyword-based arguments passed to :class:`~pykeen.nn.representation.TextRepresentation`
 
         :return:
             A text representation from the dataset.
@@ -1333,7 +1333,7 @@ class CombinedRepresentation(Representation):
             Additional keyword-based parameters used to instantiate the combination.
 
         :param kwargs:
-            Additional keyword-based parameters passed to :class:`pykeen.nn.representation.Representation`.
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.Representation`.
 
         :raises ValueError:
             If the `max_id` of the base representations are not all the same

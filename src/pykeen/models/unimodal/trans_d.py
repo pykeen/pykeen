@@ -67,14 +67,14 @@ class TransD(
             Additional keyword-based parameters passed to :class:`~pykeen.nn.modules.TransDInteraction`.
 
         :param entity_initializer:
-            The entity representation initializer. Defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+            The entity representation initializer. Defaults to :func:`~pykeen.nn.init.xavier_uniform_`.
         :param entity_constrainer:
-            The entity representation constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
+            The entity representation constrainer. Defaults to :func:`~pykeen.utils.clamp_norm`.
 
         :param relation_initializer:
-            The relation representation initializer. Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`.
+            The relation representation initializer. Defaults to :func:`~pykeen.nn.init.xavier_uniform_norm_`.
         :param relation_constrainer:
-            The relation representation constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
+            The relation representation constrainer. Defaults to :func:`~pykeen.utils.clamp_norm`.
 
         :param kwargs:
             Additional keyword-based parameters passed to :class:`~pykeen.models.ERModel`.

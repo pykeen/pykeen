@@ -40,7 +40,7 @@ class FB15k(TarFileRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the FreeBase 15K dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileRemoteDataset`.
 
         .. warning:: This dataset contains testing leakage. Use :class:`FB15k237` instead.
         """

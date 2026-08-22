@@ -149,8 +149,8 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         3. The metric name, e.g., "adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank",
             "inverse_geometric_mean_rank", or "hits@k" where k defaults to 10 but can be substituted for an integer.
             By default, 1, 3, 5, and 10 are available. Other K's can be calculated by setting the appropriate
-            variable in the ``evaluation_kwargs`` in the :func:`pykeen.pipeline.pipeline` or setting ``ks`` in the
-            :class:`pykeen.evaluation.RankBasedEvaluator`.
+            variable in the ``evaluation_kwargs`` in the :func:`~pykeen.pipeline.pipeline` or setting ``ks`` in the
+            :class:`~pykeen.evaluation.RankBasedEvaluator`.
 
         In general, all metrics are available for all combinations of sides/types except AMR and AMRI, which
         are only calculated for the average type. This is because the calculation of the expected MR in the
@@ -589,7 +589,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             the entity IDs of negative samples for tail prediction for each evaluation triple
         :param kwargs:
             additional keyword-based arguments passed to
-            :meth:`pykeen.evaluation.rank_based_evaluator.RankBasedEvaluator.__init__`
+            :meth:`~pykeen.evaluation.rank_based_evaluator.RankBasedEvaluator.__init__`
 
         :raises ValueError:
             if only a single side's negatives are given, or the negatives are in wrong shape

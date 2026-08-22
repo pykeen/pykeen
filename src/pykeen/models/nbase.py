@@ -231,7 +231,7 @@ def _repeat_when_missing_representations(
     `score_{h,t}` / `score_r` are always the same. For efficiency, they are thus
     only computed once, but to meet the API, they have to be brought into the correct shape afterwards.
 
-    For example, this is the case for :class:`pykeen.models.UM`, which does not have any relation
+    For example, this is the case for :class:`~pykeen.models.UM`, which does not have any relation
     representation. Therefore, the scores for all ``(h, *, t)`` will be the same. We calculate
     them only once, but need to repeat them for downstream use of the scores.
 
@@ -288,7 +288,7 @@ class ERModel(
     be passed through the ``super().__init__()`` in subclasses of :class:`ERModel`.
 
     Other code can still be put after the call to ``super().__init__()`` in subclasses, such as
-    registering regularizers (as done in :class:`pykeen.models.ConvKB` and :class:`pykeen.models.TransH`).
+    registering regularizers (as done in :class:`~pykeen.models.ConvKB` and :class:`~pykeen.models.TransH`).
     ---
     citation:
         author: Ali

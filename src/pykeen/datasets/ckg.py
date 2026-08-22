@@ -50,7 +50,7 @@ class CKG(TabbedDataset):
         """Initialize the `CKG <https://github.com/MannLabs/CKG>`_ dataset from [santos2020]_.
 
         :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TabbedDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TabbedDataset`.
         """
         super().__init__(
             random_state=random_state,

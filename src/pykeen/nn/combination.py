@@ -1,4 +1,4 @@
-"""Implementation of combinations for the :class:`pykeen.models.LiteralModel`."""
+"""Implementation of combinations for the :class:`~pykeen.models.LiteralModel`."""
 
 import logging
 from abc import ABC, abstractmethod

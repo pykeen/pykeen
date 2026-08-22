@@ -47,7 +47,7 @@ class Nations(PathDataset):
     def __init__(self, **kwargs):
         """Initialize the Nations dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PathDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PathDataset`.
         """
         super().__init__(
             training_path=NATIONS_TRAIN_PATH,
@@ -83,7 +83,7 @@ class NationsLiteral(NumericPathDataset):
     def __init__(self, **kwargs):
         """Initialize the Nations dataset with literals.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PathDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PathDataset`.
         """
         super().__init__(
             training_path=NATIONS_TRAIN_PATH,
