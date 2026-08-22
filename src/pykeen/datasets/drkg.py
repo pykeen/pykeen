@@ -44,7 +44,7 @@ class DRKG(TarFileSingleDataset):
         """Initialize the `DRKG <https://github.com/gnn4dr/DRKG>`_ dataset.
 
         :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileSingleDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileSingleDataset`.
         """
         super().__init__(
             url=URL,

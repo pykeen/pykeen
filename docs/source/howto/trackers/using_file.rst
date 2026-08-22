@@ -79,5 +79,5 @@ argument can still be used to specify an absolute path.
     )
 
 The same concepts can be applied in the HPO pipeline as in the previous tracker tutorials. Additional documentation of
-the valid keyword arguments can be found under :class:`pykeen.trackers.CSVResultTracker` and
-:class:`pykeen.trackers.JSONResultTracker`.
+the valid keyword arguments can be found under :class:`~pykeen.trackers.CSVResultTracker` and
+:class:`~pykeen.trackers.JSONResultTracker`.

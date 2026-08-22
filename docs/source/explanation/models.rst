@@ -78,7 +78,7 @@ Its core method is :meth:`~pykeen.nn.modules.Interaction.forward`, which receive
 representations and calculates the corresponding triple scores.
 
 As with the representations, interactions passed to :class:`~pykeen.models.ERModel` are resolved, this time using
-:meth:`pykeen.nn.interaction_resolver.make`. Hence, we can provide, e.g., strings corresponding to the interaction
+:meth:`~pykeen.nn.interaction_resolver.make`. Hence, we can provide, e.g., strings corresponding to the interaction
 function instead of an instantiated class. Further information can be found at :ref:`using_resolvers`.
 
 .. note::

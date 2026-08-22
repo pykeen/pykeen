@@ -17,11 +17,11 @@ In PyKEEN, we can define and execute an ablation study within our own program or
 configuration file (``file_name.json``).
 
 First, we show how to run an ablation study within your program. For this purpose, we provide the function
-:func:`pykeen.ablation.ablation_pipeline` that requires the ``datasets``, ``models``, ``losses``, ``optimizers``,
+:func:`~pykeen.ablation.ablation_pipeline` that requires the ``datasets``, ``models``, ``losses``, ``optimizers``,
 ``training_loops``, and ``directory`` arguments to define the datasets, models, loss functions, optimizers (e.g., Adam),
 training approaches for our ablation study, and the output directory in which the experimental artifacts should be
-saved. In the following, we define an ablation study for :class:`pykeen.models.ComplEx` over the
-:class:`pykeen.datasets.Nations` dataset in order to assess the effect of different loss functions (in our example, the
+saved. In the following, we define an ablation study for :class:`~pykeen.models.ComplEx` over the
+:class:`~pykeen.datasets.Nations` dataset in order to assess the effect of different loss functions (in our example, the
 binary cross entropy loss and the margin ranking loss) and the effect of explicitly modeling inverse relations.
 
 Now, let's start with defining the minimal requirements, i.e., the dataset(s), interaction model(s), the loss
@@ -469,7 +469,7 @@ Now that we defined our own hyper-parameter values/ranges, let's have a look at 
     ... )
 
 We are expected to provide the arguments ``datasets``, ``models``, ``losses``, ``optimizers``, and ``training_loops`` to
-:func:`pykeen.ablation.ablation_pipeline`. For all other components and hype-parameters, PyKEEN provides default
+:func:`~pykeen.ablation.ablation_pipeline`. For all other components and hype-parameters, PyKEEN provides default
 values/ranges. However, for achieving optimal performance, we should carefully define the hyper-parameter values/ranges
 ourselves, as explained above. Note that there are many more ranges to configure such hyper-parameters for the loss
 functions or the negative samplers. Check out the examples provided in `tests/resources/hpo_complex_nations.json`` how

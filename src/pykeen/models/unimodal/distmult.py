@@ -97,13 +97,13 @@ class DistMult(ERModel[FloatTensor, FloatTensor, FloatTensor]):
             default regularizer.
 
         :param entity_representations_kwargs:
-            Additional parameters to ``entity_representations_kwargs`` passed to :class:`pykeen.models.ERModel`.
+            Additional parameters to ``entity_representations_kwargs`` passed to :class:`~pykeen.models.ERModel`.
             Note that those take precedence of those which are filled in by this class.
         :param relation_representations_kwargs:
-            Additional parameters to ``relation_representations_kwargs`` passed to :class:`pykeen.models.ERModel`.
+            Additional parameters to ``relation_representations_kwargs`` passed to :class:`~pykeen.models.ERModel`.
             Note that those take precedence of those which are filled in by this class.
         :param kwargs:
-            Remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
+            Remaining keyword arguments to forward to :class:`~pykeen.models.ERModel`
         """
         if regularizer is LpRegularizer and regularizer_kwargs is None:
             regularizer_kwargs = DistMult.regularizer_default_kwargs

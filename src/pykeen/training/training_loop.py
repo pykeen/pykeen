@@ -273,7 +273,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         :param clear_optimizer: Whether to delete the optimizer instance after training (as the optimizer might have
             additional memory consumption due to e.g. moments in Adam).
         :param checkpoint_directory: An optional directory to store the checkpoint files. If None, a subdirectory named
-            ``checkpoints`` in the directory defined by :data:`pykeen.constants.PYKEEN_HOME` is used. Unless the
+            ``checkpoints`` in the directory defined by :data:`~pykeen.constants.PYKEEN_HOME` is used. Unless the
             environment variable ``PYKEEN_HOME`` is overridden, this will be ``~/.pykeen/checkpoints``.
         :param checkpoint_name: The filename for saving checkpoints. If the given filename exists already, that file
             will be loaded and used to continue training.

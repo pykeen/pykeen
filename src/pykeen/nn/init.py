@@ -244,7 +244,7 @@ class PretrainedInitializer:
     def as_embedding(self, **kwargs: Any):
         """Get a static embedding from this pre-trained initializer.
 
-        :param kwargs: Keyword arguments to pass to :class:`pykeen.nn.representation.Embedding`
+        :param kwargs: Keyword arguments to pass to :class:`~pykeen.nn.representation.Embedding`
         :returns: An embedding
         :rtype: pykeen.nn.representation.Embedding
         """

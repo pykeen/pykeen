@@ -363,7 +363,7 @@ class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
         :param relation_transformation: An optional transformation to apply to the relation representations after each
             message passing step. If ``None``, do not modify the representations.
         :param kwargs: Additional keyword-based parameters passed to
-            :class:`pykeen.nn.pyg.TypedMessagePassingRepresentation`, except the ``triples_factory``.
+            :class:`~pykeen.nn.pyg.TypedMessagePassingRepresentation`, except the ``triples_factory``.
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
 

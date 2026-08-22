@@ -56,7 +56,7 @@ class LitModule(pytorch_lightning.LightningModule, ABC):
 
     .. seealso::
 
-        :class:`pykeen.training.training_loop.TrainingLoop`
+        :class:`~pykeen.training.training_loop.TrainingLoop`
     """
 
     def __init__(

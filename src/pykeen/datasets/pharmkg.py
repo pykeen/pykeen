@@ -50,7 +50,7 @@ class PharmKG8k(UnpackedRemoteDataset):
     ):
         """Initialize the PharmKG8k dataset from [zheng2020]_.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             training_url=TRAIN_URL,
@@ -89,7 +89,7 @@ class PharmKG(SingleTabbedDataset):
         """Initialize the PharmKG dataset from [zheng2020]_.
 
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             url=RAW_URL,

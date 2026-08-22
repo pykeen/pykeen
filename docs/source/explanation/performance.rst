@@ -15,7 +15,7 @@ need a mapping from the string representations to vectors. Moreover, for computa
 store all entity/relation embeddings in matrices. Thus, the mapping process comprises two parts: Mapping strings to IDs,
 and using the IDs to access the embeddings (=row indices).
 
-In PyKEEN, the mapping process takes place in :class:`pykeen.triples.TriplesFactory`. The triples factory maintains the
+In PyKEEN, the mapping process takes place in :class:`~pykeen.triples.TriplesFactory`. The triples factory maintains the
 sets of unique entity and relation labels and ensures that they are mapped to unique integer IDs on
 $[0,\text{num_unique_entities})$ for entities and $[0, \text{num_unique_relations})$. The mappings are respectively
 accessible via the attributes :data:``pykeen.triples.TriplesFactory.entity_label_to_id`` and
@@ -36,14 +36,14 @@ assumption (LCWA), evaluating a model, and performing the link prediction task, 
 entities/relations for a given tuple, i.e. $(h, r)$, $(r, t)$ or $(h, t)$. In these cases a single tuple is used many
 times for different entities/relations.
 
-For example, we want to rank all entities for a single tuple $(h, r)$ with :class:`pykeen.models.DistMult` for the
-:class:`pykeen.datasets.FB15k237`. This dataset contains 14,505 entities, which means that there are 14,505 $(h, r, t)$
-combinations, whereas $h$ and $r$ are constant. Looking at the interaction function of :class:`pykeen.models.DistMult`,
+For example, we want to rank all entities for a single tuple $(h, r)$ with :class:`~pykeen.models.DistMult` for the
+:class:`~pykeen.datasets.FB15k237`. This dataset contains 14,505 entities, which means that there are 14,505 $(h, r, t)$
+combinations, whereas $h$ and $r$ are constant. Looking at the interaction function of :class:`~pykeen.models.DistMult`,
 we can observe that the :math:`h \odot r` part causes half of the mathematical operations to calculate :math:`h \odot r
 \odot t`. Therefore, calculating the :math:`h \odot r` part only once and reusing it spares us half of the mathematical
 operations for the other 14,504 remaining entities, making the calculations roughly twice as fast in total. The speed-up
 might be significantly higher in cases where the broadcasted part has a high relative complexity compared to the overall
-interaction function, e.g. :class:`pykeen.models.ConvE`.
+interaction function, e.g. :class:`~pykeen.models.ConvE`.
 
 To make this technique possible, PyKEEN models have to provide an explicit broadcasting function via following methods
 in the model class:
@@ -85,7 +85,7 @@ train dataset. Therefore, their definitions could be amended like:
 While this easily defined theoretically, it poses several practical challenges. For example, it leads to the
 computational challenge that all new possible triples $(h, r, t') \in T_{h,r}$ and $(h', r, t) \in H_{r,t}$ must be
 enumerated and then checked for existence in $\mathcal{K}_{train}$. Considering a dataset like
-:class:`pykeen.datasets.FB15k237` that has almost 15,000 entities, each test triple $(h,r,t) \in \mathcal{K}_{test}$
+:class:`~pykeen.datasets.FB15k237` that has almost 15,000 entities, each test triple $(h,r,t) \in \mathcal{K}_{test}$
 leads to $2 * | \mathcal{E} | = 30,000$ possible new triples, which have to be checked against the train dataset and
 then removed.
 

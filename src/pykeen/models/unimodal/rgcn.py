@@ -33,7 +33,7 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
     2. Relation representations $\textbf{R}_{r} \in \mathbb{R}^{d \times d}$ is a diagonal matrix that are learned
        independently from the GCN-based encoder.
     3. An arbitrary interaction model which computes the plausibility of facts given the enriched representations,
-       cf. :class:`pykeen.nn.modules.Interaction`.
+       cf. :class:`~pykeen.nn.modules.Interaction`.
 
     Scores for each triple $(h,r,t) \in \mathcal{K}$ are calculated by using the representations in the final level
     of the GCN-based encoder $\textbf{e}_h^L$ and $\textbf{e}_t^L$ along with relation representation $\textbf{R}_{r}$.

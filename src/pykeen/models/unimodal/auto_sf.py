@@ -68,7 +68,7 @@ class AutoSF(ERModel[Representation, Representation, Representation]):
         :param embedding_kwargs:
             keyword arguments passed to the entity and relation representation
         :param kwargs:
-            remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
+            remaining keyword arguments passed through to :class:`~pykeen.models.ERModel`.
         """
         embedding_kwargs = embedding_kwargs or {}
         super().__init__(

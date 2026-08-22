@@ -22,7 +22,7 @@ optionally applying a sigmoid activation on the scores to ensure a value range o
 .. warning::
 
     Depending on the model at hand, directly applying sigmoid might not always be sensible. For instance, distance-based
-    interaction functions, such as :class:`pykeen.nn.modules.TransEInteraction`, result in non-positive scores (since
+    interaction functions, such as :class:`~pykeen.nn.modules.TransEInteraction`, result in non-positive scores (since
     they use the *negative* distance as scoring function), and thus the output of the sigmoid only covers the interval
     $[0.5, 1]$.
 

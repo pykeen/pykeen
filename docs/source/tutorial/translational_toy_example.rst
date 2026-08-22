@@ -5,7 +5,7 @@ The following tutorial is based on a question originally posed by Heiko Paulheim
 <https://github.com/pykeen/pykeen/issues/97>`_.
 
 Given the following toy example comprising three entities in a triangle, a translational distance model like
-:class:`pykeen.models.TransE` should be able to exactly learn the geometric structure.
+:class:`~pykeen.models.TransE` should be able to exactly learn the geometric structure.
 
 ======== ========== ========
 Head     Relation   Tail

@@ -97,7 +97,7 @@ def plot_er(  # noqa: C901
 ):
     """Plot the reduced entities and relation vectors in 2D.
 
-    :param pipeline_result: The result returned by :func:`pykeen.pipeline.pipeline`.
+    :param pipeline_result: The result returned by :func:`~pykeen.pipeline.pipeline`.
     :param model: The dimensionality reduction model from :mod:`sklearn`. Defaults to PCA. Can also use KPCA, GRP, SRP,
         TSNE, LLE, ISOMAP, MDS, or SE.
     :param entities: A subset of entities to plot
@@ -106,7 +106,7 @@ def plot_er(  # noqa: C901
     :param margin: The margin size around the minimum/maximum x and y values
     :param plot_entities: If true, plot the entities based on their reduced embeddings
     :param plot_relations: By default, this is only enabled on translational distance models like
-        :class:`pykeen.models.TransE`.
+        :class:`~pykeen.models.TransE`.
     :param annotation_x_offset: X offset of label from entity position
     :param annotation_y_offset: Y offset of label from entity position
     :param entity_embedding_getter: A function that takes a model and returns its entity embeddings. If none, defaults

@@ -42,7 +42,7 @@ class WD50KT(UnpackedRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the WD50K (triples) dataset from [galkin2020]_.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             training_url=TRIPLES_TRAIN_URL,

@@ -50,7 +50,7 @@ negative examples during training, the ``filtered`` keyword can be given to ``ne
 
 PyKEEN implements several algorithms for filtering with different properties that can be chosen using the
 ``filterer`` keyword argument in ``negative_sampler_kwargs``. By default, an fast and approximate algorithm is used in
-:class:`pykeen.sampling.filtering.BloomFilterer`, which is based on
+:class:`~pykeen.sampling.filtering.BloomFilterer`, which is based on
 `bloom filters <https://en.wikipedia.org/wiki/Bloom_filter>`_. The bloom filterer also has a configurable desired error
 rate, which can be further lowered at the cost of increase in memory and computation costs.
 
@@ -73,7 +73,7 @@ rate, which can be further lowered at the cost of increase in memory and computa
     )
 
 If you want to have a guarantee that all known false negatives are filtered, you can use a slower implementation based
-on Python's built-in sets, the :class:`pykeen.sampling.filtering.PythonSetFilterer`. It can be activated with:
+on Python's built-in sets, the :class:`~pykeen.sampling.filtering.PythonSetFilterer`. It can be activated with:
 
 .. code-block:: python
 
@@ -111,7 +111,7 @@ like in:
 Filtering during evaluation is implemented differently than in negative sampling:
 
 First, there are no choices between an exact or approximate algorithm via a
-:class:`pykeen.sampling.filtering.Filterer`. Instead, the evaluation filtering can modify the
+:class:`~pykeen.sampling.filtering.Filterer`. Instead, the evaluation filtering can modify the
 scores in-place and does so instead of selecting only the non-filtered entries. The reason is
 mainly that evaluation always is done in 1:n scoring, and thus, we gain some efficiently here
 by keeping the tensor in "dense" shape ``(batch_size, num_entities)``.

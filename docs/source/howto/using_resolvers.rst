@@ -7,7 +7,7 @@ As PyKEEN is a heavily modular and extensible library, we make use of the :mod:`
 configuration of components. In this part of the tutorial, we explain how to use these configuration options, and how to
 figure out what values you can pass here.
 
-We use the initialization method of the base model class :meth:`pykeen.models.base.Model` and its handling of loss
+We use the initialization method of the base model class :meth:`~pykeen.models.base.Model` and its handling of loss
 functions as an example. Its signature is given as
 
 .. code-block:: python
@@ -29,10 +29,10 @@ passing `None`, this is interpreted as an empty dictionary.
 The `loss` parameter takes inputs of type `HintOrType[Loss]`. `HintOrType[Loss]` is a abbreviation of `Union[None, str,
 Type[Loss], Loss]`. Thus, we can either pass
 
-1. an *instance* of the :class:`pykeen.losses.Loss`, e.g., ``pykeen.losses.MarginRankingLoss(margin=2.0)``. If an
-   instance of :class:`pykeen.losses.Loss` is passed, it is used without modification. In this case, `loss_kwargs` will
+1. an *instance* of the :class:`~pykeen.losses.Loss`, e.g., ``pykeen.losses.MarginRankingLoss(margin=2.0)``. If an
+   instance of :class:`~pykeen.losses.Loss` is passed, it is used without modification. In this case, `loss_kwargs` will
    be ignored.
-2. a *subclass* of :class:`pykeen.losses.Loss`, e.g., :class:`pykeen.losses.MarginRankingLoss` In this case, the class
+2. a *subclass* of :class:`~pykeen.losses.Loss`, e.g., :class:`~pykeen.losses.MarginRankingLoss` In this case, the class
    is instantiated with the given `loss_kwargs` as (keyword-based) parameters. For instance,
 
    .. code-block:: python
@@ -72,10 +72,10 @@ using the `ClassResolver.from_subclasses` factory function, which automatically 
 base class as valid choices. Moreover, it will allow you to pass class names without the base class' name as suffix,
 e.g., `loss_resolver` accepts `MarginRanking` instead of `MarginRankingLoss`, since the base class' name `Loss` is
 removed as suffix during the normalization. To utilize this feature, we try to follow an appropriate naming scheme for
-all configurable parts, e.g., :class:`pykeen.nn.representation.Representation`, or
-:class:`pykeen.nn.modules.Interaction`.
+all configurable parts, e.g., :class:`~pykeen.nn.representation.Representation`, or
+:class:`~pykeen.nn.modules.Interaction`.
 
 The allowed parameters for `..._kwargs: OptionalKwargs` are a bit harder to determine, since they vary with your choice
 of the component! For instance, :class:`MarginRankingLoss` has a `margin` parameter, while
-:class:`pykeen.losses.BCEWithLogitsLoss` does not provide such. Hence, you should investigate the documentation of the
+:class:`~pykeen.losses.BCEWithLogitsLoss` does not provide such. Hence, you should investigate the documentation of the
 individual classes to inform yourself about available parameters and allowed values.

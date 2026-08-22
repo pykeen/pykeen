@@ -1,8 +1,8 @@
 """Early stoppers.
 
 The following code will create a scenario in which training will stop
-(quite) early when training :class:`pykeen.models.TransE` on the
-:class:`pykeen.datasets.Nations` dataset.
+(quite) early when training :class:`~pykeen.models.TransE` on the
+:class:`~pykeen.datasets.Nations` dataset.
 
 >>> from pykeen.pipeline import pipeline
 >>> pipeline_result = pipeline(

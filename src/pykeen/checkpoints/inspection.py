@@ -27,11 +27,11 @@ def simulate_checkpoints(
         additional keyword-based parameters when the schedule needs to instantiated first from a selection,
         cf. :const:`pykeen.checkpoints.scheduler_resolver`
     :param keeper:
-        a checkpoint retention policy instance or selection, cf. :const:`pykeen.checkpoints.keeper_resolver`
+        a checkpoint retention policy instance or selection, cf. :const:`~pykeen.checkpoints.keeper_resolver`
         `None` corresponds to keeping everything that was checkpointed.
     :param keeper_kwargs:
         additional keyword-based parameters when the retention policy needs to instantiated first from a selection,
-        cf. :const:`pykeen.checkpoints.keeper_resolver`
+        cf. :const:`~pykeen.checkpoints.keeper_resolver`
     """
     schedule_instance = schedule_resolver.make(schedule, schedule_kwargs)
     keeper_instance = keeper_resolver.make_safe(keeper, keeper_kwargs)
@@ -99,11 +99,11 @@ def final_checkpoints(
         additional keyword-based parameters when the schedule needs to instantiated first from a selection,
         cf. :const:`pykeen.checkpoints.scheduler_resolver`
     :param keeper:
-        a checkpoint retention policy instance or selection, cf. :const:`pykeen.checkpoints.keeper_resolver`
+        a checkpoint retention policy instance or selection, cf. :const:`~pykeen.checkpoints.keeper_resolver`
         `None` corresponds to keeping everything that was checkpointed.
     :param keeper_kwargs:
         additional keyword-based parameters when the retention policy needs to instantiated first from a selection,
-        cf. :const:`pykeen.checkpoints.keeper_resolver`
+        cf. :const:`~pykeen.checkpoints.keeper_resolver`
 
     :return:
         a sorted list of epochs at which a checkpoint remains after clean-up.

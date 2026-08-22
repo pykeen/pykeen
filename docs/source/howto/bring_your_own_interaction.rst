@@ -2,7 +2,7 @@ Bring Your Own Interaction
 ==========================
 
 This is a tutorial about how to implement your own interaction modules (also known as scoring functions) as subclasses
-of :class:`pykeen.nn.modules.Interaction` for use in PyKEEN.
+of :class:`~pykeen.nn.modules.Interaction` for use in PyKEEN.
 
 Implementing your first Interaction Module
 ------------------------------------------
@@ -16,7 +16,7 @@ Imagine you've taken a time machine back to 2013 and you have just invented Tran
 where $\mathbf{e}_i$ is the $d$-dimensional representation for entity $i$, $\mathbf{r}_j$ is the $d$-dimensional
 representation for relation $j$, and $\|...\|_2$ is the $L_2$ norm.
 
-To implement TransE in PyKEEN, you need to subclass the :class:`pykeen.nn.modules.Interaction`. This class it itself a
+To implement TransE in PyKEEN, you need to subclass the :class:`~pykeen.nn.modules.Interaction`. This class it itself a
 subclass of :class:`torch.nn.Module`, which means that you need to provide an implementation of
 :meth:`torch.nn.Module.forward`. However, the arguments are predefined as ``h``, ``r``, and ``t``, which correspond to
 the representations of the head, relation, and tail, respectively.
@@ -35,7 +35,7 @@ representations.
 
 .. seealso::
 
-    A reference implementation is provided in :class:`pykeen.nn.modules.TransEInteraction`
+    A reference implementation is provided in :class:`~pykeen.nn.modules.TransEInteraction`
 
 As a researcher who just invented TransE, you might wonder what would happen if you replaced the addition ``+`` with
 multiplication ``*``. You might then end up with a new interaction like this (which just happens to be DistMult, which
@@ -59,7 +59,7 @@ representation for relation $j$.
 
 .. seealso::
 
-    A reference implementation is provided in :class:`pykeen.nn.modules.DistMultInteraction`
+    A reference implementation is provided in :class:`~pykeen.nn.modules.DistMultInteraction`
 
 Interactions with Hyper-Parameters
 ----------------------------------
@@ -105,7 +105,7 @@ with hidden dimension $y$, $W_1 \in \mathcal{R}^{3d \times y}$, $W_2\in \mathcal
 $W_1$, $W_1$, $b_1$, and $b_2$ are *global* parameters, meaning that they are trainable, but are neither attached to the
 entities nor relations. Unlike the $p$ in TransE, these global trainable parameters are not considered hyper-parameters.
 However, like hyper-parameters, they can also be defined in the `__init__` function of your
-:class:`pykeen.nn.modules.Interaction` class. They are trained jointly with the entity and relation embeddings during
+:class:`~pykeen.nn.modules.Interaction` class. They are trained jointly with the entity and relation embeddings during
 training.
 
 .. code-block:: python
@@ -134,7 +134,7 @@ standardization of shapes of head, relation, and tail vectors.
 
 .. seealso::
 
-    A reference implementation is provided in :class:`pykeen.nn.modules.ERMLPInteraction`
+    A reference implementation is provided in :class:`~pykeen.nn.modules.ERMLPInteraction`
 
 Interactions with Different Shaped Vectors
 ------------------------------------------
@@ -248,13 +248,13 @@ functions to instantiate a model, make a model class, or run the pipeline using 
 
 .. note::
 
-    The :func:`pykeen.utils.project_entity` function was used in this implementation to reduce the complexity. So far,
+    The :func:`~pykeen.utils.project_entity` function was used in this implementation to reduce the complexity. So far,
     it's the case that all of the models using multiple different representation dimensions are quite complicated and
     don't fall into the paradigm of presenting simple examples.
 
 .. seealso::
 
-    A reference implementation is provided in :class:`pykeen.nn.modules.TransDInteraction`
+    A reference implementation is provided in :class:`~pykeen.nn.modules.TransDInteraction`
 
 Differences between :class:`pykeen.nn.modules.Interaction` and :class:`pykeen.models.Model`
 -------------------------------------------------------------------------------------------
@@ -282,7 +282,7 @@ the "Extending the Models" tutorial.
 Interaction Pipeline
 --------------------
 
-The :func:`pykeen.pipeline.pipeline` also allows passing of an interaction such that the following code block can be
+The :func:`~pykeen.pipeline.pipeline` also allows passing of an interaction such that the following code block can be
 compressed:
 
 .. code-block:: python
@@ -308,5 +308,5 @@ into:
         dataset="Nations", interaction=TransEInteraction, interaction_kwargs={"p": 2}, dimensions={"d": 100}, ...
     )
 
-This can be used with any subclass of the :class:`pykeen.nn.modules.Interaction`, not only ones that are implemented in
+This can be used with any subclass of the :class:`~pykeen.nn.modules.Interaction`, not only ones that are implemented in
 the PyKEEN package.

@@ -295,7 +295,7 @@ The reason for this behavior is three-fold:
 Checkpoints beyond the Pipeline and Technicalities
 --------------------------------------------------
 Currently, PyKEEN only supports checkpoints for training loops, implemented in the class
-:class:`pykeen.training.TrainingLoop`. When using the :func:`pykeen.pipeline.pipeline` function as defined above, the
+:class:`~pykeen.training.TrainingLoop`. When using the :func:`~pykeen.pipeline.pipeline` function as defined above, the
 pipeline actually uses the training loop functionality. Accordingly, those checkpoints save the states of the
 training loop and not the pipeline itself. Therefore, the checkpoints won't contain evaluation results that reside in
 the pipeline. However, PyKEEN makes sure the final results of the pipeline using training loop checkpoints are exactly
@@ -316,7 +316,7 @@ To show how to use the checkpoint functionality without the pipeline, we define 
 >>> training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
 
 At this point we have a model, dataset and optimizer all setup in a training loop and are ready to train the model with
-the ``training_loop``'s method :func:`pykeen.training.TrainingLoop.train`. To enable checkpoints all you have to do is
+the ``training_loop``'s method :func:`~pykeen.training.TrainingLoop.train`. To enable checkpoints all you have to do is
 setting the function argument ``checkpoint_name`` to the name you would like it to have.
 Furthermore, you can set the checkpoint frequency, i.e. how often checkpoints should be saved given in minutes, by
 setting the argument ``checkpoint_frequency`` with an integer. The default frequency is 30 minutes and setting it to
