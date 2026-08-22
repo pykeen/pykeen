@@ -1045,8 +1045,8 @@ def _build_model_helper(
     if loss is None and not isinstance(model, Model):
         # When no loss is requested, fall back to the *model's* default loss rather than the loss
         # resolver's default (:class:`~pykeen.losses.MarginRankingLoss`). This is what
-        # :meth:`pykeen.models.Model.__init__` does when it receives ``loss=None``, and what
-        # :func:`pykeen.hpo.hpo_pipeline` already does when it builds its search space.
+        # :meth:`~pykeen.models.Model.__init__` does when it receives ``loss=None``, and what
+        # :func:`~pykeen.hpo.hpo_pipeline` already does when it builds its search space.
         model_cls = model_resolver.lookup(model)
         loss = model_cls.loss_default
         # the model's defaults act as defaults, i.e., explicitly given kwargs take precedence
