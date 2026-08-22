@@ -86,12 +86,8 @@ This is enabled by passing ``grouped=True`` to :class:`~pykeen.training.SLCWATra
         training_loop_kwargs=dict(grouped=True),
     )
 
-Measured on one checkout (batch size 256, 32 negatives per positive, embedding dimension 256, forward + backward
-pass, CPU, 4 threads), grouped vs. dense scoring of the same triples:
-
-- :class:`~pykeen.models.DistMult`: dense ``score_hrt`` 29.0 ms vs. grouped ``score_t`` 11.0 ms (2.6x speedup)
-- :class:`~pykeen.models.RotatE`: dense ``score_hrt`` 79.6 ms vs. grouped ``score_t`` 35.7 ms (2.2x speedup)
-- :class:`~pykeen.models.ConvE`: dense ``score_hrt`` 5875.6 ms vs. grouped ``score_t`` 76.6 ms (77x speedup)
+Grouping consistently speeds up negative scoring compared to the dense path, with the speedup growing with the cost
+of the model's interaction function or encoder.
 
 Grouped corruption requires a negative sampler which supports it, cf.
 :data:`pykeen.sampling.NegativeSampler.supports_grouped_corruption`; :class:`~pykeen.sampling.BasicNegativeSampler`
