@@ -3,6 +3,10 @@ PyKEEN
 
 .. automodule:: pykeen
 
+This documentation is organized following the `Diátaxis <https://diataxis.fr/>`_ framework, which distinguishes between
+four kinds of content: learning-oriented *tutorials*, goal-oriented *how-to guides*, understanding-oriented
+*explanations*, and information-oriented *reference* material.
+
 .. toctree::
     :caption: Tutorials
     :name: quickstart
