@@ -19,12 +19,13 @@ from .utils import compute_compressed_adjacency_list
 from .weights import LossWeighter, loss_weighter_resolver
 from .. import typing as pykeen_typing
 from ..constants import get_target_column
-from ..sampling import NegativeSampler, negative_sampler_resolver
+from ..sampling import BasicNegativeSampler, NegativeSampler, negative_sampler_resolver
 from ..typing import (
     BoolTensor,
     FloatTensor,
     LongTensor,
     MappedTriples,
+    Target,
     TargetColumn,
     TargetHint,
 )
@@ -38,6 +39,7 @@ __all__ = [
     "SubGraphSLCWAInstances",
     "LCWABatch",
     "SLCWABatch",
+    "GroupedSLCWABatch",
 ]
 
 BatchType = TypeVar("BatchType")
@@ -56,8 +58,6 @@ class LCWABatch(TypedDict):
 class SLCWABatch(TypedDict):
     """A batch for sLCWA training."""
 
-    # TODO: separately storing head/relation/tail corruptions would enable faster scoring (and thus training)
-
     #: the positive triples, shape: (batch_size, 3)
     positives: LongTensor
 
@@ -72,6 +72,23 @@ class SLCWABatch(TypedDict):
     neg_weights: NotRequired[FloatTensor]
 
 
+class GroupedSLCWABatch(TypedDict):
+    """An sLCWA batch keeping negatives grouped by the corrupted position."""
+
+    #: the positive triples, shape: (batch_size, 3)
+    positives: LongTensor
+
+    #: the replacement IDs, keyed by corrupted target, shape: (batch_size, k_target)
+    corruptions: dict[Target, LongTensor]
+
+    #: filtering masks for negative triples, keyed by corrupted target, shape: (batch_size, k_target)
+    masks: NotRequired[dict[Target, BoolTensor]]
+
+    #: sample weights
+    pos_weights: NotRequired[FloatTensor]
+    neg_weights: NotRequired[dict[Target, FloatTensor]]
+
+
 class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
     """Base class for training instances."""
 
@@ -81,7 +98,9 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
         raise NotImplementedError
 
 
-class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCWABatch]):
+class BaseBatchedSLCWAInstances(
+    Instances[SLCWABatch | GroupedSLCWABatch], data.IterableDataset[SLCWABatch | GroupedSLCWABatch]
+):
     """Pre-batched training instances for the sLCWA training loop.
 
     .. note::
@@ -105,6 +124,7 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
         negative_sampler_kwargs: OptionalKwargs = None,
         loss_weighter: HintOrType[LossWeighter] = None,
         loss_weighter_kwargs: OptionalKwargs = None,
+        grouped: bool = False,
     ):
         """Initialize the dataset.
 
@@ -117,6 +137,11 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
         :param negative_sampler_kwargs: additional keyword-based parameters used to instantiate the negative sampler
         :param loss_weighter: The method to determine sample weights.
         :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
+        :param grouped: whether to keep the negative samples grouped by corrupted target instead of materialising
+            them as dense triples. This requires a negative sampler which supports grouped corruption, cf.
+            :data:`pykeen.sampling.NegativeSampler.supports_grouped_corruption`.
+
+        :raises ValueError: if `grouped` is `True`, but the negative sampler does not support grouped corruption.
         """
         self.mapped_triples = mapped_triples
         self.batch_size = batch_size
@@ -129,10 +154,16 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
             num_relations=num_relations,
         )
         self.loss_weighter = loss_weighter_resolver.make_safe(loss_weighter, loss_weighter_kwargs)
+        if grouped and not self.negative_sampler.supports_grouped_corruption:
+            raise ValueError(
+                f"grouped=True requires a negative sampler which supports grouped corruption, but "
+                f"{self.negative_sampler.__class__.__name__} does not. Consider using "
+                f"{BasicNegativeSampler.__name__} instead."
+            )
+        self.grouped = grouped
 
-    def __getitem__(self, item: list[int]) -> SLCWABatch:
-        """Get a batch from the given list of positive triple IDs."""
-        positive_batch = self.mapped_triples[item]
+    def _get_dense_batch(self, positive_batch: LongTensor) -> SLCWABatch:
+        """Get a dense sLCWA batch for the given positive triples."""
         negative_batch, masks = self.negative_sampler.sample(positive_batch=positive_batch)
         result = SLCWABatch(positives=positive_batch, negatives=negative_batch)
         if masks is not None:
@@ -142,12 +173,40 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
             result["neg_weights"] = self.loss_weighter.weight_triples(negative_batch)
         return result
 
+    def _get_grouped_batch(self, positive_batch: LongTensor) -> GroupedSLCWABatch:
+        """Get a grouped sLCWA batch for the given positive triples."""
+        corruptions, masks = self.negative_sampler.sample_grouped(positive_batch=positive_batch)
+        result = GroupedSLCWABatch(positives=positive_batch, corruptions=corruptions)
+        if masks is not None:
+            result["masks"] = masks
+        if self.loss_weighter is not None:
+            h, r, t = positive_batch.unbind(dim=-1)
+            result["pos_weights"] = self.loss_weighter(h=h, r=r, t=t)
+            neg_weights: dict[Target, FloatTensor] = {}
+            for target, replacements in corruptions.items():
+                match target:
+                    case pykeen_typing.LABEL_HEAD:
+                        neg_weights[target] = self.loss_weighter(h=replacements, r=r[:, None], t=t[:, None])
+                    case pykeen_typing.LABEL_RELATION:
+                        neg_weights[target] = self.loss_weighter(h=h[:, None], r=replacements, t=t[:, None])
+                    case pykeen_typing.LABEL_TAIL:
+                        neg_weights[target] = self.loss_weighter(h=h[:, None], r=r[:, None], t=replacements)
+            result["neg_weights"] = neg_weights
+        return result
+
+    def __getitem__(self, item: list[int]) -> SLCWABatch | GroupedSLCWABatch:
+        """Get a batch from the given list of positive triple IDs."""
+        positive_batch = self.mapped_triples[item]
+        if self.grouped:
+            return self._get_grouped_batch(positive_batch=positive_batch)
+        return self._get_dense_batch(positive_batch=positive_batch)
+
     @abstractmethod
     def iter_triple_ids(self) -> Iterable[list[int]]:
         """Iterate over batches of IDs of positive triples."""
         raise NotImplementedError
 
-    def __iter__(self) -> Iterator[SLCWABatch]:
+    def __iter__(self) -> Iterator[SLCWABatch | GroupedSLCWABatch]:
         """Iterate over batches."""
         for triple_ids in self.iter_triple_ids():
             yield self[triple_ids]

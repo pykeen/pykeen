@@ -110,13 +110,28 @@ corruption is used with probability $1 - p_r$.
         training_loop="sLCWA",
         negative_sampler="bernoulli",
     )
+
+Grouped Corruption
+-------------------
+
+By default, negative samplers materialise negatives as dense triples via :meth:`NegativeSampler.corrupt_batch`,
+discarding which position was corrupted. Some samplers can additionally provide the corruptions *grouped* by the
+corrupted target via :meth:`NegativeSampler.corrupt_batch_grouped`, which allows the sLCWA training loop
+(:class:`pykeen.training.SLCWATrainingLoop` with ``grouped=True``) to score each group with a single broadcasted call
+instead of scoring each negative independently, cf. :ref:`grouped_slcwa`.
+
+Whether a sampler supports this is indicated by its :data:`NegativeSampler.supports_grouped_corruption` class
+variable. Currently, :class:`~pykeen.sampling.BasicNegativeSampler` supports grouped corruption.
+:class:`~pykeen.sampling.BernoulliNegativeSampler` and :class:`~pykeen.sampling.PseudoTypedNegativeSampler` do not,
+since both choose the corrupted position per negative sample from data-dependent probabilities, so the groups would
+be ragged and could not be laid out rectangularly without padding.
 """
 
 from class_resolver import ClassResolver
 
 from .basic_negative_sampler import BasicNegativeSampler
 from .bernoulli_negative_sampler import BernoulliNegativeSampler
-from .negative_sampler import NegativeSampler
+from .negative_sampler import GroupedNegatives, NegativeSampler, expand_corruption
 from .pseudo_type import PseudoTypedNegativeSampler
 
 __all__ = [
@@ -126,6 +141,8 @@ __all__ = [
     "PseudoTypedNegativeSampler",
     # Utils
     "negative_sampler_resolver",
+    "GroupedNegatives",
+    "expand_corruption",
 ]
 
 #: A resolver for negative samplers
