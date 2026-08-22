@@ -473,7 +473,7 @@ class HpoPipelineResult(Result):
         :param save_training: Should the training triples be saved?
 
         :raises ValueError:
-            if :data:`"use_testing_data"` is provided in the best pipeline's `config`.
+            if ``"use_testing_data"`` is provided in the best pipeline's `config`.
         """
         config = self._get_best_study_config()
 

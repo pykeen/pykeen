@@ -52,7 +52,7 @@ Analysis
 ========
 
 We also provide methods for analyzing knowledge graphs. These include simple statistics such as the number of entities
-or relations (in :mod:`pykeen.triples.stats`), as well as advanced analysis of relational patterns
+or relations (in :mod:`pykeen.triples.analysis`), as well as advanced analysis of relational patterns
 (:mod:`pykeen.triples.analysis`).
 """
 
@@ -65,7 +65,14 @@ from .instances import (
     SLCWABatch,
     SubGraphSLCWAInstances,
 )
-from .triples_factory import AnyTriples, CoreTriplesFactory, KGInfo, TriplesFactory, get_mapped_triples
+from .triples_factory import (
+    AnyTriples,
+    CoreTriplesFactory,
+    KGInfo,
+    TriplesFactory,
+    get_mapped_triples,
+    splits_similarity,
+)
 from .triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -82,4 +89,5 @@ __all__ = [
     "TriplesNumericLiteralsFactory",
     "get_mapped_triples",
     "AnyTriples",
+    "splits_similarity",
 ]

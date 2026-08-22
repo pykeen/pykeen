@@ -4,8 +4,8 @@ Extending the Models
 You should first read the tutorial on bringing your own interaction module. This tutorial is about how to wrap a custom
 interaction module with a model module for general reuse and application.
 
-Implementing a model by subclassing :class:`pykeen.models.ERModel`
-------------------------------------------------------------------
+Implementing a model by subclassing :class:`~pykeen.models.ERModel`
+-------------------------------------------------------------------
 
 The following code block demonstrates how an interaction model can be used to define a full KGEM using the
 :class:`~pykeen.models.ERModel` base class.
@@ -89,7 +89,7 @@ Specifying Hyper-parameter Optimization Default Ranges
 
 All subclasses of :class:`~pykeen.models.Model` can specify the default ranges or values used during hyper-parameter
 optimization (HPO). PyKEEN implements a simple dictionary-based configuration that is interpreted by
-:func:`pykeen.hpo.hpo.suggest_kwargs` in the HPO pipeline.
+``suggest_kwargs`` in the HPO pipeline.
 
 HPO default ranges can be applied to all keyword arguments appearing in the ``__init__()`` function of your model by
 setting a class-level variable called ``hpo_default``.
@@ -156,8 +156,8 @@ With ``bool``, you can simply use ``dict(type=bool)`` or ``dict(type='bool')``.
     The HPO rules are subject to change as they are tightly coupled to :mod:`optuna`, which since version 2.0.0 has
     introduced several new possibilities.
 
-Implementing a model by instantiating :class:`pykeen.models.ERModel`
---------------------------------------------------------------------
+Implementing a model by instantiating :class:`~pykeen.models.ERModel`
+---------------------------------------------------------------------
 
 Instead of creating a new class, you can also directly use the :class:`~pykeen.models.ERModel`, e.g.
 

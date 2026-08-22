@@ -48,7 +48,7 @@ class NegativeSampler(nn.Module):
         :param num_relations: the number of relations. If None, will be inferred from the triples.
         :param num_negs_per_pos: number of negative samples to make per positive triple. Defaults to 1.
         :param filtered: Whether proposed corrupted triples that are in the training data should be filtered. Defaults
-            to False. See explanation in :func:`filter_negative_triples` for why this is a reasonable default.
+            to False, since filtering is comparatively expensive and the effect on training is usually small.
         :param filterer: If filtered is set to True, this can be used to choose which filter module from
             :mod:`pykeen.sampling.filtering` is used.
         :param filterer_kwargs: Additional keyword-based arguments passed to the filterer upon construction.

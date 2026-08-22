@@ -112,7 +112,6 @@ training.
 
     import torch.nn
     from pykeen.nn.modules import Interaction
-    from pykeen.utils import broadcast_cat
 
 
     class ERMLPInteraction(Interaction):
@@ -126,11 +125,11 @@ training.
             )
 
         def forward(self, h, r, t):
-            x = broadcast_cat([h, r, t], dim=-1)
+            x = torch.cat([h, r, t], dim=-1)
             return self.mlp(x)
 
-Note that :func:`pykeen.utils.broadcast_cat` was used instead of the standard :func:`torch.cat` because of the
-standardization of shapes of head, relation, and tail vectors.
+Note that this simplified example assumes ``h``, ``r``, and ``t`` already share the same shape; PyKEEN's built-in
+:class:`~pykeen.nn.modules.ERMLPInteraction` additionally handles the case where they don't.
 
 .. seealso::
 
@@ -179,8 +178,8 @@ version of Structured Embedding, we need to denote that the shape of the relatio
 
 .. seealso::
 
-    Reference implementations are provided in :class:`pykeen.nn.modules.StructuredEmbeddingInteraction` and in
-    :class:`pykeen.nn.modules.TransRInteraction`.
+    Reference implementations are provided in :class:`~pykeen.nn.modules.SEInteraction` and in
+    :class:`~pykeen.nn.modules.TransRInteraction`.
 
 Interactions with Multiple Representations
 ------------------------------------------
@@ -216,9 +215,9 @@ representations for each relation, but they are of different dimensions.
 
 It can be implemented by choosing a different letter for use in the ``entity_shape`` and/or ``relation_shape``
 dictionary. Ultimately, the letters used are arbitrary, but you need to remember what they are when using the
-:func:`pykeen.models.make_model`, :func:`pykeen.models.make_model_cls`, or :func:`pykeen.pipeline.interaction_pipeline`
-functions to instantiate a model, make a model class, or run the pipeline using your custom interaction module
-(respectively).
+:func:`~pykeen.models.make_model`, :func:`~pykeen.models.make_model_cls`, or :func:`~pykeen.pipeline.pipeline` (passing
+your interaction module via its ``interaction`` argument) to instantiate a model, make a model class, or run the
+pipeline using your custom interaction module (respectively).
 
 .. code-block:: python
 
@@ -256,20 +255,21 @@ functions to instantiate a model, make a model class, or run the pipeline using 
 
     A reference implementation is provided in :class:`~pykeen.nn.modules.TransDInteraction`
 
-Differences between :class:`pykeen.nn.modules.Interaction` and :class:`pykeen.models.Model`
--------------------------------------------------------------------------------------------
+Differences between :class:`~pykeen.nn.modules.Interaction` and :class:`~pykeen.models.Model`
+---------------------------------------------------------------------------------------------
 
-The high-level :func:`pipeline` function allows you to pass pre-defined subclasses of :class:`pykeen.models.Model` such
-as :class:`pykeen.models.TransE` or :class:`pykeen.models.DistMult`. These classes are high-level wrappers around the
-interaction functions :class:`pykeen.nn.modules.TransEInteraction` and :class:`nn.modules.DistMultInteraction` that are
-more suited for running benchmarking experiments or practical applications of knowledge graph embeddings that include
-lots of information about default hyper-parameters, recommended hyper-parameter optimization strategies, and more
-complex applications of regularization schemas.
+The high-level :func:`~pykeen.pipeline.pipeline` function allows you to pass pre-defined subclasses of
+:class:`~pykeen.models.Model` such as :class:`~pykeen.models.TransE` or :class:`~pykeen.models.DistMult`. These
+classes are high-level wrappers around the interaction functions :class:`~pykeen.nn.modules.TransEInteraction` and
+:class:`~pykeen.nn.modules.DistMultInteraction` that are more suited for running benchmarking experiments or
+practical applications of knowledge graph embeddings that include lots of information about default
+hyper-parameters, recommended hyper-parameter optimization strategies, and more complex applications of
+regularization schemas.
 
-As a researcher, the :class:`pykeen.nn.modules.Interaction` is a way to quickly translate ideas into new models that can
-be used without all of the overhead of defining a :class:`pykeen.models.Model`. These components are also completely
-reusable throughout PyKEEN (e.g., in self-rolled training loops) and can be used as standalone components outside of
-PyKEEN.
+As a researcher, the :class:`~pykeen.nn.modules.Interaction` is a way to quickly translate ideas into new models
+that can be used without all of the overhead of defining a :class:`~pykeen.models.Model`. These components are also
+completely reusable throughout PyKEEN (e.g., in self-rolled training loops) and can be used as standalone
+components outside of PyKEEN.
 
 If you are happy with your interaction module and would like to go the next step to making it generally reusable, check
 the "Extending the Models" tutorial.

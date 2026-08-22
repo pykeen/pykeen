@@ -110,4 +110,5 @@ follows:
         ),
     )
 
-Additional documentation of the valid keyword arguments can be found under :class:`pykeen.trackers.MLFlowResultTracker`.
+Additional documentation of the valid keyword arguments can be found under
+:class:`~pykeen.trackers.MLFlowResultTracker`.

@@ -21,7 +21,7 @@ involved: :class:`~pykeen.triples.weights.RelationLossWeighter`.
 
 Example
 -------
-Below is a minimal example of how to use it via the high-level :func:`~pykeen.pipeline.api.pipeline` API:
+Below is a minimal example of how to use it via the high-level :func:`~pykeen.pipeline.pipeline` API:
 
 .. literalinclude:: ../examples/training/loss_weights.py
 """
