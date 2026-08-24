@@ -139,7 +139,7 @@ class BaseBatchedSLCWAInstances(Instances[BatchType], data.IterableDataset[Batch
         :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
         :param grouped: whether to keep the negative samples grouped by corrupted target instead of materialising
             them as dense triples. This requires a negative sampler which supports grouped corruption, cf.
-            :data:`pykeen.sampling.NegativeSampler.supports_grouped_corruption`.
+            :data:`~pykeen.sampling.NegativeSampler.supports_grouped_corruption`.
 
         :raises ValueError: if `grouped` is `True`, but the negative sampler does not support grouped corruption.
         """

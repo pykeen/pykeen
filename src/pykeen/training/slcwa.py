@@ -35,6 +35,9 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
     [ruffinelli2020]_ call the sLCWA ``NegSamp`` in their work.
     """
 
+    #: whether to keep negatives grouped by corrupted position, cf. the ``grouped`` parameter of :meth:`__init__`
+    grouped: bool = False
+
     @update_docstring_with_resolver_keys(ResolverKey("negative_sampler", "pykeen.sampling.negative_sampler_resolver"))
     def __init__(
         self,
@@ -50,7 +53,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
             for every positive one
         :param grouped: whether to keep negatives grouped by corrupted position and score each group with a single
-            :meth:`pykeen.models.Model.score_h` / :meth:`~pykeen.models.Model.score_r` /
+            :meth:`~pykeen.models.Model.score_h` / :meth:`~pykeen.models.Model.score_r` /
             :meth:`~pykeen.models.Model.score_t` call, instead of flattening them to independent triples scored via
             :meth:`~pykeen.models.Model.score_hrt`. This can substantially speed up training, especially for models
             with expensive interaction functions or encoders (e.g., ConvE, NodePiece, message passing models).
@@ -60,7 +63,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
             batch normalization (e.g. ConvE) see different batch statistics, since the encoder then runs over `b`
             items instead of `b · num_negs_per_pos` items - the same situation LCWA training is already in. Requires
             a negative sampler which supports grouped corruption, cf.
-            :data:`pykeen.sampling.NegativeSampler.supports_grouped_corruption`.
+            :data:`~pykeen.sampling.NegativeSampler.supports_grouped_corruption`.
         :param kwargs:
             Additional keyword-based parameters passed to TrainingLoop.__init__
 
@@ -208,7 +211,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
 
         :param model: the model
         :param loss: the loss
-        :param mode: the pass mode, cf. :meth:`pykeen.models.Model.score_hrt`
+        :param mode: the pass mode, cf. :meth:`~pykeen.models.Model.score_hrt`
         :param batch: the batch of grouped sLCWA training instances
         :param start: the start index of the sub-batch
         :param stop: the stop index of the sub-batch
