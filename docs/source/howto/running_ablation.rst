@@ -113,17 +113,17 @@ is used to assign the hyper-parameters fixed values, and ``kwargs_ranges`` to de
 sample from.
 
 Let's start with assigning HPO ranges to hyper-parameters belonging to the interaction model, using the dictionary
-``model_to_model_kwargs_ranges``. Because the ``scale`` is ``power_two``, the lower bound (``low``) equals to 4, and
-the upper bound ``high`` to 6, so the embedding dimension is sampled from the set :math:`\{2^4,2^5, 2^6\}`.
+``model_to_model_kwargs_ranges``. Because the ``scale`` is ``power_two``, the lower bound (``low``) equals to 4, and the
+upper bound ``high`` to 6, so the embedding dimension is sampled from the set :math:`\{2^4,2^5, 2^6\}`.
 
 Next, we fix the number of training epochs to 50 using the argument ``model_to_training_loop_to_training_kwargs`` and
 define a range for the batch size using ``model_to_training_loop_to_training_kwargs_ranges``. We use these two
 dictionaries because the defined hyper-parameters are hyper-parameters of the training function (that is a function of
 the ``training_loop``).
 
-Finally, we define a range for the learning rate which is a hyper-parameter of the optimizer. We decide to use Adam
-as an optimizer, and define a ``log`` ``scale`` for the learning rate, i.e., the learning rate is sampled from the
-interval :math:`[0.001, 0.1)`.
+Finally, we define a range for the learning rate which is a hyper-parameter of the optimizer. We decide to use Adam as
+an optimizer, and define a ``log`` ``scale`` for the learning rate, i.e., the learning rate is sampled from the interval
+:math:`[0.001, 0.1)`.
 
 .. literalinclude:: /examples/howto/running_ablation.py
     :lines: 141-190
@@ -137,7 +137,7 @@ We are expected to provide the arguments ``datasets``, ``models``, ``losses``, `
 :func:`~pykeen.ablation.ablation_pipeline`. For all other components and hype-parameters, PyKEEN provides default
 values/ranges. However, for achieving optimal performance, we should carefully define the hyper-parameter values/ranges
 ourselves, as explained above. Note that there are many more ranges to configure such hyper-parameters for the loss
-functions or the negative samplers. Check out the examples provided in `tests/resources/hpo_complex_nations.json`` how
+functions or the negative samplers. Check out the examples provided in ``tests/resources/hpo_complex_nations.json`` how
 to define the ranges for other components.
 
 Run an Ablation Study With Your Own Data
@@ -147,7 +147,7 @@ We showed how to run an ablation study with a PyKEEN integrated dataset. Now you
 run ablations studies with your own data? Yes, you can! It requires a minimal change compared to the previous
 configuration:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> datasets = [
     ...    {
@@ -163,12 +163,12 @@ train-validation-test splits.
 Run an Ablation Study From The Command Line Interface
 -----------------------------------------------------
 
-If you want to start an ablation study from the command line interface, we provide the function
-``pykeen experiments ablation``, which expects as an argument the path to a JSON configuration file. The
-configuration file consists of a dictionary with the sub-dictionaries ``ablation`` and ``optuna`` in which the ablation
-study and the Optuna related configuration are defined. Besides, similar to the programmatic interface, the ``metadata``
-dictionary can be provided. The configuration file corresponding to the ablation study that we previously defined within
-our program would look as follows:
+If you want to start an ablation study from the command line interface, we provide the function ``pykeen experiments
+ablation``, which expects as an argument the path to a JSON configuration file. The configuration file consists of a
+dictionary with the sub-dictionaries ``ablation`` and ``optuna`` in which the ablation study and the Optuna related
+configuration are defined. Besides, similar to the programmatic interface, the ``metadata`` dictionary can be provided.
+The configuration file corresponding to the ablation study that we previously defined within our program would look as
+follows:
 
 .. code-block:: javascript
 
