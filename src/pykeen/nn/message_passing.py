@@ -58,7 +58,7 @@ class Decomposition(nn.Module, ExtraReprMixin, ABC):
 
     The implementations use the efficient version based on adjacency tensor stacking from [thanapalasingam2021]_.
     The adjacency tensor is reshaped into a sparse matrix to support message passing by a
-    single sparse matrix multiplication, cf. :func:`pykeen.nn.utils.adjacency_tensor_to_stacked_matrix`.
+    single sparse matrix multiplication, cf. :func:`~pykeen.nn.utils.adjacency_tensor_to_stacked_matrix`.
 
     .. note ::
         this module does neither take care of the self-loop, nor of applying an activation function.
@@ -199,7 +199,7 @@ class BasesDecomposition(Decomposition):
         :param num_bases:
             The number of bases.
         :param kwargs:
-            Additional keyword-based parameters passed to :class:`pykeen.nn.message_passing.Decomposition`.
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.message_passing.Decomposition`.
         """
         super().__init__(**kwargs)
 
@@ -307,7 +307,7 @@ class BlockDecomposition(Decomposition):
         :param num_blocks:
             The number of blocks.
         :param kwargs:
-            Keyword-based parameters passed to :class:`pykeen.nn.message_passing.Decomposition`.
+            Keyword-based parameters passed to :class:`~pykeen.nn.message_passing.Decomposition`.
         """
         super().__init__(**kwargs)
 

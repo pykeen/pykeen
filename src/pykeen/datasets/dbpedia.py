@@ -40,7 +40,7 @@ class DBpedia50(UnpackedRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the DBpedia50 small dataset from [shi2017b]_.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             training_url=TRAIN_URL,

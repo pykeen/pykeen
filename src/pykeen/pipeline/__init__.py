@@ -11,7 +11,7 @@ from .api import (
     replicate_pipeline_from_path,
     resolve_pipeline,
 )
-from .plot_utils import plot, plot_early_stopping, plot_er, plot_losses
+from .plot_utils import build_representation_getter, plot, plot_early_stopping, plot_er, plot_losses
 
 __all__ = [
     "PipelineResult",
@@ -27,4 +27,5 @@ __all__ = [
     "plot_early_stopping",
     "plot_er",
     "plot",
+    "build_representation_getter",
 ]

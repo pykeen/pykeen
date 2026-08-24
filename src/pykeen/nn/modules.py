@@ -79,6 +79,7 @@ __all__ = [
     "BoxEInteraction",
     "ComplExInteraction",
     "ConvEInteraction",
+    "ConvEShapeInformation",
     "ConvKBInteraction",
     "CPInteraction",
     "CrossEInteraction",
@@ -585,7 +586,7 @@ class ComplExInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
     .. note::
         this method generally expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
         `True`. However, for backwards compatibility and convenience in use, you can also pass real tensors whose shape
-        is compliant with :func:`torch.view_as_complex`, cf. :func:`pykeen.utils.ensure_complex`.
+        is compliant with :func:`torch.view_as_complex`, cf. :func:`~pykeen.utils.ensure_complex`.
 
     ---
     citation:
@@ -858,15 +859,15 @@ class ConvEInteraction(Interaction[FloatTensor, FloatTensor, tuple[FloatTensor, 
 
         :param input_channels:
             the number of input channels for the convolution operation. Can be inferred from other parameters,
-            cf. :func:`_calculate_missing_shape_information`.
+            cf. :meth:`~pykeen.nn.modules.ConvEShapeInformation.make`.
         :param output_channels:
             the number of input channels for the convolution operation
         :param embedding_height:
             the height of the "image" after reshaping the concatenated head and relation embedding. Can be inferred
-            from other parameters, cf. :func:`_calculate_missing_shape_information`.
+            from other parameters, cf. :meth:`~pykeen.nn.modules.ConvEShapeInformation.make`.
         :param embedding_width:
             the width of the "image" after reshaping the concatenated head and relation embedding. Can be inferred
-            from other parameters, cf. :func:`_calculate_missing_shape_information`.
+            from other parameters, cf. :meth:`~pykeen.nn.modules.ConvEShapeInformation.make`.
         :param kernel_width:
             the width of the convolution kernel
         :param kernel_height:
@@ -1392,10 +1393,10 @@ class TransRInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
     for head and tail entity representations $\mathbf{h}, \mathbf{t} \in \mathbb{R}^d$,
     relation representation $\mathbf{r} \in \mathbb{R}^k$,
     and a relation-specific projection matrix $\mathbf{M}_r \in \mathbb{R}^{k \times d}$.
-    $c$ enforces the constraint $\|\cdot\| \leq 1$, cf. :func:`pykeen.utils.clamp_norm`.
+    $c$ enforces the constraint $\|\cdot\| \leq 1$, cf. :func:`~pykeen.utils.clamp_norm`.
 
     .. note ::
-        :class:`pykeen.models.TransR` additionally also enforces $\|\cdot\| \leq 1$ on all embeddings.
+        :class:`~pykeen.models.TransR` additionally also enforces $\|\cdot\| \leq 1$ on all embeddings.
 
     ---
     citation:
@@ -1467,7 +1468,7 @@ class RotatEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
     .. note::
         this method generally expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
         `True`. However, for backwards compatibility and convenience in use, you can also pass real tensors whose shape
-        is compliant with :func:`torch.view_as_complex`, cf. :func:`pykeen.utils.ensure_complex`.
+        is compliant with :func:`torch.view_as_complex`, cf. :func:`~pykeen.utils.ensure_complex`.
 
     ---
     citation:
@@ -1660,20 +1661,20 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         :param embedding_dim:
             the embedding dimension of entities and relations
         :param inner_activation:
-            the inner non-linearity, or a hint thereof. Defaults to :class:`nn.Tanh`.
-            Disable by passing :class:`nn.Idenity`
+            the inner non-linearity, or a hint thereof. Defaults to :class:`torch.nn.Tanh`.
+            Disable by passing :class:`torch.nn.Identity`
         :param inner_activation_kwargs:
             additional keyword-based parameters used to instantiate the inner activation function.
         :param outer_activation:
-            the outer non-linearity, or a hint thereof. Defaults to :class:`nn.Identity`, i.e., no activation.
+            the outer non-linearity, or a hint thereof. Defaults to :class:`torch.nn.Identity`, i.e., no activation.
         :param outer_activation_kwargs:
             additional keyword-based parameters used to instantiate the outer activation function.
         :param bias_initializer:
-            the initializer to use for the biases; defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+            the initializer to use for the biases; defaults to :func:`~pykeen.nn.init.xavier_uniform_`.
         :param bias_initializer_kwargs:
             additional keyword-based parameters passed to the bias initializer.
         :param projection_initializer:
-            the initializer to use for the projection; defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+            the initializer to use for the projection; defaults to :func:`~pykeen.nn.init.xavier_uniform_`.
         :param projection_initializer_kwargs:
             additional keyword-based parameters passed to the projection initializer.
         """
@@ -1906,10 +1907,10 @@ class TuckERInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
             Whether to use batch normalization on head representations and the combination of head and relation.
         :param core_initializer:
             The core tensor's initializer, or a hint thereof.
-            Defaults to :attr:`~pykeen.nn.modules.TuckerInteraction.default_core_initializer`.
+            Defaults to :attr:`~pykeen.nn.modules.TuckERInteraction.default_core_initializer`.
         :param core_initializer_kwargs:
             Additional keyword-based parameters for the initializer.
-            Defaults to :attr:`~pykeen.nn.modules.TuckerInteraction.default_core_initializer_kwargs`.
+            Defaults to :attr:`~pykeen.nn.modules.TuckERInteraction.default_core_initializer_kwargs`.
         """
         super().__init__()
 
@@ -2323,7 +2324,7 @@ class KG2EInteraction(
     :class:`~pykeen.nn.sim.ExpectedLikelihood`.
 
     .. note ::
-        This interaction module does *not* sub-class from :class:`~pykeen.nn.modules.FunctionalInteraction`
+        This interaction module does *not* sub-class from a stateless functional interaction base class
         just for the technical reason that the choice of the similarity represents some "state". However, it
         does not contain any trainable parameters.
 
@@ -2383,9 +2384,9 @@ class KG2EInteraction(
 class TransHInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
     r"""The norm-based TransH interaction function.
 
-    This model extends :class:`~pykeen.models.TransEInteraction` by applying the translation from head to tail entity
-    in a relation-specific hyperplane in order to address its inability to model one-to-many, many-to-one, and
-    many-to-many relations.
+    This model extends :class:`~pykeen.nn.modules.TransEInteraction` by applying the translation from head to tail
+    entity in a relation-specific hyperplane in order to address its inability to model one-to-many, many-to-one,
+    and many-to-many relations.
 
     In TransH, each relation is represented by a hyperplane, or more specifically a normal vector of this hyperplane
     $\mathbf{r}_{w} \in \mathbb{R}^d$ and a vector $\mathbf{r}_{d} \in \mathbb{R}^d$ that lies in the hyperplane.
@@ -2575,7 +2576,7 @@ class DirectionAverageInteraction(
     r"""The directional average interaction module.
 
     This can be considered as a generalization of the SimplE interaction module that can be parametrized
-    with any other interaction module, rather than just :class:`pykeen.nn.modules.DistMultInteraction`.
+    with any other interaction module, rather than just :class:`~pykeen.nn.modules.DistMultInteraction`.
 
     A separate representation is learned for each entity $e \in \mathcal{E}$ for when it appears as the
     subject of a triple $\mathbf{e}_h \in \mathbb{R}^d$ and as the object of a triple $\mathbf{e}_t \in \mathbb{R}^d$.
@@ -2591,8 +2592,8 @@ class DirectionAverageInteraction(
             + f(\mathbf{t}_{h}, \mathbf{r}_{\leftarrow}, \mathbf{h}_{t})
         }{2}
 
-    Where ``f`` is the interaction model used. If :class:`pykeen.nn.modules.DistMultInteraction` is used,
-    then this becomes :class:`pykeen.nn.modules.SimplEInteraction`.
+    Where ``f`` is the interaction model used. If :class:`~pykeen.nn.modules.DistMultInteraction` is used,
+    then this becomes :class:`~pykeen.nn.modules.SimplEInteraction`.
 
     .. todo:: can we generalize the type annotations for this from FloatTensor to HeadRepresentation, etc.?
     """
@@ -2646,7 +2647,7 @@ class DirectionAverageInteraction(
 class SimplEInteraction(DirectionAverageInteraction):
     r"""The SimplE interaction function.
 
-    SimplE can be regarded as extension of (a special case of) :class:`pykeen.nn.modules.CPInteraction`,
+    SimplE can be regarded as extension of (a special case of) :class:`~pykeen.nn.modules.CPInteraction`,
     an early tensor factorization approach in which each entity
     $e \in \mathcal{E}$ is represented by two vectors $\mathbf{e}_h, \mathbf{e}_t \in \mathbb{R}^d$ and each
     relation by a single vector $\mathbf{r} \in \mathbb{R}^d$. Depending whether an entity participates in a
@@ -2693,7 +2694,7 @@ class PairREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, Flo
     relation-specific head projection, relation-specific tail projection, and tail entity, respectively.
 
     .. note ::
-        :class:`pykeen.models.PairRE` additionally enforces $\|\mathbf{h}\| = \|\mathbf{t}\| = 1$.
+        :class:`~pykeen.models.PairRE` additionally enforces $\|\mathbf{h}\| = \|\mathbf{t}\| = 1$.
 
     ---
     citation:
@@ -2746,7 +2747,7 @@ class QuatEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
     .. warning ::
         In order to representation a rotation, $\mathbf{r}$ must be normalized to unit length,
-        cf. :func:`pykeen.nn.quaternion.normalize`.
+        cf. :func:`~pykeen.nn.quaternion.normalize`.
 
     .. seealso::
         - https://en.wikipedia.org/wiki/Quaternion
@@ -3451,7 +3452,7 @@ class TransformerInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor])
             The number of Transformer layers, cf. :class:`torch.nn.TransformerEncoder`.
         :param num_heads: >0
             The number of self-attention heads inside each transformer encoder layer,
-            cf. :class:`nn.TransformerEncoderLayer`.
+            cf. :class:`torch.nn.TransformerEncoderLayer`.
         :param dropout:
             The dropout rate on each transformer encoder layer, cf. :class:`torch.nn.TransformerEncoderLayer`.
         :param dim_feedforward:
@@ -3626,11 +3627,11 @@ class AutoSFInteraction(Interaction[HeadRepresentation, RelationRepresentation, 
 
     This parametrization allows to express several well-known interaction functions, e.g.
 
-    - :class:`pykeen.nn.DistMultInteraction`:
+    - :class:`~pykeen.nn.modules.DistMultInteraction`:
         one block, $\mathcal{C} = \{(0, 0, 0, 1)\}$
-    - :class:`pykeen.nn.ComplExInteraction`:
+    - :class:`~pykeen.nn.modules.ComplExInteraction`:
         two blocks, $\mathcal{C} = \{(0, 0, 0, 1), (0, 1, 1, 1), (1, 0, 1, -1), (1, 0, 1, 1)\}$
-    - :class:`pykeen.nn.SimplEInteraction`:
+    - :class:`~pykeen.nn.modules.SimplEInteraction`:
         two blocks: $\mathcal{C} = \{(0, 0, 1, 1), (1, 1, 0, 1)\}$
 
     While in theory, we can have up to `num_blocks**3` unique triples, usually, a smaller number is preferable to have
@@ -3716,7 +3717,7 @@ class AutoSFInteraction(Interaction[HeadRepresentation, RelationRepresentation, 
         Initialize the interaction function.
 
         :param coefficients:
-            the coefficients for the individual blocks, cf. :class:`pykeen.nn.AutoSFInteraction`
+            the coefficients for the individual blocks, cf. :class:`~pykeen.nn.modules.AutoSFInteraction`
 
         :param num_blocks:
             the number of blocks. If given, will be used for both, entity and relation representations.
@@ -3763,7 +3764,7 @@ class AutoSFInteraction(Interaction[HeadRepresentation, RelationRepresentation, 
         :param coefficients:
             the coefficients in the "official" serialization format.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`pykeen.nn.AutoSFInteraction.__init__`
+            additional keyword-based parameters passed to :meth:`~pykeen.nn.modules.AutoSFInteraction.__init__`
 
         :return:
             An AutoSF interaction module

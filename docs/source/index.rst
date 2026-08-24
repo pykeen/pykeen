@@ -3,46 +3,50 @@ PyKEEN
 
 .. automodule:: pykeen
 
+This documentation is organized following the `Diátaxis <https://diataxis.fr/>`_ framework, which distinguishes between
+four kinds of content: learning-oriented *tutorials*, goal-oriented *how-to guides*, understanding-oriented
+*explanations*, and information-oriented *reference* material.
+
 .. toctree::
-    :caption: Getting Started
+    :caption: Tutorials
     :name: quickstart
     :maxdepth: 2
 
     installation
     tutorial/first_steps
-    tutorial/models
-    tutorial/representations
-    tutorial/interactions
-    tutorial/trackers/index
-    tutorial/checkpoints
     tutorial/translational_toy_example
-    tutorial/understanding_evaluation
-    tutorial/running_hpo
-    tutorial/running_ablation
-    tutorial/performance
-    tutorial/node_piece
     tutorial/inductive_lp
-    tutorial/splitting
-    contrib/lightning
-    tutorial/using_resolvers
-    tutorial/normalizer_constrainer_regularizer
-    tutorial/troubleshooting
 
 .. toctree::
-    :caption: Bring Your Own
-    :name: byo
+    :caption: How-to Guides
+    :name: howto
     :maxdepth: 2
 
-    byo/data
-    byo/interaction
+    howto/bring_your_own_data
+    howto/bring_your_own_interaction
+    howto/extending_datasets
+    howto/extending_models
+    howto/splitting
+    howto/node_piece
+    howto/using_resolvers
+    howto/checkpoints
+    howto/running_hpo
+    howto/running_ablation
+    howto/trackers/index
+    howto/troubleshooting
 
 .. toctree::
-    :caption: Extending PyKEEN
-    :name: extending
+    :caption: Explanation
+    :name: explanation
     :maxdepth: 2
 
-    extending/datasets
-    extending/models
+    explanation/models
+    explanation/interactions
+    explanation/representations
+    explanation/normalizer_constrainer_regularizer
+    explanation/understanding_evaluation
+    explanation/performance
+    explanation/dataset_degree_distributions
 
 .. toctree::
     :caption: Reference
@@ -71,6 +75,7 @@ PyKEEN
     reference/constants
     reference/checkpoints
     reference/nn/index
+    reference/lightning
     reference/utils
 
 .. toctree::
@@ -78,7 +83,6 @@ PyKEEN
     :name: appendix
     :maxdepth: 2
 
-    analysis/index
     references
 
 Indices and Tables

@@ -90,20 +90,20 @@ class TransH(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
             and numerically more stable.
 
         :param entity_initializer:
-            The entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_normal_`.
+            The entity initializer function. Defaults to :func:`~pykeen.nn.init.xavier_normal_`.
         :param regularizer:
-            The entity regularizer. Defaults to :attr:`pykeen.models.TransH.regularizer_default`.
+            The entity regularizer. Defaults to ``regularizer_default``.
         :param regularizer_kwargs:
             Keyword-based parameters for the entity regularizer. If `entity_regularizer` is None,
-            the default from :attr:`pykeen.models.TransH.regularizer_default_kwargs` will be used instead
+            the default from :attr:`~pykeen.models.TransH.regularizer_default_kwargs` will be used instead
 
         :param relation_initializer:
-            The relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_normal_`.
+            The relation initializer function. Defaults to :func:`~pykeen.nn.init.xavier_normal_`.
         :param relation_regularizer:
-            The relation regularizer. Defaults to :attr:`pykeen.models.TransH.relation_regularizer_default`.
+            The relation regularizer. Defaults to ``relation_regularizer_default``.
         :param relation_regularizer_kwargs:
             Keyword-based parameters for the relation regularizer. If `relation_regularizer` is None,
-            the default from :attr:`pykeen.models.TransH.relation_regularizer_default_kwargs` will be used instead
+            the default from :attr:`~pykeen.models.TransH.relation_regularizer_default_kwargs` will be used instead
 
         :param kwargs:
             Remaining keyword arguments are passed to :class:`~pykeen.models.ERModel`

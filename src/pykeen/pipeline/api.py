@@ -1,4 +1,4 @@
-"""The easiest way to train and evaluate a model is with the :func:`pykeen.pipeline.pipeline` function.
+"""The easiest way to train and evaluate a model is with the :func:`~pykeen.pipeline.pipeline` function.
 
 It provides a high-level entry point into the extensible functionality of
 this package. Full reference documentation for the pipeline and related functions
@@ -6,97 +6,59 @@ can be found at :mod:`pykeen.pipeline`.
 
 Training a Model
 ~~~~~~~~~~~~~~~~
-The following example shows how to train and evaluate the :class:`pykeen.models.TransE` model
-on the :class:`pykeen.datasets.Nations` dataset. Throughout the documentation, you'll notice
+The following example shows how to train and evaluate the :class:`~pykeen.models.TransE` model
+on the :class:`~pykeen.datasets.Nations` dataset. Throughout the documentation, you'll notice
 that each asset has a corresponding class in PyKEEN. You can follow the links to learn more
 about each and see the reference on how to use them specifically. Don't worry, in this part of
-the tutorial, the :func:`pykeen.pipeline.pipeline` function will take care of everything for you.
+the tutorial, the :func:`~pykeen.pipeline.pipeline` function will take care of everything for you.
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 4-10
 
-The results are returned in a :class:`pykeen.pipeline.PipelineResult` instance, which has
+The results are returned in a :class:`~pykeen.pipeline.PipelineResult` instance, which has
 attributes for the trained model, the training loop, and the evaluation.
 
 In this example, the model was given as a string. A list of available models can be found in
 :mod:`pykeen.models`. Alternatively, the class corresponding to the implementation of the model
 could be used as in:
 
->>> from pykeen.pipeline import pipeline
->>> from pykeen.models import TransE
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model=TransE,
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 13-19
 
 In this example, the dataset was given as a string. A list of available datasets can be found in
-:mod:`pykeen.datasets`. Alternatively, a subclass of :class:`pykeen.datasets.Dataset` could be
+:mod:`pykeen.datasets`. Alternatively, a subclass of :class:`~pykeen.datasets.Dataset` could be
 used as in:
 
->>> from pykeen.pipeline import pipeline
->>> from pykeen.models import TransE
->>> from pykeen.datasets import Nations
->>> pipeline_result = pipeline(
-...     dataset=Nations,
-...     model=TransE,
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 22-28
 
 In each of the previous three examples, the training approach, optimizer, and evaluation scheme
 were omitted. By default, the model is trained under the stochastic local closed world assumption (sLCWA;
-:class:`pykeen.training.SLCWATrainingLoop`). This can be explicitly given as a string:
+:class:`~pykeen.training.SLCWATrainingLoop`). This can be explicitly given as a string:
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     training_loop='sLCWA',
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 31-36
 
 Alternatively, the model can be trained under the  local closed world assumption (LCWA;
-:class:`pykeen.training.LCWATrainingLoop`) by giving ``'LCWA'``.
+:class:`~pykeen.training.LCWATrainingLoop`) by giving ``'LCWA'``.
 No additional configuration is necessary, but it's worth reading up on the differences between these training
 approaches. A list of available training assumptions can be found in :mod:`pykeen.training`.
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     training_loop='LCWA',
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 39-44
 
 One of these differences is that the sLCWA relies on *negative sampling*. The type of negative sampling
 can be given as in:
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     training_loop='sLCWA',
-...     negative_sampler='basic',
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 47-53
 
 In this example, the negative sampler was given as a string. A list of available negative samplers
 can be found in :mod:`pykeen.sampling`. Alternatively, the class corresponding to the implementation
 of the negative sampler could be used as in:
 
->>> from pykeen.pipeline import pipeline
->>> from pykeen.sampling import BasicNegativeSampler
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     training_loop='sLCWA',
-...     negative_sampler=BasicNegativeSampler,
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 56-64
 
 .. warning ::
 
@@ -106,79 +68,48 @@ of the negative sampler could be used as in:
 The type of evaluation perfomed can be specified with the ``evaluator`` keyword. By default,
 rank-based evaluation is used. It can be given explictly as in:
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     evaluator='RankBasedEvaluator',
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 67-72
 
 In this example, the evaluator string. A list of available evaluators can be found in
 :mod:`pykeen.evaluation`. Alternatively, the class corresponding to the implementation
 of the evaluator could be used as in:
 
->>> from pykeen.pipeline import pipeline
->>> from pykeen.evaluation import RankBasedEvaluator
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     evaluator=RankBasedEvaluator,
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 75-82
 
 PyKEEN implements early stopping, which can be turned on with the ``stopper`` keyword
 argument as in:
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     stopper='early',
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 85-90
 
 In PyKEEN you can also use the learning rate schedulers provided by PyTorch, which can be
 turned on with the ``lr_scheduler`` keyword argument together with the ``lr_scheduler_kwargs``
 keyword argument to specify arguments for the learning rate scheduler as in:
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     lr_scheduler='ExponentialLR',
-...     lr_scheduler_kwargs=dict(
-...         gamma=0.99,
-...     ),
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 93-101
 
 Deeper Configuration
 ~~~~~~~~~~~~~~~~~~~~
 Arguments for the model can be given as a dictionary using ``model_kwargs``.
 
->>> from pykeen.pipeline import pipeline
->>> pipeline_result = pipeline(
-...     dataset='Nations',
-...     model='TransE',
-...     model_kwargs=dict(
-...         scoring_fct_norm=2,
-...     ),
-... )
->>> pipeline_result.save_to_directory('nations_transe')
+.. literalinclude:: /examples/first_steps/pipeline_basics.py
+    :lines: 104-111
 
-The entries in ``model_kwargs`` correspond to the arguments given to :func:`pykeen.models.TransE.__init__`. For a
-complete listing of models, see :mod:`pykeen.models`, where there are links to the reference for each
+The entries in ``model_kwargs`` correspond to the arguments given to :class:`~pykeen.models.TransE`'s ``__init__``. For
+a complete listing of models, see :mod:`pykeen.models`, where there are links to the reference for each
 model that explain what kwargs are possible. Each model's default hyper-parameters were chosen based on the
 best reported values from the paper originally publishing the model unless otherwise noted on the model's
 reference page.
 
 Because the pipeline takes care of looking up classes and instantiating them,
-there are several other parameters to :func:`pykeen.pipeline.pipeline` that
+there are several other parameters to :func:`~pykeen.pipeline.pipeline` that
 can be used to specify the parameters during their respective instantiations.
 
 Arguments can be given to the dataset with ``dataset_kwargs``. These are passed on to
-the :class:`pykeen.datasets.Nations`
+the :class:`~pykeen.datasets.Nations` constructor.
 """
 
 from __future__ import annotations
@@ -259,7 +190,7 @@ def triple_hash(*triples: MappedTriples) -> Mapping[str, str]:
 @fix_dataclass_init_docs
 @dataclass
 class PipelineResult(Result):
-    """A dataclass containing the results of running :func:`pykeen.pipeline.pipeline`."""
+    """A dataclass containing the results of running :func:`~pykeen.pipeline.pipeline`."""
 
     #: The random seed used at the beginning of the pipeline
     random_seed: int
@@ -316,7 +247,7 @@ class PipelineResult(Result):
     def plot_losses(self, **kwargs):
         """Plot the losses per epoch.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_losses`.
+        :param kwargs: The keyword arguments passed to :func:`~pykeen.pipeline.plot_losses`.
         :returns: The axis
         """
         from .plot_utils import plot_losses
@@ -326,7 +257,7 @@ class PipelineResult(Result):
     def plot_early_stopping(self, **kwargs):
         """Plot the evaluations during early stopping.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_early_stopping`
+        :param kwargs: The keyword arguments passed to :func:`~pykeen.pipeline.plot_early_stopping`
         :returns: The axis
         """
         from .plot_utils import plot_early_stopping
@@ -336,7 +267,7 @@ class PipelineResult(Result):
     def plot_er(self, **kwargs):
         """Plot the reduced entities and relation vectors in 2D.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline.plot_utils.plot_er`
+        :param kwargs: The keyword arguments passed to :func:`~pykeen.pipeline.plot_er`
         :returns: The axis
 
         .. warning::
@@ -351,7 +282,7 @@ class PipelineResult(Result):
     def plot(self, **kwargs):
         """Plot all plots.
 
-        :param kwargs: The keyword arguments passed to :func:`pykeen.pipeline_plot.plot`
+        :param kwargs: The keyword arguments passed to :func:`~pykeen.pipeline.plot`
         :returns: The axis
         """
         from .plot_utils import plot
@@ -412,8 +343,8 @@ class PipelineResult(Result):
         :func:`torch.load`, cf. `torch's serialization documentation
         <https://pytorch.org/docs/stable/notes/serialization.html>`_. `training_triples` contains the training triples
         factory, including label-to-id mappings, if used. It has been saved via
-        :meth:`pykeen.triples.CoreTriplesFactory.to_path_binary`, and can re-loaded via
-        :meth:`pykeen.triples.CoreTriplesFactory.from_path_binary`.
+        :meth:`~pykeen.triples.CoreTriplesFactory.to_path_binary`, and can re-loaded via
+        :meth:`~pykeen.triples.CoreTriplesFactory.from_path_binary`.
 
         :param directory:
             the directory path. It will be created including all parent directories if necessary
@@ -544,9 +475,10 @@ class PipelineResult(Result):
 @fix_dataclass_init_docs
 @dataclass
 class TrainResult:
-    """Result of :func:`train_pipeline`, containing a trained model without post-training evaluation.
+    """Result of training, containing a trained model without post-training evaluation.
 
-    Call :meth:`evaluate` to run evaluation and obtain a full :class:`PipelineResult`.
+    Produced via :meth:`ResolutionResult.train`. Call :meth:`evaluate` to run evaluation and obtain a full
+    :class:`PipelineResult`.
     """
 
     #: The random seed used at the beginning of the pipeline
@@ -1041,6 +973,15 @@ def _build_model_helper(
             logger.warning(
                 f"Cannot specify loss in kwargs ({loss}) and model_kwargs ({_loss}). removing from model_kwargs.",
             )
+    if loss is None and not isinstance(model, Model):
+        # When no loss is requested, fall back to the *model's* default loss rather than the loss
+        # resolver's default (:class:`~pykeen.losses.MarginRankingLoss`). This is what
+        # :meth:`~pykeen.models.Model.__init__` does when it receives ``loss=None``, and what
+        # :func:`~pykeen.hpo.hpo_pipeline` already does when it builds its search space.
+        model_cls = model_resolver.lookup(model)
+        loss = model_cls.loss_default
+        # the model's defaults act as defaults, i.e., explicitly given kwargs take precedence
+        loss_kwargs = {**(model_cls.loss_default_kwargs or {}), **(loss_kwargs or {})}
     model_kwargs["loss"] = loss_resolver.make(loss, loss_kwargs)
 
     if not isinstance(model, Model):
@@ -1528,9 +1469,8 @@ def resolve_pipeline(
 ) -> ResolutionResult:
     """Resolve all pipeline components into a :class:`ResolutionResult` without running training.
 
-    All parameters match :func:`train_pipeline`. Use :meth:`ResolutionResult.train` to run
-    training and :meth:`TrainResult.evaluate` to run evaluation, or use the higher-level
-    :func:`train_pipeline` or :func:`pipeline` convenience functions.
+    Use :meth:`ResolutionResult.train` to run training and :meth:`TrainResult.evaluate` to run
+    evaluation, or use the higher-level :func:`pipeline` convenience function.
 
     :returns: A :class:`ResolutionResult` holding all resolved components ready for training.
     """
@@ -1719,8 +1659,8 @@ def pipeline(  # noqa: C901
     """Train and evaluate a model.
 
     :param dataset:
-        The name of the dataset (a key for the :data:`pykeen.datasets.dataset_resolver`) or the
-        :class:`pykeen.datasets.Dataset` instance. Alternatively, the training triples factory (``training``), testing
+        The name of the dataset (a key for the :data:`~pykeen.datasets.dataset_resolver`) or the
+        :class:`~pykeen.datasets.Dataset` instance. Alternatively, the training triples factory (``training``), testing
         triples factory (``testing``), and validation triples factory (``validation``; optional) can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
@@ -1740,12 +1680,12 @@ def pipeline(  # noqa: C901
         embedding quality.
 
     :param model:
-        The name of the model, subclass of :class:`pykeen.models.Model`, or an instance of
-        :class:`pykeen.models.Model`. Can be given as None if the ``interaction`` keyword is used.
+        The name of the model, subclass of :class:`~pykeen.models.Model`, or an instance of
+        :class:`~pykeen.models.Model`. Can be given as None if the ``interaction`` keyword is used.
     :param model_kwargs:
         Keyword arguments to pass to the model class on instantiation
-    :param interaction: The name of the interaction class, a subclass of :class:`pykeen.nn.modules.Interaction`,
-        or an instance of :class:`pykeen.nn.modules.Interaction`. Can not be given when there is also a model.
+    :param interaction: The name of the interaction class, a subclass of :class:`~pykeen.nn.modules.Interaction`,
+        or an instance of :class:`~pykeen.nn.modules.Interaction`. Can not be given when there is also a model.
     :param interaction_kwargs:
         Keyword arguments to pass during instantiation of the interaction class. Only use with ``interaction``.
     :param dimensions:
@@ -1778,13 +1718,13 @@ def pipeline(  # noqa: C901
 
     :param training_loop:
         The name of the training loop's training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class.
-        Defaults to :class:`pykeen.training.SLCWATrainingLoop`.
+        Defaults to :class:`~pykeen.training.SLCWATrainingLoop`.
     :param training_loop_kwargs:
         Keyword arguments to pass to the training loop on instantiation
     :param negative_sampler:
         The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class.
         Only allowed when training with sLCWA.
-        Defaults to :class:`pykeen.sampling.BasicNegativeSampler`.
+        Defaults to :class:`~pykeen.sampling.BasicNegativeSampler`.
     :param negative_sampler_kwargs:
         Keyword arguments to pass to the negative sampler class on instantiation
 
@@ -1798,7 +1738,7 @@ def pipeline(  # noqa: C901
         Keyword arguments to pass to the stopper upon instantiation.
 
     :param evaluator:
-        The name of the evaluator or an evaluator class. Defaults to :class:`pykeen.evaluation.RankBasedEvaluator`.
+        The name of the evaluator or an evaluator class. Defaults to :class:`~pykeen.evaluation.RankBasedEvaluator`.
     :param evaluator_kwargs:
         Keyword arguments to pass to the evaluator on instantiation
     :param evaluation_kwargs:
@@ -1816,10 +1756,10 @@ def pipeline(  # noqa: C901
     :param use_testing_data:
         If true, use the testing triples. Otherwise, use the validation triples. Defaults to true - use testing triples.
     :param device: The device or device name to run on. If none is given, the device will be looked up with
-        :func:`pykeen.utils.resolve_device`.
+        :func:`~pykeen.utils.resolve_device`.
     :param random_seed: The random seed to use. If none is specified, one will be assigned before any code
         is run for reproducibility purposes. In the returned :class:`PipelineResult` instance, it can be accessed
-        through :data:`PipelineResult.random_seed`.
+        through ``random_seed``.
     :param evaluation_fallback:
         If true, in cases where the evaluation failed using the GPU it will fall back to using a smaller batch size or
         in the last instance evaluate on the CPU, if even the smallest possible batch size is too big for the GPU.

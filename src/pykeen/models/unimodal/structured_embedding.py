@@ -61,12 +61,12 @@ class SE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor]):
             Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
             and numerically more stable.
 
-        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`~pykeen.nn.init.xavier_uniform_`.
         :param entity_constrainer: Entity constrainer function. Defaults to :func:`torch.nn.functional.normalize`.
         :param entity_constrainer_kwargs: Keyword arguments to be used when calling the entity constrainer.
 
         :param relation_initializer: Relation initializer function. Defaults to
-            :func:`pykeen.nn.init.xavier_uniform_norm_`
+            :func:`~pykeen.nn.init.xavier_uniform_norm_`
 
         :param kwargs:
             Remaining keyword arguments to forward to :class:`~pykeen.models.ERModel`

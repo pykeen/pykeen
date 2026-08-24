@@ -62,11 +62,11 @@ class TransE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
             Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
             and numerically more stable.
 
-        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`~pykeen.nn.init.xavier_uniform_`.
         :param entity_constrainer: Entity constrainer function. Defaults to :func:`torch.nn.functional.normalize`.
 
         :param relation_initializer:
-            Relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`.
+            Relation initializer function. Defaults to :func:`~pykeen.nn.init.xavier_uniform_norm_`.
         :param relation_constrainer: Relation constrainer function. Defaults to none.
 
         :param regularizer:

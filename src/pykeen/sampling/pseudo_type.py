@@ -81,7 +81,7 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         """Instantiate the pseudo-typed negative sampler.
 
         :param mapped_triples: the positive training triples
-        :param kwargs: Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
+        :param kwargs: Additional keyword based arguments passed to :class:`~pykeen.sampling.NegativeSampler`.
         """
         super().__init__(mapped_triples=mapped_triples, **kwargs)
         self.data, self.offsets = create_index(mapped_triples=mapped_triples, num_relations=self.num_relations)

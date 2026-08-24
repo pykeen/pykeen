@@ -40,7 +40,7 @@ class FB15k(TarFileRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the FreeBase 15K dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileRemoteDataset`.
 
         .. warning:: This dataset contains testing leakage. Use :class:`FB15k237` instead.
         """
@@ -75,7 +75,7 @@ class FB15k237(PackedZipRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the FreeBase 15K (237) dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.ZipFileRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PackedZipRemoteDataset`.
         """
         super().__init__(
             url="https://download.microsoft.com/download/8/7/0/8700516A-AB3D-4850-B4BB-805C515AECE1/FB15K-237.2.zip",

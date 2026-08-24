@@ -44,7 +44,7 @@ class BernoulliNegativeSampler(NegativeSampler):
         :param mapped_triples:
             the positive training triples
         :param kwargs:
-            Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
+            Additional keyword based arguments passed to :class:`~pykeen.sampling.NegativeSampler`.
         """
         super().__init__(mapped_triples=mapped_triples, **kwargs)
         # Preprocessing: Compute corruption probabilities

@@ -1,7 +1,7 @@
-"""The easiest way to optimize a model is with the :func:`pykeen.hpo.hpo_pipeline` function.
+"""The easiest way to optimize a model is with the :func:`~pykeen.hpo.hpo_pipeline` function.
 
 All of the following examples are about getting the best model
-when training :class:`pykeen.models.TransE` on the :class:`pykeen.datasets.Nations` dataset.
+when training :class:`~pykeen.models.TransE` on the :class:`~pykeen.datasets.Nations` dataset.
 Each gives a bit of insight into usage of the :func:`hpo_pipeline` function.
 
 The minimal usage of the hyper-parameter optimization is to specify the
@@ -27,7 +27,7 @@ as many trials as possible will be run in 60 seconds.
 ... )
 
 The hyper-parameter optimization pipeline has the ability to optimize hyper-parameters for the corresponding
-``*_kwargs`` arguments in the :func:`pykeen.pipeline.pipeline`:
+``*_kwargs`` arguments in the :func:`~pykeen.pipeline.pipeline`:
 
 - ``model``
 - ``loss``
@@ -47,7 +47,7 @@ samples, training loops), these values are stored in the default valeues of the 
 `__init__()` functions. They can be viewed in the corresponding reference section of the docs.
 
 Some components contain strategies for doing hyper-parameter optimization. When you call the
-:func:`pykeen.hpo.hpo_pipeline`, the following steps are taken to determine what happens for each hyper-parameter
+:func:`~pykeen.hpo.hpo_pipeline`, the following steps are taken to determine what happens for each hyper-parameter
 in each componenent:
 
 1. If an explicit value was passed, use it.
@@ -86,7 +86,7 @@ in which there's a dictionary with all of the default strategies. They keys matc
 respective ``__init__()`` functions.
 
 Since optimizers aren't re-implemented in PyKEEN, there's a specfic dictionary at
-:py:attr:`pykeen.optimizers.optimizers_hpo_defaults` containing their strategies. It's debatable whether
+:py:attr:`~pykeen.optimizers.optimizers_hpo_defaults` containing their strategies. It's debatable whether
 you should optimize the optimizers (yo dawg), so you can always choose to set the learning rate ``lr`` to a constant
 value.
 
@@ -160,7 +160,7 @@ within the bounds specified by the ``low`` and ``high`` arguments. This applies 
 Power Scale (``type=int`` only)
 *******************************
 The power scale was originally implemented as ``scale='power_two'`` to support
-:class:`pykeen.models.ConvE`'s ``output_channels`` parameter. However, using two as a base is a bit limiting, so we
+:class:`~pykeen.models.ConvE`'s ``output_channels`` parameter. However, using two as a base is a bit limiting, so we
 also implemented a more general ``scale='power'`` where you can set set ``base``. Here's an example to optimize over
 the number of negatives per positive ratio using `base=10`:
 
@@ -230,9 +230,9 @@ Custom Strategies
 -----------------
 While the default values for hyper-parameters are encoded with the python syntax
 for default values of the ``__init__()`` function of each model, the ranges/scales can be
-found in the class variable :py:attr:`pykeen.models.Model.hpo_default`. For
+found in the class variable ``hpo_default``. For
 example, the range for TransE's embedding dimension is set to optimize
-between 50 and 350 at increments of 25 in :py:attr:`pykeen.models.TransE.hpo_default`.
+between 50 and 350 at increments of 25 in :py:attr:`~pykeen.models.TransE.hpo_default`.
 TransE also has a scoring function norm that will be optimized by a categorical
 selection of {1, 2} by default.
 
@@ -303,8 +303,8 @@ constrainer and regularizer since there could be multiple representations for ei
 relation, or both. Check your desired model's documentation page for the kwargs that you can
 optimize over.
 
-Keys of :data:`pykeen.nn.representation.initializers` can be passed as initializers as strings and
-keys of :data:`pykeen.nn.representation.constrainers` can be passed as constrainers as strings.
+Keys of :data:`~pykeen.nn.init.initializer_resolver` can be passed as initializers as strings and
+keys of :data:`~pykeen.nn.representation.constrainer_resolver` can be passed as constrainers as strings.
 
 The HPO pipeline does not support optimizing over the hyper-parameters for each
 initializer. If you are interested in this, consider rolling your own ablation
@@ -313,7 +313,7 @@ study pipeline.
 Optimizing the Loss
 ~~~~~~~~~~~~~~~~~~~
 While each model has its own default loss, you can explicitly specify a loss
-the same way as in :func:`pykeen.pipeline.pipeline`.
+the same way as in :func:`~pykeen.pipeline.pipeline`.
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
@@ -323,18 +323,18 @@ the same way as in :func:`pykeen.pipeline.pipeline`.
 ...     loss='MarginRankingLoss',
 ... )
 
-As stated in the documentation for :func:`pykeen.pipeline.pipeline`, each model
-specifies its own default loss function in :py:attr:`pykeen.models.Model.loss_default`.
+As stated in the documentation for :func:`~pykeen.pipeline.pipeline`, each model
+specifies its own default loss function in ``loss_default``.
 For example, the TransE model defines the margin ranking loss as its default in
-:py:attr:`pykeen.models.TransE.loss_default`.
+``loss_default``.
 
 Each model also specifies default hyper-parameters for the loss function in
-:py:attr:`pykeen.models.Model.loss_default_kwargs`. For example, DistMultLiteral
-explicitly sets the margin to `0.0` in  :py:attr:`pykeen.models.DistMultLiteral.loss_default_kwargs`.
+:py:attr:`~pykeen.models.Model.loss_default_kwargs`. For example, DistMultLiteral
+explicitly sets the margin to `0.0` in  :py:attr:`~pykeen.models.DistMultLiteral.loss_default_kwargs`.
 
 Unlike the model's hyper-parameters, the models don't store the strategies for
 optimizing the loss functions' hyper-parameters. The pre-configured strategies
-are stored in the loss function's class variable :py:attr:`pykeen.models.Loss.hpo_default`.
+are stored in the loss function's class variable :py:attr:`~pykeen.losses.Loss.hpo_default`.
 
 However, similarily to how you would specify ``model_kwargs_ranges``, you can
 specify the ``loss_kwargs_ranges`` explicitly, as in the following example.
@@ -353,8 +353,8 @@ specify the ``loss_kwargs_ranges`` explicitly, as in the following example.
 Optimizing the Negative Sampler
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 When the stochastic local closed world assumption (sLCWA) training approach is used for training, a negative sampler
-(subclass of :py:class:`pykeen.sampling.NegativeSampler`) is chosen.
-Each has a strategy stored in :py:attr:`pykeen.sampling.NegativeSampler.hpo_default`.
+(subclass of :py:class:`~pykeen.sampling.NegativeSampler`) is chosen.
+Each has a strategy stored in :py:attr:`~pykeen.sampling.NegativeSampler.hpo_default`.
 
 Like models and regularizers, the rules are the same for specifying ``negative_sampler``,
 ``negative_sampler_kwargs``, and ``negative_sampler_kwargs_ranges``.
@@ -365,7 +365,7 @@ Yo dawg, I heard you liked optimization, so we put an optimizer around your
 optimizer so you can optimize while you optimize. Since all optimizers used
 in PyKEEN come from the PyTorch implementations, they obviously do not have
 ``hpo_defaults`` class variables. Instead, every optimizer has a default
-optimization strategy stored in :py:attr:`pykeen.optimizers.optimizers_hpo_defaults`
+optimization strategy stored in :py:attr:`~pykeen.optimizers.optimizers_hpo_defaults`
 the same way that the default strategies for losses are stored externally.
 
 Optimizing the Optimized Optimizer - a.k.a. Learning Rate Schedulers
@@ -376,7 +376,7 @@ be useful to have a more aggressive learning rate in the beginning to quickly ma
 while lowering the learning rate over time to allow the model to smoothly converge to the optimum.
 
 PyKEEN allows you to use the learning rate schedulers provided by PyTorch, which you can
-simply specify as you would in the :func:`pykeen.pipeline.pipeline`.
+simply specify as you would in the :func:`~pykeen.pipeline.pipeline`.
 
 >>> from pykeen.hpo import hpo_pipeline
 >>> hpo_pipeline_result = hpo_pipeline(
@@ -387,7 +387,7 @@ simply specify as you would in the :func:`pykeen.pipeline.pipeline`.
 >>> pipeline_result.save_to_directory('nations_transe')
 
 The same way as the optimizers don't come with ``hpo_defaults`` class variables, lr_schedulers rely
-on their own optimization strategies provided in :py:attr:`pykeen.lr_schedulers.lr_schedulers_hpo_defaults`
+on their own optimization strategies provided in :py:attr:`~pykeen.lr_schedulers.lr_schedulers_hpo_defaults`
 In case you are ready to explore even more you can of course also set your own ranges with the
 ``lr_scheduler_kwargs_ranges`` keyword argument as in:
 
@@ -404,7 +404,7 @@ In case you are ready to explore even more you can of course also set your own r
 
 Optimizing Everything Else
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-Without loss of generality, the following arguments to :func:`pykeen.pipeline.pipeline`
+Without loss of generality, the following arguments to :func:`~pykeen.pipeline.pipeline`
 have corresponding `*_kwargs` and `*_kwargs_ranges`:
 
 - ``training_loop`` (only kwargs, not kwargs_ranges)

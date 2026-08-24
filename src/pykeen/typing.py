@@ -97,14 +97,14 @@ DeviceHint = Hint[torch.device]
 TorchRandomHint = None | int | torch.Generator
 
 Representation = TypeVar("Representation", bound=OneOrSequence[FloatTensor])
-#: A type variable for head representations used in :class:`pykeen.models.Model`,
-#: :class:`pykeen.nn.modules.Interaction`, etc.
+#: A type variable for head representations used in :class:`~pykeen.models.Model`,
+#: :class:`~pykeen.nn.modules.Interaction`, etc.
 HeadRepresentation = TypeVar("HeadRepresentation", bound=OneOrSequence[FloatTensor])
-#: A type variable for relation representations used in :class:`pykeen.models.Model`,
-#: :class:`pykeen.nn.modules.Interaction`, etc.
+#: A type variable for relation representations used in :class:`~pykeen.models.Model`,
+#: :class:`~pykeen.nn.modules.Interaction`, etc.
 RelationRepresentation = TypeVar("RelationRepresentation", bound=OneOrSequence[FloatTensor])
-#: A type variable for tail representations used in :class:`pykeen.models.Model`,
-#: :class:`pykeen.nn.modules.Interaction`, etc.
+#: A type variable for tail representations used in :class:`~pykeen.models.Model`,
+#: :class:`~pykeen.nn.modules.Interaction`, etc.
 TailRepresentation = TypeVar("TailRepresentation", bound=OneOrSequence[FloatTensor])
 
 

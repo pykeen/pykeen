@@ -56,7 +56,7 @@ class LitModule(pytorch_lightning.LightningModule, ABC):
 
     .. seealso::
 
-        :class:`pykeen.training.training_loop.TrainingLoop`
+        :class:`~pykeen.training.training_loop.TrainingLoop`
     """
 
     def __init__(
@@ -102,7 +102,7 @@ class LitModule(pytorch_lightning.LightningModule, ABC):
         self.label_smoothing = label_smoothing
 
     def forward(self, hr_batch: LongTensor) -> FloatTensor:
-        """Perform the prediction or inference step by wrapping :meth:`pykeen.models.ERModel.predict_t`.
+        """Perform the prediction or inference step by wrapping :meth:`~pykeen.models.Model.predict_t`.
 
         :param hr_batch: shape: (batch_size, 2), dtype: long The indices of (head, relation) pairs.
 
@@ -167,10 +167,9 @@ class SLCWALitModule(LitModule):
     ):
         """Initialize the lightning module.
 
-        :param negative_sampler: the negative sampler, cf.
-            :meth:`pykeen.triples.CoreTriplesFactory.create_slcwa_instances`
+        :param negative_sampler: the negative sampler, cf. :class:`~pykeen.training.SLCWATrainingLoop`
         :param negative_sampler_kwargs: keyword-based parameters passed to the negative sampler, cf.
-            :meth:`pykeen.triples.CoreTriplesFactory.create_slcwa_instances`
+            :class:`~pykeen.training.SLCWATrainingLoop`
         :param kwargs: additional keyword-based parameters passed to :meth:`LitModule.__init__`
         """
         super().__init__(**kwargs)

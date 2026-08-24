@@ -13,6 +13,7 @@ import pykeen.regularizers
 from pykeen.datasets import EagerDataset, Nations
 from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.evaluation import Evaluator
+from pykeen.losses import BCEAfterSigmoidLoss, Loss, MarginRankingLoss, NSSALoss
 from pykeen.models import ERModel, FixedModel, Model
 from pykeen.models.resolve import DimensionError, make_model, make_model_cls
 from pykeen.nn.modules import TransEInteraction
@@ -528,6 +529,51 @@ def test_inductive_pipeline_evaluation_uses_local_entity_ids():
     )
 
     assert result.metric_results is not None
+
+
+def _resolve_loss(**kwargs) -> Loss:
+    """Resolve a pipeline on Nations and return the loss instance the model was built with."""
+    kwargs.setdefault("model_kwargs", {}).setdefault("embedding_dim", 8)
+    return resolve_pipeline(dataset="nations", random_seed=0, **kwargs).model.loss
+
+
+def test_pipeline_uses_model_loss_default():
+    """Test that a model without an explicitly requested loss is built with its own ``loss_default``."""
+    # ConvE declares BCEAfterSigmoidLoss; before, the loss resolver's default silently won instead
+    assert isinstance(_resolve_loss(model="ConvE"), BCEAfterSigmoidLoss)
+
+
+def test_pipeline_uses_model_loss_default_kwargs():
+    """Test that ``loss_default_kwargs`` are used along with ``loss_default``."""
+    loss = _resolve_loss(model="PairRE")
+    assert isinstance(loss, NSSALoss)
+    # PairRE.loss_default_kwargs, not NSSALoss's own default margin
+    assert loss.margin == pytest.approx(12.0)
+
+
+def test_pipeline_loss_default_is_noop_for_margin_ranking_models():
+    """Test that models inheriting the base ``loss_default`` are unaffected."""
+    # TransE names no loss of its own, so it inherits Model.loss_default -- exactly what the loss
+    # resolver produced before, i.e., previously reported results for such models do not change
+    loss = _resolve_loss(model="TransE")
+    assert isinstance(loss, MarginRankingLoss)
+    assert loss.margin == pytest.approx(1.0)
+
+
+def test_pipeline_explicit_loss_wins():
+    """Test that an explicitly requested loss is not overridden by the model's default."""
+    assert isinstance(_resolve_loss(model="ConvE", loss="MarginRanking"), MarginRankingLoss)
+    # ... also when it is passed inside model_kwargs
+    assert isinstance(_resolve_loss(model="ConvE", model_kwargs={"loss": "MarginRanking"}), MarginRankingLoss)
+
+
+def test_pipeline_loss_kwargs_without_loss():
+    """Test that ``loss_kwargs`` given without a ``loss`` are applied to the model's default loss."""
+    loss = _resolve_loss(model="PairRE", loss_kwargs={"margin": 2.0})
+    assert isinstance(loss, NSSALoss)
+    assert loss.margin == pytest.approx(2.0)
+    # the remaining defaults of the model are kept
+    assert loss.inverse_softmax_temperature == pytest.approx(1.0)
 
 
 @pytest.mark.parametrize("tf_cls", [CoreTriplesFactory, TriplesFactory])

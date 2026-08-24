@@ -46,7 +46,7 @@ defined as:
 Uniform Negative Sampling
 -------------------------
 
-The default negative sampler :class:`pykeen.sampling.BasicNegativeSampler` generates corrupted triples from a known
+The default negative sampler :class:`~pykeen.sampling.BasicNegativeSampler` generates corrupted triples from a known
 positive triple $(h,r,t) \in \mathcal{K}$ by uniformly randomly either using the corrupt heads operation or the corrupt
 tails operation. The default negative sampler is automatically used in the following code:
 
@@ -73,7 +73,7 @@ It can be set explicitly with:
         negative_sampler="basic",
     )
 
-In general, the behavior of the negative sampler can be modified when using the :func:`pykeen.pipeline.pipeline` by
+In general, the behavior of the negative sampler can be modified when using the :func:`~pykeen.pipeline.pipeline` by
 passing the ``negative_sampler_kwargs`` argument. In order to explicitly specifiy which of the head, relation, and tail
 corruption methods are used, the ``corruption_schema`` argument can be used. For example, to use all three, the
 collection ``('h', 'r', 't')`` can be passed as in the following:
@@ -95,7 +95,7 @@ collection ``('h', 'r', 't')`` can be passed as in the following:
 Bernoulli Negative Sampling
 ---------------------------
 
-The Bernoulli negative sampler :class:`pykeen.sampling.BernoulliNegativeSampler` generates corrupted triples from a
+The Bernoulli negative sampler :class:`~pykeen.sampling.BernoulliNegativeSampler` generates corrupted triples from a
 known positive triple $(h,r,t) \in \mathcal{K}$ similarly to the uniform negative sampler, but it pre-computes a
 probability $p_r$ for each relation $r$ to weight whether the head corruption is used with probability $p_r$ or if tail
 corruption is used with probability $1 - p_r$.

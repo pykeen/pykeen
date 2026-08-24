@@ -51,8 +51,8 @@ class _NewAbstractModel(Model, ABC):
     relations' representations, how they want to be looked up, and how they should
     be scored. The :class:`ERModel` provides a commonly useful implementation
     which allows for the specification of one or more entity representations and
-    one or more relation representations in the form of :class:`pykeen.nn.Embedding`
-    as well as a matching instance of a :class:`pykeen.nn.Interaction`.
+    one or more relation representations in the form of :class:`~pykeen.nn.representation.Embedding`
+    as well as a matching instance of a :class:`~pykeen.nn.modules.Interaction`.
     """
 
     #: The default regularizer class
@@ -231,7 +231,7 @@ def _repeat_when_missing_representations(
     `score_{h,t}` / `score_r` are always the same. For efficiency, they are thus
     only computed once, but to meet the API, they have to be brought into the correct shape afterwards.
 
-    For example, this is the case for :class:`pykeen.models.UM`, which does not have any relation
+    For example, this is the case for :class:`~pykeen.models.UM`, which does not have any relation
     representation. Therefore, the scores for all ``(h, *, t)`` will be the same. We calculate
     them only once, but need to repeat them for downstream use of the scores.
 
@@ -288,7 +288,7 @@ class ERModel(
     be passed through the ``super().__init__()`` in subclasses of :class:`ERModel`.
 
     Other code can still be put after the call to ``super().__init__()`` in subclasses, such as
-    registering regularizers (as done in :class:`pykeen.models.ConvKB` and :class:`pykeen.models.TransH`).
+    registering regularizers (as done in :class:`~pykeen.models.ConvKB` and :class:`~pykeen.models.TransH`).
     ---
     citation:
         author: Ali
@@ -406,9 +406,9 @@ class ERModel(
         :param regularizer_kwargs:
             additional keyword-based parameters for the regularizer's instantiation
         :param default_regularizer:
-            the default regularizer; if None, use :attr:`regularizer_default`
+            the default regularizer; if None, use ``regularizer_default``
         :param default_regularizer_kwargs:
-            the default regularizer kwargs; if None, use :attr:`regularizer_default_kwargs`
+            the default regularizer kwargs; if None, use ``regularizer_default_kwargs``
 
         :raises KeyError: If an invalid parameter name was given
         """

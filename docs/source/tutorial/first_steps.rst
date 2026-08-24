@@ -9,7 +9,7 @@ Loading a pre-trained Model
 ---------------------------
 
 Many of the previous examples ended with saving the results using the
-:meth:`pykeen.pipeline.PipelineResult.save_to_directory`. One of the artifacts written to the given directory is the
+:meth:`~pykeen.pipeline.PipelineResult.save_to_directory`. One of the artifacts written to the given directory is the
 ``trained_model.pkl`` file. Because all PyKEEN models inherit from :class:`torch.nn.Module`, we use the PyTorch
 mechanisms for saving and loading them. This means that you can use :func:`torch.load` to load a model like:
 
@@ -25,14 +25,14 @@ Mapping Entity and Relation Identifiers to their Names
 While PyKEEN internally maps entities and relations to contiguous identifiers, it's still useful to be able to interact
 with datasets, triples factories, and models using the labels of the entities and relations.
 
-We can map a triples factory's entities to identifiers using :func:`TriplesFactory.entities_to_ids` like in the
-following example:
+We can map a triples factory's entities to identifiers using :func:`~pykeen.triples.TriplesFactory.entities_to_ids` like
+in the following example:
 
 .. literalinclude:: ../examples/first_steps/entity_and_relation_mapping.py
     :lines: 4-11,38-39
 
-Similarly, we can map a triples factory's relations to identifiers using :data:`TriplesFactory.relations_to_ids` like in
-the following example:
+Similarly, we can map a triples factory's relations to identifiers using
+:meth:`~pykeen.triples.TriplesFactory.relations_to_ids` like in the following example:
 
 .. literalinclude:: ../examples/first_steps/entity_and_relation_mapping.py
     :lines: 40
@@ -54,18 +54,18 @@ representations, so they are respectively stored as sequences in the ``entity_re
 ``relation_representations`` attributes of each model. While the exact contents of these sequences are model-dependent,
 the first element of each is usually the "primary" representation for either the entities or relations.
 
-Typically, the values in these sequences are instances of the :class:`pykeen.nn.representation.Embedding`. This
+Typically, the values in these sequences are instances of the :class:`~pykeen.nn.representation.Embedding`. This
 implements a similar, but more powerful, interface to the built-in :class:`torch.nn.Embedding` class. However, the
 values in these sequences can more generally be instances of any subclasses of
-:class:`pykeen.nn.representation.Representation`. This allows for more powerful encoders those in GNNs such as
-:class:`pykeen.models.RGCN` to be implemented and used.
+:class:`~pykeen.nn.representation.Representation`. This allows for more powerful encoders those in GNNs such as
+:class:`~pykeen.models.RGCN` to be implemented and used.
 
 The entity representations and relation representations can be accessed like this:
 
 .. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
     :lines: 4-14
 
-Most models, like :class:`pykeen.models.TransE`, only have one representation for entities and one for relations. This
+Most models, like :class:`~pykeen.models.TransE`, only have one representation for entities and one for relations. This
 means that the ``entity_representations`` and ``relation_representations`` lists both have a length of 1. All of the
 entity embeddings can be accessed like:
 
@@ -78,7 +78,7 @@ Since all representations are subclasses of :class:`torch.nn.Module`, you need t
 .. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
     :lines: 28-29
 
-The `forward()` function of all :class:`pykeen.nn.representation.Representation` takes an ``indices`` parameter. By
+The `forward()` function of all :class:`~pykeen.nn.representation.Representation` takes an ``indices`` parameter. By
 default, it is ``None`` and returns all values. More explicitly, this looks like:
 
 .. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
@@ -102,14 +102,6 @@ You might want to detach them from the GPU and convert to a :class:`numpy.ndarra
 
 .. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
     :lines: 48
-
-.. warning::
-
-    Some old-style models (e.g., ones inheriting from :class:`pykeen.models.EntityRelationEmbeddingModel`) don't fully
-    implement the ``entity_representations`` and ``relation_representations`` interface. This means that they might have
-    additional embeddings stored in attributes that aren't exposed through these sequences. For example,
-    :class:`pykeen.models.TransD` has a secondary entity embedding in :data:`pykeen.models.TransD.entity_projections`.
-    Eventually, all models will be upgraded to new-style models and this won't be a problem.
 
 Beyond the Pipeline
 -------------------

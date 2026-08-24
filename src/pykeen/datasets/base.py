@@ -320,7 +320,7 @@ class Dataset(ExtraReprMixin):
         return normalize_string((self.metadata or {}).get("name") or self.__class__.__name__)
 
     def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
-        """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
+        """Remix a dataset using :func:`~pykeen.triples.remix.remix`."""
         return EagerDataset(
             *remix(
                 *self._tup(),
@@ -330,7 +330,7 @@ class Dataset(ExtraReprMixin):
         )
 
     def deteriorate(self, n: int | float, random_state: TorchRandomHint = None) -> Dataset:
-        """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
+        """Deteriorate n triples from the dataset's training with :func:`~pykeen.triples.deteriorate.deteriorate`."""
         return EagerDataset(
             *deteriorate(
                 *self._tup(),
@@ -349,7 +349,7 @@ class Dataset(ExtraReprMixin):
 
         .. seealso::
 
-            :func:`pykeen.triples.triples_factory.splits_similarity`.
+            :func:`~pykeen.triples.splits_similarity`.
         """
         return dataset_similarity(self, other, metric=metric)
 
@@ -384,7 +384,7 @@ class Dataset(ExtraReprMixin):
 
         .. warning::
 
-            This is different to :meth:`pykeen.triples.triples_factory.CoreTriplesFactory.new_with_restriction` as it
+            This is different to :meth:`~pykeen.triples.CoreTriplesFactory.new_with_restriction` as it
             does modify the label to id mapping.
         """
         # early termination for simple case
@@ -575,8 +575,8 @@ class LazyDataset(Dataset):
         """Get the appropriate cache root directory.
 
         :param cache_root: If none is passed, defaults to a subfolder of the PyKEEN home directory defined in
-            :data:`pykeen.constants.PYKEEN_HOME`. The subfolder is named based on the class inheriting from
-            :class:`pykeen.datasets.base.Dataset`.
+            :data:`~pykeen.constants.PYKEEN_HOME`. The subfolder is named based on the class inheriting from
+            :class:`~pykeen.datasets.base.Dataset`.
 
         :returns: A path object for the calculated cache root directory
         """
@@ -609,8 +609,8 @@ class PathDataset(LazyDataset):
         :param validation_path: Path to the validation triples file or validation triples file.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path` and ultimately through
-            to :func:`pykeen.triples.utils.load_triples`.
+        :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
+            and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
         """
         self.training_path = pathlib.Path(training_path)
         self.testing_path = pathlib.Path(testing_path)
@@ -687,8 +687,8 @@ class UnpackedRemoteDataset(PathDataset):
         :param force: If true, redownload any cached files
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path` and ultimately through
-            to :func:`pykeen.triples.utils.load_triples`.
+        :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
+            and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
         """
         self.cache_root = self._help_cache(cache_root)
