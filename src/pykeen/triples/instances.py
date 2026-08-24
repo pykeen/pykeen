@@ -101,7 +101,7 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
 
 
 class BaseBatchedSLCWAInstances(
-    Instances[SLCWABatch | GroupedSLCWABatch], data.IterableDataset[SLCWABatch | GroupedSLCWABatch]
+    Instances[T], data.IterableDataset[T]
 ):
     """Pre-batched training instances for the sLCWA training loop.
 
