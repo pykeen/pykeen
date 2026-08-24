@@ -102,7 +102,9 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
         raise NotImplementedError
 
 
-class BaseBatchedSLCWAInstances(Instances[BatchType], data.IterableDataset[BatchType]):
+class BaseBatchedSLCWAInstances(
+    Instances[SLCWABatch | GroupedSLCWABatch], data.IterableDataset[SLCWABatch | GroupedSLCWABatch]
+):
     """Pre-batched training instances for the sLCWA training loop.
 
     .. note::
