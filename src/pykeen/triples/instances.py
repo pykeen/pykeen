@@ -186,11 +186,16 @@ class BaseBatchedSLCWAInstances(Instances[BatchType], data.IterableDataset[Batch
             for target, replacements in corruptions.items():
                 match target:
                     case pykeen_typing.LABEL_HEAD:
-                        neg_weights[target] = self.loss_weighter(h=replacements, r=r[:, None], t=t[:, None])
+                        raw_weights = self.loss_weighter(h=replacements, r=r[:, None], t=t[:, None])
                     case pykeen_typing.LABEL_RELATION:
-                        neg_weights[target] = self.loss_weighter(h=h[:, None], r=replacements, t=t[:, None])
+                        raw_weights = self.loss_weighter(h=h[:, None], r=replacements, t=t[:, None])
                     case pykeen_typing.LABEL_TAIL:
-                        neg_weights[target] = self.loss_weighter(h=h[:, None], r=r[:, None], t=replacements)
+                        raw_weights = self.loss_weighter(h=h[:, None], r=r[:, None], t=replacements)
+                # loss weighters may only depend on a subset of h/r/t (e.g. RelationLossWeighter ignores h/t) and
+                # rely on __call__'s documented broadcasting semantics; broadcast explicitly to replacements' shape
+                # so downstream concatenation/masking sees the same per-negative shape as the dense path. clone()
+                # since broadcast_to returns a non-writable expanded view (e.g. incompatible with pin_memory).
+                neg_weights[target] = raw_weights.broadcast_to(replacements.shape).clone()
             result["neg_weights"] = neg_weights
         return result
 
