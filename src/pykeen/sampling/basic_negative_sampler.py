@@ -38,13 +38,12 @@ def sample_replacement(true_ids: LongTensor, num_negs: int, max_index: int) -> L
     return replacement
 
 
-def random_replacement_(batch: LongTensor, index: int, selection: slice, size: int, max_index: int) -> None:
+def random_replacement_(batch: LongTensor, index: int, selection: slice, max_index: int) -> None:
     """Replace a column of a batch of indices by random indices.
 
     :param batch: shape: `(*batch_dims, d)` the batch of indices
     :param index: the index (of the last axis) which to replace
     :param selection: a selection of the batch, e.g., a slice or a mask
-    :param size: the size of the selection
     :param max_index: the maximum index value at the chosen position
     """
     batch[selection, index] = sample_replacement(
@@ -119,7 +118,6 @@ class BasicNegativeSampler(NegativeSampler):
                 batch=negative_batch,
                 index=index,
                 selection=slice(start, stop),
-                size=stop - start,
                 max_index=self.num_relations if index == 1 else self.num_entities,
             )
 

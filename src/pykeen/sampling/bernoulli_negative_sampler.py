@@ -96,7 +96,6 @@ class BernoulliNegativeSampler(NegativeSampler):
                 batch=negative_batch,
                 index=index,
                 selection=mask,
-                size=mask.sum(),
                 max_index=self.num_entities,
             )
 
