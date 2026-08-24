@@ -59,7 +59,7 @@ class MTransEDataset(EADataset, ABC):
         Initialize the dataset.
 
         :param graph_pair:
-            the graph-pair within the dataset family (cf. :data:`GRAPH_PAIRS`)
+            the graph-pair within the dataset family (cf. ``GRAPH_PAIRS``)
         :param kwargs:
             additional keyword-based parameters passed to :meth:`EABase.__init__`
 

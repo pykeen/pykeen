@@ -46,7 +46,7 @@ triples. As an example, we will calculate scores for all validation triples from
 >>> dataset = get_dataset(dataset="nations")
 >>> pack = predict_triples(model=result.model, triples=dataset.validation)
 
-The variable :data:`pack` now contains a :class:`pykeen.predict.ScorePack`, which essentially is a pair of
+The variable ``pack`` now contains a :class:`~pykeen.predict.ScorePack`, which essentially is a pair of
 ID-based triples with their predicted scores. For interpretation, it can be helpful to add their corresponding labels,
 which the `"nations"` dataset offers, and convert them to a pandas dataframe:
 
@@ -94,7 +94,7 @@ The predictions object also exposes filtered / annotated dataframe through its `
 
 Full Scoring
 ------------
-Finally, we can use :func:`pykeen.predict.predict` to calculate scores for *all* possible triples. Notice that
+Finally, we can use :func:`~pykeen.predict.predict_all` to calculate scores for *all* possible triples. Notice that
 this operation can be prohibitively expensive for reasonably sized knowledge graphs, and the model may produce
 additional ill-calibrated scores for entity/relation combinations it has never seen paired before during training.
 The next line calculates *and* stores all triples and scores

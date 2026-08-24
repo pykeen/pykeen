@@ -396,8 +396,8 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
 
         :param batch_size: the batch size to use.
         :param use_tqdm: whether to use tqdm
-        :param page_rank_kwargs: keyword-based parameters used for :func:`page_rank`. Must not include `edge_index`, or
-            `x0`.
+        :param page_rank_kwargs: keyword-based parameters used for :func:`torch_ppr.page_rank`. Must not include
+            `edge_index`, or `x0`.
         """
         self.batch_size = batch_size
         self.page_rank_kwargs = page_rank_kwargs or {}

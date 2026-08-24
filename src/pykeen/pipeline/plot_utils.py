@@ -13,6 +13,7 @@ __all__ = [
     "plot_early_stopping",
     "plot_er",
     "plot",
+    "build_representation_getter",
 ]
 
 logger = logging.getLogger(__name__)
@@ -110,11 +111,11 @@ def plot_er(  # noqa: C901
     :param annotation_x_offset: X offset of label from entity position
     :param annotation_y_offset: Y offset of label from entity position
     :param entity_embedding_getter: A function that takes a model and returns its entity embeddings. If none, defaults
-        to :func:`_default_entity_embedding_getter`, which just gets ``model.entity_embeddings``. Note, the default only
-        works with old-style PyKEEN models.
+        to :func:`~pykeen.pipeline.build_representation_getter`, which just gets the model's first entity
+        representation.
     :param relation_embedding_getter: A function that takes a model and returns its relation embeddings. If none,
-        defaults to :func:`_default_relation_embedding_getter`, which just gets ``model.relation_embeddings``. Note, the
-        default only works with old-style PyKEEN models.
+        defaults to :func:`~pykeen.pipeline.build_representation_getter`, which just gets the model's first relation
+        representation.
     :param ax: The matplotlib axis, if pre-defined
     :param subtitle: A user-defined subtitle. Is inferred if not given. Pass an empty string to not use a subtitle.
     :param kwargs: The keyword arguments passed to `__init__()` of the reducer class (e.g., PCA, TSNE)

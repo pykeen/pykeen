@@ -299,7 +299,8 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
         """Initialize the representation.
 
         :param triples_factory: The factory comprising the training triples used for message passing
-        :param kwargs: Additional keyword-based parameters passed to :class:`pykeen.nn.pyg.MessagePassingRepresentation`
+        :param kwargs: Additional keyword-based parameters passed to
+            :class:`~pykeen.nn.pyg.MessagePassingRepresentation`
         """
         super().__init__(triples_factory=triples_factory, **kwargs)
         # register an additional buffer for the categorical edge type

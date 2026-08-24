@@ -5,3 +5,4 @@ PyTorch Lightning Integration
     :no-heading:
     :headings: --
     :no-inheritance-diagram:
+    :include-all-objects:

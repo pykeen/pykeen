@@ -1,11 +1,12 @@
 Extending the Datasets
 ======================
 
-While the core of PyKEEN uses the :class:`pykeen.triples.TriplesFactory` for handling sets of triples, the definition of
-a training, validation, and testing trichotomy for a given dataset is very useful for reproducible benchmarking. The
-internal :class:`pykeen.datasets.base.Dataset` class can be considered as a three-tuple of datasets (though it's
-implemented as a class such that it can be extended). There are several datasets included in PyKEEN already, each coming
-from sources that look different. This tutorial gives some insight into implementing your own Dataset class.
+While the core of PyKEEN uses the :class:`~pykeen.triples.TriplesFactory` for handling sets of triples, the
+definition of a training, validation, and testing trichotomy for a given dataset is very useful for reproducible
+benchmarking. The internal :class:`~pykeen.datasets.base.Dataset` class can be considered as a three-tuple of
+datasets (though it's implemented as a class such that it can be extended). There are several datasets included in
+PyKEEN already, each coming from sources that look different. This tutorial gives some insight into implementing
+your own Dataset class.
 
 Pre-split Datasets
 ------------------

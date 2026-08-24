@@ -226,8 +226,8 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         :param wikidata_ids: The Wikidata IDs.
         :param max_id: The total number of IDs. If provided, must match the length of ``wikidata_ids``.
         :param image_kwargs: Keyword-based parameters passed to
-            :meth:`pykeen.nn.vision.cache.WikidataImageCache.get_image_paths`.
-        :param cache: A pre-instantiated image cache. If None, :class:`WikidataImageCache` is used.
+            :meth:`~pykeen.nn.vision.WikidataImageCache.get_image_paths`.
+        :param cache: A pre-instantiated image cache. If None, :class:`~pykeen.nn.vision.WikidataImageCache` is used.
         :param kwargs: Additional keyword-based parameters passed to
             :class:`~pykeen.nn.vision.representation.VisualRepresentation`.
 

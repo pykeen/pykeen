@@ -17,12 +17,12 @@ and using the IDs to access the embeddings (=row indices).
 
 In PyKEEN, the mapping process takes place in :class:`~pykeen.triples.TriplesFactory`. The triples factory maintains the
 sets of unique entity and relation labels and ensures that they are mapped to unique integer IDs on
-$[0,\text{num_unique_entities})$ for entities and $[0, \text{num_unique_relations})$. The mappings are respectively
-accessible via the attributes :data:``pykeen.triples.TriplesFactory.entity_label_to_id`` and
-:data:``pykeen.triples.TriplesFactory.relation_label_to_id``.
+$[0,\text{num\_unique\_entities})$ for entities and $[0, \text{num\_unique\_relations})$. The mappings are respectively
+accessible via the attributes :attr:`~pykeen.triples.TriplesFactory.entity_to_id` and
+:attr:`~pykeen.triples.TriplesFactory.relation_to_id`.
 
 To improve the performance, the mapping process takes place only once, and the ID-based triples are stored in a tensor
-:data:``pykeen.triples.TriplesFactory.mapped_triples``.
+``mapped_triples``.
 
 .. _tuple_broadcasting:
 
@@ -30,9 +30,10 @@ Tuple Broadcasting
 ------------------
 
 Interaction functions are usually only given for the standard case of scoring a single triple $(h, r, t)$. This function
-is implemented in PyKEEN in the :func:`pykeen.models.base.Model.score_hrt` method of each model, e.g.
-:func:`pykeen.models.DistMult.score_hrt` for :class:`pykeen.models.DistMult`. When training under the local closed world
-assumption (LCWA), evaluating a model, and performing the link prediction task, the goal is to score all
+is implemented in PyKEEN in the :meth:`~pykeen.models.Model.score_hrt` method of each model, e.g. via
+:meth:`~pykeen.models.ERModel.score_hrt` for :class:`~pykeen.models.DistMult`. When training under the local
+closed world assumption (LCWA), evaluating a model, and performing the link prediction task, the goal is to score
+all
 entities/relations for a given tuple, i.e. $(h, r)$, $(r, t)$ or $(h, t)$. In these cases a single tuple is used many
 times for different entities/relations.
 
@@ -48,9 +49,9 @@ interaction function, e.g. :class:`~pykeen.models.ConvE`.
 To make this technique possible, PyKEEN models have to provide an explicit broadcasting function via following methods
 in the model class:
 
-    - :func:`pykeen.models.base.Model.score_h` - Scoring all possible head entities for a given $(r, t)$ tuple
-    - :func:`pykeen.models.base.Model.score_r` - Scoring all possible relations for a given $(h, t)$ tuple
-    - :func:`pykeen.models.base.Model.score_t` - Scoring all possible tail entities for a given $(h, r)$ tuple
+    - :meth:`~pykeen.models.Model.score_h` - Scoring all possible head entities for a given $(r, t)$ tuple
+    - :meth:`~pykeen.models.Model.score_r` - Scoring all possible relations for a given $(h, t)$ tuple
+    - :meth:`~pykeen.models.Model.score_t` - Scoring all possible tail entities for a given $(h, r)$ tuple
 
 The PyKEEN architecture natively supports these methods and makes use of this technique wherever possible without any
 additional modifications. Providing these methods is completely optional and not required when implementing new models.
@@ -96,8 +97,8 @@ speed for the filtered evaluation compared to the mechanisms used in previous ve
 As a starting point, PyKEEN will always compute scores for all triples in $H_{r,t}$ and $T_{h,r}$, even in the filtered
 setting. Because the number of positive triples on average is very low, few results have to be removed. Additionally,
 due to the technique presented in :ref:`tuple_broadcasting`, scoring extra entities has a marginally low cost.
-Therefore, we start with the score vectors from :func:`pykeen.models.base.Model.score_t` for all triples $(h, r, t') \in
-H_{r,t}$ and from :func:`pykeen.models.base.Model.score_h` for all triples $(h', r, t) \in T_{h,r}$.
+Therefore, we start with the score vectors from :meth:`~pykeen.models.Model.score_t` for all triples $(h, r, t') \in
+H_{r,t}$ and from :meth:`~pykeen.models.Model.score_h` for all triples $(h', r, t) \in T_{h,r}$.
 
 Following, the sparse filters $\mathbf{f}_t \in \mathbb{B}^{| \mathcal{E}|}$ and $\mathbf{f}_h \in \mathbb{B}^{|
 \mathcal{E}|}$ are created, which state which of the entities would lead to triples found in the train dataset. To
@@ -117,7 +118,7 @@ $T_{h,r}$ in order to obtain $T^{\text{filtered}}_{h,r}$. This is achieved by pe
 5. The index vector is now applied on the tail entity column of the train dataset, returning all tail entity IDs $t'$
    that combined with $h$ and $r$ lead to triples contained in the train dataset
 6. Finally, the $t'$ tail entity ID index vector is applied on the initially mentioned vector returned by
-   :func:`pykeen.models.base.Model.score_t` for all possible triples $(h, r, t')$ and all affected scores are set to
+   :meth:`~pykeen.models.Model.score_t` for all possible triples $(h, r, t')$ and all affected scores are set to
    ``float('nan')`` following the IEEE-754 specification, which makes these scores non-comparable, effectively leading
    to the score vector for all possible novel triples $(h, r, t') \in T^{\text{filtered}}_{h,r}$.
 
@@ -130,7 +131,7 @@ Sub-batching & Slicing
 
 With growing model and dataset sizes the KGEM at hand is likely to exceed the memory provided by GPUs. Especially during
 training it might be desired to train using a certain batch size. When this batch size is too big for the hardware at
-hand, PyKEEN allows to set a sub-batch size in the range of :math:`[1, \text{batch_size}]`. When the sub-batch size is
+hand, PyKEEN allows to set a sub-batch size in the range of :math:`[1, \text{batch\_size}]`. When the sub-batch size is
 set, PyKEEN automatically accumulates the gradients after each sub-batch and clears the computational graph during
 training. This allows to train KGEMs on GPU that otherwise would be too big for the hardware at hand, while the obtained
 results are identical to training without sub-batching.
@@ -148,12 +149,10 @@ results are identical to training without sub-batching.
 
 For some large configurations, even after applying the sub-batching trick, out-of-memory errors may still occur. In this
 case, PyKEEN implements another technique, called *slicing*. Note that we often compute more than one score for each
-batch element: in sLCWA, we have :math:`1 + \text{num_negative_samples}` scores, and in LCWA, we have
-:math:`\text{num_entities}` scores for each batch element. In slicing, we do not compute all of these scores at once,
-but rather in smaller "batches". For old-style models, i.e., those subclassing from
-:class:`pykeen.models.base._OldAbstractModel`, this has to be implemented individually for each of them. New-style
-models, i.e., those deriving from :class:`pykeen.models.nbase.ERModel` have a generic implementation enabling slicing
-for *all* interactions.
+batch element: in sLCWA, we have :math:`1 + \text{num\_negative\_samples}` scores, and in LCWA, we have
+:math:`\text{num\_entities}` scores for each batch element. In slicing, we do not compute all of these scores at once,
+but rather in smaller "batches". All models derive from :class:`~pykeen.models.nbase.ERModel`, which has a generic
+implementation enabling slicing for *all* interactions.
 
 .. note::
 
