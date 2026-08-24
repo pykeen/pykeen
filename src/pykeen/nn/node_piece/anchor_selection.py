@@ -154,7 +154,7 @@ class PageRankAnchorSelection(SingleSelection):
         """Initialize the selection strategy.
 
         :param num_anchors: the number of anchors to select
-        :param kwargs: additional keyword-based parameters passed to :func:`page_rank`.
+        :param kwargs: additional keyword-based parameters passed to :func:`torch_ppr.page_rank`.
         """
         super().__init__(num_anchors=num_anchors)
         self.kwargs = kwargs

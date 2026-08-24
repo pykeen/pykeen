@@ -20,6 +20,7 @@ Splitting
 
 .. automodapi:: pykeen.triples.splitting
     :no-heading:
+    :include-all-objects:
 
 Remixing
 --------

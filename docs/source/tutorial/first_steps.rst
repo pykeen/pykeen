@@ -25,14 +25,14 @@ Mapping Entity and Relation Identifiers to their Names
 While PyKEEN internally maps entities and relations to contiguous identifiers, it's still useful to be able to interact
 with datasets, triples factories, and models using the labels of the entities and relations.
 
-We can map a triples factory's entities to identifiers using :func:`TriplesFactory.entities_to_ids` like in the
-following example:
+We can map a triples factory's entities to identifiers using :func:`~pykeen.triples.TriplesFactory.entities_to_ids` like
+in the following example:
 
 .. literalinclude:: ../examples/first_steps/entity_and_relation_mapping.py
     :lines: 4-11,38-39
 
-Similarly, we can map a triples factory's relations to identifiers using :data:`TriplesFactory.relations_to_ids` like in
-the following example:
+Similarly, we can map a triples factory's relations to identifiers using
+:meth:`~pykeen.triples.TriplesFactory.relations_to_ids` like in the following example:
 
 .. literalinclude:: ../examples/first_steps/entity_and_relation_mapping.py
     :lines: 40
@@ -102,14 +102,6 @@ You might want to detach them from the GPU and convert to a :class:`numpy.ndarra
 
 .. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
     :lines: 48
-
-.. warning::
-
-    Some old-style models (e.g., ones inheriting from :class:`pykeen.models.EntityRelationEmbeddingModel`) don't fully
-    implement the ``entity_representations`` and ``relation_representations`` interface. This means that they might have
-    additional embeddings stored in attributes that aren't exposed through these sequences. For example,
-    :class:`pykeen.models.TransD` has a secondary entity embedding in :data:`pykeen.models.TransD.entity_projections`.
-    Eventually, all models will be upgraded to new-style models and this won't be a problem.
 
 Beyond the Pipeline
 -------------------

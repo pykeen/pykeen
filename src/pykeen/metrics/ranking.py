@@ -1428,7 +1428,7 @@ class MedianRank(RankBasedMetric):
             \text{and} \quad \sum_{r_i \geq m} w_i \geq \frac{1}{2} \sum_j w_j
 
     The weighted median generalizes the standard median: when all weights are equal, it reduces to the unweighted
-    median. The implementation uses PyKEEN's :func:`weighted_median` utility function.
+    median. The implementation uses PyKEEN's :func:`~pykeen.metrics.utils.weighted_median` utility function.
 
     **Expected Value (Unweighted Case)**
 
@@ -1607,7 +1607,8 @@ class Variance(RankBasedMetric):
     .. note::
 
         This computes the variance of the **observed weighted sample**, not the variance of the weighted mean
-        (which is computed by :func:`weighted_mean_variance` and used in metric expected value/variance calculations).
+        (which is computed by :func:`~pykeen.metrics.utils.weighted_mean_variance` and used in metric expected
+        value/variance calculations).
 
     ---
     link: https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html

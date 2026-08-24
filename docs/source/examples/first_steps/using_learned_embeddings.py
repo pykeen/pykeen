@@ -14,7 +14,7 @@ entity_representation_modules = model.entity_representations
 relation_representation_modules = model.relation_representations
 
 # %%
-from pykeen.nn.representation import Embedding  # noqa: E402
+from pykeen.nn.representation import Embedding
 
 # TransE has one representation for entities and one for relations
 # both are simple embedding matrices
@@ -34,7 +34,7 @@ entity_embedding_tensor = entity_embeddings(indices=None)
 relation_embedding_tensor = relation_embeddings(indices=None)
 
 # %%
-import torch  # noqa: E402
+import torch
 
 entity_embedding_tensor = entity_embeddings(indices=torch.as_tensor([1, 3]))
 

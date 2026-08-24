@@ -1,7 +1,7 @@
 r"""Loss functions integrated in PyKEEN.
 
 Rather than re-using the built-in loss functions in PyTorch, we have elected to re-implement
-some of the code from :mod:`pytorch.nn.modules.loss` in order to encode the three different
+some of the code from :mod:`torch.nn.modules.loss` in order to encode the three different
 links of loss functions accepted by PyKEEN in a class hierarchy. This allows for PyKEEN to more
 dynamically handle different kinds of loss functions as well as share code. Further, it gives
 more insight to potential users.
@@ -310,7 +310,7 @@ class Loss(_Loss):
         Initialize the loss.
 
         :param reduction:
-            the reduction, cf. :mod:`pykeen.nn.modules._Loss`
+            the reduction, cf. :class:`torch.nn.modules.loss._Loss`
         """
         super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
@@ -546,7 +546,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
         """Initialize the loss criterion.
 
         :param reduction:
-            The reduction, cf. :mod:`pykeen.nn.modules._Loss`
+            The reduction, cf. :class:`torch.nn.modules.loss._Loss`
         :param pos_weight:
             A weight for the positive class.
         """
@@ -592,9 +592,9 @@ class MarginPairwiseLoss(PairwiseLoss):
     .. math ::
         L(k, \bar{k}) = g(f(\bar{k}) - f(k) + \lambda)
 
-    Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function (e.g.,
-    :class:`pykeen.models.TransE` has $f(h,r,t)=-||\mathbf{e}_h+\mathbf{e}_r-\mathbf{e}_t||_p$), $g(x)$ is an activation
-    function like the ReLU or softmax, and $\lambda$ is the margin.
+    Where $k$ are the positive triples, $\bar{k}$ are the negative triples, $f$ is the interaction function
+    (e.g., :class:`~pykeen.models.TransE` has $f(h,r,t)=-||\mathbf{e}_h+\mathbf{e}_r-\mathbf{e}_t||_p$), $g(x)$ is
+    an activation function like the ReLU or softmax, and $\lambda$ is the margin.
     """
 
     hpo_default: ClassVar[Mapping[str, Any]] = {
@@ -934,7 +934,7 @@ class DoubleMarginLoss(PointwiseLoss):
 
         .. note ::
             There are multiple variants to set the pair of margins. A full documentation is provided in
-            :func:`DoubleMarginLoss.resolve_margins`.
+            :func:`~pykeen.losses.DoubleMarginLoss.resolve_margin`.
 
         :param positive_margin:
             The (absolute) margin for the positive scores. Should be larger than the negative one.

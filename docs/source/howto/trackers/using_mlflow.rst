@@ -14,19 +14,8 @@ Pipeline Example
 This example shows using MLflow with the :func:`~pykeen.pipeline.pipeline` function. Minimally, the ``tracking_uri`` and
 ``experiment_name`` are required in the ``result_tracker_kwargs``.
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    pipeline_result = pipeline(
-        model="RotatE",
-        dataset="Kinships",
-        result_tracker="mlflow",
-        result_tracker_kwargs=dict(
-            tracking_uri="http://localhost:5000",
-            experiment_name="Tutorial Training of RotatE on Kinships",
-        ),
-    )
+.. literalinclude:: /examples/howto/using_mlflow.py
+    :lines: 4-14
 
 If you navigate to the MLflow UI at http://localhost:5000, you'll see the experiment appeared in the left column.
 
@@ -43,19 +32,8 @@ HPO Example
 
 This example shows using MLflow with the :func:`~pykeen.hpo.hpo_pipeline` function.
 
-.. code-block:: python
-
-    from pykeen.hpo import hpo_pipeline
-
-    pipeline_result = hpo_pipeline(
-        model="RotatE",
-        dataset="Kinships",
-        result_tracker="mlflow",
-        result_tracker_kwargs=dict(
-            tracking_uri="http://localhost:5000",
-            experiment_name="Tutorial HPO Training of RotatE on Kinships",
-        ),
-    )
+.. literalinclude:: /examples/howto/using_mlflow.py
+    :lines: 17-27
 
 The same navigation through MLflow can be done for this example.
 
@@ -65,20 +43,8 @@ Reusing Experiments
 In the MLflow UI, you'll see that experiments are assigned an ID. This means you can re-use the same ID to group
 different sub-experiments together using the ``experiment_id`` keyword argument instead of ``experiment_name``.
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    experiment_id = 4  # if doesn't already exist, will throw an error!
-    pipeline_result = pipeline(
-        model='RotatE',
-        dataset='Kinships',
-        result_tracker='mlflow'
-        result_tracker_kwargs=dict(
-            tracking_uri='http://localhost:5000',
-            experiment_id=4,
-        ),
-    )
+.. literalinclude:: /examples/howto/using_mlflow.py
+    :lines: 30-38
 
 Adding Tags
 -----------
@@ -110,4 +76,5 @@ follows:
         ),
     )
 
-Additional documentation of the valid keyword arguments can be found under :class:`pykeen.trackers.MLFlowResultTracker`.
+Additional documentation of the valid keyword arguments can be found under
+:class:`~pykeen.trackers.MLFlowResultTracker`.

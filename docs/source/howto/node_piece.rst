@@ -21,9 +21,9 @@ We'll use :class:`~pykeen.datasets.FB15k237` for illustrating purposes throughou
 In the simplest usage of :class:`~pykeen.models.NodePiece`, we'll only use relations for tokenization. We can do this by
 with the following arguments:
 
-1. Set the ``tokenizers="RelationTokenizer"`` to :class:`pykeen.nn.node_piece.RelationTokenizer`. We can simply refer to
-   the class name and it gets automatically resolved to the correct subclass of :class:`pykeen.nn.node_piece.Tokenizer`
-   by the :mod:`class_resolver`.
+1. Set the ``tokenizers="RelationTokenizer"`` to :class:`~pykeen.nn.node_piece.RelationTokenizer`. We can simply refer
+   to the class name and it gets automatically resolved to the correct subclass of
+   :class:`~pykeen.nn.node_piece.Tokenizer` by the :mod:`class_resolver`.
 2. Set the ``num_tokens=12`` to sample 12 unique relations per node. If, for some entities, there are less than 12
    unique relations, the difference will be padded with the auxiliary padding token.
 
@@ -52,9 +52,9 @@ relational context. It's as easy as sending a list of tokenizers to ``tokenizers
         embedding_dim=64,
     )
 
-Class resolver will automatically instantiate :class:`pykeen.nn.node_piece.AnchorTokenizer` with 20 anchors per node and
-:class:`pykeen.nn.node_piece.RelationTokenizer` with 12 relations per node, so the order of specifying ``tokenizers``
-and ``num_tokens`` matters here.
+Class resolver will automatically instantiate :class:`~pykeen.nn.node_piece.AnchorTokenizer` with 20 anchors per node
+and :class:`~pykeen.nn.node_piece.RelationTokenizer` with 12 relations per node, so the order of specifying
+``tokenizers`` and ``num_tokens`` matters here.
 
 Anchor Selection and Searching
 ------------------------------
@@ -220,8 +220,8 @@ In some tasks, you might not need anchors at all and could use RelationTokenizer
 - in node classification (currently, this pipeline is not available in PyKEEN) on dense relation-rich graphs like
   Wikidata, we found that just a relational context is better than anchors + relations.
 
-Using NodePiece with :func:`pykeen.pipeline.pipeline`
------------------------------------------------------
+Using NodePiece with :func:`~pykeen.pipeline.pipeline`
+------------------------------------------------------
 
 Let's pack the last NodePiece model into the pipeline:
 
@@ -268,7 +268,9 @@ For a local file, specify ``path``:
 
 .. code-block:: python
 
-    precomputed_tokenizer = tokenizer_resolver.make("precomputedpool", path=Path("path/to/vocab.pkl"))
+    precomputed_tokenizer = tokenizer_resolver.make(
+        "precomputedpool", path=Path("path/to/vocab.pkl")
+    )
 
     model = NodePiece(
         triples_factory=dataset.training,
@@ -280,11 +282,13 @@ For a remote file, specify the ``url``:
 
 .. code-block:: python
 
-    precomputed_tokenizer = tokenizer_resolver.make("precomputedpool", url="http://link/to/vocab.pkl")
+    precomputed_tokenizer = tokenizer_resolver.make(
+        "precomputedpool", url="http://link/to/vocab.pkl"
+    )
 
 Generally, :class:`~pykeen.nn.node_piece.PrecomputedPoolTokenizer` can use any
-:class:`~pykeen.nn.node_piece.PrecomputedTokenizerLoader` as a custom processor of vocabulary formats. Right now there is
-one such loader, :class:`~pykeen.nn.node_piece.GalkinPrecomputedTokenizerLoader` that expects a dictionary of the
+:class:`~pykeen.nn.node_piece.PrecomputedTokenizerLoader` as a custom processor of vocabulary formats. Right now there
+is one such loader, :class:`~pykeen.nn.node_piece.GalkinPrecomputedTokenizerLoader` that expects a dictionary of the
 following format:
 
 ::
@@ -354,8 +358,8 @@ both) to a single vector:
 
     f([a_1, a_2, ...., a_k, r_1, r_2, ..., r_m]) \in \mathbb{R}^{(k+m) \times d} \rightarrow  \mathbb{R}^{d}
 
-Right now, by default we use a simple 2-layer MLP (:class:`pykeen.nn.perceptron.ConcatMLP`) that concatenates all tokens
-to one long vector and projects it down to model's embedding dimension:
+Right now, by default we use a simple 2-layer MLP (:class:`~pykeen.nn.perceptron.ConcatMLP`) that concatenates all
+tokens to one long vector and projects it down to model's embedding dimension:
 
 .. code-block:: python
 
@@ -456,8 +460,8 @@ NodePiece + GNN
 
 It is also possible to add a message passing GNN on top of obtained NodePiece representations to further enrich node
 states - we found it shows even better results in inductive LP tasks. We have that implemented with
-:class:`~pykeen.models.InductiveNodePieceGNN` that uses a 2-layer `CompGCN <https://arxiv.org/abs/1911.03082>`_ encoder -
-please check the Inductive Link Prediction tutorial.
+:class:`~pykeen.models.InductiveNodePieceGNN` that uses a 2-layer `CompGCN <https://arxiv.org/abs/1911.03082>`_ encoder
+- please check the Inductive Link Prediction tutorial.
 
 Tokenizing Large Graphs with METIS
 ----------------------------------
@@ -519,7 +523,9 @@ Let's use the new tokenizer for the Wikidata5M graph of 5M nodes and 20M edges.
                     num_anchors=1000,  # overall, we will have 20 * 1000 = 20000 anchors
                 ),
                 searcher="SparseBFSSearcher",  # a new efficient anchor searcher
-                searcher_kwargs=dict(max_iter=5),  # each node will be tokenized with anchors in the 5-hop neighborhood
+                searcher_kwargs=dict(
+                    max_iter=5
+                ),  # each node will be tokenized with anchors in the 5-hop neighborhood
             ),
             dict(),
         ],

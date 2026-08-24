@@ -22,18 +22,8 @@ Pipeline Example
 
 This example shows using WANDB with the :func:`~pykeen.pipeline.pipeline` function.
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    pipeline_result = pipeline(
-        model="RotatE",
-        dataset="Kinships",
-        result_tracker="wandb",
-        result_tracker_kwargs=dict(
-            project="pykeen_project",
-        ),
-    )
+.. literalinclude:: /examples/howto/using_wandb.py
+    :lines: 4-13
 
 You can navigate to the created project in WANDB and observe a running experiment. Further tweaking of appearance,
 charts, and other settings is described in the official `documentation <https://docs.wandb.com/>`_
@@ -41,39 +31,16 @@ charts, and other settings is described in the official `documentation <https://
 You can also specify optional ``tags`` which will appear on the website instead of randomly generated labels. All
 further keyword arguments are passed to :func:`wandb.init`.
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    pipeline_result = pipeline(
-        model="RotatE",
-        dataset="Kinships",
-        result_tracker="wandb",
-        result_tracker_kwargs=dict(
-            project="pykeen_project",
-            tags="experiment-1",
-        ),
-    )
+.. literalinclude:: /examples/howto/using_wandb.py
+    :lines: 16-24
 
 HPO Example
 -----------
 
 This example shows using WANDB with the :func:`~pykeen.hpo.hpo_pipeline` function.
 
-.. code-block:: python
-
-    from pykeen.hpo import hpo_pipeline
-
-    pipeline_result = hpo_pipeline(
-        model="RotatE",
-        dataset="Kinships",
-        result_tracker="wandb",
-        result_tracker_kwargs=dict(
-            project="pykeen_project",
-            tags="new run",
-            reinit=True,
-        ),
-    )
+.. literalinclude:: /examples/howto/using_wandb.py
+    :lines: 27-38
 
 It's safe to specify the experiment name during HPO. Several runs will be sent to the same experiment under different
 hashes. However, specifying the experiment name is advisable more for single runs and not for batches of multiple runs.

@@ -28,10 +28,10 @@ optionally applying a sigmoid activation on the scores to ensure a value range o
 
 Most models derive from :class:`ERModel`, which is a generic implementation of a knowledge graph embedding model. It
 combines a variable number of *representations* for entities and relations, cf.
-:class:`pykeen.nn.representation.Representation`, and an interaction function, cf.
-:class:`pykeen.nn.modules.Interaction`. The representation modules convert integer entity or relation indices to numeric
-representations, e.g., vectors. The interaction function takes the representations of the head entities, relations and
-tail entities as input and computes a scalar plausibility score for triples.
+:class:`~pykeen.nn.representation.Representation`, and an interaction function, cf.
+:class:`~pykeen.nn.modules.Interaction`. The representation modules convert integer entity or relation indices to
+numeric representations, e.g., vectors. The interaction function takes the representations of the head entities,
+relations and tail entities as input and computes a scalar plausibility score for triples.
 
 .. note::
 
