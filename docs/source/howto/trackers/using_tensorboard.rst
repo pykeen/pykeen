@@ -39,15 +39,8 @@ Minimal Pipeline Example
 
 The tensorboard tracker can be used during training with the :func:`~pykeen.pipeline.pipeline` as follows:
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    pipeline_result = pipeline(
-        model="RotatE",
-        dataset="Kinships",
-        result_tracker="tensorboard",
-    )
+.. literalinclude:: /examples/howto/using_tensorboard.py
+    :lines: 4-10
 
 It is placed in a subdirectory of :mod:`pystow` default data directory of PyKEEN called ``tensorboard``, which will
 likely be at ``~/.data/pykeen/logs/tensorboard`` on your system. The file is named based on the current time if no
@@ -59,18 +52,8 @@ Specifying a Log Name
 If you want to specify the name of the log file in the default directory, use the ``experiment_name`` keyword argument
 like:
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    pipeline_result = pipeline(
-        model="RotatE",
-        dataset="Kinships",
-        result_tracker="tensorboard",
-        result_tracker_kwargs=dict(
-            experiment_name="rotate-kinships",
-        ),
-    )
+.. literalinclude:: /examples/howto/using_tensorboard.py
+    :lines: 13-20
 
 Specifying a Custom Log Directory
 ---------------------------------
@@ -78,18 +61,8 @@ Specifying a Custom Log Directory
 If you want to specify a custom directory to store the tensorboard logs, use the ``experiment_path`` keyword argument
 like:
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    pipeline_result = pipeline(
-        model="RotatE",
-        dataset="Kinships",
-        result_tracker="tensorboard",
-        result_tracker_kwargs=dict(
-            experiment_path="tb-logs/rotate-kinships",
-        ),
-    )
+.. literalinclude:: /examples/howto/using_tensorboard.py
+    :lines: 23-30
 
 .. warning::
 
@@ -101,16 +74,8 @@ Minimal HPO Pipeline Example
 
 Tensorboard tracking can also be used in conjunction with a HPO pipeline as follows:
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    hpo_pipeline_result = hpo_pipeline(
-        n_trials=30,
-        dataset="Nations",
-        model="TransE",
-        result_tracker="tensorboard",
-    )
+.. literalinclude:: /examples/howto/using_tensorboard.py
+    :lines: 33-40
 
 This provides a way to compare directly between different trails and parameter configurations. Please not that it is
 recommended to leave the experiment name as the default value here to allow for a directory to be created per trail.

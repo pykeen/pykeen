@@ -41,28 +41,16 @@ number.
 
 As an example, consider we trained a KGEM on the countries dataset, e.g., using
 
-.. code-block:: python
-
-    from pykeen.datasets import get_dataset
-    from pykeen.pipeline import pipeline
-    dataset = get_dataset(dataset="countries")
-    result = pipeline(dataset=dataset, model="mure", random_seed=42, training_kwargs=dict(num_epochs=100))
+.. literalinclude:: /examples/explanation/understanding_evaluation.py
+    :lines: 4-9
 
 During evaluation time, we now evaluate head and tail prediction, i.e., whether we can predict the correct
 head/tail entity from the remainder of a triple. The first triple in the test split of this dataset is
 `['belgium', 'locatedin', 'europe']`. Thus, for tail prediction, we aim to answer `['belgium', 'locatedin', ?]`.
 We can see the results using the prediction workflow:
 
-.. code-block:: python
-
-    from pykeen.predict import predict_target
-
-    df = predict_target(
-        model=result.model,
-        head="belgium",
-        relation="locatedin",
-        triples_factory=result.training,
-    )
+.. literalinclude:: /examples/explanation/understanding_evaluation.py
+    :lines: 12-19
 
 which returns a dataframe of all tail candidate entities sorted according to the predicted score.
 The index in this sorted list is essentially the *rank* of the correct answer.
@@ -133,18 +121,8 @@ As an example, we can inspect the :class:`~pykeen.datasets.WD50KT` dataset, wher
 (`"instance of" <https://www.wikidata.org/wiki/Property:P31>`_, `"human" <https://www.wikidata.org/wiki/Q5>`_),
 is present in 699 evaluation triples.
 
-.. code-block:: python
-
-    from pykeen.datasets import get_dataset
-    ds = get_dataset(dataset="wd50kt")
-    unique_relation_tail, counts = dataset.testing.mapped_triples[:, 1:].unique(return_counts=True, dim=0)
-    # c = 699
-    c = counts.max()
-    r, t = unique_relation_tail[counts.argmax()]
-    # https://www.wikidata.org/wiki/Q5 -> "human"
-    t = dataset.testing.entity_id_to_label[t.item()]
-    # https://www.wikidata.org/wiki/Property:P31 -> "instance of"
-    r = dataset.testing.relation_id_to_label[r.item()]
+.. literalinclude:: /examples/explanation/understanding_evaluation.py
+    :lines: 22-29
 
 There are arguments that we want these entities to have a strong effect on evaluation: since they occur often, they
 are seemingly important, and thus evaluation should reflect that. However, sometimes we also do *not* want to have
@@ -206,38 +184,8 @@ the training triples. With the [bordes2013]_ technique where the testing set is 
 ``additional_filter_triples`` should include both the training triples and validation triples as in the following
 example:
 
-.. code-block:: python
-
-    from pykeen.datasets import FB15k237
-    from pykeen.evaluation import RankBasedEvaluator
-    from pykeen.models import TransE
-
-    # Get FB15k-237 dataset
-    dataset = FB15k237()
-
-    # Define model
-    model = TransE(
-        triples_factory=dataset.training,
-    )
-
-    # Train your model (code is omitted for brevity)
-    ...
-
-    # Define evaluator
-    evaluator = RankBasedEvaluator(
-        filtered=True,  # Note: this is True by default; we're just being explicit
-    )
-
-    # Evaluate your model with not only testing triples,
-    # but also filter on validation triples
-    results = evaluator.evaluate(
-        model=model,
-        mapped_triples=dataset.testing.mapped_triples,
-        additional_filter_triples=[
-            dataset.training.mapped_triples,
-            dataset.validation.mapped_triples,
-        ],
-    )
+.. literalinclude:: /examples/explanation/understanding_evaluation.py
+    :lines: 32-61
 
 Entity and Relation Restriction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -269,29 +217,12 @@ The edges in the graph are listed `here <https://github.com/hetio/hetionet/blob/
 but we will focus on only the compound treat disease (CtD) and compound palliates disease (CpD) relations during
 evaluation. This can be done with the following:
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    evaluation_relation_whitelist = {'CtD', 'CpD'}
-    pipeline_result = pipeline(
-        dataset='Hetionet',
-        model='RotatE',
-        evaluation_relation_whitelist=evaluation_relation_whitelist,
-    )
+.. literalinclude:: /examples/explanation/understanding_evaluation.py
+    :lines: 64-69
 
 By restricting evaluation to the edges of interest, models more appropriate for drug repositioning can
 be identified during hyper-parameter optimization instead of models that are good at predicting all
 types of relations. The HPO pipeline accepts the same arguments:
 
-.. code-block:: python
-
-    from pykeen.hpo import hpo_pipeline
-
-    evaluation_relation_whitelist = {'CtD', 'CpD'}
-    hpo_pipeline_result = hpo_pipeline(
-        n_trials=30,
-        dataset='Hetionet',
-        model='RotatE',
-        evaluation_relation_whitelist=evaluation_relation_whitelist,
-    )
+.. literalinclude:: /examples/explanation/understanding_evaluation.py
+    :lines: 72-79
