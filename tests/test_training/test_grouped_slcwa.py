@@ -15,7 +15,7 @@ from pykeen.triples.instances import GroupedSLCWABatch, SLCWABatch
 MODELS = [DistMult, TransE, RotatE, ComplEx, UM]
 
 
-def _make_batches(*, filtered: bool = False, weighted: bool = False) -> tuple[SLCWABatch, GroupedSLCWABatch, Dataset]:
+def _make_batches(*, filtered: bool = False, weighted: bool = False) -> tuple[GroupedSLCWABatch, SLCWABatch, Dataset]:
     dataset = Nations()
     mapped_triples = dataset.training.mapped_triples
     positives = mapped_triples[:8]
