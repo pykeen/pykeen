@@ -80,13 +80,15 @@ This is enabled by passing ``grouped=True`` to :class:`~pykeen.training.SLCWATra
 
     results = pipeline(
         dataset="fb15k237",
-        model="conve",
+        model="rotate",
         training_loop="sLCWA",
         training_loop_kwargs=dict(grouped=True),
     )
 
-Grouping consistently speeds up negative scoring compared to the dense path, with the speedup growing with the cost of
-the model's interaction function or encoder.
+Grouping can substantially speed up negative scoring compared to the dense path for models with expensive interaction
+functions or encoders, with the speedup growing with that cost. For models with cheap interaction functions and few
+negatives per positive, the per-target dispatch (up to three separate scoring calls instead of one) and extra
+concatenation can outweigh the savings, making grouped training slower instead.
 
 Grouped corruption requires a negative sampler which supports it, cf.
 :data:`~pykeen.sampling.NegativeSampler.supports_grouped_corruption`; :class:`~pykeen.sampling.BasicNegativeSampler`
