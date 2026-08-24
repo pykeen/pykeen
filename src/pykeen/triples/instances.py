@@ -55,11 +55,18 @@ class LCWABatch(TypedDict):
     """Sample weights."""
 
 
-class SLCWABatch(TypedDict):
-    """A batch for sLCWA training."""
+class _BaseSLCWABatch(TypedDict):
+    """Shared fields of the sLCWA batch variants."""
 
     #: the positive triples, shape: (batch_size, 3)
     positives: LongTensor
+
+    #: sample weights for the positive triples
+    pos_weights: NotRequired[FloatTensor]
+
+
+class SLCWABatch(_BaseSLCWABatch):
+    """A batch for sLCWA training."""
 
     #: the negative triples, shape: (batch_size, num_negatives_per_positive, 3)
     negatives: LongTensor
@@ -67,16 +74,12 @@ class SLCWABatch(TypedDict):
     #: filtering masks for negative triples, shape: (batch_size, num_negatives_per_positive)
     masks: NotRequired[BoolTensor]
 
-    #: sample weights
-    pos_weights: NotRequired[FloatTensor]
+    #: sample weights for the negative triples
     neg_weights: NotRequired[FloatTensor]
 
 
-class GroupedSLCWABatch(TypedDict):
+class GroupedSLCWABatch(_BaseSLCWABatch):
     """An sLCWA batch keeping negatives grouped by the corrupted position."""
-
-    #: the positive triples, shape: (batch_size, 3)
-    positives: LongTensor
 
     #: the replacement IDs, keyed by corrupted target, shape: (batch_size, k_target)
     corruptions: dict[Target, LongTensor]
@@ -84,8 +87,7 @@ class GroupedSLCWABatch(TypedDict):
     #: filtering masks for negative triples, keyed by corrupted target, shape: (batch_size, k_target)
     masks: NotRequired[dict[Target, BoolTensor]]
 
-    #: sample weights
-    pos_weights: NotRequired[FloatTensor]
+    #: sample weights for the negatives, keyed by corrupted target
     neg_weights: NotRequired[dict[Target, FloatTensor]]
 
 

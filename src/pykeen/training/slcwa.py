@@ -1,7 +1,7 @@
 """Training KGE models based on the sLCWA."""
 
 import logging
-from typing import Literal
+from typing import Literal, cast
 
 import torch
 from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
@@ -123,8 +123,9 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
     def _get_batch_size(batch: SLCWABatch | GroupedSLCWABatch) -> int:  # noqa: D102
         return batch["positives"].shape[0]
 
-    @staticmethod
+    @classmethod
     def _process_batch_static(
+        cls,
         model: Model,
         loss: Loss,
         mode: InductiveMode | None,
@@ -139,11 +140,11 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
             raise AttributeError("Slicing is not possible for sLCWA training loops.")
 
         if "corruptions" in batch:
-            return SLCWATrainingLoop._process_grouped_batch_static(
+            return cls._process_grouped_batch_static(
                 model=model,
                 loss=loss,
                 mode=mode,
-                batch=batch,
+                batch=cast(GroupedSLCWABatch, batch),
                 start=start,
                 stop=stop,
                 label_smoothing=label_smoothing,
@@ -192,8 +193,9 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
             + model.collect_regularization_term()
         )
 
-    @staticmethod
+    @classmethod
     def _process_grouped_batch_static(
+        cls,
         model: Model,
         loss: Loss,
         mode: InductiveMode | None,
