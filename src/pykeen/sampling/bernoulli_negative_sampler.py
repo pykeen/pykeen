@@ -33,6 +33,10 @@ class BernoulliNegativeSampler(NegativeSampler):
     actual positive triples $(h,r,t) \in \mathcal{K}$ will be removed.
     """
 
+    # note: the corrupted position is chosen per negative sample from a data-dependent (relation-specific)
+    # probability, so the groups are ragged and cannot be laid out rectangularly without padding, which would cost
+    # more interaction compute than it saves on lookups. Hence, `supports_grouped_corruption` stays `False`.
+
     def __init__(
         self,
         *,
@@ -92,7 +96,6 @@ class BernoulliNegativeSampler(NegativeSampler):
                 batch=negative_batch,
                 index=index,
                 selection=mask,
-                size=mask.sum(),
                 max_index=self.num_entities,
             )
 

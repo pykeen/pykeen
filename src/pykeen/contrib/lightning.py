@@ -163,6 +163,7 @@ class SLCWALitModule(LitModule):
         *,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
+        grouped: bool = False,
         **kwargs,
     ):
         """Initialize the lightning module.
@@ -170,11 +171,14 @@ class SLCWALitModule(LitModule):
         :param negative_sampler: the negative sampler, cf. :class:`~pykeen.training.SLCWATrainingLoop`
         :param negative_sampler_kwargs: keyword-based parameters passed to the negative sampler, cf.
             :class:`~pykeen.training.SLCWATrainingLoop`
+        :param grouped: whether to keep negatives grouped by corrupted position, cf.
+            :attr:`~pykeen.training.SLCWATrainingLoop.grouped`
         :param kwargs: additional keyword-based parameters passed to :meth:`LitModule.__init__`
         """
         super().__init__(**kwargs)
         self.negative_sampler = negative_sampler
         self.negative_sampler_kwargs = negative_sampler_kwargs
+        self.grouped = grouped
 
     # docstr-coverage: inherited
     def _step(self, batch, prefix: str):  # noqa: D102
@@ -204,6 +208,7 @@ class SLCWALitModule(LitModule):
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=self.negative_sampler_kwargs,
                 # sampler=sampler,
+                grouped=self.grouped,
             ),
             # shuffle=shuffle,
             # disable automatic batching in data loader

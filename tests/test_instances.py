@@ -4,12 +4,15 @@ from collections.abc import MutableMapping
 from typing import Any
 
 import numpy
+import pytest
 import torch
 
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
+from pykeen.sampling import BernoulliNegativeSampler
 from pykeen.triples import LCWAInstances
 from pykeen.triples.instances import BatchedSLCWAInstances, SubGraphSLCWAInstances
 from pykeen.triples.triples_factory import TriplesFactory
+from pykeen.triples.weights import RelationLossWeighter
 from tests import cases
 
 
@@ -80,6 +83,56 @@ class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
         factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
         instances = BatchedSLCWAInstances.from_triples_factory(factory)
         assert len(instances) == 4
+
+    def test_grouped(self):
+        """Test that grouped instances emit the expected keys and shapes."""
+        instances = BatchedSLCWAInstances.from_triples_factory(
+            self.factory,
+            batch_size=2,
+            negative_sampler_kwargs={"num_negs_per_pos": 3},
+            grouped=True,
+        )
+        for batch in torch.utils.data.DataLoader(dataset=instances, batch_size=None):
+            assert isinstance(batch, dict)
+            assert {"positives", "corruptions"}.issubset(batch.keys())
+            assert batch["positives"].shape == (2, 3)
+            assert "negatives" not in batch
+            assert sum(replacements.shape[-1] for replacements in batch["corruptions"].values()) == 3
+            for replacements in batch["corruptions"].values():
+                assert replacements.shape[0] == 2
+
+    def test_grouped_with_loss_weighter(self):
+        """Test that grouped instances with a loss weighter emit correctly-shaped neg_weights.
+
+        Regression test: the per-target loss weighter call relies on broadcasting semantics (cf.
+        :meth:`pykeen.triples.weights.LossWeighter.__call__`), e.g. :class:`~pykeen.triples.weights.
+        RelationLossWeighter` ignores h/t and returns a `(batch, 1)`-shaped tensor regardless of how many
+        corruptions were requested per target -- this must be broadcast to match the corruptions' shape before
+        being consumed downstream (cf. :meth:`pykeen.training.slcwa.SLCWATrainingLoop._process_grouped_batch_static`).
+        """
+        num_negs_per_pos = 3
+        weighter = RelationLossWeighter.inverse_relation_frequency(self.factory.mapped_triples)
+        instances = BatchedSLCWAInstances.from_triples_factory(
+            self.factory,
+            batch_size=2,
+            negative_sampler_kwargs={"num_negs_per_pos": num_negs_per_pos},
+            loss_weighter=weighter,
+            grouped=True,
+        )
+        for batch in torch.utils.data.DataLoader(dataset=instances, batch_size=None):
+            assert batch["pos_weights"].shape == (2,)
+            for target, replacements in batch["corruptions"].items():
+                assert batch["neg_weights"][target].shape == replacements.shape
+
+    def test_grouped_requires_supporting_sampler(self):
+        """Test that grouped=True with a non-supporting sampler raises a ValueError."""
+        assert not BernoulliNegativeSampler.supports_grouped_corruption
+        with pytest.raises(ValueError, match="grouped"):
+            BatchedSLCWAInstances.from_triples_factory(
+                self.factory,
+                negative_sampler=BernoulliNegativeSampler,
+                grouped=True,
+            )
 
 
 class SubGraphSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):

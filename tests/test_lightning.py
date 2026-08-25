@@ -115,6 +115,36 @@ def test_lit_training(model, model_kwargs, training_loop):
 
 
 @needs_packages("pytorch_lightning")
+def test_lit_training_grouped():
+    """Test training with the sLCWA lightning module using grouped negative sampling."""
+    dataset = get_dataset(dataset="nations")
+    lit_pipeline(
+        training_loop="slcwa",
+        training_loop_kwargs={
+            "model": "distmult",
+            "dataset": dataset,
+            "model_kwargs": {"embedding_dim": EMBEDDING_DIM},
+            "batch_size": 8,
+            "grouped": True,
+        },
+        trainer_kwargs={
+            # automatically choose accelerator
+            "accelerator": "auto",
+            # defaults to TensorBoard; explicitly disabled here
+            "logger": False,
+            # disable checkpointing
+            "enable_checkpointing": False,
+            # fast run
+            "max_epochs": 2,
+            # reduce fixed per-test overhead; validation itself still runs each epoch
+            "enable_progress_bar": False,
+            "enable_model_summary": False,
+            "num_sanity_val_steps": 0,
+        },
+    )
+
+
+@needs_packages("pytorch_lightning")
 def test_lit_pipeline_with_dataset_without_validation():
     """Test training on a dataset without validation triples."""
     dataset = get_dataset(dataset="nations")

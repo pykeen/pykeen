@@ -59,6 +59,7 @@ or relations (in :mod:`pykeen.triples.analysis`), as well as advanced analysis o
 from .instances import (
     BaseBatchedSLCWAInstances,
     BatchedSLCWAInstances,
+    GroupedSLCWABatch,
     Instances,
     LCWABatch,
     LCWAInstances,
@@ -80,6 +81,7 @@ __all__ = [
     "BaseBatchedSLCWAInstances",
     "LCWABatch",
     "SLCWABatch",
+    "GroupedSLCWABatch",
     "LCWAInstances",
     "BatchedSLCWAInstances",
     "SubGraphSLCWAInstances",

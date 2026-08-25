@@ -15,6 +15,7 @@ from class_resolver import HintOrType
 from docdata import parse_docdata
 from torch import nn
 
+from ..constants import TARGET_TO_KEYS
 from ..inverse import RelationInverter, relation_inverter_resolver
 from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..triples import KGInfo
@@ -471,18 +472,66 @@ class Model(nn.Module, ABC):
         """
         if target == LABEL_TAIL:
             if full_batch:
-                hrt_batch = hrt_batch[:, 0:2]
+                hrt_batch = hrt_batch[:, TARGET_TO_KEYS[LABEL_TAIL]]
             return self.predict_t(hrt_batch, **kwargs, tails=ids)
 
         if target == LABEL_RELATION:
             if full_batch:
-                hrt_batch = hrt_batch[:, 0::2]
+                hrt_batch = hrt_batch[:, TARGET_TO_KEYS[LABEL_RELATION]]
             return self.predict_r(hrt_batch, **kwargs, relations=ids)
 
         if target == LABEL_HEAD:
             if full_batch:
-                hrt_batch = hrt_batch[:, 1:3]
+                hrt_batch = hrt_batch[:, TARGET_TO_KEYS[LABEL_HEAD]]
             return self.predict_h(hrt_batch, **kwargs, heads=ids)
+
+        raise ValueError(f"Unknown target={target}")
+
+    def score(
+        self,
+        batch: LongTensor,
+        target: Target,
+        ids: LongTensor | None = None,
+        *,
+        full_batch: bool = True,
+        **kwargs,
+    ) -> FloatTensor:
+        """Score the given target for a batch, optionally restricted to `ids`.
+
+        This is the training-time sibling of :meth:`predict`: it does not switch the model into evaluation mode,
+        does not apply sigmoid, and does not remap inverse relations.
+
+        :param batch: shape: (batch_size, 3) or (batch_size, 2)
+            the full batch, or the relevant part of it
+        :param target:
+            the target to predict
+        :param ids:
+            restrict scoring to only those ids
+        :param full_batch:
+            whether `batch` is the full batch, or only the "input" part of the target scoring method
+        :param kwargs:
+            additional keyword-based parameters passed to the specific target scoring method.
+
+        :raises ValueError:
+            if the target is invalid
+
+        :return: shape: (batch_size, num)
+            the scores
+        """
+        if target == LABEL_TAIL:
+            if full_batch:
+                batch = batch[:, TARGET_TO_KEYS[LABEL_TAIL]]
+            return self.score_t(batch, **kwargs, tails=ids)
+
+        if target == LABEL_RELATION:
+            if full_batch:
+                batch = batch[:, TARGET_TO_KEYS[LABEL_RELATION]]
+            return self.score_r(batch, **kwargs, relations=ids)
+
+        if target == LABEL_HEAD:
+            if full_batch:
+                batch = batch[:, TARGET_TO_KEYS[LABEL_HEAD]]
+            return self.score_h(batch, **kwargs, heads=ids)
 
         raise ValueError(f"Unknown target={target}")
 

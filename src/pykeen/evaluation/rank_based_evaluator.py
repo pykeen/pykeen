@@ -721,7 +721,10 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             dense_positive_mask=dense_positive_mask,
         )
         # store keys for calculating macro weights
-        self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().cpu().numpy())
+        # note: TARGET_TO_KEYS[target] is a slice, so indexing with it returns a view into hrt_batch rather than a
+        # copy; since we keep these arrays around for the whole evaluation, clone() first so we don't pin the full
+        # (and much larger) hrt_batch tensor in memory for the duration.
+        self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().clone().cpu().numpy())
 
     # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
