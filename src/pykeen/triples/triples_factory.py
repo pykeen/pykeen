@@ -695,7 +695,7 @@ class CoreTriplesFactory(KGInfo):
         return self.__class__(
             mapped_triples=condenser(self.mapped_triples),
             num_entities=condenser.entities.apply_to_num(self.num_entities),
-            num_relations=condenser.relations.apply_to_num(self.num_relations),
+            num_relations=condenser.relations.apply_to_num(self.real_num_relations),
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
@@ -1302,7 +1302,7 @@ class TriplesFactory(CoreTriplesFactory):
             entity_to_id=condenser.entities.apply_to_map(self.entity_id_to_label),
             relation_to_id=condenser.relations.apply_to_map(self.relation_id_to_label),
             num_entities=condenser.entities.apply_to_num(self.num_entities),
-            num_relations=condenser.relations.apply_to_num(self.num_relations),
+            num_relations=condenser.relations.apply_to_num(self.real_num_relations),
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
@@ -1327,7 +1327,7 @@ class TriplesFactory(CoreTriplesFactory):
         return CoreTriplesFactory(
             mapped_triples=self.mapped_triples,
             num_entities=self.num_entities,
-            num_relations=self.num_relations,
+            num_relations=self.real_num_relations,
             create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )

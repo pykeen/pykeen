@@ -224,6 +224,39 @@ class TestTriplesFactory(unittest.TestCase):
         # check that in all other splits no inverse triples are to be created
         assert not any(f.create_inverse_triples for f in others)
 
+    def test_num_relations_preserved_with_inverse_triples(self):
+        """Test that derived factories do not re-double the number of relations."""
+        factory = Nations(create_inverse_triples=True).training
+        real_num_relations = factory.real_num_relations
+        assert factory.num_relations == 2 * real_num_relations
+
+        # drop a "middle" entity, so that condensing actually has to re-assign IDs
+        mapped_triples = factory.mapped_triples
+        mapped_triples = mapped_triples[(mapped_triples[:, 0] != 5) & (mapped_triples[:, 2] != 5)]
+        derived = [
+            factory.to_core_triples_factory(),
+            factory.clone_and_exchange_triples(mapped_triples=mapped_triples).condense(),
+        ]
+        for derived_factory in derived:
+            with self.subTest(derived=derived_factory.__class__.__name__):
+                assert derived_factory.create_inverse_triples
+                assert derived_factory.real_num_relations == real_num_relations
+                assert derived_factory.num_relations == 2 * real_num_relations
+
+    def test_fully_inductive_split_with_inverse_triples(self):
+        """Test that a fully inductive split does not re-double the number of relations."""
+        factory = Nations(create_inverse_triples=True).training
+        real_num_relations = factory.real_num_relations
+        training, inference, *evaluation = factory.split_fully_inductive(random_state=0)
+        for part in (training, inference):
+            assert part.create_inverse_triples
+            assert part.real_num_relations == real_num_relations
+            assert part.num_relations == 2 * real_num_relations
+        # inverse triples for evaluation are handled by the evaluation code
+        for part in evaluation:
+            assert not part.create_inverse_triples
+            assert part.num_relations == real_num_relations
+
     @needs_packages("wordcloud", "IPython")
     def test_entity_word_cloud(self):
         """Test word cloud generation."""
