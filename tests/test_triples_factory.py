@@ -1,6 +1,7 @@
 """Unit tests for triples factories."""
 
 import itertools as itt
+import pickle
 import tempfile
 import unittest
 from collections.abc import Collection, Iterable, Mapping
@@ -583,6 +584,34 @@ class TestUtils(unittest.TestCase):
         """Test binary i/o on core triples factory with inverse relations."""
         tf1 = Nations(create_inverse_triples=True).training.to_core_triples_factory()
         self.assert_binary_io(tf1, CoreTriplesFactory)
+
+    def test_pickle_roundtrip(self):
+        """Test that a triples factory survives being pickled."""
+        for create_inverse_triples in (False, True):
+            with self.subTest(create_inverse_triples=create_inverse_triples):
+                tf1 = Nations(create_inverse_triples=create_inverse_triples).training
+                tf2 = pickle.loads(pickle.dumps(tf1))  # noqa: S301
+                self.assert_tf_equal(tf1, tf2)
+                assert tf2.num_relations == tf1.num_relations
+                assert tf2.real_num_relations == tf1.real_num_relations
+
+    def test_unpickle_legacy_state(self):
+        """Test that states pickled before num_relations & co. became properties still load."""
+        for create_inverse_triples in (False, True):
+            with self.subTest(create_inverse_triples=create_inverse_triples):
+                tf1 = Nations(create_inverse_triples=create_inverse_triples).training
+                # emulate the instance state as written by an older PyKEEN, where both were plain attributes
+                state = dict(tf1.__dict__)
+                state["create_inverse_triples"] = state.pop("_create_inverse_triples")
+                state["num_relations"] = tf1.num_relations
+
+                tf2 = tf1.__class__.__new__(tf1.__class__)
+                tf2.__setstate__(state)
+                self.assert_tf_equal(tf1, tf2)
+                assert tf2.create_inverse_triples == create_inverse_triples
+                assert tf2.num_relations == tf1.num_relations
+                # the stale copy must not shadow the derived property
+                assert "num_relations" not in tf2.__dict__
 
     def assert_binary_io(self, tf, tf_cls):
         """Check the triples factory can be written and reloaded properly."""
