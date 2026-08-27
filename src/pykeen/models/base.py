@@ -544,7 +544,7 @@ class Model(nn.Module, ABC):
                 " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
                 " or using the pipeline().",
             )
-        return self.relation_inverter.invert_(batch=batch, index=index_relation).flip(1)
+        return self.relation_inverter.invert(batch=batch, index=index_relation).flip(1)
 
     def score_hrt_inverse(
         self,

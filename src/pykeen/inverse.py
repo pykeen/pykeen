@@ -34,6 +34,10 @@ class RelationInverter(ABC):
     def invert_(self, batch: LongTensor, index: int = 1) -> LongTensor:
         """Invert relations in a batch (in-place)."""
 
+    def invert(self, batch: LongTensor, index: int = 1) -> LongTensor:
+        """Invert relations in a batch, leaving the input batch unmodified."""
+        return self.invert_(batch=batch.clone(), index=index)
+
     def map(self, batch: LongTensor, index: int = 1, invert: bool = False) -> LongTensor:
         """Map relations in a batch, optionally also inverting them."""
         batch = self._map(batch=batch, index=index)
