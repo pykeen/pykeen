@@ -585,10 +585,23 @@ class CoreTriplesFactory(KGInfo):
         )
 
     def get_inverse_relation_id(self, relation: int) -> int:
-        """Get the inverse relation identifier for the given relation."""
+        """Get the inverse relation identifier for the given relation.
+
+        :param relation:
+            The relation ID as used by this factory's triples, i.e., in ``0 ... real_num_relations - 1``.
+
+        :raises ValueError:
+            If no inverse triples are created, or the relation ID is out of range.
+
+        :return:
+            The *internal* ID of the corresponding inverse relation, i.e., in
+            ``0 ... num_relations - 1``, as used by models trained on this factory.
+        """
         if not self.create_inverse_triples:
             raise ValueError("Can not get inverse triple, they have not been created.")
-        return self.relation_inverter.get_inverse_id(relation_id=relation)
+        if not (0 <= relation < self.real_num_relations):
+            raise ValueError(f"Invalid {relation=}; must be in [0, {self.real_num_relations})")
+        return self.relation_inverter.get_inverse_id(relation_id=self.relation_inverter.to_internal(relation))
 
     def _add_inverse_triples_if_necessary(self, mapped_triples: MappedTriples) -> MappedTriples:
         """Add inverse triples if they shall be created."""

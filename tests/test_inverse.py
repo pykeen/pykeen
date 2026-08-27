@@ -52,3 +52,26 @@ def test_score_inverse_does_not_modify_input(model: Model, method_name: str, col
     copy = batch.clone()
     getattr(model, method_name)(batch)
     assert torch.equal(batch, copy)
+
+
+def test_get_inverse_relation_id():
+    """Test that the factory's inverse relation ID matches the one used by models."""
+    factory = Nations(create_inverse_triples=True).training
+    model = TransE(triples_factory=factory, embedding_dim=2, random_seed=0)
+    for relation in range(factory.real_num_relations):
+        inverse_id = factory.get_inverse_relation_id(relation)
+        assert 0 <= inverse_id < factory.num_relations
+        assert model.relation_inverter.is_inverse(torch.as_tensor([inverse_id])).item()
+        # this is the relation ID a model actually uses for the inverse of ``relation``
+        batch = torch.as_tensor([[0, relation, 1]])
+        expected = model._prepare_inverse_batch(model._prepare_batch(batch, index_relation=1), index_relation=1)
+        assert expected[0, 1].item() == inverse_id
+
+
+def test_get_inverse_relation_id_errors():
+    """Test the input validation of the factory's inverse relation ID lookup."""
+    factory = Nations(create_inverse_triples=True).training
+    with pytest.raises(ValueError, match="Invalid relation"):
+        factory.get_inverse_relation_id(factory.real_num_relations)
+    with pytest.raises(ValueError, match="they have not been created"):
+        Nations().training.get_inverse_relation_id(0)
