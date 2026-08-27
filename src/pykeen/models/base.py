@@ -419,6 +419,8 @@ class Model(nn.Module, ABC):
     def predict_r(
         self,
         ht_batch: LongTensor,
+        *,
+        relations: LongTensor | None = None,
         **kwargs,
     ) -> FloatTensor:
         """Forward pass using middle (relation) prediction for obtaining scores of all possible relations.
@@ -429,6 +431,9 @@ class Model(nn.Module, ABC):
 
         :param ht_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, tail) pairs.
+        :param relations: shape: (num_relations,)
+            The relations to score against, given as *real* relation IDs. If None, scores against all
+            relations, which comprise the inverse relations if the model has been trained with them.
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Model.score_r`
 
@@ -437,7 +442,10 @@ class Model(nn.Module, ABC):
         """
         self.eval()  # Enforce evaluation mode
         ht_batch = ht_batch.to(self.device)
-        scores = self.score_r(ht_batch, **kwargs)
+        # when trained on inverse relations, the internal relation ID is twice the original relation ID
+        if relations is not None and self.use_inverse_triples:
+            relations = self.relation_inverter.to_internal(relations)
+        scores = self.score_r(ht_batch, relations=relations, **kwargs)
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores
