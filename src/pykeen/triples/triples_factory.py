@@ -1016,8 +1016,13 @@ class CoreTriplesFactory(KGInfo):
         if relations is not None:
             extra_metadata["relation_restriction"] = relations
             relations = self.relations_to_ids(relations=relations)
-            remaining_relations = (self.num_relations - len(relations)) if invert_relation_selection else len(relations)
-            logger.info(f"keeping {format_relative_comparison(remaining_relations, self.num_relations)} relations.")
+            # note: the restriction is given in terms of the factory's own ("real") relation IDs
+            remaining_relations = (
+                (self.real_num_relations - len(relations)) if invert_relation_selection else len(relations)
+            )
+            logger.info(
+                f"keeping {format_relative_comparison(remaining_relations, self.real_num_relations)} relations."
+            )
 
         # Delegate to function
         mapped_triples = restrict_triples(
