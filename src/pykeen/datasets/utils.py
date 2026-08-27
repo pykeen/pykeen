@@ -184,11 +184,7 @@ def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = 
 
 def _set_inverse_triples_(dataset_instance: Dataset, create_inverse_triples: bool) -> Dataset:
     # note: we only need to set the create_inverse_triples in the training factory.
-    if dataset_instance.create_inverse_triples and not create_inverse_triples:
-        assert dataset_instance.training.num_relations % 2 == 0
-        dataset_instance.training.num_relations //= 2
-    elif create_inverse_triples and not dataset_instance.training.create_inverse_triples:
-        dataset_instance.training.num_relations *= 2
+    # the setter keeps the factory's num_relations in sync.
     dataset_instance.training.create_inverse_triples = create_inverse_triples
     return dataset_instance
 

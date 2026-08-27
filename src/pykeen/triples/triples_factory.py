@@ -270,9 +270,6 @@ class KGInfo(ExtraReprMixin):
     #: the number of relations (maybe including "artificial" inverse relations)
     num_relations: int
 
-    #: whether to create inverse triples
-    create_inverse_triples: bool
-
     #: the number of real relations, i.e., without artificial inverses
     real_num_relations: int
 
@@ -294,10 +291,21 @@ class KGInfo(ExtraReprMixin):
         """
         self.num_entities = num_entities
         self.real_num_relations = num_relations
-        if create_inverse_triples:
-            num_relations *= 2
-        self.num_relations = num_relations
-        self.create_inverse_triples = create_inverse_triples
+        self._create_inverse_triples = create_inverse_triples
+        self.num_relations = 2 * num_relations if create_inverse_triples else num_relations
+
+    @property
+    def create_inverse_triples(self) -> bool:
+        """Whether to create inverse triples."""
+        return self._create_inverse_triples
+
+    @create_inverse_triples.setter
+    def create_inverse_triples(self, create_inverse_triples: bool) -> None:
+        """Set whether to create inverse triples, keeping :attr:`num_relations` in sync."""
+        if create_inverse_triples == self._create_inverse_triples:
+            return
+        self._create_inverse_triples = create_inverse_triples
+        self.num_relations = 2 * self.real_num_relations if create_inverse_triples else self.real_num_relations
 
     def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""

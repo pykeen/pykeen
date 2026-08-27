@@ -75,3 +75,18 @@ def test_get_inverse_relation_id_errors():
         factory.get_inverse_relation_id(factory.real_num_relations)
     with pytest.raises(ValueError, match="they have not been created"):
         Nations().training.get_inverse_relation_id(0)
+
+
+@pytest.mark.parametrize("create_inverse_triples", [False, True])
+def test_create_inverse_triples_setter(create_inverse_triples: bool):
+    """Test that toggling the flag keeps the number of relations consistent."""
+    factory = Nations(create_inverse_triples=create_inverse_triples).training
+    real_num_relations = factory.real_num_relations
+    for flag in (True, False, True, create_inverse_triples):
+        factory.create_inverse_triples = flag
+        assert factory.create_inverse_triples == flag
+        assert factory.real_num_relations == real_num_relations
+        assert factory.num_relations == (2 * real_num_relations if flag else real_num_relations)
+        # the (possibly inverted) triples have to stay within the ID range
+        mapped_triples = factory._add_inverse_triples_if_necessary(mapped_triples=factory.mapped_triples)
+        assert mapped_triples[:, 1].max().item() < factory.num_relations
