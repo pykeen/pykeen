@@ -267,9 +267,6 @@ class KGInfo(ExtraReprMixin):
     #: the number of unique entities
     num_entities: int
 
-    #: the number of relations (maybe including "artificial" inverse relations)
-    num_relations: int
-
     #: the number of real relations, i.e., without artificial inverses
     real_num_relations: int
 
@@ -292,7 +289,11 @@ class KGInfo(ExtraReprMixin):
         self.num_entities = num_entities
         self.real_num_relations = num_relations
         self._create_inverse_triples = create_inverse_triples
-        self.num_relations = 2 * num_relations if create_inverse_triples else num_relations
+
+    @property
+    def num_relations(self) -> int:
+        """The number of relations, including the "artificial" inverse relations."""
+        return 2 * self.real_num_relations if self.create_inverse_triples else self.real_num_relations
 
     @property
     def create_inverse_triples(self) -> bool:
@@ -301,11 +302,16 @@ class KGInfo(ExtraReprMixin):
 
     @create_inverse_triples.setter
     def create_inverse_triples(self, create_inverse_triples: bool) -> None:
-        """Set whether to create inverse triples, keeping :attr:`num_relations` in sync."""
-        if create_inverse_triples == self._create_inverse_triples:
-            return
+        """Set whether to create inverse triples; :attr:`num_relations` follows."""
         self._create_inverse_triples = create_inverse_triples
-        self.num_relations = 2 * self.real_num_relations if create_inverse_triples else self.real_num_relations
+
+    def __setstate__(self, state: MutableMapping[str, Any]) -> None:
+        """Restore from a pickled state, tolerating states written before the properties were introduced."""
+        if "_create_inverse_triples" not in state:
+            state["_create_inverse_triples"] = state.pop("create_inverse_triples")
+        # num_relations is derived nowadays
+        state.pop("num_relations", None)
+        self.__dict__.update(state)
 
     def iter_extra_repr(self) -> Iterable[str]:
         """Iterate over extra_repr components."""
