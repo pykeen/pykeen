@@ -167,6 +167,23 @@ def parallel_unsqueeze(x: FloatTensor | Sequence[FloatTensor], dim: int) -> Floa
     return cast(Sequence[FloatTensor], [xx.unsqueeze(dim=dim) for xx in x])
 
 
+# docstr-coverage:excused `overload`
+@overload
+def parallel_prefix_unsqueeze(x: Sequence[FloatTensor], ndim: int) -> Sequence[FloatTensor]: ...
+
+
+# docstr-coverage:excused `overload`
+@overload
+def parallel_prefix_unsqueeze(x: FloatTensor, ndim: int) -> FloatTensor: ...
+
+
+def parallel_prefix_unsqueeze(x: FloatTensor | Sequence[FloatTensor], ndim: int) -> FloatTensor | Sequence[FloatTensor]:
+    """Prepend the given number of singleton dimensions to all representations."""
+    for _ in range(ndim):
+        x = parallel_unsqueeze(x, dim=0)
+    return x
+
+
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):
     """Base class for interaction functions."""
 

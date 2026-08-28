@@ -55,6 +55,7 @@ from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
+from .scoring import ScoringBatch
 from .unimodal import (
     CP,
     ERMLP,
@@ -98,6 +99,8 @@ __all__ = [
     "InductiveERModel",
     "LiteralModel",
     "EvaluationOnlyModel",
+    # Scoring
+    "ScoringBatch",
     # Concrete Models
     "AutoSF",
     "BoxE",
