@@ -1,9 +1,8 @@
 """Base classes for literal datasets."""
 
 import pathlib
-from typing import TextIO
 
-from .base import LazyDataset
+from .base import PathDataset
 from ..triples import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -11,17 +10,21 @@ __all__ = [
 ]
 
 
-class NumericPathDataset(LazyDataset):
-    """Contains a lazy reference to a training, testing, and validation dataset."""
+class NumericPathDataset(PathDataset):
+    """A path dataset which additionally loads numeric literals for its entities.
+
+    This is an ordinary :class:`~pykeen.datasets.base.PathDataset` with a different triples factory class; the
+    literals file is passed to every factory.
+    """
 
     triples_factory_cls = TriplesNumericLiteralsFactory
 
     def __init__(
         self,
-        training_path: str | pathlib.Path | TextIO,
-        testing_path: str | pathlib.Path | TextIO,
-        validation_path: str | pathlib.Path | TextIO,
-        literals_path: str | pathlib.Path | TextIO,
+        training_path: str | pathlib.Path,
+        testing_path: str | pathlib.Path,
+        validation_path: str | pathlib.Path,
+        literals_path: str | pathlib.Path,
         eager: bool = False,
         create_inverse_triples: bool = False,
     ) -> None:
@@ -34,39 +37,14 @@ class NumericPathDataset(LazyDataset):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        self.training_path = training_path
-        self.testing_path = testing_path
-        self.validation_path = validation_path
-        self.literals_path = literals_path
-
-        self._create_inverse_triples = create_inverse_triples
-
-        if eager:
-            self._load()
-            self._load_validation()
-
-    def _load(self) -> None:
-        self._training = self.triples_factory_cls.from_path(
-            path=self.training_path,
-            path_to_numeric_triples=self.literals_path,
-            create_inverse_triples=self._create_inverse_triples,
-        )
-        self._testing = self.triples_factory_cls.from_path(
-            path=self.testing_path,
-            path_to_numeric_triples=self.literals_path,
-            entity_to_id=self._training.entity_to_id,  # share entity index with training
-            relation_to_id=self._training.relation_to_id,  # share relation index with training
-        )
-
-    def _load_validation(self) -> None:
-        # don't call this function by itself. assumes called through the `validation`
-        # property and the _training factory has already been loaded
-        assert self._training is not None
-        self._validation = self.triples_factory_cls.from_path(
-            path=self.validation_path,
-            path_to_numeric_triples=self.literals_path,
-            entity_to_id=self._training.entity_to_id,  # share entity index with training
-            relation_to_id=self._training.relation_to_id,  # share relation index with training
+        self.literals_path = pathlib.Path(literals_path)
+        super().__init__(
+            training_path=training_path,
+            testing_path=testing_path,
+            validation_path=validation_path,
+            eager=eager,
+            create_inverse_triples=create_inverse_triples,
+            factory_kwargs={"path_to_numeric_triples": self.literals_path},
         )
 
     def __repr__(self) -> str:  # noqa: D105
