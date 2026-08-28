@@ -9,7 +9,7 @@ import abc
 import logging
 import pathlib
 import typing
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import ClassVar, Generic, Literal, TypedDict, TypeVar, cast, overload
 
 import click
@@ -20,7 +20,7 @@ from docdata import parse_docdata
 from more_click import verbose_option
 
 from .base import LazyDataset
-from ..triples import TriplesFactory
+from ..triples import CoreTriplesFactory, TriplesFactory
 from ..typing import EntityMapping, RelationMapping
 
 if typing.TYPE_CHECKING:
@@ -59,32 +59,25 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
         """
         self.cache_root = self._help_cache(cache_root)
         self._create_inverse_triples = create_inverse_triples
+        super().__init__()
 
     # docstr-coverage: inherited
-    def _load(self) -> None:  # noqa: D102
+    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
         dataset = self._load_ogb_dataset()
         # label mapping is in dataset.root/mapping
         entity_to_id, relation_to_id = self._load_mappings(pathlib.Path(dataset.root).joinpath("mapping"))
-        self._training = TriplesFactory(
-            mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "train")),
-            entity_to_id=entity_to_id,
-            relation_to_id=relation_to_id,
-            create_inverse_triples=self._create_inverse_triples,
-        )
-        self._testing = TriplesFactory(
-            mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "test")),
-            entity_to_id=entity_to_id,
-            relation_to_id=relation_to_id,
-        )
-
-    # docstr-coverage: inherited
-    def _load_validation(self) -> None:  # noqa: D102
-        dataset = self._load_ogb_dataset()
-        self._validation = TriplesFactory(
-            mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "valid")),
-            entity_to_id=self.entity_to_id,
-            relation_to_id=self.relation_to_id,
-        )
+        return {
+            key: TriplesFactory(
+                mapped_triples=self._compose_mapped_triples(
+                    data_dict=self._load_data_dict_for_split(dataset, cast(SplitKey, which))
+                ),
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+                # note: inverse triples for the evaluation factories are handled by the evaluation code
+                create_inverse_triples=self._create_inverse_triples and key == "training",
+            )
+            for key, which in (("training", "train"), ("testing", "test"), ("validation", "valid"))
+        }
 
     def _load_ogb_dataset(self) -> LinkPropPredDataset:
         """
