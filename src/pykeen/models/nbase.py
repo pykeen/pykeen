@@ -31,6 +31,7 @@ from ..typing import (
     LongTensor,
     RelationRepresentation,
     TailRepresentation,
+    Target,
 )
 from ..utils import check_shapes, get_batchnorm_modules
 
@@ -252,6 +253,45 @@ def _repeat_when_missing_representations(
     if representations:
         return scores
     return scores.repeat(*(1,) * (scores.ndim - 1), num)
+
+
+def _prefix_unsqueeze_target(
+    target: Target,
+    ndim: int,
+    h: HeadRepresentation,
+    r: RelationRepresentation,
+    t: TailRepresentation,
+) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
+    """Prepend batch dimensions to the target's representations.
+
+    When the same candidates are scored for each batch element, the target's representations are looked up once,
+    with shape ``(num, *dims)``. They need the batch dimensions prepended to broadcast against the other two
+    positions, which have shape ``(*batch_shape, 1, *dims)``.
+
+    :param target:
+        the target position
+    :param ndim:
+        the number of batch dimensions to prepend
+    :param h:
+        the head representations
+    :param r:
+        the relation representations
+    :param t:
+        the tail representations
+
+    :raises ValueError:
+        if the target is invalid
+
+    :return:
+        the representations, with the target's ones unsqueezed
+    """
+    if target == LABEL_HEAD:
+        return parallel_prefix_unsqueeze(h, ndim=ndim), r, t
+    if target == LABEL_RELATION:
+        return h, parallel_prefix_unsqueeze(r, ndim=ndim), t
+    if target == LABEL_TAIL:
+        return h, r, parallel_prefix_unsqueeze(t, ndim=ndim)
+    raise ValueError(f"Unknown target={target}")
 
 
 def iter_slices(
@@ -533,14 +573,15 @@ class ERModel(
         :return: shape: (*batch_shape,) or (*batch_shape, num)
             the scores
         """
-        if batch.target is None:
+        target = batch.target
+        if target is None:
             if slice_size:
                 raise ValueError("Slicing requires a target; there is nothing to slice along.")
             h, r, t = self._get_representations(*batch.lookup_indices, mode=mode)
             return self.interaction(h=h, r=r, t=t)
 
         # the target's representations, and the total number of candidates
-        if batch.target == LABEL_RELATION:
+        if target == LABEL_RELATION:
             target_representations = self.relation_representations
             total = self.num_relations
         else:
@@ -564,13 +605,10 @@ class ERModel(
                 dim=-1,
             )
 
-        representations: list[Any] = list(self._get_representations(*batch.lookup_indices, mode=mode))
+        h, r, t = self._get_representations(*batch.lookup_indices, mode=mode)
         # the same candidates are scored for each batch element -> prepend the batch dimensions
         if batch.shared_target:
-            representations[batch.target_index] = parallel_prefix_unsqueeze(
-                representations[batch.target_index], ndim=batch.batch_ndim
-            )
-        h, r, t = representations
+            h, r, t = _prefix_unsqueeze_target(target, batch.batch_ndim, h, r, t)
         ids = batch.target_ids
         return _repeat_when_missing_representations(
             scores=self.interaction(h=h, r=r, t=t),

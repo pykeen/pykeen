@@ -7,7 +7,7 @@ import logging
 import os
 import pickle
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from typing import Any, ClassVar, Literal, NamedTuple
 
 import torch
@@ -567,7 +567,7 @@ class Model(nn.Module, ABC):
             raise ValueError(f"Unknown target={target}") from None
         if full_batch:
             batch = batch[:, dispatch.keys]
-        method = getattr(self, dispatch.predict if kind == "predict" else dispatch.score)
+        method: Callable[..., FloatTensor] = getattr(self, dispatch.predict if kind == "predict" else dispatch.score)
         return method(batch, **kwargs, **{dispatch.ids: ids})
 
     """Inverse scoring"""

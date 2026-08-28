@@ -14,20 +14,19 @@ slicing, and repetition logic.
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Iterable, Mapping
-from typing import cast
+from collections.abc import Iterable
 
 import torch
 
-from ..constants import COLUMN_LABELS
-from ..typing import LongTensor, Target
+from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
+from ..typing import LongTensor, Target, TargetColumn
 
 __all__ = [
     "ScoringBatch",
 ]
 
 
-def broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...]:
+def _broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...]:
     """Determine the common shape of the given index shapes.
 
     :param shapes:
@@ -39,11 +38,11 @@ def broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...]
     :return:
         the broadcasted shape
     """
-    shapes = list(shapes)
+    materialized = list(shapes)
     try:
-        return tuple(torch.broadcast_shapes(*shapes))
+        return tuple(torch.broadcast_shapes(*materialized))
     except RuntimeError as error:
-        raise ValueError(f"Cannot broadcast index shapes {shapes}") from error
+        raise ValueError(f"Cannot broadcast index shapes {materialized}") from error
 
 
 def _pad_trailing_dims(x: LongTensor, ndim: int) -> LongTensor:
@@ -118,14 +117,16 @@ class ScoringBatch:
         missing = sorted(label for label, index in raw.items() if index is None)
         if missing:
             raise ValueError(f"Missing index tensors for {missing}; only the target may be None")
-        keys = cast(Mapping[Target, LongTensor], raw)
+        # the comprehension narrows the value type to LongTensor, given the check above
+        keys = {label: index for label, index in raw.items() if index is not None}
 
         # index tensors are left-aligned; pad them so that torch's right-aligned broadcasting agrees
         self.batch_ndim = max(index.ndim for index in keys.values())
         padded = {label: _pad_trailing_dims(index, ndim=self.batch_ndim) for label, index in keys.items()}
-        for label, index in padded.items():
-            setattr(self, label, index)
-        self.batch_shape = broadcast_index_shapes(index.shape for index in padded.values())
+        self.head, self.relation, self.tail = (
+            padded.get(label, index) for label, index in zip(COLUMN_LABELS, self.indices, strict=True)
+        )
+        self.batch_shape = _broadcast_index_shapes(index.shape for index in padded.values())
 
         ids = self.target_ids
         if ids is not None and ids.ndim not in (1, self.batch_ndim + 1):
@@ -140,7 +141,7 @@ class ScoringBatch:
         return self.head, self.relation, self.tail
 
     @property
-    def target_index(self) -> int:
+    def target_index(self) -> TargetColumn:
         """Return the column index of the target.
 
         :raises ValueError:
@@ -151,7 +152,7 @@ class ScoringBatch:
         """
         if self.target is None:
             raise ValueError("There is no target.")
-        return COLUMN_LABELS.index(self.target)
+        return TARGET_TO_INDEX[self.target]
 
     @property
     def target_ids(self) -> LongTensor | None:
@@ -183,14 +184,12 @@ class ScoringBatch:
         """
         if self.target is None:
             return self.indices
-        # only the target may be None, cf. __post_init__
-        return cast(
-            tuple[LongTensor | None, LongTensor | None, LongTensor | None],
-            tuple(
-                index if label == self.target else cast(LongTensor, index).unsqueeze(dim=self.batch_ndim)
-                for label, index in zip(COLUMN_LABELS, self.indices, strict=True)
-            ),
+        # the `index is None` check is redundant - only the target may be None, cf. __post_init__ - but narrows
+        head, relation, tail = (
+            index if label == self.target or index is None else index.unsqueeze(dim=self.batch_ndim)
+            for label, index in zip(COLUMN_LABELS, self.indices, strict=True)
         )
+        return head, relation, tail
 
     def with_target_ids(self, ids: LongTensor) -> ScoringBatch:
         """Return a copy of this batch with the target's index tensor replaced.
