@@ -326,7 +326,7 @@ ignore = [
 "tests/**/*.py" = [
     "INP001", # tests are not a package
     "PIE790", # allow pass in test stubs/abstract methods
-    "D102",   # tests were never covered by docstr-coverage's src/pykeen-only scan
+    "D102",   # test methods document intent via their name, not a docstring
 ]
 
 [tool.ruff.lint.pydocstyle]
