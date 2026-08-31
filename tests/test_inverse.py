@@ -20,7 +20,7 @@ def model() -> Model:
     return TransE(triples_factory=Nations(create_inverse_triples=True).training, embedding_dim=2, random_seed=0)
 
 
-@pytest.mark.parametrize("method_name", ["invert", "map"])
+@pytest.mark.parametrize("method_name", ["invert_internal_batch", "to_internal_batch"])
 def test_batch_methods_do_not_modify_input(relation_inverter: RelationInverter, method_name: str):
     """Test that the batch-level methods leave their input alone."""
     batch = torch.as_tensor([[0, 1, 2], [3, 4, 5]])
@@ -45,11 +45,11 @@ def test_default_inverter_ids():
     """Test the ID scheme of the default relation inverter."""
     inverter = DefaultRelationInverter()
     batch = torch.as_tensor([[0, 3, 1]])
-    mapped = inverter.map(batch=batch)
+    mapped = inverter.to_internal_batch(batch=batch)
     assert mapped[0, 1].item() == 6
     assert inverter.get_inverse_id(relation_id=mapped[0, 1]).item() == 7
     assert not inverter.is_inverse(mapped[:, 1]).any()
-    assert inverter.is_inverse(inverter.map(batch=batch, invert=True)[:, 1]).all()
+    assert inverter.is_inverse(inverter.to_internal_batch(batch=batch, invert=True)[:, 1]).all()
 
 
 @pytest.mark.parametrize(

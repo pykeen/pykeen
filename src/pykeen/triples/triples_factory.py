@@ -625,8 +625,8 @@ class CoreTriplesFactory(KGInfo):
         logger.info("Creating inverse triples.")
         return torch.cat(
             [
-                self.relation_inverter.map(batch=mapped_triples),
-                self.relation_inverter.map(batch=mapped_triples, invert=True).flip(1),
+                self.relation_inverter.to_internal_batch(batch=mapped_triples),
+                self.relation_inverter.to_internal_batch(batch=mapped_triples, invert=True).flip(1),
             ]
         )
 

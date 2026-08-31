@@ -49,14 +49,14 @@ class RelationInverter(ABC):
     def is_inverse(self, ids: LongTensor) -> BoolTensor:
         """Return a mask whether the relation IDs correspond to inverse relations."""
 
-    def invert(self, batch: LongTensor, index: int = 1) -> LongTensor:
-        """Invert the (internal) relations in a batch, leaving the input batch unmodified."""
+    def invert_internal_batch(self, batch: LongTensor, index: int = 1) -> LongTensor:
+        """Invert the internal relation IDs in a batch, leaving the input batch unmodified."""
         batch = batch.clone()
         batch[:, index] = self.get_inverse_id(batch[:, index])
         return batch
 
-    def map(self, batch: LongTensor, index: int = 1, invert: bool = False) -> LongTensor:
-        """Map relations in a batch from real to internal IDs, optionally also inverting them.
+    def to_internal_batch(self, batch: LongTensor, index: int = 1, invert: bool = False) -> LongTensor:
+        """Convert the real relation IDs in a batch to internal ones, optionally also inverting them.
 
         The input batch is left unmodified.
         """

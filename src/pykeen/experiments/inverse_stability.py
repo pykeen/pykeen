@@ -91,7 +91,7 @@ def run_inverse_stability_workflow(
     # triples factory when training with inverse relations
     batch = test_tf.mapped_triples
     if model_inst.use_inverse_triples:
-        batch = model_inst.relation_inverter.map(batch=batch)
+        batch = model_inst.relation_inverter.to_internal_batch(batch=batch)
 
     # Score with original triples
     scores_forward = model_inst.score_hrt(batch, mode=mode)
