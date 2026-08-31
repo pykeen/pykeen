@@ -255,7 +255,7 @@ class SparseBFSSearcher(AnchorSearcher):
     def create_adjacency(
         edge_index: numpy.ndarray,
         num_entities: int | None = None,
-    ) -> torch.tensor:
+    ) -> torch.Tensor:
         """Create a sparse adjacency matrix (in the form of the edge list) from a given edge index.
 
         :param edge_index: shape: (2, m) the edge index
@@ -274,11 +274,11 @@ class SparseBFSSearcher(AnchorSearcher):
     @staticmethod
     def bfs(
         anchors: numpy.ndarray,
-        edge_list: torch.tensor,
+        edge_list: torch.Tensor,
         max_iter: int,
         k: int,
         device: torch.device,
-    ) -> numpy.ndarray:
+    ) -> torch.Tensor:
         """Determine the candidate pool using breadth-first search.
 
         :param anchors: shape: (a,) the anchor node IDs
@@ -357,7 +357,7 @@ class SparseBFSSearcher(AnchorSearcher):
 
     @staticmethod
     def select(
-        pool: torch.tensor,
+        pool: torch.Tensor,
         k: int,
     ) -> numpy.ndarray:
         """Select $k$ anchors from the given pools.
