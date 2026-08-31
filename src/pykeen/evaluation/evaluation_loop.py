@@ -394,16 +394,19 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
             # {(h, r, t1), (h, r, t1), ..., (h, r, tk)}
             # predict scores for all candidates
             scores = self.model.predict(hrt_batch=hrt_batch, target=target, mode=self.mode)
-            true_scores = dense_positive_mask = None
+            dense_positive_mask = None
+
+            # the true score is required for ranking, independent of whether the filtered protocol is used;
+            # filtering only decides whether the *other* positives are masked out beforehand.
+            batch_ids = torch.arange(scores.shape[0], device=scores.device)
+            target_ids = hrt_batch[:, TARGET_TO_INDEX[target]]
+            # shape: (batch_size, 1)
+            true_scores = scores[batch_ids, target_ids, None]
 
             # filter scores
             if self.evaluator.filtered:
                 if filter_batch is None:
                     raise AssertionError("Filter indices are required to filter scores.")
-                # extract true scores
-                batch_ids = torch.arange(scores.shape[0], device=scores.device)
-                target_ids = hrt_batch[:, TARGET_TO_INDEX[target]]
-                true_scores = scores[batch_ids, target_ids, None]
                 # replace by nan
                 scores = filter_scores_(scores=scores, filter_batch=filter_batch)
                 # rewrite true scores

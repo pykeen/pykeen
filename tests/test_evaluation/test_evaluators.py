@@ -494,6 +494,21 @@ class TestEvaluationFiltering(unittest.TestCase):
         )
         assert eval_results.get_metric(name="mr") == 1, "The rank should equal 1"
 
+    def test_evaluation_unfiltered(self):
+        """Test that the raw (unfiltered) ranking protocol is supported.
+
+        Filtering only decides whether the *other* positives are masked out; the true score - and thus a rank - is
+        available either way.
+        """
+        eval_results = RankBasedEvaluator(filtered=False).evaluate(
+            model=self.model,
+            mapped_triples=self.test_triples,
+            batch_size=1,
+            use_tqdm=False,
+        )
+        # the true entity receives the third-highest score on both sides, and nothing is filtered out
+        assert eval_results.get_metric(name="mr") == 3, "The raw mean rank should equal 3"
+
 
 @pytest.mark.parametrize(
     ("string", "expected"),
