@@ -334,6 +334,7 @@ nitpick_ignore = [
     ("py:class", "pykeen.datasets.ea.combination.FactoryType"),
     ("py:class", "pykeen.evaluation.evaluation_loop.BatchType"),
     ("py:class", "pykeen.evaluation.evaluator.MetricKeyType"),
+    ("py:class", "pykeen.inverse.RelationID"),
     ("py:class", "pykeen.utils.K"),
     ("py:class", "pykeen.utils.V"),
     ("py:class", "pykeen.utils.X"),

@@ -45,6 +45,25 @@ class Model(nn.Module, ABC):
     relations' representations, how they want to be looked up, and how they should
     be scored. The :class:`~pykeen.models.ERModel` provides a commonly used interface for models storing entity
     and relation representations in the form of :class:`~pykeen.nn.representation.Embedding`.
+
+    .. note::
+
+        There are two families of scoring methods, and they use *different* relation ID spaces.
+
+        The ``score_*`` methods, e.g., :meth:`Model.score_hrt`, are the low-level interface implemented
+        by subclasses. They expect the model's *internal* relation IDs, which comprise a forward
+        and an inverse ID for each relation when the model is trained with inverse relations,
+        cf. :class:`~pykeen.inverse.RelationInverter`. They also expect the batch to already be
+        on the model's device.
+
+        The ``predict_*`` methods, e.g., :meth:`Model.predict_hrt`, are the user-facing interface. They
+        expect the *real* relation IDs, i.e., the ones stored in the triples factory's
+        :attr:`~pykeen.triples.TriplesFactory.relation_to_id` and ``mapped_triples``, accept
+        batches on any device, and additionally take care of setting the evaluation mode and of
+        optionally applying a sigmoid. Internally, they delegate to the ``score_*`` methods after
+        converting the batch via ``_prepare_batch``.
+
+        Unless the model uses inverse relations, the two ID spaces coincide.
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
@@ -315,6 +334,22 @@ class Model(nn.Module, ABC):
     """Prediction methods"""
 
     def _prepare_batch(self, batch: LongTensor, index_relation: int) -> LongTensor:
+        """Prepare a batch of "real" IDs for the scoring methods.
+
+        The prediction methods, e.g., :meth:`Model.predict_hrt`, take the relation IDs stored
+        inside the triples factory, while the scoring methods, e.g., :meth:`Model.score_hrt`,
+        operate on the model's internal ones, cf. :class:`~pykeen.inverse.RelationInverter`.
+        This method translates between the two, and moves the batch onto the model's device.
+
+        :param batch: shape: (batch_size, num_columns), dtype: long
+            The batch of IDs, with relations given as the "real" IDs used by the triples factory.
+        :param index_relation:
+            The column containing the relation IDs.
+
+        :return: shape: (batch_size, num_columns), dtype: long
+            The batch on the model's device, with relations given as internal IDs. Unless the
+            model uses inverse relations, the two ID spaces coincide and the IDs are unchanged.
+        """
         # send to device
         batch = batch.to(self.device)
 
