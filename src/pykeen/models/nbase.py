@@ -15,7 +15,7 @@ from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs, n
 from torch import nn
 
 from .base import Model
-from .scoring import ScoringBatch
+from .scoring import ScoringBatch, TargetScoringBatch, TripleScoringBatch
 from ..nn import representation_resolver
 from ..nn.modules import Interaction, interaction_resolver, parallel_prefix_unsqueeze
 from ..nn.representation import Representation
@@ -568,20 +568,42 @@ class ERModel(
             "testing" in the inductive setting
 
         :raises ValueError:
-            if slicing is requested for a batch without a target
+            if slicing is requested for a batch without a scoring target
 
         :return: shape: (*batch_shape,) or (*batch_shape, num)
             the scores
         """
-        target = batch.target
-        if target is None:
-            if slice_size:
-                raise ValueError("Slicing requires a target; there is nothing to slice along.")
-            h, r, t = self._get_representations(*batch.lookup_indices, mode=mode)
-            return self.interaction(h=h, r=r, t=t)
+        match batch:
+            case TripleScoringBatch():
+                if slice_size:
+                    raise ValueError("Slicing requires a target; there is nothing to slice along.")
+                h, r, t = self._get_representations(*batch.lookup_indices, mode=mode)
+                return self.interaction(h=h, r=r, t=t)
+            case TargetScoringBatch():
+                return self._score_target(batch, slice_size=slice_size, mode=mode)
 
+    def _score_target(
+        self,
+        batch: TargetScoringBatch,
+        *,
+        slice_size: int | None = None,
+        mode: InductiveMode | None = None,
+    ) -> FloatTensor:
+        """Score a single position against many candidates.
+
+        :param batch:
+            the scoring request
+        :param slice_size: >0
+            the maximum number of candidates to score at once
+        :param mode:
+            the pass mode, which is None in the transductive setting and one of "training", "validation", or
+            "testing" in the inductive setting
+
+        :return: shape: (*batch_shape, num)
+            the scores
+        """
         # the target's representations, and the total number of candidates
-        if target == LABEL_RELATION:
+        if batch.target == LABEL_RELATION:
             target_representations = self.relation_representations
             total = self.num_relations
         else:
@@ -597,7 +619,7 @@ class ERModel(
         if slice_size:
             return torch.cat(
                 [
-                    self._score(batch.with_target_ids(partial_ids), slice_size=None, mode=mode)
+                    self._score_target(batch.with_target_ids(partial_ids), slice_size=None, mode=mode)
                     for partial_ids in iter_slices(
                         ids=batch.target_ids, slice_size=slice_size, total=total, device=batch.device
                     )
@@ -608,12 +630,11 @@ class ERModel(
         h, r, t = self._get_representations(*batch.lookup_indices, mode=mode)
         # the same candidates are scored for each batch element -> prepend the batch dimensions
         if batch.shared_target:
-            h, r, t = _prefix_unsqueeze_target(target, batch.batch_ndim, h, r, t)
-        ids = batch.target_ids
+            h, r, t = _prefix_unsqueeze_target(batch.target, batch.batch_ndim, h, r, t)
         return _repeat_when_missing_representations(
             scores=self.interaction(h=h, r=r, t=t),
             representations=target_representations,
-            num=total if ids is None else ids.shape[-1],
+            num=total if batch.target_ids is None else batch.target_ids.shape[-1],
         )
 
     # docstr-coverage: inherited
@@ -626,7 +647,7 @@ class ERModel(
         tails: LongTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         return self._score(
-            ScoringBatch(head=hr_batch[..., 0], relation=hr_batch[..., 1], tail=tails, target=LABEL_TAIL),
+            TargetScoringBatch(head=hr_batch[..., 0], relation=hr_batch[..., 1], tail=tails, target=LABEL_TAIL),
             slice_size=slice_size,
             mode=mode,
         )
@@ -641,7 +662,7 @@ class ERModel(
         heads: LongTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         return self._score(
-            ScoringBatch(head=heads, relation=rt_batch[..., 0], tail=rt_batch[..., 1], target=LABEL_HEAD),
+            TargetScoringBatch(head=heads, relation=rt_batch[..., 0], tail=rt_batch[..., 1], target=LABEL_HEAD),
             slice_size=slice_size,
             mode=mode,
         )
@@ -656,7 +677,7 @@ class ERModel(
         relations: LongTensor | None = None,
     ) -> FloatTensor:  # noqa: D102
         return self._score(
-            ScoringBatch(head=ht_batch[..., 0], relation=relations, tail=ht_batch[..., 1], target=LABEL_RELATION),
+            TargetScoringBatch(head=ht_batch[..., 0], relation=relations, tail=ht_batch[..., 1], target=LABEL_RELATION),
             slice_size=slice_size,
             mode=mode,
         )

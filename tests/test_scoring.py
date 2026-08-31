@@ -14,7 +14,7 @@ import pytest
 import torch
 
 from pykeen.constants import TARGET_TO_KEYS
-from pykeen.models import UM, DistMult, ERModel, ScoringBatch
+from pykeen.models import UM, DistMult, ERModel, TargetScoringBatch, TripleScoringBatch
 from pykeen.triples import KGInfo
 from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, LongTensor, Target
 
@@ -157,7 +157,7 @@ class TestScoringBatch:
     def test_batch_shape(self, target: Target) -> None:
         """Test that the batch shape is inferred from the non-target index tensors."""
         indices = {label: self._index(BATCH_SIZE) for label in TARGETS if label != target}
-        batch = ScoringBatch(**indices, **{target: None}, target=target)
+        batch = TargetScoringBatch(**indices, **{target: None}, target=target)
         assert batch.batch_ndim == 1
         assert batch.batch_shape == (BATCH_SIZE,)
         assert batch.shared_target
@@ -169,12 +169,12 @@ class TestScoringBatch:
         """Test that shared and per-batch candidates are distinguished."""
         indices = {label: self._index(BATCH_SIZE) for label in TARGETS if label != target}
         ids = self._index(BATCH_SIZE, NUM_IDS) if per_batch else self._index(NUM_IDS)
-        batch = ScoringBatch(**indices, **{target: ids}, target=target)
+        batch = TargetScoringBatch(**indices, **{target: ids}, target=target)
         assert batch.shared_target is not per_batch
 
     def test_no_target(self) -> None:
         """Test that the index tensors are left-aligned when there is no target."""
-        batch = ScoringBatch(
+        batch = TripleScoringBatch(
             head=self._index(BATCH_SIZE), relation=self._index(BATCH_SIZE), tail=self._index(BATCH_SIZE, NUM_IDS)
         )
         assert batch.batch_ndim == 2
@@ -188,13 +188,13 @@ class TestScoringBatch:
     def test_lookup_indices(self, target: Target) -> None:
         """Test that the non-target index tensors gain the target axis."""
         indices = {label: self._index(BATCH_SIZE) for label in TARGETS if label != target}
-        batch = ScoringBatch(**indices, **{target: None}, target=target)
+        batch = TargetScoringBatch(**indices, **{target: None}, target=target)
         for label, index in zip(TARGETS, batch.lookup_indices, strict=True):
             assert index is None if label == target else index.shape == (BATCH_SIZE, 1)
 
     def test_with_target_ids(self) -> None:
         """Test replacing the target's index tensor."""
-        batch = ScoringBatch(
+        batch = TargetScoringBatch(
             head=self._index(BATCH_SIZE), relation=self._index(BATCH_SIZE), tail=None, target=LABEL_TAIL
         )
         sliced = batch.with_target_ids(self._index(NUM_IDS))
@@ -207,12 +207,17 @@ class TestScoringBatch:
     def test_missing_index(self) -> None:
         """Test that only the target may be None."""
         with pytest.raises(ValueError, match="Missing index tensors"):
-            ScoringBatch(head=self._index(BATCH_SIZE), relation=None, tail=None, target=LABEL_TAIL)
+            TargetScoringBatch(head=self._index(BATCH_SIZE), relation=None, tail=None, target=LABEL_TAIL)
+
+    def test_missing_index_without_target(self) -> None:
+        """Test that all index tensors are required when there is no target."""
+        with pytest.raises(ValueError, match="Missing index tensors"):
+            TripleScoringBatch(head=self._index(BATCH_SIZE), relation=self._index(BATCH_SIZE), tail=None)
 
     def test_unknown_target(self) -> None:
         """Test that an invalid target is rejected."""
         with pytest.raises(ValueError, match="nope"):
-            ScoringBatch(
+            TargetScoringBatch(
                 head=self._index(BATCH_SIZE),
                 relation=self._index(BATCH_SIZE),
                 tail=self._index(BATCH_SIZE),
@@ -222,12 +227,12 @@ class TestScoringBatch:
     def test_non_broadcastable(self) -> None:
         """Test that non-broadcastable index shapes are rejected."""
         with pytest.raises(ValueError, match="Cannot broadcast"):
-            ScoringBatch(head=self._index(2), relation=self._index(3), tail=None, target=LABEL_TAIL)
+            TargetScoringBatch(head=self._index(2), relation=self._index(3), tail=None, target=LABEL_TAIL)
 
     def test_invalid_target_shape(self) -> None:
         """Test that target IDs with an unusable number of dimensions are rejected."""
         with pytest.raises(ValueError, match="must have shape"):
-            ScoringBatch(
+            TargetScoringBatch(
                 head=self._index(BATCH_SIZE),
                 relation=self._index(BATCH_SIZE),
                 tail=self._index(1, BATCH_SIZE, NUM_IDS),
@@ -236,19 +241,19 @@ class TestScoringBatch:
 
     def test_no_target_slicing(self, model: ERModel, hrt_batch: LongTensor) -> None:
         """Test that slicing a batch without a target is rejected."""
-        batch = ScoringBatch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=hrt_batch[:, 2])
+        batch = TripleScoringBatch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=hrt_batch[:, 2])
         with pytest.raises(ValueError, match="requires a target"):
             model._score(batch, slice_size=2)
 
     def test_no_target_scoring(self, model: ERModel, hrt_batch: LongTensor) -> None:
         """Test that scoring without a target agrees with ``score_hrt``."""
-        batch = ScoringBatch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=hrt_batch[:, 2])
+        batch = TripleScoringBatch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=hrt_batch[:, 2])
         torch.testing.assert_close(model._score(batch), model.score_hrt(hrt_batch).squeeze(dim=-1))
 
     def test_no_target_broadcasting(self, model: ERModel, hrt_batch: LongTensor) -> None:
         """Test that scoring without a target broadcasts a block of triples."""
         tails = _ids(target=LABEL_TAIL, per_batch=True)
-        batch = ScoringBatch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=tails)
+        batch = TripleScoringBatch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=tails)
         assert batch.batch_shape == (BATCH_SIZE, NUM_IDS)
         torch.testing.assert_close(
             model._score(batch), model.score_t(hrt_batch[:, TARGET_TO_KEYS[LABEL_TAIL]], tails=tails)

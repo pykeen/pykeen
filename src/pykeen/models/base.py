@@ -8,7 +8,7 @@ import os
 import pickle
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Mapping
-from typing import Any, ClassVar, Literal, NamedTuple
+from typing import Any, ClassVar, Literal
 
 import torch
 from class_resolver import HintOrType
@@ -38,27 +38,11 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class _TargetDispatch(NamedTuple):
-    """The target-specific parts of :meth:`Model.score` and :meth:`Model.predict`."""
-
-    #: the non-target columns of a full ``(batch_size, 3)`` batch
-    keys: slice
-
-    #: the name of the target-specific scoring method
-    score: str
-
-    #: the name of the target-specific prediction method
-    predict: str
-
-    #: the name of the keyword argument restricting the scored IDs
-    ids: str
-
-
-#: the dispatch table shared by :meth:`Model.score` and :meth:`Model.predict`
-_TARGET_DISPATCH: Mapping[Target, _TargetDispatch] = {
-    LABEL_HEAD: _TargetDispatch(TARGET_TO_KEYS[LABEL_HEAD], "score_h", "predict_h", "heads"),
-    LABEL_RELATION: _TargetDispatch(TARGET_TO_KEYS[LABEL_RELATION], "score_r", "predict_r", "relations"),
-    LABEL_TAIL: _TargetDispatch(TARGET_TO_KEYS[LABEL_TAIL], "score_t", "predict_t", "tails"),
+#: the name of the keyword argument restricting the scored IDs, per target
+_TARGET_TO_IDS_KEY: Mapping[Target, str] = {
+    LABEL_HEAD: "heads",
+    LABEL_RELATION: "relations",
+    LABEL_TAIL: "tails",
 }
 
 
@@ -561,14 +545,18 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, num)
             the scores
         """
-        try:
-            dispatch = _TARGET_DISPATCH[target]
-        except KeyError:
-            raise ValueError(f"Unknown target={target}") from None
+        method: Callable[..., FloatTensor]
+        if target == LABEL_HEAD:
+            method = self.predict_h if kind == "predict" else self.score_h
+        elif target == LABEL_RELATION:
+            method = self.predict_r if kind == "predict" else self.score_r
+        elif target == LABEL_TAIL:
+            method = self.predict_t if kind == "predict" else self.score_t
+        else:
+            raise ValueError(f"Unknown target={target}")
         if full_batch:
-            batch = batch[:, dispatch.keys]
-        method: Callable[..., FloatTensor] = getattr(self, dispatch.predict if kind == "predict" else dispatch.score)
-        return method(batch, **kwargs, **{dispatch.ids: ids})
+            batch = batch[:, TARGET_TO_KEYS[target]]
+        return method(batch, **kwargs, **{_TARGET_TO_IDS_KEY[target]: ids})
 
     """Inverse scoring"""
 
