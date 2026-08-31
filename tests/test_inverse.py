@@ -41,6 +41,15 @@ def test_get_inverse_id_is_involution(relation_inverter: RelationInverter):
     assert relation_inverter.is_inverse(inverse_id).sum() == relation_id.numel() // 2
 
 
+def test_is_inverse_accepts_plain_ints(relation_inverter: RelationInverter):
+    """Test that the ID-level methods work on plain integers, too."""
+    for relation in range(5):
+        internal = relation_inverter.to_internal(relation_id=relation)
+        assert not relation_inverter.is_inverse(relation_id=internal)
+        assert relation_inverter.is_inverse(relation_id=relation_inverter.get_inverse_id(relation_id=internal))
+        assert relation_inverter.to_real(relation_id=internal) == relation
+
+
 def test_default_inverter_ids():
     """Test the ID scheme of the default relation inverter."""
     inverter = DefaultRelationInverter()

@@ -8,11 +8,13 @@ from class_resolver import Resolver
 from .typing import BoolTensor, LongTensor
 
 __all__ = [
+    "RelationID",
     "RelationInverter",
     "DefaultRelationInverter",
     "relation_inverter_resolver",
 ]
 
+#: A relation ID, either a single one, or a batch thereof
 RelationID = TypeVar("RelationID", int, LongTensor)
 
 
@@ -46,8 +48,8 @@ class RelationInverter(ABC):
         """
 
     @abstractmethod
-    def is_inverse(self, ids: LongTensor) -> BoolTensor:
-        """Return a mask whether the relation IDs correspond to inverse relations."""
+    def is_inverse(self, relation_id: RelationID) -> bool | BoolTensor:
+        """Return whether the internal relation IDs correspond to inverse relations."""
 
     def invert_internal_batch(self, batch: LongTensor, index: int = 1) -> LongTensor:
         """Invert the internal relation IDs in a batch, leaving the input batch unmodified."""
@@ -92,8 +94,8 @@ class DefaultRelationInverter(RelationInverter):
         return relation_id ^ 1
 
     # docstr-coverage: inherited
-    def is_inverse(self, ids: LongTensor) -> BoolTensor:  # noqa: D102
-        return (ids & 1) == 1
+    def is_inverse(self, relation_id: RelationID) -> bool | BoolTensor:  # noqa: D102
+        return (relation_id & 1) == 1
 
 
 #: A resolver for relation inverter protocols
