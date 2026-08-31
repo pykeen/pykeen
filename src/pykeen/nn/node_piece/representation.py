@@ -3,7 +3,7 @@
 import logging
 import pathlib
 from collections.abc import Callable, Iterable
-from typing import NamedTuple
+from typing import NamedTuple, Self
 
 import torch
 from class_resolver import (
@@ -15,7 +15,6 @@ from class_resolver import (
     update_docstring_with_resolver_keys,
 )
 from docdata import parse_docdata
-from typing_extensions import Self
 
 from .tokenization import Tokenizer, tokenizer_resolver
 from ..combination import ConcatAggregationCombination

@@ -27,10 +27,10 @@ Below is a minimal example of how to use it via the high-level :func:`~pykeen.pi
 """
 
 from abc import ABC, abstractmethod
+from typing import Self
 
 import torch
 from class_resolver import ClassResolver
-from typing_extensions import Self
 
 from ..typing import COLUMN_RELATION, FloatTensor, LongTensor, MappedTriples
 
