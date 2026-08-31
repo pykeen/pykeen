@@ -39,8 +39,11 @@ class RelationInverter(ABC):
 
     @abstractmethod
     def get_inverse_id(self, relation_id: RelationID) -> RelationID:
-        """Get the internal inverse ID for a given internal (forward) relation ID."""
-        # TODO: inverse of inverse?
+        """Get the internal ID of the inverse of an internal relation ID.
+
+        Implementations have to be involutions, i.e., applying this method twice has to yield the
+        input ID again. In particular, it maps the ID of an inverse relation back to its forward one.
+        """
 
     @abstractmethod
     def is_inverse(self, ids: LongTensor) -> BoolTensor:
@@ -66,23 +69,31 @@ class RelationInverter(ABC):
 
 
 class DefaultRelationInverter(RelationInverter):
-    """Maps normal relations to even IDs, and the corresponding inverse to the next odd ID."""
+    """Uses the lowest bit of the internal relation ID as the "is inverse" flag.
+
+    The internal ID is the real relation ID shifted up by one bit, with the lowest bit set for
+    inverse relations, i.e., ``internal_id = (real_id << 1) | is_inverse``. Equivalently, forward
+    relations get even IDs, and the corresponding inverse the next odd one.
+    """
 
     # docstr-coverage: inherited
     def to_internal(self, relation_id: RelationID) -> RelationID:  # noqa: D102
-        return 2 * relation_id
+        # shift up to make room for the flag, which is unset for forward relations
+        return relation_id << 1
 
     # docstr-coverage: inherited
     def to_real(self, relation_id: RelationID) -> RelationID:  # noqa: D102
-        return relation_id // 2
+        # shift the flag out again
+        return relation_id >> 1
 
     # docstr-coverage: inherited
     def get_inverse_id(self, relation_id: RelationID) -> RelationID:  # noqa: D102
-        return relation_id + 1
+        # toggling the flag switches between a relation and its inverse in either direction
+        return relation_id ^ 1
 
     # docstr-coverage: inherited
     def is_inverse(self, ids: LongTensor) -> BoolTensor:  # noqa: D102
-        return ids % 2 == 1
+        return (ids & 1) == 1
 
 
 #: A resolver for relation inverter protocols

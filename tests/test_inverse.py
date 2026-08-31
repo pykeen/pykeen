@@ -30,6 +30,17 @@ def test_batch_methods_do_not_modify_input(relation_inverter: RelationInverter, 
     assert not torch.equal(result, copy)
 
 
+def test_get_inverse_id_is_involution(relation_inverter: RelationInverter):
+    """Test that applying the inverse-ID mapping twice is the identity."""
+    relation_id = torch.arange(10)
+    inverse_id = relation_inverter.get_inverse_id(relation_id=relation_id)
+    # an inverse relation's inverse is the forward relation again
+    assert torch.equal(relation_inverter.get_inverse_id(relation_id=inverse_id), relation_id)
+    # ... and forward and inverse IDs are never the same
+    assert not torch.equal(inverse_id, relation_id)
+    assert relation_inverter.is_inverse(inverse_id).sum() == relation_id.numel() // 2
+
+
 def test_default_inverter_ids():
     """Test the ID scheme of the default relation inverter."""
     inverter = DefaultRelationInverter()
