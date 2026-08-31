@@ -481,6 +481,6 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
 
 #: A resolver for NodePiece anchor searchers
 anchor_searcher_resolver: ClassResolver[AnchorSearcher] = ClassResolver.from_subclasses(
-    base=AnchorSearcher,
+    base=AnchorSearcher,  # type: ignore[type-abstract]
     default=CSGraphAnchorSearcher,
 )

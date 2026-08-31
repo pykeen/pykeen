@@ -96,4 +96,4 @@ class RelationLossWeighter(LossWeighter):
 
 
 #: A resolver for loss weighters
-loss_weighter_resolver: ClassResolver[LossWeighter] = ClassResolver.from_subclasses(base=LossWeighter)
+loss_weighter_resolver: ClassResolver[LossWeighter] = ClassResolver.from_subclasses(base=LossWeighter)  # type: ignore[type-abstract]

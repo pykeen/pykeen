@@ -489,6 +489,6 @@ class CollapseGraphPairCombinator(GraphPairCombinator[FactoryType]):
 
 
 graph_combinator_resolver: ClassResolver[GraphPairCombinator] = ClassResolver.from_subclasses(
-    base=GraphPairCombinator,
+    base=GraphPairCombinator,  # type: ignore[type-abstract]
     default=ExtraRelationGraphPairCombinator,
 )

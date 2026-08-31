@@ -364,7 +364,7 @@ class DeterministicCleaner(Cleaner):
 
 
 #: A resolver for triple cleaners
-cleaner_resolver: ClassResolver[Cleaner] = ClassResolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
+cleaner_resolver: ClassResolver[Cleaner] = ClassResolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)  # type: ignore[type-abstract]
 
 
 class Splitter:
@@ -490,7 +490,7 @@ class CoverageSplitter(Splitter):
 
 
 #: A resolver for triple splitters
-splitter_resolver: ClassResolver[Splitter] = ClassResolver.from_subclasses(base=Splitter, default=CoverageSplitter)
+splitter_resolver: ClassResolver[Splitter] = ClassResolver.from_subclasses(base=Splitter, default=CoverageSplitter)  # type: ignore[type-abstract]
 
 
 def split(

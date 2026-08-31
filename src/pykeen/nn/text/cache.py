@@ -313,4 +313,4 @@ class WikidataTextCache(TextCache):
 
 
 #: A resolver for text caches
-text_cache_resolver: ClassResolver[TextCache] = ClassResolver.from_subclasses(base=TextCache)
+text_cache_resolver: ClassResolver[TextCache] = ClassResolver.from_subclasses(base=TextCache)  # type: ignore[type-abstract]

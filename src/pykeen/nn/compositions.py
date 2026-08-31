@@ -79,7 +79,7 @@ class CircularCorrelationCompositionModule(FunctionalCompositionModule):
 
 #: A resolver for compositions
 composition_resolver: ClassResolver[CompositionModule] = ClassResolver.from_subclasses(
-    CompositionModule,
+    CompositionModule,  # type: ignore[type-abstract]
     default=MultiplicationCompositionModule,
     skip={
         FunctionalCompositionModule,

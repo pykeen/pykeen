@@ -1942,9 +1942,9 @@ class AdjustedGeometricMeanRankIndex(ReindexedMetric):
 
 
 rank_based_metric_resolver: ClassResolver[RankBasedMetric] = ClassResolver.from_subclasses(
-    base=RankBasedMetric,
+    base=RankBasedMetric,  # type: ignore[type-abstract]
     default=InverseHarmonicMeanRank,  # mrr
-    skip={ExpectationNormalizedMetric, ReindexedMetric, ZMetric, DerivedRankBasedMetric},
+    skip={ExpectationNormalizedMetric, ReindexedMetric, ZMetric, DerivedRankBasedMetric},  # type: ignore[type-abstract]
 )
 """The rank-based metric resolver allows for the lookup and instantiation of classes
 deriving from :class:`RankBasedMetric` via the :mod:`class_resolver`.

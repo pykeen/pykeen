@@ -722,7 +722,7 @@ class MatthewsCorrelationCoefficient(ConfusionMatrixClassificationMetric):
 
 #: A resolver for classification metrics
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver.from_subclasses(
-    base=ClassificationMetric,
+    base=ClassificationMetric,  # type: ignore[type-abstract]
     default=AveragePrecisionScore,
-    skip={BinarizedClassificationMetric, ConfusionMatrixClassificationMetric},
+    skip={BinarizedClassificationMetric, ConfusionMatrixClassificationMetric},  # type: ignore[type-abstract]
 )

@@ -199,7 +199,7 @@ def _help_representations(tablefmt: str = "github", *, link_fmt: str | None = No
             resolver=representation_resolver,
             link_fmt=link_fmt,
             # cf. https://github.com/python/mypy/issues/5374
-            skip={MessagePassingRepresentation},
+            skip={MessagePassingRepresentation},  # type: ignore[type-abstract]
         )
     ]
     headers = ["Name", "Reference"]
