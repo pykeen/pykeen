@@ -262,6 +262,11 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, torch.T
         if targets is None:
             targets = [LABEL_HEAD, LABEL_TAIL]
         mapped_triples = get_mapped_triples(mapped_triples=mapped_triples, factory=factory)
+        # note: a single tensor or triples factory is a valid hint, and neither has a meaningful truth value;
+        # hence we normalize to a sequence before checking whether anything was passed at all
+        additional_filter_triples = (
+            [] if additional_filter_triples is None else list(upgrade_to_sequence(additional_filter_triples))
+        )
 
         self.mapped_triples = mapped_triples
         self.num_triples = mapped_triples.shape[0]
@@ -272,12 +277,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, torch.T
             if not additional_filter_triples:
                 logger.warning("Enabled filtered evaluation, but not additional filter triples are passed.")
             df = pandas.DataFrame(
-                data=torch.cat(
-                    [
-                        mapped_triples,
-                        *(get_mapped_triples(x) for x in upgrade_to_sequence(additional_filter_triples or [])),
-                    ]
-                ),
+                data=torch.cat([mapped_triples, *(get_mapped_triples(x) for x in additional_filter_triples)]),
                 columns=COLUMN_LABELS,
             )
             self.filter_indices = {target: FilterIndex.from_df(df=df, target=target) for target in targets}

@@ -11,7 +11,7 @@ import pykeen.evaluation.rank_based_evaluator
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, RankBasedEvaluator
 from pykeen.evaluation.classification_evaluator import ClassificationEvaluator
-from pykeen.evaluation.evaluation_loop import LCWAEvaluationLoop
+from pykeen.evaluation.evaluation_loop import LCWAEvaluationDataset, LCWAEvaluationLoop
 from pykeen.models import FixedModel
 from pykeen.typing import LABEL_RELATION
 from tests import cases
@@ -83,3 +83,16 @@ def test_process_batch_filtered_and_masked():
     # note: the classification evaluator raises if the dense positive mask is missing
     loop.process_batch(batch=next(iter(loop.get_loader(batch_size=2))))
     assert evaluator.all_positives
+
+
+@pytest.mark.parametrize("as_sequence", [False, True])
+@pytest.mark.parametrize("filtered", [False, True])
+def test_dataset_additional_filter_triples(filtered: bool, as_sequence: bool):
+    """Test that a single tensor is accepted as additional filter triples."""
+    dataset = Nations()
+    additional_filter_triples = dataset.training.mapped_triples
+    LCWAEvaluationDataset(
+        factory=dataset.testing,
+        filtered=filtered,
+        additional_filter_triples=[additional_filter_triples] if as_sequence else additional_filter_triples,
+    )
