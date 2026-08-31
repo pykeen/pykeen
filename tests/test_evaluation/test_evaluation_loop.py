@@ -4,6 +4,7 @@ from collections.abc import MutableMapping
 from typing import Any
 
 import pytest
+import torch
 
 import pykeen.evaluation.evaluation_loop
 import pykeen.evaluation.rank_based_evaluator
@@ -64,3 +65,21 @@ def test_loop_matches_evaluate(evaluator: Evaluator):
         use_tqdm=False,
     )
     assert loop_result.to_flat_dict() == pytest.approx(result.to_flat_dict())
+
+
+@torch.inference_mode()
+def test_process_batch_filtered_and_masked():
+    """Test that filtering and the dense positive masks are not mutually exclusive."""
+    dataset = Nations()
+    # note: no in-tree evaluator requires both, but the combination is supported by Evaluator.evaluate
+    evaluator = ClassificationEvaluator()
+    evaluator.filtered = True
+    loop = LCWAEvaluationLoop(
+        model=FixedModel(triples_factory=dataset.training),
+        triples_factory=dataset.testing,
+        evaluator=evaluator,
+        additional_filter_triples=[dataset.training.mapped_triples],
+    )
+    # note: the classification evaluator raises if the dense positive mask is missing
+    loop.process_batch(batch=next(iter(loop.get_loader(batch_size=2))))
+    assert evaluator.all_positives

@@ -414,7 +414,8 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
 
             # create dense positive masks
             # TODO: afaik, dense positive masks are not used on GPU -> we do not need to move the masks around
-            elif self.evaluator.requires_positive_mask:
+            # note: an evaluator may require *both* filtering and the dense masks
+            if self.evaluator.requires_positive_mask:
                 if filter_batch is None:
                     raise AssertionError("Filter indices are required to create dense positive masks.")
                 dense_positive_mask = torch.zeros_like(scores, dtype=torch.bool, device=filter_batch.device)
