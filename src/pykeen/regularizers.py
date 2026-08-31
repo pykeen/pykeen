@@ -376,5 +376,7 @@ class CombinedRegularizer(Regularizer):
 
 #: A resolver for regularizers
 regularizer_resolver: ClassResolver[Regularizer] = ClassResolver.from_subclasses(
-    base=Regularizer, default=NoRegularizer, location="pykeen.regularizers.regularizer_resolver"
+    base=Regularizer,  # type: ignore[type-abstract]
+    default=NoRegularizer,
+    location="pykeen.regularizers.regularizer_resolver",
 )
