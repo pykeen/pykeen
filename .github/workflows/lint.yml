@@ -47,9 +47,6 @@ jobs:
 
     - name: Check package metadata with Pyroma
       run: tox -e pyroma
-    
-    - name: Check docstring coverage
-      run: tox -e docstr-coverage
 
     - name: Check manifest
       run: tox -e manifest

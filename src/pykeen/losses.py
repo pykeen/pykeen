@@ -406,8 +406,7 @@ class PointwiseLoss(Loss):
         """
         raise NotImplementedError
 
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
+    def process_slcwa_scores(  # noqa: D102
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
@@ -443,8 +442,7 @@ class PointwiseLoss(Loss):
             weights=weights,
         )
 
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
+    def process_lcwa_scores(  # noqa: D102
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
@@ -556,7 +554,6 @@ class BCEWithLogitsLoss(PointwiseLoss):
         else:
             self.pos_weight = None
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         return functional.binary_cross_entropy_with_logits(
             x, target, reduction=self.reduction, weight=weight, pos_weight=self.pos_weight
@@ -577,7 +574,6 @@ class MSELoss(PointwiseLoss):
 
     synonyms = {"Mean Square Error Loss", "Mean Squared Error Loss"}
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         if weight is None:
             return functional.mse_loss(x, target, reduction=self.reduction)
@@ -627,8 +623,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
+    def process_slcwa_scores(  # noqa: D102
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
@@ -637,7 +632,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         num_entities: int | None = None,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # Sanity check
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
@@ -652,15 +647,14 @@ class MarginPairwiseLoss(PairwiseLoss):
             pos_scores=positive_scores, neg_scores=negative_scores, pos_weights=pos_weights, neg_weights=neg_weights
         )
 
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
+    def process_lcwa_scores(  # noqa: D102
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
         weights: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # Sanity check
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
@@ -685,14 +679,13 @@ class MarginPairwiseLoss(PairwiseLoss):
 
         return self(pos_scores=positive_scores, neg_scores=negative_scores)
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         pos_scores: FloatTensor,
         neg_scores: FloatTensor,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         self._raise_on_weights(pos_weights)
         self._raise_on_weights(neg_weights)
         return self._reduction_method(
@@ -967,8 +960,7 @@ class DoubleMarginLoss(PointwiseLoss):
         self.positive_weight = positive_negative_balance
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
+    def process_slcwa_scores(  # noqa: D102
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
@@ -977,7 +969,7 @@ class DoubleMarginLoss(PointwiseLoss):
         num_entities: int | None = None,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # Sanity check
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
@@ -1006,15 +998,14 @@ class DoubleMarginLoss(PointwiseLoss):
         negative_loss = self._reduction_method(self.margin_activation(self.negative_margin + negative_scores))
         return self.positive_weight * positive_loss + self.negative_weight * negative_loss
 
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
+    def process_lcwa_scores(  # noqa: D102
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
         weights: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # Sanity check
         if label_smoothing:
             labels = apply_label_smoothing(
@@ -1025,7 +1016,6 @@ class DoubleMarginLoss(PointwiseLoss):
 
         return self(x=predictions, target=labels, weight=weights)
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         self._raise_on_weights(weight)
         return self.positive_weight * self._reduction_method(
@@ -1075,8 +1065,7 @@ class DeltaPointwiseLoss(PointwiseLoss):
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
-    # docstr-coverage: inherited
-    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         # scale labels from [0, 1] to [-1, 1]
         target = 2 * target - 1
         loss = self.margin_activation(self.margin - target * x)
@@ -1189,7 +1178,6 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
     name: Binary cross entropy (after sigmoid)
     """
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         return functional.binary_cross_entropy(x.sigmoid(), target, weight=weight, reduction=self.reduction)
 
@@ -1246,8 +1234,7 @@ class CrossEntropyLoss(SetwiseLoss):
     name: Cross entropy
     """
 
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
+    def process_slcwa_scores(  # noqa: D102
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
@@ -1256,7 +1243,7 @@ class CrossEntropyLoss(SetwiseLoss):
         num_entities: int | None = None,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         self._raise_on_weights(pos_weights)
         self._raise_on_weights(neg_weights)
         # we need dense negative scores => unfilter if necessary
@@ -1284,15 +1271,14 @@ class CrossEntropyLoss(SetwiseLoss):
             reduction=self.reduction,
         )
 
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
+    def process_lcwa_scores(  # noqa: D102
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
         weights: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # make sure labels form a proper probability distribution
         labels = functional.normalize(labels, p=1, dim=-1)
         # calculate cross entropy loss
@@ -1371,15 +1357,14 @@ class InfoNCELoss(CrossEntropyLoss):
         self.inverse_softmax_temperature = math.exp(log_adversarial_temperature)
         self.margin = margin
 
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
+    def process_lcwa_scores(  # noqa: D102
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
         weights: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # determine positive; do not check with == since the labels are floats
         pos_mask = labels > 0.5
         # subtract margin from positive scores
@@ -1394,8 +1379,7 @@ class InfoNCELoss(CrossEntropyLoss):
             weights=weights,
         )
 
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
+    def process_slcwa_scores(  # noqa: D102
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
@@ -1404,7 +1388,7 @@ class InfoNCELoss(CrossEntropyLoss):
         num_entities: int | None = None,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # subtract margin from positive scores
         positive_scores = positive_scores - self.margin
         # normalize positive score shape
@@ -1439,15 +1423,14 @@ class AdversarialLoss(SetwiseLoss):
         self.inverse_softmax_temperature = inverse_softmax_temperature
         self.factor = 0.5 if self._reduction_method is torch.mean else 1.0
 
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
+    def process_lcwa_scores(  # noqa: D102
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
         weights: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         self._raise_on_weights(weights)
         # determine positive; do not check with == since the labels are floats
         pos_mask = labels > 0.5
@@ -1475,8 +1458,7 @@ class AdversarialLoss(SetwiseLoss):
 
         return self.factor * (pos_loss + neg_loss)
 
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
+    def process_slcwa_scores(  # noqa: D102
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
@@ -1485,7 +1467,7 @@ class AdversarialLoss(SetwiseLoss):
         num_entities: int | None = None,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # Sanity check
         self._raise_on_weights(pos_weights)
         self._raise_on_weights(neg_weights)
@@ -1603,25 +1585,23 @@ class NSSALoss(AdversarialLoss):
         super().__init__(reduction=reduction, inverse_softmax_temperature=adversarial_temperature)
         self.margin = margin
 
-    # docstr-coverage: inherited
-    def positive_loss_term(
+    def positive_loss_term(  # noqa: D102
         self,
         pos_scores: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # Sanity check
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
         return -self._reduction_method(functional.logsigmoid(self.margin + pos_scores))
 
-    # docstr-coverage: inherited
-    def negative_loss_term_unreduced(
+    def negative_loss_term_unreduced(  # noqa: D102
         self,
         neg_scores: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # Sanity check
         if label_smoothing:
             raise UnsupportedLabelSmoothingError(self)
@@ -1644,13 +1624,12 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
     name: Adversarially weighted binary cross entropy (with logits)
     """
 
-    # docstr-coverage: inherited
-    def positive_loss_term(
+    def positive_loss_term(  # noqa: D102
         self,
         pos_scores: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         return functional.binary_cross_entropy_with_logits(
             pos_scores,
             # TODO: maybe we can make this more efficient?
@@ -1658,13 +1637,12 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
             reduction=self.reduction,
         )
 
-    # docstr-coverage: inherited
-    def negative_loss_term_unreduced(
+    def negative_loss_term_unreduced(  # noqa: D102
         self,
         neg_scores: FloatTensor,
         label_smoothing: float | None = None,
         num_entities: int | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         return functional.binary_cross_entropy_with_logits(
             neg_scores,
             # TODO: maybe we can make this more efficient?
@@ -1730,7 +1708,6 @@ class FocalLoss(PointwiseLoss):
         self.alpha = alpha
         self.gamma = gamma
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         p = x.sigmoid()
         ce_loss = functional.binary_cross_entropy_with_logits(x, target, reduction="none")

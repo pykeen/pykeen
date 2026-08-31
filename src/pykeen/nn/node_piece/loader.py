@@ -42,7 +42,6 @@ class GalkinPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
         https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/ogb/download.sh
     """
 
-    # docstr-coverage: inherited
     def __call__(self, path: pathlib.Path) -> tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
         with path.open(mode="rb") as pickle_file:
             # contains: anchor_ids, entity_ids, mapping {entity_id -> {"ancs": anchors, "dists": distances}}
@@ -80,7 +79,6 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
             path,
         )
 
-    # docstr-coverage: inherited
     def __call__(self, path: pathlib.Path) -> tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
         c = torch.load(path, weights_only=False)
         order = c["order"]

@@ -299,7 +299,6 @@ class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
         ],
     }
 
-    # docstr-coverage: inherited
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs)
         kwargs.pop("max_id")
@@ -336,7 +335,6 @@ class WikidataTextRepresentationTests(cases.RepresentationTestCase):
         "encoder": "character-embedding",
     }
 
-    # docstr-coverage: inherited
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs)
         # the representation module infers the max_id from the provided labels
@@ -361,7 +359,6 @@ class BiomedicalCURIERepresentationTests(cases.RepresentationTestCase):
         "encoder": "character-embedding",
     }
 
-    # docstr-coverage: inherited
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs)
         # the representation module infers the max_id from the provided labels
@@ -510,7 +507,6 @@ class TransformedRepresentationTest(cases.RepresentationTestCase):
         "base_kwargs": {"shape": (5,)},
     }
 
-    # docstr-coverage: inherited
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs)
         kwargs["transformation"] = torch.nn.Linear(5, 7)
@@ -529,7 +525,6 @@ class EmbeddingBagRepresentation(cases.RepresentationTestCase):
     cls = pykeen.nn.representation.EmbeddingBagRepresentation
     kwargs = {"shape": (5,)}
 
-    # docstr-coverage: inherited
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs)
         max_id = kwargs["max_id"]

@@ -318,13 +318,12 @@ class RandomizedCleaner(Cleaner):
     3. Continue until ``move_id_mask`` has no true bits
     """
 
-    # docstr-coverage: inherited
-    def cleanup_pair(
+    def cleanup_pair(  # noqa: D102
         self,
         reference: MappedTriples,
         other: MappedTriples,
         random_state: TorchRandomHint,
-    ) -> tuple[MappedTriples, MappedTriples]:  # noqa: D102
+    ) -> tuple[MappedTriples, MappedTriples]:
         generator = ensure_torch_random_state(random_state)
         move_id_mask = _prepare_cleanup(reference, other)
 
@@ -350,13 +349,12 @@ class RandomizedCleaner(Cleaner):
 class DeterministicCleaner(Cleaner):
     """Cleanup a triples array (testing) with respect to another (training)."""
 
-    # docstr-coverage: inherited
-    def cleanup_pair(
+    def cleanup_pair(  # noqa: D102
         self,
         reference: MappedTriples,
         other: MappedTriples,
         random_state: TorchRandomHint,
-    ) -> tuple[MappedTriples, MappedTriples]:  # noqa: D102
+    ) -> tuple[MappedTriples, MappedTriples]:
         move_id_mask = _prepare_cleanup(reference, other)
         reference = torch.cat([reference, other[move_id_mask]])
         other = other[~move_id_mask]
@@ -454,13 +452,12 @@ class CleanupSplitter(Splitter):
         """
         self.cleaner = cleaner_resolver.make(cleaner)
 
-    # docstr-coverage: inherited
-    def split_absolute_size(
+    def split_absolute_size(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         sizes: Sequence[int],
         generator: torch.Generator,
-    ) -> Sequence[MappedTriples]:  # noqa: D102
+    ) -> Sequence[MappedTriples]:
         triples_groups = _split_triples(mapped_triples, sizes=sizes, generator=generator)
         # Make sure that the first element has all the right stuff in it
         logger.debug("cleaning up groups")
@@ -472,13 +469,12 @@ class CleanupSplitter(Splitter):
 class CoverageSplitter(Splitter):
     """This splitter greedily selects training triples such that each entity is covered and then splits the rest."""
 
-    # docstr-coverage: inherited
-    def split_absolute_size(
+    def split_absolute_size(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         sizes: Sequence[int],
         generator: torch.Generator,
-    ) -> Sequence[MappedTriples]:  # noqa: D102
+    ) -> Sequence[MappedTriples]:
         seed_mask = _get_cover_deterministic(triples=mapped_triples)
         train_seed = mapped_triples[seed_mask]
         remaining_triples = mapped_triples[~seed_mask]

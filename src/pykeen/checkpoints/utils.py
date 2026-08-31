@@ -45,8 +45,7 @@ class ResultListenerAdapter(ResultTracker):
         self.base_log_metrics = self.base.log_metrics
         self.base.log_metrics = self.log_metrics
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
