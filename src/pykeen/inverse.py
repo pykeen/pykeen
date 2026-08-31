@@ -1,7 +1,7 @@
 """Relation inversion logic."""
 
 from abc import ABC, abstractmethod
-from typing import TypeVar
+from typing import TypeVar, overload
 
 from class_resolver import Resolver
 
@@ -46,6 +46,12 @@ class RelationInverter(ABC):
         Implementations have to be involutions, i.e., applying this method twice has to yield the
         input ID again. In particular, it maps the ID of an inverse relation back to its forward one.
         """
+
+    @overload
+    def is_inverse(self, relation_id: int) -> bool: ...
+
+    @overload
+    def is_inverse(self, relation_id: LongTensor) -> BoolTensor: ...
 
     @abstractmethod
     def is_inverse(self, relation_id: RelationID) -> bool | BoolTensor:
