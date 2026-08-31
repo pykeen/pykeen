@@ -91,7 +91,6 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         super().__init__(mapped_triples=mapped_triples, **kwargs)
         self.data, self.offsets = create_index(mapped_triples=mapped_triples, num_relations=self.num_relations)
 
-    # docstr-coverage: inherited
     def corrupt_batch(self, positive_batch: LongTensor):  # noqa: D102
         batch_size = positive_batch.shape[0]
 

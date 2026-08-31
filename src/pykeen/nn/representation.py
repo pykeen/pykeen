@@ -320,7 +320,6 @@ class SubsetRepresentation(Representation):
         super().__init__(max_id=max_id, shape=ShapeError.verify(shape=base.shape, reference=shape), **kwargs)
         self.base = base
 
-    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
@@ -469,14 +468,12 @@ class Embedding(Representation):
         max_id, *shape = tensor.tensor.shape
         return cls(max_id=max_id, shape=shape, initializer=tensor, trainable=trainable, **kwargs)
 
-    # docstr-coverage: inherited
     def reset_parameters(self) -> None:  # noqa: D102
         # initialize weights in-place
         self._embeddings.weight.data = self.initializer(
             self._embeddings.weight.data.view(self.max_id, *self._shape),
         ).view(*self._embeddings.weight.data.shape)
 
-    # docstr-coverage: inherited
     def post_parameter_update(self):  # noqa: D102
         # apply constraints in-place
         if self.constrainer is not None:
@@ -487,7 +484,6 @@ class Embedding(Representation):
                 x = torch.view_as_real(x)
             self._embeddings.weight.data = x.view(*self._embeddings.weight.data.shape)
 
-    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
@@ -641,7 +637,6 @@ class LowRankRepresentation(Representation):
         """Return the number of bases."""
         return self.base.max_id
 
-    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
@@ -1029,12 +1024,10 @@ class CombinedCompGCNRepresentations(nn.Module):
         # initialize buffer of enriched representations
         self.enriched_representations = None
 
-    # docstr-coverage: inherited
     def post_parameter_update(self) -> None:  # noqa: D102
         # invalidate enriched embeddings
         self.enriched_representations = None
 
-    # docstr-coverage: inherited
     def train(self, mode: bool = True):  # noqa: D102
         # when changing from evaluation to training mode, the buffered representations have been computed without
         # gradient tracking. hence, we need to invalidate them.
@@ -1119,7 +1112,6 @@ class SingleCompGCNRepresentation(Representation):
         self.position = position_index
         self.reset_parameters()
 
-    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
@@ -1260,7 +1252,6 @@ class TextRepresentation(Representation):
             raise TypeError(f"{cls.__name__} requires access to labels, but dataset.training does not provide such.")
         return cls.from_triples_factory(triples_factory=dataset.training, **kwargs)
 
-    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
@@ -1391,7 +1382,6 @@ class CombinedRepresentation(Representation):
         """
         return combination([b._plain_forward(indices=indices) for b in base])
 
-    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
@@ -1424,14 +1414,13 @@ class CachedTextRepresentation(TextRepresentation):
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
 
-    # docstr-coverage: inherited
     @classmethod
-    def from_triples_factory(
+    def from_triples_factory(  # noqa: D102
         cls,
         triples_factory: TriplesFactory,
         for_entities: bool = True,
         **kwargs,
-    ) -> TextRepresentation:  # noqa: D102
+    ) -> TextRepresentation:
         labeling: Labeling = triples_factory.entity_labeling if for_entities else triples_factory.relation_labeling
         return cls(identifiers=labeling.all_labels().tolist(), **kwargs)
 
@@ -1573,7 +1562,6 @@ class PartitionRepresentation(Representation):
         self.bases = nn.ModuleList(bases)
         self.register_buffer(name="assignment", tensor=assignment)
 
-    # docstr-coverage: inherited
     def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         assignment = self.assignment
         if indices is not None:
@@ -1870,7 +1858,6 @@ class TransformedRepresentation(Representation):
         """
         return transformation(base(indices=indices))
 
-    # docstr-coverage: inherited
     def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         return self._help_forward(base=self.base, transformation=self.transformation, indices=indices)
 
@@ -2139,13 +2126,11 @@ class TensorTrainRepresentation(Representation):
             )
         )
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"num_cores={len(self.bases)}"
         yield f"eq='{self.eq}'"
 
-    # docstr-coverage: inherited
     def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         assignment = self.assignment
         if indices is not None:
@@ -2236,7 +2221,6 @@ class EmbeddingBagRepresentation(Representation):
         # set-up embedding bag
         self.embedding_bag = nn.EmbeddingBag(num_embeddings=num_components + 1, embedding_dim=embedding_dim, mode=mode)
 
-    # docstr-coverage: inherited
     def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         if indices is None:
             indices = unique_indices = inverse = torch.arange(self.max_id)

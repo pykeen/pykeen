@@ -307,7 +307,6 @@ select = [
 ignore = [
     "D105", # Missing docstring in magic method
     "S101", # Use of assert detected, TODO remove
-    "D102", # Missing docstring in public method, TODO remove
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores
@@ -327,6 +326,7 @@ ignore = [
 "tests/**/*.py" = [
     "INP001", # tests are not a package
     "PIE790", # allow pass in test stubs/abstract methods
+    "D102",   # test methods document intent via their name, not a docstring
 ]
 
 [tool.ruff.lint.pydocstyle]

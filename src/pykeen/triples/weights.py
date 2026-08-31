@@ -80,8 +80,7 @@ class RelationLossWeighter(LossWeighter):
         super().__init__()
         self.weights = weights
 
-    # docstr-coverage: inherited
-    def __call__(self, h: LongTensor | None, r: LongTensor | None, t: LongTensor | None) -> FloatTensor:
+    def __call__(self, h: LongTensor | None, r: LongTensor | None, t: LongTensor | None) -> FloatTensor:  # noqa: D102
         if r is None:
             return self.weights
         return self.weights[r]

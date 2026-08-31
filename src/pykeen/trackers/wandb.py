@@ -50,28 +50,24 @@ class WANDBResultTracker(ResultTracker):
         self.kwargs = kwargs
         self.run = None
 
-    # docstr-coverage: inherited
     def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         self.run = self.wandb.init(project=self.project, name=run_name, **self.kwargs)
 
-    # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         self.run.finish(exit_code=0 if success else -1)
         self.run = None
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if self.run is None:
             raise AssertionError("start_run must be called before logging any metrics")
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
         self.run.log(metrics, step=step)
 
-    # docstr-coverage: inherited
     def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:  # noqa: D102
         if self.run is None:
             raise AssertionError("start_run must be called before logging any metrics")

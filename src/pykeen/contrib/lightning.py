@@ -149,7 +149,6 @@ class LitModule(pytorch_lightning.LightningModule, ABC):
             self.optimizer, self.optimizer_kwargs, params=self.parameters(), lr=self.learning_rate
         )
 
-    # docstr-coverage: inherited
     def on_before_zero_grad(self, optimizer: torch.optim.Optimizer) -> None:  # noqa: D102
         # call post_parameter_update
         self.model.post_parameter_update()
@@ -180,7 +179,6 @@ class SLCWALitModule(LitModule):
         self.negative_sampler_kwargs = negative_sampler_kwargs
         self.grouped = grouped
 
-    # docstr-coverage: inherited
     def _step(self, batch, prefix: str):  # noqa: D102
         loss = SLCWATrainingLoop._process_batch_static(
             model=self.model,
@@ -196,7 +194,6 @@ class SLCWALitModule(LitModule):
         self.log(f"{prefix}_loss", loss)
         return loss
 
-    # docstr-coverage: inherited
     def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:  # noqa: D102
         return torch.utils.data.DataLoader(
             dataset=BatchedSLCWAInstances.from_triples_factory(
@@ -225,7 +222,6 @@ class LCWALitModule(LitModule):
         https://github.com/pykeen/pykeen/pull/905
     """
 
-    # docstr-coverage: inherited
     def _step(self, batch, prefix: str):  # noqa: D102
         loss = LCWATrainingLoop._process_batch_static(
             model=self.model,
@@ -243,7 +239,6 @@ class LCWALitModule(LitModule):
         self.log(f"{prefix}_loss", loss)
         return loss
 
-    # docstr-coverage: inherited
     def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:  # noqa: D102
         return torch.utils.data.DataLoader(
             dataset=LCWAInstances.from_triples_factory(triples_factory),
