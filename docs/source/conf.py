@@ -317,7 +317,6 @@ nitpick_ignore = [
     ("py:class", "LookupOrType"),
     ("py:class", "MappedTriples"),
     ("py:class", "MarginRankingLoss"),
-    ("py:class", "OModel"),
     ("py:class", "OneOrManyHintOrType"),
     ("py:class", "OneOrManyOptionalKwargs"),
     ("py:class", "OneOrSequence"),
