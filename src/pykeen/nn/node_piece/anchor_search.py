@@ -112,7 +112,6 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         """
         self.max_iter = max_iter
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"max_iter={self.max_iter}"
@@ -244,7 +243,6 @@ class SparseBFSSearcher(AnchorSearcher):
         self.max_iter = max_iter
         self.device = resolve_device(device)
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"max_iter={self.max_iter}"
@@ -400,7 +398,6 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         self.page_rank_kwargs = page_rank_kwargs or {}
         self.use_tqdm = use_tqdm
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield f"batch_size={self.batch_size}"
         yield f"use_tqdm={self.use_tqdm}"

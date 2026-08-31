@@ -1634,7 +1634,6 @@ class MedianAbsoluteDeviation(RankBasedMetric):
     synonyms: ClassVar[Collection[str]] = ("rank_mad", "mad")
     supports_weights = True
 
-    # docstr-coverage: inherited
     def __call__(
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:  # noqa: D102
@@ -1763,7 +1762,6 @@ class HitsAtK(RankBasedMetric):
         super().__init__()
         self.k = k
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"k={self.k}"
@@ -1773,7 +1771,6 @@ class HitsAtK(RankBasedMetric):
     ) -> float:  # noqa: D102
         return np.average(np.less_equal(ranks, self.k), weights=weights).item()
 
-    # docstr-coverage: inherited
     @property
     def key(self) -> str:  # noqa: D102
         return super().key[:-1] + str(self.k)

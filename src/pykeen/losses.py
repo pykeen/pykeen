@@ -554,7 +554,6 @@ class BCEWithLogitsLoss(PointwiseLoss):
         else:
             self.pos_weight = None
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         return functional.binary_cross_entropy_with_logits(
             x, target, reduction=self.reduction, weight=weight, pos_weight=self.pos_weight
@@ -575,7 +574,6 @@ class MSELoss(PointwiseLoss):
 
     synonyms = {"Mean Square Error Loss", "Mean Squared Error Loss"}
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         if weight is None:
             return functional.mse_loss(x, target, reduction=self.reduction)
@@ -1018,7 +1016,6 @@ class DoubleMarginLoss(PointwiseLoss):
 
         return self(x=predictions, target=labels, weight=weights)
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         self._raise_on_weights(weight)
         return self.positive_weight * self._reduction_method(
@@ -1181,7 +1178,6 @@ class BCEAfterSigmoidLoss(PointwiseLoss):
     name: Binary cross entropy (after sigmoid)
     """
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         return functional.binary_cross_entropy(x.sigmoid(), target, weight=weight, reduction=self.reduction)
 
@@ -1712,7 +1708,6 @@ class FocalLoss(PointwiseLoss):
         self.alpha = alpha
         self.gamma = gamma
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         p = x.sigmoid()
         ce_loss = functional.binary_cross_entropy_with_logits(x, target, reduction="none")

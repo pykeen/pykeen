@@ -377,7 +377,6 @@ class EvaluatorUtilsTests(unittest.TestCase):
 class DummyMetricResults(MetricResults[Target]):
     """Dummy metric results."""
 
-    # docstr-coverage: inherited
     @classmethod
     def key_from_string(cls, s: str | None) -> Target:  # noqa: D102
         return normalize_target(s)
@@ -391,7 +390,6 @@ class DummyEvaluator(Evaluator[Target]):
         super().__init__(*args, **kwargs)
         self.counter: Counter[Target] = Counter()
 
-    # docstr-coverage: inherited
     def process_scores_(
         self,
         hrt_batch: MappedTriples,
@@ -402,11 +400,9 @@ class DummyEvaluator(Evaluator[Target]):
     ) -> None:  # noqa: D102
         self.counter.update((target,))
 
-    # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
         self.counter.clear()
 
-    # docstr-coverage: inherited
     def finalize(self) -> MetricResults[Target]:  # noqa: D102
         return DummyMetricResults(data={target: float(count) for target, count in self.counter.items()})
 

@@ -137,12 +137,10 @@ class NoRegularizer(Regularizer):
     #: The default strategy for optimizing the no-op regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    # docstr-coverage: inherited
     def update(self, *tensors: FloatTensor) -> None:  # noqa: D102
         # no need to compute anything
         pass
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         # always return zero
         return torch.zeros(1, dtype=x.dtype, device=x.device)
@@ -191,7 +189,6 @@ class LpRegularizer(Regularizer):
         self.normalize = normalize
         self.p = p
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         return lp_norm(x=x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
@@ -235,7 +232,6 @@ class PowerSumRegularizer(Regularizer):
         self.normalize = normalize
         self.p = p
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         return powersum_norm(x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
@@ -281,7 +277,6 @@ class NormLimitRegularizer(Regularizer):
         self.max_norm = max_norm
         self.power_norm = power_norm
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         if self.power_norm:
             norm = powersum_norm(x, p=self.p, dim=self.dim, normalize=False)
@@ -318,11 +313,9 @@ class OrthogonalityRegularizer(Regularizer):
         super().__init__(weight=weight, **kwargs, apply_only_once=apply_only_once)
         self.epsilon = epsilon
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         raise NotImplementedError(f"{self.__class__.__name__} regularizer is order-sensitive!")
 
-    # docstr-coverage: inherited
     def update(self, *tensors: FloatTensor) -> None:  # noqa: D102
         if len(tensors) != 2:
             raise ValueError("Expects exactly two tensors")
@@ -373,12 +366,10 @@ class CombinedRegularizer(Regularizer):
             ).reciprocal(),
         )
 
-    # docstr-coverage: inherited
     @property
     def normalize(self):  # noqa: D102
         return any(r.normalize for r in self.regularizers)
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)
 

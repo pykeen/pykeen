@@ -111,7 +111,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         """Return the shape of the literals."""
         return self.numeric_literals.shape[1:]
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"num_literals={len(self.literals_to_id)}"
@@ -138,7 +137,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=self.literals_to_id,
         )
 
-    # docstr-coverage: inherited
     def to_path_binary(self, path: str | pathlib.Path | TextIO) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # save literal-to-id mapping

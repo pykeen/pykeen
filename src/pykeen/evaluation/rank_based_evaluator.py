@@ -369,12 +369,10 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
             self.ranks[target, rank_type].append(v.detach().cpu().numpy())
         self.num_candidates[target].append(batch_ranks.number_of_options.detach().cpu().numpy())
 
-    # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
         self.ranks.clear()
         self.num_candidates.clear()
 
-    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
@@ -723,12 +721,10 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         # (and much larger) hrt_batch tensor in memory for the duration.
         self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().clone().cpu().numpy())
 
-    # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
         super().clear()
         self.keys.clear()
 
-    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError

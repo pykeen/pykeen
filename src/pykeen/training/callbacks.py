@@ -158,7 +158,6 @@ class TrackerTrainingCallback(TrainingCallback):
     It logs the loss after each epoch to the given result tracker,
     """
 
-    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
 
@@ -179,7 +178,6 @@ class GradientNormClippingTrainingCallback(TrainingCallback):
         self.max_norm = max_norm
         self.norm_type = norm_type or 2.0
 
-    # docstr-coverage: inherited
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         clip_grad_norm_(
             parameters=self.model.get_grad_params(),
@@ -203,7 +201,6 @@ class GradientAbsClippingTrainingCallback(TrainingCallback):
         super().__init__()
         self.clip_value = clip_value
 
-    # docstr-coverage: inherited
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         clip_grad_value_(self.model.get_grad_params(), clip_value=self.clip_value)
 
@@ -271,7 +268,6 @@ class EvaluationTrainingCallback(TrainingCallback):
         self.kwargs = kwargs
         self.batch_size = self.kwargs.pop("batch_size", None)
 
-    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if epoch % self.frequency:
             return
@@ -339,7 +335,6 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
             )
         return self._evaluation_loop
 
-    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if epoch % self.frequency:
             return
@@ -376,7 +371,6 @@ class StopperTrainingCallback(TrainingCallback):
         self.last_best_epoch = last_best_epoch
         self.best_epoch_model_file_path = best_epoch_model_file_path
 
-    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if self.stopper.should_evaluate(epoch):
             # TODO how to pass inductive mode
@@ -406,7 +400,6 @@ class OptimizerTrainingCallback(TrainingCallback):
         self.only_size_probing = only_size_probing
         self.pre_step_callbacks = tuple(pre_step_callbacks or [])
 
-    # docstr-coverage: inherited
     def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
         # Recall that torch *accumulates* gradients. Before passing in a
         # new instance, you need to zero out the gradients from the old instance
@@ -414,7 +407,6 @@ class OptimizerTrainingCallback(TrainingCallback):
         # note: we want to run this step during size probing to cleanup any remaining grads
         self.optimizer.zero_grad(set_to_none=True)
 
-    # docstr-coverage: inherited
     def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
         # pre-step callbacks
         for cb in self.pre_step_callbacks:
@@ -435,7 +427,6 @@ class OptimizerTrainingCallback(TrainingCallback):
 class LearningRateSchedulerTrainingCallback(TrainingCallback):
     """Update learning rate scheduler."""
 
-    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if self.training_loop.lr_scheduler is None:
             raise ValueError(f"{self} can only be called when a learning rate schedule is used.")
@@ -538,12 +529,10 @@ class EvaluationLossTrainingCallback(TrainingCallback):
         self.maximum_batch_size = maximum_batch_size
         self.callback = MultiTrainingCallback(callbacks=callbacks, callbacks_kwargs=callbacks_kwargs)
 
-    # docstr-coverage: inherited
     def register_training_loop(self, training_loop: training.TrainingLoop) -> None:  # noqa: D102
         super().register_training_loop(training_loop)
         self.callback.register_training_loop(training_loop=training_loop)
 
-    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         from .lcwa import LCWATrainingLoop
 
@@ -604,7 +593,6 @@ class MultiTrainingCallback(TrainingCallback):
         super().__init__()
         self.callbacks = callback_resolver.make_many(callbacks, callbacks_kwargs) if callbacks else []
 
-    # docstr-coverage: inherited
     def register_training_loop(self, training_loop: training.TrainingLoop) -> None:  # noqa: D102
         super().register_training_loop(training_loop=training_loop)
         for callback in self.callbacks:
@@ -616,32 +604,26 @@ class MultiTrainingCallback(TrainingCallback):
         if self._training_loop is not None:
             callback.register_training_loop(self._training_loop)
 
-    # docstr-coverage: inherited
     def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.pre_batch(**kwargs)
 
-    # docstr-coverage: inherited
     def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss, **kwargs)
 
-    # docstr-coverage: inherited
     def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_batch(epoch=epoch, batch=batch, **kwargs)
 
-    # docstr-coverage: inherited
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.pre_step(**kwargs)
 
-    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss, **kwargs)
 
-    # docstr-coverage: inherited
     def post_train(self, losses: list[float], **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_train(losses=losses, **kwargs)

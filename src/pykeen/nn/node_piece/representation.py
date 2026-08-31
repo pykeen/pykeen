@@ -185,14 +185,12 @@ class TokenizationRepresentation(Representation):
             **kwargs,
         )
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"max_id={self.assignment.shape[0]}"
         yield f"num_tokens={self.num_tokens}"
         yield f"vocabulary_size={self.vocabulary_size}"
 
-    # docstr-coverage: inherited
     def _plain_forward(
         self,
         indices: LongTensor | None = None,

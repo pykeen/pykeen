@@ -61,7 +61,6 @@ class FileResultTracker(ResultTracker):
         logger.info(f"Logging to {path.as_uri()}.")
         self.file = path.open(mode="w", newline="", encoding="utf8")
 
-    # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         self.file.close()
 
@@ -97,11 +96,9 @@ class CSVResultTracker(FileResultTracker):
         super().__init__(path=path, name=name)
         self.csv_writer = csv.writer(self.file, **kwargs)
 
-    # docstr-coverage: inherited
     def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         self.csv_writer.writerow(self.HEADER)
 
-    # docstr-coverage: inherited
     def _write(
         self,
         dictionary: Mapping[str, Any],

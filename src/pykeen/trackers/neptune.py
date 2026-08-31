@@ -81,7 +81,6 @@ class NeptuneResultTracker(ResultTracker):
         for k, v in metrics.items():
             self._help_log(k, step, v)
 
-    # docstr-coverage: inherited
     def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:  # noqa: D102
         params = flatten_dictionary(params, prefix=prefix)
         for k, v in params.items():

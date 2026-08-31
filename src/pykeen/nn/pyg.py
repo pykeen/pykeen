@@ -206,7 +206,6 @@ class MessagePassingRepresentation(Representation, ABC):
         #   * replace base representations
         #   * keep layers & activations
 
-    # docstr-coverage: inherited
     def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         if self.restrict_k_hop and indices is not None:
             # we can restrict the message passing to the k-hop neighborhood of the desired indices;
@@ -270,7 +269,6 @@ class SimpleMessagePassingRepresentation(MessagePassingRepresentation):
     name: Simple Message Passing
     """
 
-    # docstr-coverage: inherited
     def pass_messages(self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None) -> FloatTensor:  # noqa: D102
         for layer, activation in zip(self.layers, self.activations, strict=False):
             x = activation(layer(x, edge_index=edge_index))
@@ -317,7 +315,6 @@ class TypedMessagePassingRepresentation(MessagePassingRepresentation):
             return self.edge_type
         return self.edge_type[edge_mask]
 
-    # docstr-coverage: inherited
     def pass_messages(self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None) -> FloatTensor:  # noqa: D102
         edge_type = self._get_edge_type(edge_mask=edge_mask)
         for layer, activation in zip(self.layers, self.activations, strict=False):
@@ -376,7 +373,6 @@ class FeaturizedMessagePassingRepresentation(TypedMessagePassingRepresentation):
         )
         self.relation_transformation = relation_transformation
 
-    # docstr-coverage: inherited
     def pass_messages(self, x: FloatTensor, edge_index: LongTensor, edge_mask: BoolTensor | None = None) -> FloatTensor:  # noqa: D102
         edge_type = self._get_edge_type(edge_mask=edge_mask)
         # get initial relation representations

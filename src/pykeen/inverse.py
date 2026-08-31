@@ -47,24 +47,20 @@ class RelationInverter(ABC):
 class DefaultRelationInverter(RelationInverter):
     """Maps normal relations to even IDs, and the corresponding inverse to the next odd ID."""
 
-    # docstr-coverage: inherited
     def get_inverse_id(self, relation_id: RelationID) -> RelationID:  # noqa: D102
         return relation_id + 1
 
-    # docstr-coverage: inherited
     def _map(self, batch: LongTensor, index: int = 1) -> LongTensor:  # noqa: D102
         batch = batch.clone()
         batch[:, index] *= 2
         return batch
 
-    # docstr-coverage: inherited
     def invert_(self, batch: LongTensor, index: int = 1) -> LongTensor:  # noqa: D102
         # The number of relations stored in the triples factory includes the number of inverse relations
         # Id of inverse relation: relation + 1
         batch[:, index] += 1
         return batch
 
-    # docstr-coverage: inherited
     def is_inverse(self, ids: LongTensor) -> BoolTensor:  # noqa: D102
         return ids % 2 == 1
 

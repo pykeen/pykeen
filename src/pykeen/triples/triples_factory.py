@@ -1019,7 +1019,6 @@ class CoreTriplesFactory(KGInfo):
         )
 
     @classmethod
-    # docstr-coverage: inherited
     def from_path_binary(
         cls,
         path: str | pathlib.Path | TextIO,
@@ -1292,7 +1291,6 @@ class TriplesFactory(CoreTriplesFactory):
             and (self.relation_to_id == __o.relation_to_id)
         )
 
-    # docstr-coverage: inherited
     def apply_condenser(self, condenser: TripleCondenser) -> Self:  # noqa: D102
         if not condenser:
             return self
@@ -1307,7 +1305,6 @@ class TriplesFactory(CoreTriplesFactory):
             metadata=self.metadata,
         )
 
-    # docstr-coverage: inherited
     def merge(self, *others: Self) -> Self:  # noqa: D102
         for i, other in enumerate(others):
             if other.entity_to_id != self.entity_to_id:
@@ -1332,7 +1329,6 @@ class TriplesFactory(CoreTriplesFactory):
             metadata=self.metadata,
         )
 
-    # docstr-coverage: inherited
     def to_path_binary(self, path: str | pathlib.Path | TextIO) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # store entity/relation to ID
@@ -1458,11 +1454,9 @@ class TriplesFactory(CoreTriplesFactory):
             axis=1,
         )
 
-    # docstr-coverage: inherited
     def entities_to_ids(self, entities: Iterable[int] | Iterable[str]) -> Sequence[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=entities, label_to_id=self.entity_labeling.label_to_id)
 
-    # docstr-coverage: inherited
     def relations_to_ids(self, relations: Iterable[int] | Iterable[str]) -> Sequence[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=relations, label_to_id=self.relation_labeling.label_to_id)
 

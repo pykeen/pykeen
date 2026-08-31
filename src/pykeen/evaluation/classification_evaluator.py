@@ -41,7 +41,6 @@ class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
 
     metrics = classification_metric_resolver.lookup_dict
 
-    # docstr-coverage: inherited
     @classmethod
     def key_from_string(cls, s: str | None) -> ClassificationMetricKey:  # noqa: D102
         if s is None:
@@ -140,12 +139,10 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
             self.all_scores[target][key] = scores_np[i]
             self.all_positives[target][key] = dense_positive_mask_np[i]
 
-    # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
         self.all_positives.clear()
         self.all_scores.clear()
 
-    # docstr-coverage: inherited
     def finalize(self) -> ClassificationMetricResults:  # noqa: D102
         result = ClassificationMetricResults.from_scores(
             metrics=self.metrics,

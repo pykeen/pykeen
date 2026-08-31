@@ -250,7 +250,6 @@ class BaseBatchedSLCWAInstances(
 class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
     """Random pre-batched training instances for the sLCWA training loop."""
 
-    # docstr-coverage: inherited
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
         yield from data.BatchSampler(
             sampler=data.RandomSampler(data_source=split_workload(len(self.mapped_triples))),
@@ -325,7 +324,6 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
             node_weights[other_vertex] -= 1
         return result
 
-    # docstr-coverage: inherited
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
         yield from (self.subgraph_sample() for _ in split_workload(len(self)))
 
