@@ -1090,15 +1090,6 @@ def predict_target(
     if ids is None:
         ids = range(len(scores))
 
-    # when scoring against *all* relations, the scores comprise the artificial inverse relations,
-    # which we drop here and translate back to the "real" relation IDs.
-    # note: maybe we want to expose these scores, too?
-    if target == LABEL_RELATION and model.use_inverse_triples and targets is None:
-        ids_t = torch.as_tensor(ids)
-        non_inv_mask = ~model.relation_inverter.is_inverse(ids_t)
-        ids = model.relation_inverter.to_real(ids_t[non_inv_mask]).tolist()
-        scores = scores[non_inv_mask]
-
     # create raw dataframe
     data = {f"{target}_id": ids, "score": scores.tolist()}
     if labels is not None:

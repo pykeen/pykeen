@@ -466,19 +466,25 @@ class Model(nn.Module, ABC):
 
         :param ht_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, tail) pairs.
-        :param relations: shape: (num_relations,)
-            The relations to score against, given as *real* relation IDs. If None, scores against all
-            relations, which comprise the inverse relations if the model has been trained with them.
+        :param relations: shape: (num_real_relations,)
+            The relations to score against, given as *real* relation IDs. If None, scores against
+            all real relations.
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Model.score_r`
 
-        :return: shape: (batch_size, num_relations), dtype: float
-            For each h-t pair, the scores for all possible relations.
+        :return: shape: (batch_size, num_real_relations), dtype: float
+            For each h-t pair, the scores for all possible relations, with the columns indexed by
+            *real* relation ID. The artificial inverse relations are never scored against; use
+            :meth:`Model.score_r` directly to obtain their scores.
         """
         self.eval()  # Enforce evaluation mode
         ht_batch = ht_batch.to(self.device)
-        # when trained on inverse relations, the internal relation ID is twice the original relation ID
-        if relations is not None and self.use_inverse_triples:
+        if self.use_inverse_triples:
+            # score_r operates on the model's internal relations, which comprise the artificial
+            # inverse ones. Asking for the forward IDs explicitly keeps the columns indexed by
+            # "real" relation ID, without computing the inverse scores just to discard them.
+            if relations is None:
+                relations = torch.arange(self.num_real_relations, device=self.device)
             relations = self.relation_inverter.to_internal(relations)
         scores = self.score_r(ht_batch, relations=relations, **kwargs)
         if self.predict_with_sigmoid:

@@ -73,6 +73,24 @@ def test_score_inverse_does_not_modify_input(model: Model, method_name: str, col
     assert torch.equal(batch, copy)
 
 
+@pytest.mark.parametrize("create_inverse_triples", [False, True])
+def test_predict_r_uses_real_relation_ids(create_inverse_triples: bool):
+    """Test that predict_r scores against the real relations, while score_r stays internal."""
+    factory = Nations(create_inverse_triples=create_inverse_triples).training
+    model = TransE(triples_factory=factory, embedding_dim=2, random_seed=0)
+    ht_batch = torch.as_tensor([[0, 1], [2, 3]])
+
+    # score_r operates on the model's internal relations, which comprise the inverse ones
+    assert model.score_r(ht_batch).shape[-1] == factory.num_relations
+
+    # predict_r drops them again, so that the columns are indexed by the factory's relation IDs ...
+    scores = model.predict_r(ht_batch)
+    assert scores.shape[-1] == factory.real_num_relations
+    # ... in the same order as when they are requested explicitly
+    explicit = model.predict_r(ht_batch, relations=torch.arange(factory.real_num_relations))
+    assert torch.allclose(scores, explicit)
+
+
 def test_get_inverse_relation_id():
     """Test that the factory's inverse relation ID matches the one used by models."""
     factory = Nations(create_inverse_triples=True).training
