@@ -60,8 +60,7 @@ class ExpectedLikelihood(KG2ESimilarity):
         \right)
     """
 
-    # docstr-coverage: inherited
-    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:
+    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:  # noqa: D102
         var = tensor_sum(*(d.diagonal_covariance for d in (h, r, t)))
         mean = tensor_sum(h.mean, -t.mean, -r.mean)
 
@@ -112,8 +111,7 @@ class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
         <https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Kullback%E2%80%93Leibler_divergence>`_
     """
 
-    # docstr-coverage: inherited
-    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:
+    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:  # noqa: D102
         e_var = h.diagonal_covariance + t.diagonal_covariance
         r_var_safe = at_least_eps(r.diagonal_covariance)
         terms = []

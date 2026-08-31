@@ -150,12 +150,10 @@ def parallel_slice_batches(
         yield unpack_singletons(*(batch[start:stop] for start, stop in zip(splits, splits[1:], strict=False)))  # type: ignore[misc]
 
 
-# docstr-coverage:excused `overload`
 @overload
 def parallel_unsqueeze(x: Sequence[FloatTensor], dim: int) -> Sequence[FloatTensor]: ...
 
 
-# docstr-coverage:excused `overload`
 @overload
 def parallel_unsqueeze(x: FloatTensor, dim: int) -> FloatTensor: ...
 
@@ -1058,7 +1056,6 @@ class ConvKBInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         self.hidden_dropout = nn.Dropout(p=hidden_dropout_rate)
         self.linear = nn.Linear(embedding_dim * num_filters, 1, bias=True)
 
-    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # Use Xavier initialization for weight; bias to zero
         nn.init.xavier_uniform_(self.linear.weight, gain=nn.init.calculate_gain("relu"))
@@ -1280,7 +1277,6 @@ class ERMLPInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
             )
         return self.hidden_to_score(self.activation(x)).squeeze(dim=-1)
 
-    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # Initialize biases with zero
         nn.init.zeros_(self.hidden.bias)
@@ -1732,7 +1728,6 @@ class ProjEInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         # dot product with t
         return self.outer_activation(batched_dot(x, t) + self.b_p)
 
-    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         self.projection_initializer(self.d_e)
         self.projection_initializer(self.d_r)
@@ -1946,7 +1941,6 @@ class TuckERInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
 
         self.reset_parameters()
 
-    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # instantiate here to make module easily serializable
         core_initializer = init.initializer_resolver.make(
@@ -2557,8 +2551,7 @@ class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation,
         """Expose the base interaction's relation shape."""
         return self.base.relation_shape
 
-    # docstr-coverage: inherited
-    def forward(self, h: HeadRepresentation, r: RelationRepresentation, t: TailRepresentation) -> FloatTensor:
+    def forward(self, h: HeadRepresentation, r: RelationRepresentation, t: TailRepresentation) -> FloatTensor:  # noqa: D102
         scores = self.base(h, r, t)
         if self.clamp_score is None:
             return scores
@@ -2868,18 +2861,16 @@ class MonotonicAffineTransformationInteraction(
             dtype=torch.get_default_dtype(),
         ).squeeze()
 
-    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         self.bias.data = self.initial_bias.to(device=self.bias.device)
         self.log_scale.data = self.initial_log_scale.to(device=self.bias.device)
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         h: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         return self.log_scale.exp() * self.base(h=h, r=r, t=t) + self.bias
 
 
@@ -3369,7 +3360,6 @@ class MultiLinearTuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTe
             requires_grad=True,
         )
 
-    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # initialize core tensor
         nn.init.normal_(

@@ -201,7 +201,6 @@ class PythonSetFilterer(Filterer):
         # store set of triples
         self.triples = triple_tensor_to_set(mapped_triples)
 
-    # docstr-coverage: inherited
     def contains(self, batch: MappedTriples) -> BoolTensor:  # noqa: D102
         return torch.as_tensor(
             data=[tuple(triple) in self.triples for triple in batch.view(-1, 3).tolist()],

@@ -219,7 +219,6 @@ class BasesDecomposition(Decomposition):
             base_kwargs={"initializer": nn.init.xavier_normal_},
         )
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"num_bases={self.relation_representations.num_bases}"
@@ -234,18 +233,15 @@ class BasesDecomposition(Decomposition):
         """Return the base weights."""
         return self.relation_representations.weight(indices=None)
 
-    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # note: the only parameters are inside the relation representation module, which has its own reset_parameters
         pass
 
-    # docstr-coverage: inherited
     def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
         x = einsum("ni, rb, bio -> rno", x, self.base_weights, self.bases)
         # TODO: can we change the dimension order to make this contiguous?
         return torch.spmm(adj, x.reshape(-1, self.output_dim))
 
-    # docstr-coverage: inherited
     def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
         x = torch.spmm(adj, x)
         x = x.view(self.num_relations, -1, self.input_dim)
@@ -341,7 +337,6 @@ class BlockDecomposition(Decomposition):
         """Reset the layer's parameters."""
         xavier_normal_(self.blocks.data)
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"num_blocks={self.num_blocks}"
@@ -351,7 +346,6 @@ class BlockDecomposition(Decomposition):
             yield f"input_block_size={self.input_block_size}"
             yield f"output_block_size={self.output_block_size}"
 
-    # docstr-coverage: inherited
     def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
         # apply padding if necessary
         x = _pad_if_necessary(x=x, dim=self.padded_input_dim)
@@ -367,7 +361,6 @@ class BlockDecomposition(Decomposition):
         # remove padding if necessary
         return _unpad_if_necessary(x=x, dim=self.padded_output_dim)
 
-    # docstr-coverage: inherited
     def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
         # apply padding if necessary
         x = _pad_if_necessary(x=x, dim=self.padded_input_dim)
@@ -684,14 +677,12 @@ class RGCNRepresentation(Representation):
         self.enriched_embeddings = None
         self.cache = cache
 
-    # docstr-coverage: inherited
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
 
         # invalidate enriched embeddings
         self.enriched_embeddings = None
 
-    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
 

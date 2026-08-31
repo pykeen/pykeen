@@ -51,7 +51,6 @@ class IdentityCache(TextCache):
     Mostly used for testing.
     """
 
-    # docstr-coverage: inherited
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str | None]:  # noqa: D102
         return identifiers
 

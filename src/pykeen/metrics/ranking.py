@@ -570,10 +570,9 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         """
         self.base = rank_based_metric_resolver.make(base_cls or self.base_cls, pos_kwargs=kwargs)
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         if num_candidates is None:
             raise ValueError(f"{self.__class__.__name__} requires number of candidates.")
         return self.adjust(
@@ -604,14 +603,13 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         parameters = self.get_coefficients(num_candidates=num_candidates, weights=weights)
         return parameters.scale * base_metric_result + parameters.offset
 
-    # docstr-coverage: inherited
-    def expected_value(
+    def expected_value(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # since scale and offset are constant for a given number of candidates, we have
         # E[scale * M + offset] = scale * E[M] + offset
         return self.adjust(
@@ -622,14 +620,13 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
             weights=weights,
         )
 
-    # docstr-coverage: inherited
-    def variance(
+    def variance(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # since scale and offset are constant for a given number of candidates, we have
         # V[scale * M + offset] = scale^2 * V[M]
         parameters = self.get_coefficients(num_candidates=num_candidates, weights=weights)
@@ -710,10 +707,9 @@ class ZMetric(DerivedRankBasedMetric):
     closed_expectation: ClassVar[bool] = True
     closed_variance: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
-    def get_coefficients(
+    def get_coefficients(  # noqa: D102
         self, num_candidates: np.ndarray, weights: np.ndarray | None = None
-    ) -> AffineTransformationParameters:  # noqa: D102
+    ) -> AffineTransformationParameters:
         mean = self.base.expected_value(num_candidates=num_candidates, weights=weights)
         std = self.base.std(num_candidates=num_candidates, weights=weights)
         scale = _safe_divide(1.0, std)
@@ -722,25 +718,23 @@ class ZMetric(DerivedRankBasedMetric):
         offset = -scale * mean
         return AffineTransformationParameters(scale=scale, offset=offset)
 
-    # docstr-coverage: inherited
-    def expected_value(
+    def expected_value(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # should be exactly 0.0
         return 0.0  # centered
 
-    # docstr-coverage: inherited
-    def variance(
+    def variance(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # should be exactly 1.0
         return 1.0  # re-scaled
 
@@ -764,22 +758,20 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
 
     closed_expectation: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
-    def get_coefficients(
+    def get_coefficients(  # noqa: D102
         self, num_candidates: np.ndarray, weights: np.ndarray | None = None
-    ) -> AffineTransformationParameters:  # noqa: D102
+    ) -> AffineTransformationParameters:
         return AffineTransformationParameters(
             scale=_safe_divide(1, self.base.expected_value(num_candidates=num_candidates, weights=weights))
         )
 
-    # docstr-coverage: inherited
-    def expected_value(
+    def expected_value(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         return 1.0  # centered
 
 
@@ -806,23 +798,21 @@ class ReindexedMetric(DerivedRankBasedMetric):
     supported_rank_types = (RANK_REALISTIC,)
     closed_expectation: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
-    def get_coefficients(
+    def get_coefficients(  # noqa: D102
         self, num_candidates: np.ndarray, weights: np.ndarray | None = None
-    ) -> AffineTransformationParameters:  # noqa: D102
+    ) -> AffineTransformationParameters:
         mean = self.base.expected_value(num_candidates=num_candidates, weights=weights)
         scale = _safe_divide(1.0, 1.0 - mean)
         offset = -scale * mean
         return AffineTransformationParameters(scale=scale, offset=offset)
 
-    # docstr-coverage: inherited
-    def expected_value(
+    def expected_value(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # should be exactly 0.0
         return 0.0
 
@@ -905,32 +895,29 @@ class ArithmeticMeanRank(RankBasedMetric):
     closed_expectation: ClassVar[bool] = True
     closed_variance: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return np.average(np.asanyarray(ranks), weights=weights).item()
 
-    # docstr-coverage: inherited
-    def expected_value(
+    def expected_value(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         num_candidates = np.asanyarray(num_candidates)
         individual_expectation = 0.5 * (num_candidates + 1)
         return weighted_mean_expectation(individual=individual_expectation, weights=weights)
 
-    # docstr-coverage: inherited
-    def variance(
+    def variance(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         num_candidates = np.asanyarray(num_candidates)
         individual_variance = (num_candidates**2 - 1) / 12.0
         return weighted_mean_variance(individual=individual_variance, weights=weights)
@@ -966,10 +953,9 @@ class InverseArithmeticMeanRank(RankBasedMetric):
     synonyms: ClassVar[Collection[str]] = ("iamr",)
     supports_weights = True
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return np.reciprocal(np.average(np.asanyarray(ranks), weights=weights)).item()
 
 
@@ -1035,10 +1021,9 @@ class GeometricMeanRank(RankBasedMetric):
     closed_expectation: ClassVar[bool] = True
     closed_variance: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return stats.gmean(ranks, weights=weights).item()
 
     @staticmethod
@@ -1049,14 +1034,13 @@ class GeometricMeanRank(RankBasedMetric):
         safe_total = np.clip(total, a_min=np.finfo(weights.dtype).eps, a_max=None)
         return weights / safe_total
 
-    # docstr-coverage: inherited
-    def expected_value(
+    def expected_value(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         alpha = self._normalize_weights(weights, n=len(num_candidates))
 
         # E[G] = Product( E[ X_i^alpha_i ] )
@@ -1065,14 +1049,13 @@ class GeometricMeanRank(RankBasedMetric):
 
         return np.exp(log_expectation)
 
-    # docstr-coverage: inherited
-    def variance(
+    def variance(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         alpha = self._normalize_weights(weights, n=len(num_candidates))
 
         # 1. Calculate Log of First Moment E[G]
@@ -1126,10 +1109,9 @@ class InverseGeometricMeanRank(RankBasedMetric):
     synonyms: ClassVar[Collection[str]] = ("igmr",)
     supports_weights = True
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return np.reciprocal(stats.gmean(ranks, weights=weights)).item()
 
 
@@ -1177,10 +1159,9 @@ class HarmonicMeanRank(RankBasedMetric):
     synonyms: ClassVar[Collection[str]] = ("hmr",)
     supports_weights = True
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return weighted_harmonic_mean(a=ranks, weights=weights).item()
 
 
@@ -1318,34 +1299,31 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     closed_expectation: ClassVar[bool] = True
     closed_variance: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return np.reciprocal(weighted_harmonic_mean(a=ranks, weights=weights)).item()
 
-    # docstr-coverage: inherited
-    def expected_value(
+    def expected_value(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         num_candidates = np.asanyarray(num_candidates)
         n = num_candidates.max().item()
         expectation = generalized_harmonic_numbers(n, p=-1.0) / np.arange(1, n + 1)
         individual = expectation[num_candidates - 1]
         return weighted_mean_expectation(individual, weights)
 
-    # docstr-coverage: inherited
-    def variance(
+    def variance(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         num_candidates = np.asanyarray(num_candidates)
         n = num_candidates.max().item()
         individual = harmonic_variances(n)[num_candidates - 1]
@@ -1478,23 +1456,21 @@ class MedianRank(RankBasedMetric):
     closed_expectation: ClassVar[bool] = True
     closed_variance: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         if weights is None:
             return np.median(ranks).item()
 
         return weighted_median(a=ranks, weights=weights).item()
 
-    # docstr-coverage: inherited
-    def expected_value(
+    def expected_value(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # weighted case is equivalent to Subset Sum Problem (~NP complete)
         if weights is not None:
             return super().expected_value(
@@ -1508,10 +1484,9 @@ class MedianRank(RankBasedMetric):
         # We slice [:-1] because the array goes up to x=k_max, and P(M > k_max) is 0.
         return np.sum(sf[:-1])
 
-    # docstr-coverage: inherited
-    def variance(
+    def variance(  # noqa: D102
         self, num_candidates: np.ndarray, num_samples: int | None = None, weights: np.ndarray | None = None, **kwargs
-    ) -> float:  # noqa: D102
+    ) -> float:
         # weighted case is equivalent to Subset Sum Problem (~NP complete)
         if weights is not None:
             return super().variance(num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs)
@@ -1546,10 +1521,9 @@ class InverseMedianRank(RankBasedMetric):
     increasing = True
     supports_weights = True
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return np.reciprocal(weighted_median(a=ranks, weights=weights), dtype=float).item()
 
 
@@ -1577,10 +1551,9 @@ class StandardDeviation(RankBasedMetric):
     synonyms: ClassVar[Collection[str]] = ("rank_std", "std")
     supports_weights: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         ranks = np.asanyarray(ranks)
         if weights is None:
             return ranks.std().item()
@@ -1620,10 +1593,9 @@ class Variance(RankBasedMetric):
     synonyms: ClassVar[Collection[str]] = ("rank_var", "var")
     supports_weights: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         ranks = np.asanyarray(ranks)
         if weights is None:
             return ranks.var().item()
@@ -1662,7 +1634,6 @@ class MedianAbsoluteDeviation(RankBasedMetric):
     synonyms: ClassVar[Collection[str]] = ("rank_mad", "mad")
     supports_weights = True
 
-    # docstr-coverage: inherited
     def __call__(
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:  # noqa: D102
@@ -1701,10 +1672,9 @@ class Count(RankBasedMetric):
     synonyms: ClassVar[Collection[str]] = ("rank_count",)
     supports_weights: ClassVar[bool] = False
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         # TODO: should we return the sum of weights?
         if weights is not None:
             raise NoWeightSupportError(
@@ -1792,43 +1762,38 @@ class HitsAtK(RankBasedMetric):
         super().__init__()
         self.k = k
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"k={self.k}"
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return np.average(np.less_equal(ranks, self.k), weights=weights).item()
 
-    # docstr-coverage: inherited
     @property
     def key(self) -> str:  # noqa: D102
         return super().key[:-1] + str(self.k)
 
-    # docstr-coverage: inherited
-    def expected_value(
+    def expected_value(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/C_i)
         individual = np.minimum(self.k / num_candidates, 1.0)
         return weighted_mean_expectation(individual=individual, weights=weights)
 
-    # docstr-coverage: inherited
-    def variance(
+    def variance(  # noqa: D102
         self,
         num_candidates: np.ndarray,
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/C_i)
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         p = np.minimum(self.k / num_candidates, 1.0)

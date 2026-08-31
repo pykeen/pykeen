@@ -162,7 +162,6 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
             character_representation, max_id=num_real_tokens + 2, shape=dim
         )
 
-    # docstr-coverage: inherited
     def forward_normalized(self, texts: Sequence[str]) -> FloatTensor:  # noqa: D102
         # tokenize
         token_ids = [[self.token_to_id.get(c, self.unknown_idx) for c in text] for text in texts]
@@ -218,7 +217,6 @@ class TransformerTextEncoder(TextEncoder):
         )
         self.max_length = max_length or 512
 
-    # docstr-coverage: inherited
     def forward_normalized(self, texts: Sequence[str]) -> FloatTensor:  # noqa: D102
         return self.model(
             **self.tokenizer(

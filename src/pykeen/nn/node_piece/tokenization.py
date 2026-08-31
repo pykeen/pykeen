@@ -61,14 +61,13 @@ class Tokenizer:
 class RelationTokenizer(Tokenizer):
     """Tokenize entities by representing them as a bag of relations."""
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> tuple[int, LongTensor]:  # noqa: D102
+    ) -> tuple[int, LongTensor]:
         # tokenize: represent entities by bag of relations
         h, r, t = mapped_triples.t()
 
@@ -143,14 +142,13 @@ class AnchorTokenizer(Tokenizer):
         # convert to torch
         return len(anchors) + 1, torch.as_tensor(tokens, dtype=torch.long)
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> tuple[int, LongTensor]:  # noqa: D102
+    ) -> tuple[int, LongTensor]:
         return self._call(
             edge_index=get_edge_index(mapped_triples=mapped_triples),
             num_tokens=num_tokens,
@@ -177,14 +175,13 @@ class MetisAnchorTokenizer(AnchorTokenizer):
         self.num_partitions = num_partitions
         self.device = resolve_device(device)
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> tuple[int, LongTensor]:  # noqa: D102
+    ) -> tuple[int, LongTensor]:
         try:
             import torch_sparse
         except ImportError as err:
@@ -306,10 +303,9 @@ class PrecomputedPoolTokenizer(Tokenizer):
             raise ValueError("Expected pool to contain contiguous keys 0...(N-1)")
         self.randomize_selection = randomize_selection
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
-    ) -> tuple[int, LongTensor]:  # noqa: D102
+    ) -> tuple[int, LongTensor]:
         if num_entities != len(self.pool):
             raise ValueError(f"Invalid number of entities ({num_entities}); expected {len(self.pool)}")
         if self.randomize_selection:

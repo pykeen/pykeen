@@ -73,11 +73,9 @@ class ConcatCombination(Combination):
         super().__init__()
         self.dim = dim
 
-    # docstr-coverage: inherited
     def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         return torch.cat(xs, dim=self.dim)
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"dim={self.dim}"
@@ -116,7 +114,6 @@ class ConcatProjectionCombination(ConcatCombination):
             activation_resolver.make(activation, activation_kwargs),
         )
 
-    # docstr-coverage: inherited
     def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         return self.projection(super().forward(xs))
 
@@ -143,11 +140,9 @@ class ConcatAggregationCombination(ConcatCombination):
         self.dim = dim
         self.aggregation = aggregation_resolver.make(aggregation, aggregation_kwargs)
 
-    # docstr-coverage: inherited
     def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         return self.aggregation(super().forward(xs=xs), dim=self.dim)
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"aggregation={self.aggregation}"
@@ -183,7 +178,6 @@ class ComplexSeparatedCombination(Combination):
         self.real_combination = combination_resolver.make(combination, combination_kwargs)
         self.imag_combination = combination_resolver.make(imag_combination, imag_combination_kwargs)
 
-    # docstr-coverage: inherited
     def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         if not any(x.is_complex() for x in xs):
             raise ValueError(
@@ -198,7 +192,6 @@ class ComplexSeparatedCombination(Combination):
         # combine
         return combine_complex(x_re=x_re, x_im=x_im)
 
-    # docstr-coverage: inherited
     def output_shape(self, input_shapes: Sequence[tuple[int, ...]]) -> tuple[int, ...]:  # noqa: D102
         # symbolic output to avoid dtype issue
         # we only need to consider real part here
@@ -287,7 +280,6 @@ class GatedCombination(Combination):
             activation_kwargs=hidden_activation_kwargs,
         )
 
-    # docstr-coverage: inherited
     def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
         assert len(xs) == 2
         z = self.gate(xs)

@@ -342,13 +342,12 @@ class GraphPairCombinator(Generic[FactoryType], ABC):
 class DisjointGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """This combinator keeps both graphs as disconnected components."""
 
-    # docstr-coverage: inherited
-    def process(
+    def process(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         alignment: LongTensor,
         offsets: LongTensor,
-    ) -> ProcessedTuple:  # noqa: D102
+    ) -> ProcessedTuple:
         return ProcessedTuple(
             mapped_triples,
             alignment,
@@ -359,13 +358,12 @@ class DisjointGraphPairCombinator(GraphPairCombinator[FactoryType]):
 class SwapGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """Add extra triples by swapping aligned entities."""
 
-    # docstr-coverage: inherited
-    def process(
+    def process(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         alignment: LongTensor,
         offsets: LongTensor,
-    ) -> ProcessedTuple:  # noqa: D102
+    ) -> ProcessedTuple:
         # add swap triples
         # e1 ~ e2 => (e1, r, t) ~> (e2, r, t), or (h, r, e1) ~> (h, r, e2)
         # create dense entity remapping for swap
@@ -398,13 +396,12 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator[FactoryType]):
     #: the name of the additional alignment relation
     ALIGNMENT_RELATION_NAME: ClassVar[str] = "same-as"
 
-    # docstr-coverage: inherited
-    def process(
+    def process(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         alignment: LongTensor,
         offsets: LongTensor,
-    ) -> ProcessedTuple:  # noqa: D102
+    ) -> ProcessedTuple:
         # add alignment triples with extra relation
         left_id, right_id = alignment
         alignment_relation_id = get_num_ids(mapped_triples[:, 1])
@@ -458,13 +455,12 @@ def iter_entity_mappings(
 class CollapseGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """This combinator merges all matching entity pairs into a single ID."""
 
-    # docstr-coverage: inherited
-    def process(
+    def process(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         alignment: LongTensor,
         offsets: LongTensor,
-    ) -> ProcessedTuple:  # noqa: D102
+    ) -> ProcessedTuple:
         # determine connected components regarding the same-as relation (i.e., applies transitivity)
         entity_id_mapping = torch.arange(get_num_ids(mapped_triples[:, 0::2]))
         for cc in get_connected_components(pairs=alignment.t().tolist()):

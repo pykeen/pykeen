@@ -139,7 +139,6 @@ class _NewAbstractModel(Model, ABC):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
-    # docstr-coverage: inherited
     def collect_regularization_term(self):  # noqa: D102
         return sum(
             regularizer.pop_regularization_term()
@@ -504,15 +503,14 @@ class ERModel(
         if self.training and get_batchnorm_modules(self):
             raise ValueError("This model does not support slicing, since it has batch normalization layers.")
 
-    # docstr-coverage: inherited
-    def score_t(
+    def score_t(  # noqa: D102
         self,
         hr_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
         tails: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # normalize before checking
         if slice_size and slice_size >= self.num_entities:
             slice_size = None
@@ -542,15 +540,14 @@ class ERModel(
             num=self._get_entity_len(mode=mode) if tails is None else tails.shape[-1],
         )
 
-    # docstr-coverage: inherited
-    def score_h(
+    def score_h(  # noqa: D102
         self,
         rt_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
         heads: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # normalize before checking
         if slice_size and slice_size >= self.num_entities:
             slice_size = None
@@ -580,15 +577,14 @@ class ERModel(
             num=self._get_entity_len(mode=mode) if heads is None else heads.shape[-1],
         )
 
-    # docstr-coverage: inherited
-    def score_r(
+    def score_r(  # noqa: D102
         self,
         ht_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
         relations: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # normalize before checking
         if slice_size and slice_size >= self.num_relations:
             slice_size = None

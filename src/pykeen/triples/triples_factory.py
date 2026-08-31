@@ -1019,7 +1019,6 @@ class CoreTriplesFactory(KGInfo):
         )
 
     @classmethod
-    # docstr-coverage: inherited
     def from_path_binary(
         cls,
         path: str | pathlib.Path | TextIO,
@@ -1292,7 +1291,6 @@ class TriplesFactory(CoreTriplesFactory):
             and (self.relation_to_id == __o.relation_to_id)
         )
 
-    # docstr-coverage: inherited
     def apply_condenser(self, condenser: TripleCondenser) -> Self:  # noqa: D102
         if not condenser:
             return self
@@ -1307,7 +1305,6 @@ class TriplesFactory(CoreTriplesFactory):
             metadata=self.metadata,
         )
 
-    # docstr-coverage: inherited
     def merge(self, *others: Self) -> Self:  # noqa: D102
         for i, other in enumerate(others):
             if other.entity_to_id != self.entity_to_id:
@@ -1332,7 +1329,6 @@ class TriplesFactory(CoreTriplesFactory):
             metadata=self.metadata,
         )
 
-    # docstr-coverage: inherited
     def to_path_binary(self, path: str | pathlib.Path | TextIO) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # store entity/relation to ID
@@ -1367,14 +1363,13 @@ class TriplesFactory(CoreTriplesFactory):
             data[name] = dict(zip(df["label"], df["id"], strict=False))
         return data
 
-    # docstr-coverage: inherited
-    def clone_and_exchange_triples(
+    def clone_and_exchange_triples(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
         create_inverse_triples: bool | None = None,
-    ) -> Self:  # noqa: D102
+    ) -> Self:
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
         return TriplesFactory(  # type: ignore[return-value]
@@ -1459,11 +1454,9 @@ class TriplesFactory(CoreTriplesFactory):
             axis=1,
         )
 
-    # docstr-coverage: inherited
     def entities_to_ids(self, entities: Iterable[int] | Iterable[str]) -> Sequence[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=entities, label_to_id=self.entity_labeling.label_to_id)
 
-    # docstr-coverage: inherited
     def relations_to_ids(self, relations: Iterable[int] | Iterable[str]) -> Sequence[int]:  # noqa: D102
         return _ensure_ids(labels_or_ids=relations, label_to_id=self.relation_labeling.label_to_id)
 
@@ -1536,12 +1529,11 @@ class TriplesFactory(CoreTriplesFactory):
 
         return SVG(data=svg_str)
 
-    # docstr-coverage: inherited
-    def tensor_to_df(
+    def tensor_to_df(  # noqa: D102
         self,
         tensor: LongTensor,
         **kwargs: torch.Tensor | np.ndarray | Sequence,
-    ) -> pd.DataFrame:  # noqa: D102
+    ) -> pd.DataFrame:
         data = super().tensor_to_df(tensor=tensor, **kwargs)
         old_col = list(data.columns)
 
@@ -1561,14 +1553,13 @@ class TriplesFactory(CoreTriplesFactory):
         columns = list(TRIPLES_DF_COLUMNS) + old_col[3:]
         return data.loc[:, columns]
 
-    # docstr-coverage: inherited
-    def new_with_restriction(
+    def new_with_restriction(  # noqa: D102
         self,
         entities: None | Collection[int] | Collection[str] = None,
         relations: None | Collection[int] | Collection[str] = None,
         invert_entity_selection: bool = False,
         invert_relation_selection: bool = False,
-    ) -> Self:  # noqa: D102
+    ) -> Self:
         if entities is None and relations is None:
             return self
         if entities is not None:

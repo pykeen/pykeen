@@ -102,14 +102,13 @@ def _inverse_frequency_weighting(idx: LongTensor) -> FloatTensor:
 class InverseInDegreeEdgeWeighting(EdgeWeighting):
     """Normalize messages by inverse in-degree."""
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         source: LongTensor,
         target: LongTensor,
         message: FloatTensor | None = None,
         x_e: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         weight = _inverse_frequency_weighting(idx=target)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
@@ -119,14 +118,13 @@ class InverseInDegreeEdgeWeighting(EdgeWeighting):
 class InverseOutDegreeEdgeWeighting(EdgeWeighting):
     """Normalize messages by inverse out-degree."""
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         source: LongTensor,
         target: LongTensor,
         message: FloatTensor | None = None,
         x_e: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         weight = _inverse_frequency_weighting(idx=source)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
@@ -136,14 +134,13 @@ class InverseOutDegreeEdgeWeighting(EdgeWeighting):
 class SymmetricEdgeWeighting(EdgeWeighting):
     """Normalize messages by product of inverse sqrt of in-degree and out-degree."""
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         source: LongTensor,
         target: LongTensor,
         message: FloatTensor | None = None,
         x_e: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         weight = (_inverse_frequency_weighting(idx=source) * _inverse_frequency_weighting(idx=target)).sqrt()
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
@@ -180,14 +177,13 @@ class AttentionEdgeWeighting(EdgeWeighting):
         self.attention_dim = message_dim // num_heads
         self.dropout = nn.Dropout(dropout)
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         source: LongTensor,
         target: LongTensor,
         message: FloatTensor | None = None,
         x_e: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         if message is None or x_e is None:
             raise ValueError(f"{self.__class__.__name__} requires message and x_e.")
 

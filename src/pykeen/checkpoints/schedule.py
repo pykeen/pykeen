@@ -36,7 +36,7 @@ class EveryCheckpointSchedule(CheckpointSchedule):
     #: The checkpoint frequency
     frequency: int = 10
 
-    def __call__(self, step: int) -> bool:
+    def __call__(self, step: int) -> bool:  # noqa: D102  # dunder override, see D105
         return not step % self.frequency
 
 
@@ -46,7 +46,7 @@ class ExplicitCheckpointSchedule(CheckpointSchedule):
 
     steps: Collection[int]
 
-    def __call__(self, step: int) -> bool:
+    def __call__(self, step: int) -> bool:  # noqa: D102  # dunder override, see D105
         return step in self.steps
 
 
@@ -68,7 +68,7 @@ class BestCheckpointSchedule(CheckpointSchedule):
     def __post_init__(self):
         self._adapter = ResultListenerAdapter(self.result_tracker, metric_selection=self.metric_selection)
 
-    def __call__(self, step: int) -> bool:
+    def __call__(self, step: int) -> bool:  # noqa: D102  # dunder override, see D105
         return self._adapter.is_best(step)
 
 
@@ -84,7 +84,7 @@ class UnionCheckpointSchedule(CheckpointSchedule):
     def __post_init__(self):
         self._bases = schedule_resolver.make_many(self.bases, self.bases_kwargs)
 
-    def __call__(self, step: int) -> bool:
+    def __call__(self, step: int) -> bool:  # noqa: D102  # dunder override, see D105
         return any(base(step) for base in self._bases)
 
 
