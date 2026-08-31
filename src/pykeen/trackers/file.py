@@ -113,16 +113,14 @@ class CSVResultTracker(FileResultTracker):
         self.csv_writer.writerows((label, step, key, value) for key, value in dictionary.items())
         self.file.flush()
 
-    # docstr-coverage: inherited
-    def log_params(
+    def log_params(  # noqa: D102
         self,
         params: Mapping[str, Any],
         prefix: str | None = None,
     ) -> None:  # noqa: D102
         self._write(dictionary=params, label="parameter", step=0, prefix=prefix)
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
@@ -146,16 +144,14 @@ class JSONResultTracker(FileResultTracker):
     def _write(self, obj) -> None:
         print(json.dumps(obj), file=self.file, flush=True)  # noqa:T201
 
-    # docstr-coverage: inherited
-    def log_params(
+    def log_params(  # noqa: D102
         self,
         params: Mapping[str, Any],
         prefix: str | None = None,
     ) -> None:  # noqa: D102
         self._write({"params": params, "prefix": prefix})
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,

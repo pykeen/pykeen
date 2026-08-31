@@ -65,9 +65,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         self.numeric_literals = numeric_literals
         self.literals_to_id = literals_to_id
 
-    # docstr-coverage: inherited
     @classmethod
-    def from_path(
+    def from_path(  # noqa: D102
         cls,
         path: str | pathlib.Path | TextIO,
         *,
@@ -80,9 +79,8 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         triples = load_triples(path)
         return cls.from_labeled_triples(triples=triples, numeric_triples=numeric_triples, **kwargs)
 
-    # docstr-coverage: inherited
     @classmethod
-    def from_labeled_triples(
+    def from_labeled_triples(  # noqa: D102
         cls,
         triples: LabeledTriples,
         *,
@@ -118,8 +116,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         yield from super().iter_extra_repr()
         yield f"num_literals={len(self.literals_to_id)}"
 
-    # docstr-coverage: inherited
-    def clone_and_exchange_triples(
+    def clone_and_exchange_triples(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         extra_metadata: dict[str, Any] | None = None,

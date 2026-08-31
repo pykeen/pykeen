@@ -71,8 +71,7 @@ class NeptuneResultTracker(ResultTracker):
         if tags:
             self.experiment.append_tags(*tags)
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,

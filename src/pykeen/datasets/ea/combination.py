@@ -342,8 +342,7 @@ class GraphPairCombinator(Generic[FactoryType], ABC):
 class DisjointGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """This combinator keeps both graphs as disconnected components."""
 
-    # docstr-coverage: inherited
-    def process(
+    def process(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         alignment: LongTensor,
@@ -359,8 +358,7 @@ class DisjointGraphPairCombinator(GraphPairCombinator[FactoryType]):
 class SwapGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """Add extra triples by swapping aligned entities."""
 
-    # docstr-coverage: inherited
-    def process(
+    def process(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         alignment: LongTensor,
@@ -398,8 +396,7 @@ class ExtraRelationGraphPairCombinator(GraphPairCombinator[FactoryType]):
     #: the name of the additional alignment relation
     ALIGNMENT_RELATION_NAME: ClassVar[str] = "same-as"
 
-    # docstr-coverage: inherited
-    def process(
+    def process(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         alignment: LongTensor,
@@ -458,8 +455,7 @@ def iter_entity_mappings(
 class CollapseGraphPairCombinator(GraphPairCombinator[FactoryType]):
     """This combinator merges all matching entity pairs into a single ID."""
 
-    # docstr-coverage: inherited
-    def process(
+    def process(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         alignment: LongTensor,

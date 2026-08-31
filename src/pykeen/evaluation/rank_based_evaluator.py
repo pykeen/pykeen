@@ -349,8 +349,7 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
                 continue
             yield key, None
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,
@@ -628,8 +627,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self.negative_samples = negatives
         self.num_entities = evaluation_factory.num_entities
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,
@@ -704,8 +702,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         # broadcast to samples
         return weights[inverse]
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,

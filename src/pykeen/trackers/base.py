@@ -101,8 +101,7 @@ class PythonResultTracker(ResultTracker):
             params = {f"{prefix}.{key}": value for key, value in params.items()}
         self.configuration.update(params)
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
@@ -171,8 +170,7 @@ class ConsoleResultTracker(ResultTracker):
             if not self.parameter_filter or self.parameter_filter.match(key):
                 self.write(f"Parameter: {key} = {value}")
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
@@ -225,8 +223,7 @@ class MultiResultTracker(ResultTracker):
         for tracker in self.trackers:
             tracker.log_params(params=params, prefix=prefix)
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,

@@ -504,8 +504,7 @@ class ERModel(
         if self.training and get_batchnorm_modules(self):
             raise ValueError("This model does not support slicing, since it has batch normalization layers.")
 
-    # docstr-coverage: inherited
-    def score_t(
+    def score_t(  # noqa: D102
         self,
         hr_batch: LongTensor,
         *,
@@ -542,8 +541,7 @@ class ERModel(
             num=self._get_entity_len(mode=mode) if tails is None else tails.shape[-1],
         )
 
-    # docstr-coverage: inherited
-    def score_h(
+    def score_h(  # noqa: D102
         self,
         rt_batch: LongTensor,
         *,
@@ -580,8 +578,7 @@ class ERModel(
             num=self._get_entity_len(mode=mode) if heads is None else heads.shape[-1],
         )
 
-    # docstr-coverage: inherited
-    def score_r(
+    def score_r(  # noqa: D102
         self,
         ht_batch: LongTensor,
         *,

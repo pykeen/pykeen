@@ -61,8 +61,7 @@ class Tokenizer:
 class RelationTokenizer(Tokenizer):
     """Tokenize entities by representing them as a bag of relations."""
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         num_tokens: int,
@@ -143,8 +142,7 @@ class AnchorTokenizer(Tokenizer):
         # convert to torch
         return len(anchors) + 1, torch.as_tensor(tokens, dtype=torch.long)
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         num_tokens: int,
@@ -177,8 +175,7 @@ class MetisAnchorTokenizer(AnchorTokenizer):
         self.num_partitions = num_partitions
         self.device = resolve_device(device)
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         num_tokens: int,
@@ -306,8 +303,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
             raise ValueError("Expected pool to contain contiguous keys 0...(N-1)")
         self.randomize_selection = randomize_selection
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
     ) -> tuple[int, LongTensor]:  # noqa: D102
         if num_entities != len(self.pool):

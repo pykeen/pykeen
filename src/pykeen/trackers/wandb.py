@@ -59,8 +59,7 @@ class WANDBResultTracker(ResultTracker):
         self.run.finish(exit_code=0 if success else -1)
         self.run = None
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,

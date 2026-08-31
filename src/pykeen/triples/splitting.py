@@ -318,8 +318,7 @@ class RandomizedCleaner(Cleaner):
     3. Continue until ``move_id_mask`` has no true bits
     """
 
-    # docstr-coverage: inherited
-    def cleanup_pair(
+    def cleanup_pair(  # noqa: D102
         self,
         reference: MappedTriples,
         other: MappedTriples,
@@ -350,8 +349,7 @@ class RandomizedCleaner(Cleaner):
 class DeterministicCleaner(Cleaner):
     """Cleanup a triples array (testing) with respect to another (training)."""
 
-    # docstr-coverage: inherited
-    def cleanup_pair(
+    def cleanup_pair(  # noqa: D102
         self,
         reference: MappedTriples,
         other: MappedTriples,
@@ -454,8 +452,7 @@ class CleanupSplitter(Splitter):
         """
         self.cleaner = cleaner_resolver.make(cleaner)
 
-    # docstr-coverage: inherited
-    def split_absolute_size(
+    def split_absolute_size(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         sizes: Sequence[int],
@@ -472,8 +469,7 @@ class CleanupSplitter(Splitter):
 class CoverageSplitter(Splitter):
     """This splitter greedily selects training triples such that each entity is covered and then splits the rest."""
 
-    # docstr-coverage: inherited
-    def split_absolute_size(
+    def split_absolute_size(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         sizes: Sequence[int],

@@ -1424,9 +1424,8 @@ class CachedTextRepresentation(TextRepresentation):
         # delegate to super class
         super().__init__(labels=labels, **kwargs)
 
-    # docstr-coverage: inherited
     @classmethod
-    def from_triples_factory(
+    def from_triples_factory(  # noqa: D102
         cls,
         triples_factory: TriplesFactory,
         for_entities: bool = True,

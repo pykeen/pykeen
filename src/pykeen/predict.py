@@ -619,8 +619,7 @@ class CountScoreConsumer(ScoreConsumer):
         self.batch_count = 0
         self.score_count = 0
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         batch: PredictionBatch,
         target: Target,
@@ -650,8 +649,7 @@ class TopKScoreConsumer(ScoreConsumer):
         self.result = torch.empty(0, 3, dtype=torch.long, device=device)
         self.scores = torch.empty(0, device=device)
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         batch: PredictionBatch,
         target: Target,
@@ -728,8 +726,7 @@ class AllScoreConsumer(ScoreConsumer):
             dim=-1,
         ).view(-1, 3)
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         batch: PredictionBatch,
         target: Target,

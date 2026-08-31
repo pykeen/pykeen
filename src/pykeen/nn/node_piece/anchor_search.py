@@ -83,8 +83,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         top_dist = numpy.take_along_axis(arr=array, indices=top_k_indices, axis=0)
         return numpy.take_along_axis(arr=top_k_indices, indices=numpy.argsort(top_dist, axis=0), axis=0)
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
     ) -> numpy.ndarray:  # noqa: D102
         # convert to adjacency matrix
@@ -225,8 +224,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
             tokens[i, : len(chosen)] = chosen
         return tokens
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
     ) -> numpy.ndarray:  # noqa: D102
         adjacency = self.create_adjacency(edge_index=edge_index, num_entities=num_entities)
@@ -374,8 +372,7 @@ class SparseBFSSearcher(AnchorSearcher):
         # since the output is sorted, no need for random sampling, we just take top-k nearest
         return indices[:, :k].detach().cpu().numpy()
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
     ) -> numpy.ndarray:  # noqa: D102
         edge_list = self.create_adjacency(edge_index=edge_index, num_entities=num_entities)
@@ -432,8 +429,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
             .numpy()
         )
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
     ) -> numpy.ndarray:  # noqa: D102
         num_entities = ensure_num_entities(edge_index, num_entities=num_entities)

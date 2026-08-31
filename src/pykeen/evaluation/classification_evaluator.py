@@ -115,8 +115,7 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
             for metric_cls in classification_metric_resolver.lookup_dict.values()
         )
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,

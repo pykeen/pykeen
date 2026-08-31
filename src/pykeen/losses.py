@@ -406,8 +406,7 @@ class PointwiseLoss(Loss):
         """
         raise NotImplementedError
 
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
+    def process_slcwa_scores(  # noqa: D102
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
@@ -443,8 +442,7 @@ class PointwiseLoss(Loss):
             weights=weights,
         )
 
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
+    def process_lcwa_scores(  # noqa: D102
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
@@ -627,8 +625,7 @@ class MarginPairwiseLoss(PairwiseLoss):
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
+    def process_slcwa_scores(  # noqa: D102
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
@@ -652,8 +649,7 @@ class MarginPairwiseLoss(PairwiseLoss):
             pos_scores=positive_scores, neg_scores=negative_scores, pos_weights=pos_weights, neg_weights=neg_weights
         )
 
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
+    def process_lcwa_scores(  # noqa: D102
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
@@ -685,8 +681,7 @@ class MarginPairwiseLoss(PairwiseLoss):
 
         return self(pos_scores=positive_scores, neg_scores=negative_scores)
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         pos_scores: FloatTensor,
         neg_scores: FloatTensor,
@@ -967,8 +962,7 @@ class DoubleMarginLoss(PointwiseLoss):
         self.positive_weight = positive_negative_balance
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
+    def process_slcwa_scores(  # noqa: D102
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
@@ -1006,8 +1000,7 @@ class DoubleMarginLoss(PointwiseLoss):
         negative_loss = self._reduction_method(self.margin_activation(self.negative_margin + negative_scores))
         return self.positive_weight * positive_loss + self.negative_weight * negative_loss
 
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
+    def process_lcwa_scores(  # noqa: D102
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
@@ -1075,8 +1068,7 @@ class DeltaPointwiseLoss(PointwiseLoss):
         self.margin = margin
         self.margin_activation = margin_activation_resolver.make(margin_activation)
 
-    # docstr-coverage: inherited
-    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:
+    def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         # scale labels from [0, 1] to [-1, 1]
         target = 2 * target - 1
         loss = self.margin_activation(self.margin - target * x)
@@ -1246,8 +1238,7 @@ class CrossEntropyLoss(SetwiseLoss):
     name: Cross entropy
     """
 
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
+    def process_slcwa_scores(  # noqa: D102
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
@@ -1284,8 +1275,7 @@ class CrossEntropyLoss(SetwiseLoss):
             reduction=self.reduction,
         )
 
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
+    def process_lcwa_scores(  # noqa: D102
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
@@ -1371,8 +1361,7 @@ class InfoNCELoss(CrossEntropyLoss):
         self.inverse_softmax_temperature = math.exp(log_adversarial_temperature)
         self.margin = margin
 
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
+    def process_lcwa_scores(  # noqa: D102
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
@@ -1394,8 +1383,7 @@ class InfoNCELoss(CrossEntropyLoss):
             weights=weights,
         )
 
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
+    def process_slcwa_scores(  # noqa: D102
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
@@ -1439,8 +1427,7 @@ class AdversarialLoss(SetwiseLoss):
         self.inverse_softmax_temperature = inverse_softmax_temperature
         self.factor = 0.5 if self._reduction_method is torch.mean else 1.0
 
-    # docstr-coverage: inherited
-    def process_lcwa_scores(
+    def process_lcwa_scores(  # noqa: D102
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
@@ -1475,8 +1462,7 @@ class AdversarialLoss(SetwiseLoss):
 
         return self.factor * (pos_loss + neg_loss)
 
-    # docstr-coverage: inherited
-    def process_slcwa_scores(
+    def process_slcwa_scores(  # noqa: D102
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
@@ -1603,8 +1589,7 @@ class NSSALoss(AdversarialLoss):
         super().__init__(reduction=reduction, inverse_softmax_temperature=adversarial_temperature)
         self.margin = margin
 
-    # docstr-coverage: inherited
-    def positive_loss_term(
+    def positive_loss_term(  # noqa: D102
         self,
         pos_scores: FloatTensor,
         label_smoothing: float | None = None,
@@ -1615,8 +1600,7 @@ class NSSALoss(AdversarialLoss):
             raise UnsupportedLabelSmoothingError(self)
         return -self._reduction_method(functional.logsigmoid(self.margin + pos_scores))
 
-    # docstr-coverage: inherited
-    def negative_loss_term_unreduced(
+    def negative_loss_term_unreduced(  # noqa: D102
         self,
         neg_scores: FloatTensor,
         label_smoothing: float | None = None,
@@ -1644,8 +1628,7 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
     name: Adversarially weighted binary cross entropy (with logits)
     """
 
-    # docstr-coverage: inherited
-    def positive_loss_term(
+    def positive_loss_term(  # noqa: D102
         self,
         pos_scores: FloatTensor,
         label_smoothing: float | None = None,
@@ -1658,8 +1641,7 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
             reduction=self.reduction,
         )
 
-    # docstr-coverage: inherited
-    def negative_loss_term_unreduced(
+    def negative_loss_term_unreduced(  # noqa: D102
         self,
         neg_scores: FloatTensor,
         label_smoothing: float | None = None,

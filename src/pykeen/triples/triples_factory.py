@@ -1367,8 +1367,7 @@ class TriplesFactory(CoreTriplesFactory):
             data[name] = dict(zip(df["label"], df["id"], strict=False))
         return data
 
-    # docstr-coverage: inherited
-    def clone_and_exchange_triples(
+    def clone_and_exchange_triples(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         extra_metadata: dict[str, Any] | None = None,
@@ -1536,8 +1535,7 @@ class TriplesFactory(CoreTriplesFactory):
 
         return SVG(data=svg_str)
 
-    # docstr-coverage: inherited
-    def tensor_to_df(
+    def tensor_to_df(  # noqa: D102
         self,
         tensor: LongTensor,
         **kwargs: torch.Tensor | np.ndarray | Sequence,
@@ -1561,8 +1559,7 @@ class TriplesFactory(CoreTriplesFactory):
         columns = list(TRIPLES_DF_COLUMNS) + old_col[3:]
         return data.loc[:, columns]
 
-    # docstr-coverage: inherited
-    def new_with_restriction(
+    def new_with_restriction(  # noqa: D102
         self,
         entities: None | Collection[int] | Collection[str] = None,
         relations: None | Collection[int] | Collection[str] = None,

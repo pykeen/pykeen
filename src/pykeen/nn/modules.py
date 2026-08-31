@@ -2557,8 +2557,7 @@ class ClampedInteraction(Interaction[HeadRepresentation, RelationRepresentation,
         """Expose the base interaction's relation shape."""
         return self.base.relation_shape
 
-    # docstr-coverage: inherited
-    def forward(self, h: HeadRepresentation, r: RelationRepresentation, t: TailRepresentation) -> FloatTensor:
+    def forward(self, h: HeadRepresentation, r: RelationRepresentation, t: TailRepresentation) -> FloatTensor:  # noqa: D102
         scores = self.base(h, r, t)
         if self.clamp_score is None:
             return scores
@@ -2873,8 +2872,7 @@ class MonotonicAffineTransformationInteraction(
         self.bias.data = self.initial_bias.to(device=self.bias.device)
         self.log_scale.data = self.initial_log_scale.to(device=self.bias.device)
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         h: HeadRepresentation,
         r: RelationRepresentation,

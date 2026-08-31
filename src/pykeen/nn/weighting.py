@@ -102,8 +102,7 @@ def _inverse_frequency_weighting(idx: LongTensor) -> FloatTensor:
 class InverseInDegreeEdgeWeighting(EdgeWeighting):
     """Normalize messages by inverse in-degree."""
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         source: LongTensor,
         target: LongTensor,
@@ -119,8 +118,7 @@ class InverseInDegreeEdgeWeighting(EdgeWeighting):
 class InverseOutDegreeEdgeWeighting(EdgeWeighting):
     """Normalize messages by inverse out-degree."""
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         source: LongTensor,
         target: LongTensor,
@@ -136,8 +134,7 @@ class InverseOutDegreeEdgeWeighting(EdgeWeighting):
 class SymmetricEdgeWeighting(EdgeWeighting):
     """Normalize messages by product of inverse sqrt of in-degree and out-degree."""
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         source: LongTensor,
         target: LongTensor,
@@ -180,8 +177,7 @@ class AttentionEdgeWeighting(EdgeWeighting):
         self.attention_dim = message_dim // num_heads
         self.dropout = nn.Dropout(dropout)
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         source: LongTensor,
         target: LongTensor,

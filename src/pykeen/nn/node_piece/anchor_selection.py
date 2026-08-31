@@ -236,8 +236,7 @@ class MixtureAnchorSelection(AnchorSelection):
         yield from super().iter_extra_repr()
         yield f"selections={self.selections}"
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         edge_index: numpy.ndarray,
         known_anchors: numpy.ndarray | None = None,

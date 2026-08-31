@@ -44,8 +44,7 @@ class TensorBoardResultTracker(ResultTracker):
         #  via self.writer.log_dir
         self.writer = torch.utils.tensorboard.SummaryWriter(log_dir=experiment_path)
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
