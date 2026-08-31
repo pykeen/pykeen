@@ -418,7 +418,8 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
                 if filter_batch is None:
                     raise AssertionError("Filter indices are required to create dense positive masks.")
                 dense_positive_mask = torch.zeros_like(scores, dtype=torch.bool, device=filter_batch.device)
-                dense_positive_mask[filter_batch[:, 0], filter_batch[:, 0]] = True
+                # filter_batch is given as (batch_id, entity_id) pairs
+                dense_positive_mask[filter_batch[:, 0], filter_batch[:, 1]] = True
 
             # delegate processing of scores to the evaluator
             self.evaluator.process_scores_(

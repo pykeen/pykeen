@@ -9,6 +9,7 @@ import pykeen.evaluation.evaluation_loop
 import pykeen.evaluation.rank_based_evaluator
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, RankBasedEvaluator
+from pykeen.evaluation.classification_evaluator import ClassificationEvaluator
 from pykeen.evaluation.evaluation_loop import LCWAEvaluationLoop
 from pykeen.models import FixedModel
 from pykeen.typing import LABEL_RELATION
@@ -39,6 +40,8 @@ class RelationPredictionLinkPredictionEvaluationLoopTestCase(LinkPredictionEvalu
         RankBasedEvaluator(filtered=True),
         # the raw / unfiltered ranking protocol has to work, too
         RankBasedEvaluator(filtered=False),
+        # exercises the dense positive mask code path
+        ClassificationEvaluator(),
     ],
 )
 def test_loop_matches_evaluate(evaluator: Evaluator):
