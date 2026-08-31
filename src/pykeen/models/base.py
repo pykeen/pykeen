@@ -261,11 +261,11 @@ class Model(nn.Module, ABC):
         :param relations: shape: (num_relations,) | (batch_size, num_relations)
             relation indices to score against. If None, scores against all relations (from the given mode).
 
-        :return: shape: (batch_size, num_real_relations), dtype: float
-            For each h-t pair, the scores for all possible relations.
+        :return: shape: (batch_size, num_relations), dtype: float
+            For each h-t pair, the scores for all possible relations. As for the other scoring
+            methods, the relations are the model's *internal* ones, so this comprises the
+            artificial inverse relations when the model is trained with them.
         """
-        # TODO: this currently compute (batch_size, num_relations) instead,
-        # i.e., scores for normal and inverse relations
 
     @abstractmethod
     def score_h(
