@@ -85,7 +85,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
 
     def __call__(  # noqa: D102
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
-    ) -> numpy.ndarray:  # noqa: D102
+    ) -> numpy.ndarray:
         # convert to adjacency matrix
         adjacency = edge_index_to_sparse_matrix(edge_index=torch.as_tensor(edge_index, dtype=torch.long)).coalesce()
         # convert to scipy sparse csr
@@ -225,7 +225,7 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
 
     def __call__(  # noqa: D102
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
-    ) -> numpy.ndarray:  # noqa: D102
+    ) -> numpy.ndarray:
         adjacency = self.create_adjacency(edge_index=edge_index, num_entities=num_entities)
         pool = self.bfs(anchors=anchors, adjacency=adjacency, max_iter=self.max_iter, k=k)
         return self.select(pool=pool, k=k)
@@ -372,7 +372,7 @@ class SparseBFSSearcher(AnchorSearcher):
 
     def __call__(  # noqa: D102
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
-    ) -> numpy.ndarray:  # noqa: D102
+    ) -> numpy.ndarray:
         edge_list = self.create_adjacency(edge_index=edge_index, num_entities=num_entities)
         pool = self.bfs(anchors=anchors, edge_list=edge_list, max_iter=self.max_iter, k=k, device=self.device)
         return self.select(pool=pool, k=k)
@@ -428,7 +428,7 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
 
     def __call__(  # noqa: D102
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
-    ) -> numpy.ndarray:  # noqa: D102
+    ) -> numpy.ndarray:
         num_entities = ensure_num_entities(edge_index, num_entities=num_entities)
         result = numpy.full(shape=(num_entities, k), fill_value=-1)
         i = 0

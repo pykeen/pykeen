@@ -72,7 +72,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         *,
         path_to_numeric_triples: None | str | pathlib.Path | TextIO = None,
         **kwargs,
-    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+    ) -> "TriplesNumericLiteralsFactory":
         if path_to_numeric_triples is None:
             raise ValueError(f"{cls.__name__} requires path_to_numeric_triples.")
         numeric_triples = load_triples(path_to_numeric_triples)
@@ -86,7 +86,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         *,
         numeric_triples: LabeledTriples | None = None,
         **kwargs,
-    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+    ) -> "TriplesNumericLiteralsFactory":
         if numeric_triples is None:
             raise ValueError(f"{cls.__name__} requires numeric_triples.")
         base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
@@ -121,7 +121,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
         create_inverse_triples: bool | None = None,
-    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+    ) -> "TriplesNumericLiteralsFactory":
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
         return TriplesNumericLiteralsFactory(

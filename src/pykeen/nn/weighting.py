@@ -108,7 +108,7 @@ class InverseInDegreeEdgeWeighting(EdgeWeighting):
         target: LongTensor,
         message: FloatTensor | None = None,
         x_e: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         weight = _inverse_frequency_weighting(idx=target)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
@@ -124,7 +124,7 @@ class InverseOutDegreeEdgeWeighting(EdgeWeighting):
         target: LongTensor,
         message: FloatTensor | None = None,
         x_e: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         weight = _inverse_frequency_weighting(idx=source)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
@@ -140,7 +140,7 @@ class SymmetricEdgeWeighting(EdgeWeighting):
         target: LongTensor,
         message: FloatTensor | None = None,
         x_e: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         weight = (_inverse_frequency_weighting(idx=source) * _inverse_frequency_weighting(idx=target)).sqrt()
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
@@ -183,7 +183,7 @@ class AttentionEdgeWeighting(EdgeWeighting):
         target: LongTensor,
         message: FloatTensor | None = None,
         x_e: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         if message is None or x_e is None:
             raise ValueError(f"{self.__class__.__name__} requires message and x_e.")
 

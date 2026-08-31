@@ -49,7 +49,7 @@ class TensorBoardResultTracker(ResultTracker):
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
         for key, value in metrics.items():
             self.writer.add_scalar(tag=key, scalar_value=value, global_step=step)

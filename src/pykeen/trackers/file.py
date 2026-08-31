@@ -114,7 +114,7 @@ class CSVResultTracker(FileResultTracker):
         self,
         params: Mapping[str, Any],
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self._write(dictionary=params, label="parameter", step=0, prefix=prefix)
 
     def log_metrics(  # noqa: D102
@@ -122,7 +122,7 @@ class CSVResultTracker(FileResultTracker):
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self._write(dictionary=metrics, label="metric", step=step, prefix=prefix)
 
 
@@ -145,7 +145,7 @@ class JSONResultTracker(FileResultTracker):
         self,
         params: Mapping[str, Any],
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self._write({"params": params, "prefix": prefix})
 
     def log_metrics(  # noqa: D102
@@ -153,5 +153,5 @@ class JSONResultTracker(FileResultTracker):
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self._write({"metrics": metrics, "prefix": prefix, "step": step})

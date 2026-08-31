@@ -1369,7 +1369,7 @@ class TriplesFactory(CoreTriplesFactory):
         extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
         create_inverse_triples: bool | None = None,
-    ) -> Self:  # noqa: D102
+    ) -> Self:
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
         return TriplesFactory(  # type: ignore[return-value]
@@ -1533,7 +1533,7 @@ class TriplesFactory(CoreTriplesFactory):
         self,
         tensor: LongTensor,
         **kwargs: torch.Tensor | np.ndarray | Sequence,
-    ) -> pd.DataFrame:  # noqa: D102
+    ) -> pd.DataFrame:
         data = super().tensor_to_df(tensor=tensor, **kwargs)
         old_col = list(data.columns)
 
@@ -1559,7 +1559,7 @@ class TriplesFactory(CoreTriplesFactory):
         relations: None | Collection[int] | Collection[str] = None,
         invert_entity_selection: bool = False,
         invert_relation_selection: bool = False,
-    ) -> Self:  # noqa: D102
+    ) -> Self:
         if entities is None and relations is None:
             return self
         if entities is not None:

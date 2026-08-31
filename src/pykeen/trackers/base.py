@@ -104,7 +104,7 @@ class PythonResultTracker(ResultTracker):
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if not self.store_metrics:
             return
 
@@ -171,7 +171,7 @@ class ConsoleResultTracker(ResultTracker):
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if not self.track_metrics:
             return
 
@@ -221,7 +221,7 @@ class MultiResultTracker(ResultTracker):
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         for tracker in self.trackers:
             tracker.log_metrics(metrics=metrics, step=step, prefix=prefix)
 

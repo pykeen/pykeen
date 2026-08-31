@@ -76,7 +76,7 @@ class NeptuneResultTracker(ResultTracker):
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         metrics = flatten_dictionary(metrics, prefix=prefix)
         for k, v in metrics.items():
             self._help_log(k, step, v)

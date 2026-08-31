@@ -67,7 +67,7 @@ class RelationTokenizer(Tokenizer):
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> tuple[int, LongTensor]:  # noqa: D102
+    ) -> tuple[int, LongTensor]:
         # tokenize: represent entities by bag of relations
         h, r, t = mapped_triples.t()
 
@@ -148,7 +148,7 @@ class AnchorTokenizer(Tokenizer):
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> tuple[int, LongTensor]:  # noqa: D102
+    ) -> tuple[int, LongTensor]:
         return self._call(
             edge_index=get_edge_index(mapped_triples=mapped_triples),
             num_tokens=num_tokens,
@@ -181,7 +181,7 @@ class MetisAnchorTokenizer(AnchorTokenizer):
         num_tokens: int,
         num_entities: int,
         num_relations: int,
-    ) -> tuple[int, LongTensor]:  # noqa: D102
+    ) -> tuple[int, LongTensor]:
         try:
             import torch_sparse
         except ImportError as err:
@@ -305,7 +305,7 @@ class PrecomputedPoolTokenizer(Tokenizer):
 
     def __call__(  # noqa: D102
         self, mapped_triples: MappedTriples, num_tokens: int, num_entities: int, num_relations: int
-    ) -> tuple[int, LongTensor]:  # noqa: D102
+    ) -> tuple[int, LongTensor]:
         if num_entities != len(self.pool):
             raise ValueError(f"Invalid number of entities ({num_entities}); expected {len(self.pool)}")
         if self.randomize_selection:

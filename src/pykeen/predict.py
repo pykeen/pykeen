@@ -620,7 +620,7 @@ class CountScoreConsumer(ScoreConsumer):
         batch: PredictionBatch,
         target: Target,
         scores: FloatTensor,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self.batch_count += batch.shape[0]
         self.score_count += scores.numel()
 
@@ -650,7 +650,7 @@ class TopKScoreConsumer(ScoreConsumer):
         batch: PredictionBatch,
         target: Target,
         scores: FloatTensor,
-    ) -> None:  # noqa: D102
+    ) -> None:
         batch_size, num_scores = scores.shape
         assert batch.shape == (batch_size, 2)
 
@@ -727,7 +727,7 @@ class AllScoreConsumer(ScoreConsumer):
         batch: PredictionBatch,
         target: Target,
         scores: FloatTensor,
-    ) -> None:  # noqa: D102
+    ) -> None:
         j = 0
         selectors: list[slice | LongTensor] = []
         for col in COLUMN_LABELS:

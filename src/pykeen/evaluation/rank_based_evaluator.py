@@ -356,7 +356,7 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if true_scores is None:
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
 
@@ -632,7 +632,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if true_scores is None:
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
 
@@ -707,7 +707,7 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         super().process_scores_(
             hrt_batch=hrt_batch,
             target=target,

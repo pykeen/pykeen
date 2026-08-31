@@ -2870,7 +2870,7 @@ class MonotonicAffineTransformationInteraction(
         h: HeadRepresentation,
         r: RelationRepresentation,
         t: TailRepresentation,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         return self.log_scale.exp() * self.base(h=h, r=r, t=t) + self.bias
 
 

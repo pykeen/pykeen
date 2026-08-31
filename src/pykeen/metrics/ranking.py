@@ -572,7 +572,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         if num_candidates is None:
             raise ValueError(f"{self.__class__.__name__} requires number of candidates.")
         return self.adjust(
@@ -609,7 +609,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # since scale and offset are constant for a given number of candidates, we have
         # E[scale * M + offset] = scale * E[M] + offset
         return self.adjust(
@@ -626,7 +626,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # since scale and offset are constant for a given number of candidates, we have
         # V[scale * M + offset] = scale^2 * V[M]
         parameters = self.get_coefficients(num_candidates=num_candidates, weights=weights)
@@ -709,7 +709,7 @@ class ZMetric(DerivedRankBasedMetric):
 
     def get_coefficients(  # noqa: D102
         self, num_candidates: np.ndarray, weights: np.ndarray | None = None
-    ) -> AffineTransformationParameters:  # noqa: D102
+    ) -> AffineTransformationParameters:
         mean = self.base.expected_value(num_candidates=num_candidates, weights=weights)
         std = self.base.std(num_candidates=num_candidates, weights=weights)
         scale = _safe_divide(1.0, std)
@@ -724,7 +724,7 @@ class ZMetric(DerivedRankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # should be exactly 0.0
         return 0.0  # centered
 
@@ -734,7 +734,7 @@ class ZMetric(DerivedRankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # should be exactly 1.0
         return 1.0  # re-scaled
 
@@ -760,7 +760,7 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
 
     def get_coefficients(  # noqa: D102
         self, num_candidates: np.ndarray, weights: np.ndarray | None = None
-    ) -> AffineTransformationParameters:  # noqa: D102
+    ) -> AffineTransformationParameters:
         return AffineTransformationParameters(
             scale=_safe_divide(1, self.base.expected_value(num_candidates=num_candidates, weights=weights))
         )
@@ -771,7 +771,7 @@ class ExpectationNormalizedMetric(DerivedRankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         return 1.0  # centered
 
 
@@ -800,7 +800,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
 
     def get_coefficients(  # noqa: D102
         self, num_candidates: np.ndarray, weights: np.ndarray | None = None
-    ) -> AffineTransformationParameters:  # noqa: D102
+    ) -> AffineTransformationParameters:
         mean = self.base.expected_value(num_candidates=num_candidates, weights=weights)
         scale = _safe_divide(1.0, 1.0 - mean)
         offset = -scale * mean
@@ -812,7 +812,7 @@ class ReindexedMetric(DerivedRankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # should be exactly 0.0
         return 0.0
 
@@ -897,7 +897,7 @@ class ArithmeticMeanRank(RankBasedMetric):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return np.average(np.asanyarray(ranks), weights=weights).item()
 
     def expected_value(  # noqa: D102
@@ -906,7 +906,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         num_candidates = np.asanyarray(num_candidates)
         individual_expectation = 0.5 * (num_candidates + 1)
         return weighted_mean_expectation(individual=individual_expectation, weights=weights)
@@ -917,7 +917,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         num_candidates = np.asanyarray(num_candidates)
         individual_variance = (num_candidates**2 - 1) / 12.0
         return weighted_mean_variance(individual=individual_variance, weights=weights)
@@ -955,7 +955,7 @@ class InverseArithmeticMeanRank(RankBasedMetric):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return np.reciprocal(np.average(np.asanyarray(ranks), weights=weights)).item()
 
 
@@ -1023,7 +1023,7 @@ class GeometricMeanRank(RankBasedMetric):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return stats.gmean(ranks, weights=weights).item()
 
     @staticmethod
@@ -1040,7 +1040,7 @@ class GeometricMeanRank(RankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         alpha = self._normalize_weights(weights, n=len(num_candidates))
 
         # E[G] = Product( E[ X_i^alpha_i ] )
@@ -1055,7 +1055,7 @@ class GeometricMeanRank(RankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         alpha = self._normalize_weights(weights, n=len(num_candidates))
 
         # 1. Calculate Log of First Moment E[G]
@@ -1111,7 +1111,7 @@ class InverseGeometricMeanRank(RankBasedMetric):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return np.reciprocal(stats.gmean(ranks, weights=weights)).item()
 
 
@@ -1161,7 +1161,7 @@ class HarmonicMeanRank(RankBasedMetric):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return weighted_harmonic_mean(a=ranks, weights=weights).item()
 
 
@@ -1301,7 +1301,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return np.reciprocal(weighted_harmonic_mean(a=ranks, weights=weights)).item()
 
     def expected_value(  # noqa: D102
@@ -1310,7 +1310,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         num_candidates = np.asanyarray(num_candidates)
         n = num_candidates.max().item()
         expectation = generalized_harmonic_numbers(n, p=-1.0) / np.arange(1, n + 1)
@@ -1323,7 +1323,7 @@ class InverseHarmonicMeanRank(RankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         num_candidates = np.asanyarray(num_candidates)
         n = num_candidates.max().item()
         individual = harmonic_variances(n)[num_candidates - 1]
@@ -1458,7 +1458,7 @@ class MedianRank(RankBasedMetric):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         if weights is None:
             return np.median(ranks).item()
 
@@ -1470,7 +1470,7 @@ class MedianRank(RankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # weighted case is equivalent to Subset Sum Problem (~NP complete)
         if weights is not None:
             return super().expected_value(
@@ -1486,7 +1486,7 @@ class MedianRank(RankBasedMetric):
 
     def variance(  # noqa: D102
         self, num_candidates: np.ndarray, num_samples: int | None = None, weights: np.ndarray | None = None, **kwargs
-    ) -> float:  # noqa: D102
+    ) -> float:
         # weighted case is equivalent to Subset Sum Problem (~NP complete)
         if weights is not None:
             return super().variance(num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs)
@@ -1523,7 +1523,7 @@ class InverseMedianRank(RankBasedMetric):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return np.reciprocal(weighted_median(a=ranks, weights=weights), dtype=float).item()
 
 
@@ -1553,7 +1553,7 @@ class StandardDeviation(RankBasedMetric):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         ranks = np.asanyarray(ranks)
         if weights is None:
             return ranks.std().item()
@@ -1595,7 +1595,7 @@ class Variance(RankBasedMetric):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         ranks = np.asanyarray(ranks)
         if weights is None:
             return ranks.var().item()
@@ -1674,7 +1674,7 @@ class Count(RankBasedMetric):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         # TODO: should we return the sum of weights?
         if weights is not None:
             raise NoWeightSupportError(
@@ -1768,7 +1768,7 @@ class HitsAtK(RankBasedMetric):
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return np.average(np.less_equal(ranks, self.k), weights=weights).item()
 
     @property
@@ -1781,7 +1781,7 @@ class HitsAtK(RankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/C_i)
         individual = np.minimum(self.k / num_candidates, 1.0)
@@ -1793,7 +1793,7 @@ class HitsAtK(RankBasedMetric):
         num_samples: int | None = None,
         weights: np.ndarray | None = None,
         **kwargs,
-    ) -> float:  # noqa: D102
+    ) -> float:
         # for each individual ranking task, we have I[r_i <= k] ~ Bernoulli(k/C_i)
         num_candidates = np.asanyarray(num_candidates, dtype=float)
         p = np.minimum(self.k / num_candidates, 1.0)

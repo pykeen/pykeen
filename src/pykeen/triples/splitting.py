@@ -323,7 +323,7 @@ class RandomizedCleaner(Cleaner):
         reference: MappedTriples,
         other: MappedTriples,
         random_state: TorchRandomHint,
-    ) -> tuple[MappedTriples, MappedTriples]:  # noqa: D102
+    ) -> tuple[MappedTriples, MappedTriples]:
         generator = ensure_torch_random_state(random_state)
         move_id_mask = _prepare_cleanup(reference, other)
 
@@ -354,7 +354,7 @@ class DeterministicCleaner(Cleaner):
         reference: MappedTriples,
         other: MappedTriples,
         random_state: TorchRandomHint,
-    ) -> tuple[MappedTriples, MappedTriples]:  # noqa: D102
+    ) -> tuple[MappedTriples, MappedTriples]:
         move_id_mask = _prepare_cleanup(reference, other)
         reference = torch.cat([reference, other[move_id_mask]])
         other = other[~move_id_mask]
@@ -457,7 +457,7 @@ class CleanupSplitter(Splitter):
         mapped_triples: MappedTriples,
         sizes: Sequence[int],
         generator: torch.Generator,
-    ) -> Sequence[MappedTriples]:  # noqa: D102
+    ) -> Sequence[MappedTriples]:
         triples_groups = _split_triples(mapped_triples, sizes=sizes, generator=generator)
         # Make sure that the first element has all the right stuff in it
         logger.debug("cleaning up groups")
@@ -474,7 +474,7 @@ class CoverageSplitter(Splitter):
         mapped_triples: MappedTriples,
         sizes: Sequence[int],
         generator: torch.Generator,
-    ) -> Sequence[MappedTriples]:  # noqa: D102
+    ) -> Sequence[MappedTriples]:
         seed_mask = _get_cover_deterministic(triples=mapped_triples)
         train_seed = mapped_triples[seed_mask]
         remaining_triples = mapped_triples[~seed_mask]

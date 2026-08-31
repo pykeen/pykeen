@@ -62,7 +62,7 @@ class WANDBResultTracker(ResultTracker):
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if self.run is None:
             raise AssertionError("start_run must be called before logging any metrics")
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)

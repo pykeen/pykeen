@@ -52,7 +52,7 @@ class MLFlowResultTracker(ResultTracker):
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
         self.mlflow.log_metrics(metrics=metrics, step=step)
 

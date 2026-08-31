@@ -121,7 +121,7 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if dense_positive_mask is None:
             raise KeyError("Sklearn evaluators need the positive mask!")
 

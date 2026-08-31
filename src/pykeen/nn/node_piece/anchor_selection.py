@@ -235,7 +235,7 @@ class MixtureAnchorSelection(AnchorSelection):
         self,
         edge_index: numpy.ndarray,
         known_anchors: numpy.ndarray | None = None,
-    ) -> numpy.ndarray:  # noqa: D102
+    ) -> numpy.ndarray:
         # split this up into first and rest, because once
         # we apply one selection, even to a none value for `known_anchors`,
         # we are guaranteed to have a non-none anchor

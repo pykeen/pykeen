@@ -510,7 +510,7 @@ class ERModel(
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
         tails: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # normalize before checking
         if slice_size and slice_size >= self.num_entities:
             slice_size = None
@@ -547,7 +547,7 @@ class ERModel(
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
         heads: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # normalize before checking
         if slice_size and slice_size >= self.num_entities:
             slice_size = None
@@ -584,7 +584,7 @@ class ERModel(
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
         relations: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # normalize before checking
         if slice_size and slice_size >= self.num_relations:
             slice_size = None
