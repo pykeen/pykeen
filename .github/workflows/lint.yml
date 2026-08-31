@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ "3.10", "3.14" ]
+        python-version: [ "3.11", "3.14" ]
     steps:
       - uses: actions/checkout@v5
 
@@ -47,9 +47,6 @@ jobs:
 
     - name: Check package metadata with Pyroma
       run: tox -e pyroma
-
-    - name: Check manifest
-      run: tox -e manifest
 
     - name: Check RST conformity with doc8
       run: tox -e doc8

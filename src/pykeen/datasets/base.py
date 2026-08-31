@@ -9,7 +9,7 @@ import zipfile
 from abc import abstractmethod
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from io import BytesIO
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar, Self, cast
 
 import click
 import docdata
@@ -19,7 +19,6 @@ import torch
 from more_click import verbose_option
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
-from typing_extensions import Self
 
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory

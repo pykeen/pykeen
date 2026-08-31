@@ -5,12 +5,11 @@ import logging
 import pathlib
 import re
 from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
-from typing import Any, ClassVar, TextIO
+from typing import Any, ClassVar, Self, TextIO
 
 import numpy as np
 import pandas as pd
 import torch
-from typing_extensions import Self
 
 from .splitting import split, split_fully_inductive, split_semi_inductive
 from .utils import TRIPLES_DF_COLUMNS, get_num_ids, load_triples, tensor_to_df

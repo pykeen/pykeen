@@ -6,14 +6,13 @@ Generally requires :mod:`torchvision` to be installed.
 import functools
 import pathlib
 from collections.abc import Callable, Sequence
-from typing import Any, TypeAlias
+from typing import Any, Self, TypeAlias
 
 import torch
 import torch.nn
 import torch.utils.data
 from class_resolver import OptionalKwargs
 from docdata import parse_docdata
-from typing_extensions import Self
 
 from .cache import WikidataImageCache
 from ..representation import BackfillRepresentation, Representation
