@@ -20,15 +20,14 @@ def model() -> Model:
     return TransE(triples_factory=Nations(create_inverse_triples=True).training, embedding_dim=2, random_seed=0)
 
 
-def test_invert_does_not_modify_input(relation_inverter: RelationInverter):
-    """Test that the non-inplace variant leaves its input alone."""
+@pytest.mark.parametrize("method_name", ["invert", "map"])
+def test_batch_methods_do_not_modify_input(relation_inverter: RelationInverter, method_name: str):
+    """Test that the batch-level methods leave their input alone."""
     batch = torch.as_tensor([[0, 1, 2], [3, 4, 5]])
     copy = batch.clone()
-    inverted = relation_inverter.invert(batch=batch)
+    result = getattr(relation_inverter, method_name)(batch=batch)
     assert torch.equal(batch, copy)
-    assert not torch.equal(inverted, copy)
-    # the in-place variant applied to a copy has to agree
-    assert torch.equal(inverted, relation_inverter.invert_(batch=copy))
+    assert not torch.equal(result, copy)
 
 
 def test_default_inverter_ids():

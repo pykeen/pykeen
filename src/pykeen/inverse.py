@@ -25,6 +25,8 @@ class RelationInverter(ABC):
       inside a :class:`~pykeen.triples.CoreTriplesFactory`, and
     - the *internal* relation IDs, ``0 ... 2 * num_real_relations - 1``, as used by models trained
       with inverse relations, which comprise a forward and an inverse ID for each real relation.
+
+    Subclasses only define the ID-level translation; the batch-level operations are derived from it.
     """
 
     @abstractmethod
@@ -40,28 +42,27 @@ class RelationInverter(ABC):
         """Get the internal inverse ID for a given internal (forward) relation ID."""
         # TODO: inverse of inverse?
 
-    def _map(self, batch: LongTensor, index: int = 1) -> LongTensor:
-        """Map relations in a batch from real to internal IDs."""
-        batch = batch.clone()
-        batch[:, index] = self.to_internal(batch[:, index])
-        return batch
-
-    @abstractmethod
-    def invert_(self, batch: LongTensor, index: int = 1) -> LongTensor:
-        """Invert relations in a batch (in-place)."""
-
-    def invert(self, batch: LongTensor, index: int = 1) -> LongTensor:
-        """Invert relations in a batch, leaving the input batch unmodified."""
-        return self.invert_(batch=batch.clone(), index=index)
-
-    def map(self, batch: LongTensor, index: int = 1, invert: bool = False) -> LongTensor:
-        """Map relations in a batch, optionally also inverting them."""
-        batch = self._map(batch=batch, index=index)
-        return self.invert_(batch=batch, index=index) if invert else batch
-
     @abstractmethod
     def is_inverse(self, ids: LongTensor) -> BoolTensor:
         """Return a mask whether the relation IDs correspond to inverse relations."""
+
+    def invert(self, batch: LongTensor, index: int = 1) -> LongTensor:
+        """Invert the (internal) relations in a batch, leaving the input batch unmodified."""
+        batch = batch.clone()
+        batch[:, index] = self.get_inverse_id(batch[:, index])
+        return batch
+
+    def map(self, batch: LongTensor, index: int = 1, invert: bool = False) -> LongTensor:
+        """Map relations in a batch from real to internal IDs, optionally also inverting them.
+
+        The input batch is left unmodified.
+        """
+        relation_id = self.to_internal(batch[:, index])
+        if invert:
+            relation_id = self.get_inverse_id(relation_id)
+        batch = batch.clone()
+        batch[:, index] = relation_id
+        return batch
 
 
 class DefaultRelationInverter(RelationInverter):
@@ -78,13 +79,6 @@ class DefaultRelationInverter(RelationInverter):
     # docstr-coverage: inherited
     def get_inverse_id(self, relation_id: RelationID) -> RelationID:  # noqa: D102
         return relation_id + 1
-
-    # docstr-coverage: inherited
-    def invert_(self, batch: LongTensor, index: int = 1) -> LongTensor:  # noqa: D102
-        # The number of relations stored in the triples factory includes the number of inverse relations
-        # Id of inverse relation: relation + 1
-        batch[:, index] += 1
-        return batch
 
     # docstr-coverage: inherited
     def is_inverse(self, ids: LongTensor) -> BoolTensor:  # noqa: D102
