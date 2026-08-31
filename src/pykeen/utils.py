@@ -82,6 +82,7 @@ __all__ = [
     "get_batchnorm_modules",
     "get_dropout_modules",
     "calculate_broadcasted_elementwise_result_shape",
+    "pad_trailing_dims",
     "estimate_cost_of_sequence",
     "get_optimal_sequence",
     "tensor_sum",
@@ -497,6 +498,30 @@ def calculate_broadcasted_elementwise_result_shape(
 ) -> tuple[int, ...]:
     """Determine the return shape of a broadcasted elementwise operation."""
     return tuple(max(a, b) for a, b in zip(first, second, strict=False))
+
+
+def pad_trailing_dims(x: torch.Tensor, ndim: int) -> torch.Tensor:
+    """Append singleton dimensions until the tensor has the given number of dimensions.
+
+    This is useful for tensors which are aligned from the *left*, e.g., index tensors whose batch dimensions come
+    first, since :mod:`torch` broadcasts from the right.
+
+    :param x:
+        the tensor
+    :param ndim:
+        the desired number of dimensions; must be at least `x.ndim`
+
+    :raises ValueError:
+        if the tensor already has more than the desired number of dimensions
+
+    :return:
+        the tensor with trailing singleton dimensions appended
+    """
+    if ndim < x.ndim:
+        raise ValueError(f"Cannot reduce a tensor of shape {tuple(x.shape)} to {ndim} dimensions.")
+    if ndim == x.ndim:
+        return x
+    return x.view(*x.shape, *(1,) * (ndim - x.ndim))
 
 
 def estimate_cost_of_sequence(
