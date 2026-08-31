@@ -144,10 +144,6 @@ pykeen = "pykeen.cli:main"
 [tool.cruft]
 skip = ["**/__init__.py", "tests/*"]
 
-# MyPy, see https://mypy.readthedocs.io/en/stable/config_file.html
-[tool.mypy]
-plugins = []
-
 # Doc8, see https://doc8.readthedocs.io/en/stable/readme.html#ini-file-usage
 [tool.doc8]
 max-line-length = 120

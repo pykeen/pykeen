@@ -160,7 +160,7 @@ def normalize_rank_type(rank: str | None) -> RankType:
     rank = RANK_TYPE_SYNONYMS.get(rank, rank)
     if rank not in RANK_TYPES:
         raise ValueError(f"Invalid target={rank}. Possible values: {RANK_TYPES}")
-    return cast(RankType, rank)
+    return rank
 
 
 TargetBoth = Literal["both"]

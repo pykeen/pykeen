@@ -26,8 +26,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Check static typing with MyPy
-        run: tox -e mypy
+      - name: Check static typing with ty
+        run: tox -e ty
 
   lint-single-version:
     name: Lint Single Version
