@@ -5,14 +5,13 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from typing import Generic, TypedDict, TypeVar
+from typing import Generic, NotRequired, Self, TypedDict, TypeVar
 
 import numpy as np
 import scipy.sparse
 import torch
 from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch.utils import data
-from typing_extensions import NotRequired, Self
 
 from .triples_factory import CoreTriplesFactory
 from .utils import compute_compressed_adjacency_list

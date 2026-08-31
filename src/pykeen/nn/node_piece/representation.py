@@ -3,7 +3,7 @@
 import logging
 import pathlib
 from collections.abc import Callable, Iterable
-from typing import NamedTuple
+from typing import NamedTuple, Self
 
 import torch
 from class_resolver import (
@@ -15,7 +15,6 @@ from class_resolver import (
     update_docstring_with_resolver_keys,
 )
 from docdata import parse_docdata
-from typing_extensions import Self
 
 from .tokenization import Tokenizer, tokenizer_resolver
 from ..combination import ConcatAggregationCombination
@@ -315,11 +314,9 @@ class NodePieceRepresentation(CombinedRepresentation):
         if max_id:
             assert max_id == triples_factory.num_entities
 
-        # normalize triples
+        # note: the factory's triples never contain the artificial inverse triples -- those are only
+        # materialized when creating training instances -- so we always tokenize on "real" relation IDs
         mapped_triples = triples_factory.mapped_triples
-        if triples_factory.create_inverse_triples:
-            # inverse triples are created afterwards implicitly
-            mapped_triples = mapped_triples[mapped_triples[:, 1] < triples_factory.real_num_relations]
 
         token_representations, token_representations_kwargs, num_tokens = broadcast_upgrade_to_sequences(
             token_representations, token_representations_kwargs, num_tokens

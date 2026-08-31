@@ -10,7 +10,7 @@ import string
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Any, ClassVar, Literal, cast
+from typing import Any, ClassVar, Literal, Self, cast
 
 import more_itertools
 import numpy
@@ -30,7 +30,6 @@ from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import nn
 from torch.nn import functional
-from typing_extensions import Self
 
 from .combination import Combination, combination_resolver
 from .compositions import CompositionModule, composition_resolver

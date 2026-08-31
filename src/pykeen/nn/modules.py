@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
-from typing import Any, ClassVar, Generic, cast, overload
+from typing import Any, ClassVar, Generic, Self, cast, overload
 
 import more_itertools
 import numpy
@@ -27,7 +27,6 @@ from class_resolver.contrib.torch import activation_resolver
 from docdata import parse_docdata
 from torch import nn
 from torch.nn.init import xavier_normal_
-from typing_extensions import Self
 
 from . import init, quaternion
 from .sim import KG2ESimilarity, kg2e_similarity_resolver

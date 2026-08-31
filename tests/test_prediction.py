@@ -374,6 +374,25 @@ def test_predict_target(
     assert pred.factory == factory
 
 
+@pytest.mark.parametrize("targets", [None, [1, 2, 3]])
+def test_predict_relation_target_with_inverse_triples(targets: None | Sequence[int]):
+    """Test that relation prediction reports "real" relation IDs when using inverse relations."""
+    factory = Nations(create_inverse_triples=True).training
+    model = pykeen.models.mocks.FixedModel(triples_factory=factory)
+    pred = pykeen.predict.predict_target(model=model, head=0, tail=1, triples_factory=factory, targets=targets)
+
+    # the IDs have to be the "real" ones, i.e., match the factory's relation labeling ...
+    expected_ids = set(range(factory.real_num_relations)) if targets is None else set(targets)
+    assert set(pred.df["relation_id"]) == expected_ids
+    # ... and be consistent with the labels
+    assert all(
+        factory.relation_to_id[label] == identifier
+        for identifier, label in zip(pred.df["relation_id"], pred.df["relation_label"], strict=True)
+    )
+    # ... such that they can be compared against the factory's triples
+    pred.add_membership_columns(training=factory)
+
+
 @pytest.mark.parametrize(
     ("heads", "relations", "tails", "target"),
     [

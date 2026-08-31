@@ -212,7 +212,7 @@ def predict_hrt_uncertain(
     """
     return predict_uncertain_helper(
         model=model,
-        batch=hrt_batch,
+        batch=model._prepare_batch(batch=hrt_batch, index_relation=1),
         score_method=model.score_hrt,
         num_samples=num_samples,
         mode=mode,
@@ -263,7 +263,7 @@ def predict_h_uncertain(
     """
     return predict_uncertain_helper(
         model=model,
-        batch=rt_batch,
+        batch=model._prepare_batch(batch=rt_batch, index_relation=0),
         score_method=model.score_h_inverse if model.use_inverse_triples else model.score_h,
         num_samples=num_samples,
         slice_size=slice_size,
@@ -362,7 +362,7 @@ def predict_t_uncertain(
     """
     return predict_uncertain_helper(
         model=model,
-        batch=hr_batch,
+        batch=model._prepare_batch(batch=hr_batch, index_relation=1),
         score_method=model.score_t,
         num_samples=num_samples,
         slice_size=slice_size,
