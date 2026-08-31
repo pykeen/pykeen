@@ -85,7 +85,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
                     f"{sampler_cls.__name__} does not."
                 )
 
-    # docstr-coverage: inherited
     def _create_training_data_loader(
         self,
         triples_factory: CoreTriplesFactory,
@@ -122,7 +121,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
         )
 
     @staticmethod
-    # docstr-coverage: inherited
     def _get_batch_size(batch: SLCWABatch | GroupedSLCWABatch) -> int:  # noqa: D102
         return batch["positives"].shape[0]
 
@@ -274,7 +272,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
             + model.collect_regularization_term()
         )
 
-    # docstr-coverage: inherited
     def _process_batch(
         self,
         batch: SLCWABatch | GroupedSLCWABatch,
@@ -294,7 +291,6 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
             slice_size=slice_size,
         )
 
-    # docstr-coverage: inherited
     def _slice_size_search(
         self,
         *,

@@ -96,7 +96,6 @@ class DefaultRelationInverter(RelationInverter):
         # shift the flag out again
         return relation_id >> 1
 
-    # docstr-coverage: inherited
     def get_inverse_id(self, relation_id: RelationID) -> RelationID:  # noqa: D102
         # toggling the flag switches between a relation and its inverse in either direction
         return relation_id ^ 1

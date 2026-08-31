@@ -49,7 +49,6 @@ class FunctionalCompositionModule(CompositionModule):
     #: The stateless function that gets composed
     func: ClassVar[Composition]
 
-    # docstr-coverage: inherited
     def forward(self, a: FloatTensor, b: FloatTensor) -> FloatTensor:  # noqa: D102
         return self.__class__.func(a, b)
 
