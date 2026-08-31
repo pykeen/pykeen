@@ -47,9 +47,11 @@ class RelationInverter(ABC):
         input ID again. In particular, it maps the ID of an inverse relation back to its forward one.
         """
 
+    # docstr-coverage:excused `overload`
     @overload
     def is_inverse(self, relation_id: int) -> bool: ...
 
+    # docstr-coverage:excused `overload`
     @overload
     def is_inverse(self, relation_id: LongTensor) -> BoolTensor: ...
 
