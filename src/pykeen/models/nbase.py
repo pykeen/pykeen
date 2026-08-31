@@ -534,10 +534,10 @@ class ERModel(
         """
         # Note: slicing cannot be used here: the indices for score_hrt only have a batch
         # dimension, and slicing along this dimension is already considered by sub-batching.
-        # Note: we do not delegate to the general method for performance reasons
         # Note: repetition is not necessary here
-        h, r, t = self._get_representations(h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2], mode=mode)
-        return self.interaction.score_hrt(h=h, r=r, t=t)
+        return self._score(
+            TripleScoringBatch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=hrt_batch[:, 2]), mode=mode
+        ).unsqueeze(dim=-1)
 
     def _check_slicing(self, slice_size: int | None) -> None:
         """Raise an error, if slicing is requested, but the model does not support it."""

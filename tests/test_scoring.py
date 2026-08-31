@@ -246,9 +246,11 @@ class TestScoringBatch:
             model._score(batch, slice_size=2)
 
     def test_no_target_scoring(self, model: ERModel, hrt_batch: LongTensor) -> None:
-        """Test that scoring without a target agrees with ``score_hrt``."""
+        """Test that scoring without a target picks the triples out of the 1:n scores."""
         batch = TripleScoringBatch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=hrt_batch[:, 2])
-        torch.testing.assert_close(model._score(batch), model.score_hrt(hrt_batch).squeeze(dim=-1))
+        # note: ``score_hrt`` itself delegates here, so it cannot serve as the reference
+        expected = model.score(hrt_batch, target=LABEL_TAIL).gather(dim=-1, index=hrt_batch[:, 2:]).squeeze(dim=-1)
+        torch.testing.assert_close(model._score(batch), expected)
 
     def test_no_target_broadcasting(self, model: ERModel, hrt_batch: LongTensor) -> None:
         """Test that scoring without a target broadcasts a block of triples."""

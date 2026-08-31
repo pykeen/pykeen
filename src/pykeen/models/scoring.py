@@ -35,7 +35,8 @@ def _broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...
     """Determine the common shape of the given index shapes.
 
     :param shapes:
-        the shapes of the index tensors
+        the shapes of the index tensors; they must have the same number of dimensions, cf.
+        :func:`~pykeen.utils.pad_trailing_dims`
 
     :raises ValueError:
         if the shapes are not broadcastable
@@ -43,11 +44,15 @@ def _broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...
     :return:
         the broadcasted shape
     """
+    # note: this is equivalent to torch.broadcast_shapes for equal-ndim shapes, but about an order of magnitude
+    # faster, and scoring constructs one batch per call
     materialized = list(shapes)
-    try:
-        return tuple(torch.broadcast_shapes(*materialized))
-    except RuntimeError as error:
-        raise ValueError(f"Cannot broadcast index shapes {materialized}") from error
+    result = []
+    for sizes in zip(*materialized, strict=True):
+        if len(set(sizes) - {1}) > 1:
+            raise ValueError(f"Cannot broadcast index shapes {materialized}")
+        result.append(max(sizes))
+    return tuple(result)
 
 
 def _align_batch_indices(
