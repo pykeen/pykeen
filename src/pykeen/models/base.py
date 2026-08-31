@@ -7,8 +7,8 @@ import logging
 import os
 import pickle
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable, Mapping
-from typing import Any, ClassVar, Literal
+from collections.abc import Iterable, Mapping
+from typing import Any, ClassVar
 
 import torch
 from class_resolver import HintOrType
@@ -36,14 +36,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-
-#: the name of the keyword argument restricting the scored IDs, per target
-_TARGET_TO_IDS_KEY: Mapping[Target, str] = {
-    LABEL_HEAD: "heads",
-    LABEL_RELATION: "relations",
-    LABEL_TAIL: "tails",
-}
 
 
 class Model(nn.Module, ABC):
@@ -478,9 +470,22 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, num)
             the scores
         """
-        return self._dispatch_target(
-            batch=hrt_batch, target=target, ids=ids, full_batch=full_batch, kind="predict", **kwargs
-        )
+        if target == LABEL_TAIL:
+            if full_batch:
+                hrt_batch = hrt_batch[:, TARGET_TO_KEYS[LABEL_TAIL]]
+            return self.predict_t(hrt_batch, **kwargs, tails=ids)
+
+        if target == LABEL_RELATION:
+            if full_batch:
+                hrt_batch = hrt_batch[:, TARGET_TO_KEYS[LABEL_RELATION]]
+            return self.predict_r(hrt_batch, **kwargs, relations=ids)
+
+        if target == LABEL_HEAD:
+            if full_batch:
+                hrt_batch = hrt_batch[:, TARGET_TO_KEYS[LABEL_HEAD]]
+            return self.predict_h(hrt_batch, **kwargs, heads=ids)
+
+        raise ValueError(f"Unknown target={target}")
 
     def score(
         self,
@@ -513,50 +518,22 @@ class Model(nn.Module, ABC):
         :return: shape: (batch_size, num)
             the scores
         """
-        return self._dispatch_target(batch=batch, target=target, ids=ids, full_batch=full_batch, kind="score", **kwargs)
+        if target == LABEL_TAIL:
+            if full_batch:
+                batch = batch[:, TARGET_TO_KEYS[LABEL_TAIL]]
+            return self.score_t(batch, **kwargs, tails=ids)
 
-    def _dispatch_target(
-        self,
-        batch: LongTensor,
-        target: Target,
-        ids: LongTensor | None,
-        full_batch: bool,
-        kind: Literal["score", "predict"],
-        **kwargs,
-    ) -> FloatTensor:
-        """Dispatch to the target-specific scoring or prediction method.
+        if target == LABEL_RELATION:
+            if full_batch:
+                batch = batch[:, TARGET_TO_KEYS[LABEL_RELATION]]
+            return self.score_r(batch, **kwargs, relations=ids)
 
-        :param batch: shape: (batch_size, 3) or (batch_size, 2)
-            the full batch, or the relevant part of it
-        :param target:
-            the target
-        :param ids:
-            restrict scoring to only those ids
-        :param full_batch:
-            whether `batch` is the full batch, or only the "input" part of the target-specific method
-        :param kind:
-            whether to dispatch to the `score_*` or the `predict_*` family
-        :param kwargs:
-            additional keyword-based parameters passed to the target-specific method
-
-        :raises ValueError:
-            if the target is invalid
-
-        :return: shape: (batch_size, num)
-            the scores
-        """
-        method: Callable[..., FloatTensor]
         if target == LABEL_HEAD:
-            method = self.predict_h if kind == "predict" else self.score_h
-        elif target == LABEL_RELATION:
-            method = self.predict_r if kind == "predict" else self.score_r
-        elif target == LABEL_TAIL:
-            method = self.predict_t if kind == "predict" else self.score_t
-        else:
-            raise ValueError(f"Unknown target={target}")
-        if full_batch:
-            batch = batch[:, TARGET_TO_KEYS[target]]
-        return method(batch, **kwargs, **{_TARGET_TO_IDS_KEY[target]: ids})
+            if full_batch:
+                batch = batch[:, TARGET_TO_KEYS[LABEL_HEAD]]
+            return self.score_h(batch, **kwargs, heads=ids)
+
+        raise ValueError(f"Unknown target={target}")
 
     """Inverse scoring"""
 
