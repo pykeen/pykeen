@@ -385,6 +385,33 @@ class Loss(_Loss):
         """
         raise NotImplementedError
 
+    def process_bcwa_scores(
+        self,
+        predictions: FloatTensor,
+        targets: LongTensor,
+        label_smoothing: float | None = None,
+        weights: FloatTensor | None = None,
+    ) -> FloatTensor:
+        """
+        Process scores for BCWA training loop.
+
+        :param predictions: shape: (num_heads, num_relations, num_tails)
+            The scores.
+        :param targets: shape: (num_positive_triples, 3)
+            The positive triples in batch-local indices.
+        :param label_smoothing:
+            An optional label smoothing parameter.
+
+        :return:
+            A scalar loss value.
+        """
+        self._raise_on_weights(weights)  # TODO use weights
+        labels = torch.zeros_like(predictions)
+        hs, rs, ts = targets.unbind(dim=-1)
+        labels[hs, rs, ts] = 1.0
+        labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=2)
+        return self(predictions, labels)
+
 
 class PointwiseLoss(Loss):
     """Pointwise loss functions compute an independent loss term for each triple-label pair."""
