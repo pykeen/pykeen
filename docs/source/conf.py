@@ -245,8 +245,8 @@ texinfo_documents = [
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
-    "torch": ("https://pytorch.org/docs/stable", None),
-    "torchvision": ("https://pytorch.org/vision/stable", None),
+    "torch": ("https://docs.pytorch.org/docs/stable", None),
+    "torchvision": ("https://docs.pytorch.org/vision/stable", None),
     "torch_geometric": ("https://pytorch-geometric.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "optuna": ("https://optuna.readthedocs.io/en/latest", None),
@@ -254,7 +254,7 @@ intersphinx_mapping = {
     "pyobo": ("https://pyobo.readthedocs.io/en/stable", None),
     "class_resolver": ("https://class-resolver.readthedocs.io/en/latest", None),
     "bio2bel": ("https://bio2bel.readthedocs.io/en/latest", None),
-    "boto3": ("https://boto3.amazonaws.com/v1/documentation/api/latest", None),
+    "boto3": ("https://docs.aws.amazon.com/boto3/latest", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "datasets": ("https://huggingface.co/docs/datasets/main/en", None),
