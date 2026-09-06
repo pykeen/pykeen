@@ -248,7 +248,7 @@ class MixtureAnchorSelection(AnchorSelection):
 
 #: A resolver for NodePiece anchor selectors
 anchor_selection_resolver: ClassResolver[AnchorSelection] = ClassResolver.from_subclasses(
-    base=AnchorSelection,
+    base=AnchorSelection,  # type: ignore[type-abstract]
     default=DegreeAnchorSelection,
-    skip={SingleSelection},
+    skip={SingleSelection},  # type: ignore[type-abstract]
 )

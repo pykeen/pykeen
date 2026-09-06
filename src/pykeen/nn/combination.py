@@ -289,7 +289,7 @@ class GatedCombination(Combination):
 
 #: Resolve combinations
 combination_resolver: ClassResolver[Combination] = ClassResolver.from_subclasses(
-    base=Combination,
+    base=Combination,  # type: ignore[type-abstract]
     default=ConcatCombination,
     location="pykeen.nn.combination.combination_resolver",
 )
