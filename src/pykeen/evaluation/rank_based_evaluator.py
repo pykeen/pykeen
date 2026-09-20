@@ -149,8 +149,8 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         3. The metric name, e.g., "adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank",
             "inverse_geometric_mean_rank", or "hits@k" where k defaults to 10 but can be substituted for an integer.
             By default, 1, 3, 5, and 10 are available. Other K's can be calculated by setting the appropriate
-            variable in the ``evaluation_kwargs`` in the :func:`pykeen.pipeline.pipeline` or setting ``ks`` in the
-            :class:`pykeen.evaluation.RankBasedEvaluator`.
+            variable in the ``evaluation_kwargs`` in the :func:`~pykeen.pipeline.pipeline` or setting ``ks`` in the
+            :class:`~pykeen.evaluation.RankBasedEvaluator`.
 
         In general, all metrics are available for all combinations of sides/types except AMR and AMRI, which
         are only calculated for the average type. This is because the calculation of the expected MR in the
@@ -349,15 +349,14 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
                 continue
             yield key, None
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if true_scores is None:
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
 
@@ -370,12 +369,10 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
             self.ranks[target, rank_type].append(v.detach().cpu().numpy())
         self.num_candidates[target].append(batch_ranks.number_of_options.detach().cpu().numpy())
 
-    # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
         self.ranks.clear()
         self.num_candidates.clear()
 
-    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
@@ -579,17 +576,17 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             the factory with evaluation triples
         :param additional_filter_triples:
             additional true triples to use for filtering; only relevant if not explicit negatives are given.
-            cf. :func:`pykeen.evaluation.rank_based_evaluator.sample_negatives`
+            cf. :func:`~pykeen.evaluation.sample_negatives`
         :param num_negatives:
             the number of negatives to sample; only relevant if not explicit negatives are given.
-            cf. :func:`pykeen.evaluation.rank_based_evaluator.sample_negatives`
+            cf. :func:`~pykeen.evaluation.sample_negatives`
         :param head_negatives: shape: (num_triples, num_negatives)
             the entity IDs of negative samples for head prediction for each evaluation triple
         :param tail_negatives: shape: (num_triples, num_negatives)
             the entity IDs of negative samples for tail prediction for each evaluation triple
         :param kwargs:
             additional keyword-based arguments passed to
-            :meth:`pykeen.evaluation.rank_based_evaluator.RankBasedEvaluator.__init__`
+            :meth:`~pykeen.evaluation.rank_based_evaluator.RankBasedEvaluator.__init__`
 
         :raises ValueError:
             if only a single side's negatives are given, or the negatives are in wrong shape
@@ -628,15 +625,14 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self.negative_samples = negatives
         self.num_entities = evaluation_factory.num_entities
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if true_scores is None:
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
 
@@ -704,15 +700,14 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         # broadcast to samples
         return weights[inverse]
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         super().process_scores_(
             hrt_batch=hrt_batch,
             target=target,
@@ -721,14 +716,15 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             dense_positive_mask=dense_positive_mask,
         )
         # store keys for calculating macro weights
-        self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().cpu().numpy())
+        # note: TARGET_TO_KEYS[target] is a slice, so indexing with it returns a view into hrt_batch rather than a
+        # copy; since we keep these arrays around for the whole evaluation, clone() first so we don't pin the full
+        # (and much larger) hrt_batch tensor in memory for the duration.
+        self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().clone().cpu().numpy())
 
-    # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
         super().clear()
         self.keys.clear()
 
-    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError

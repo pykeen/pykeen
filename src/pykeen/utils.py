@@ -137,9 +137,12 @@ def resolve_device(device: DeviceHint = None) -> torch.device:
         device = "cuda"
     if isinstance(device, str):
         device = torch.device(device)
-    if not torch.cuda.is_available() and device.type == "cuda":
+    if device.type == "cuda" and not torch.cuda.is_available():
+        device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+        logger.warning(f"No CUDA devices were available. The model runs on {device.type}.")
+    if device.type == "mps" and not torch.backends.mps.is_available():
         device = torch.device("cpu")
-        logger.warning("No cuda devices were available. The model runs on CPU")
+        logger.warning("MPS was not available. The model runs on CPU")
     return device
 
 
@@ -1532,10 +1535,15 @@ class ExtraReprMixin:
 try:
     from opt_einsum import contract
 
-    einsum = functools.partial(contract, backend="torch")
+    _einsum_impl = functools.partial(contract, backend="torch")
     logger.info("Using opt_einsum")
 except ImportError:
-    einsum = torch.einsum
+    _einsum_impl = torch.einsum
+
+
+def einsum(*args, **kwargs):
+    """Compute an Einstein summation, using ``opt_einsum`` as a backend if it is installed."""
+    return _einsum_impl(*args, **kwargs)
 
 
 def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> BoolTensor:
@@ -1586,7 +1594,6 @@ def add_cudnn_error_hint(func: Callable[P, X]) -> Callable[P, X]:
         a decorated function
     """
 
-    # docstr-coverage: excused `wrapped`
     @functools.wraps(func)
     def wrapped(*args: P.args, **kwargs: P.kwargs) -> X:
         try:
@@ -1659,12 +1666,10 @@ def circular_correlation(a: FloatTensor, b: FloatTensor) -> FloatTensor:
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
 
 
-# docstr-coverage:excused `overload`
 @overload
 def merge_kwargs(kwargs: Sequence[OptionalKwargs], **extra_kwargs: Any | None) -> Sequence[OptionalKwargs]: ...
 
 
-# docstr-coverage:excused `overload`
 @overload
 def merge_kwargs(kwargs: OptionalKwargs, **extra_kwargs: Any | None) -> OptionalKwargs: ...
 

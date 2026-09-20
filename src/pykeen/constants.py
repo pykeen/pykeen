@@ -70,7 +70,13 @@ TARGET_TO_INDEX: Mapping[Target, TargetColumn] = {
 
 COLUMN_LABELS: tuple[Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
 TARGET_TO_KEY_LABELS = {target: [c for c in COLUMN_LABELS if c != target] for target in COLUMN_LABELS}
-TARGET_TO_KEYS = {target: [TARGET_TO_INDEX[c] for c in cs] for target, cs in TARGET_TO_KEY_LABELS.items()}
+#: the (non-target) key columns for each target, as slices rather than index lists so that indexing a tensor with
+#: them (e.g., ``hrt_batch[:, TARGET_TO_KEYS[target]]``) returns a view instead of a copy
+TARGET_TO_KEYS: Mapping[Target, slice] = {
+    LABEL_HEAD: slice(1, 3),  # relation, tail
+    LABEL_RELATION: slice(0, None, 2),  # head, tail
+    LABEL_TAIL: slice(0, 2),  # head, relation
+}
 
 
 def get_target_column(target: TargetHint = None) -> TargetColumn:

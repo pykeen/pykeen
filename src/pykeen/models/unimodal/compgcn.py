@@ -53,13 +53,13 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
             ``encoder_kwargs``.
         :param encoder_kwargs:
             Additional keyword arguments for the encoder,
-            cf. :class:`pykeen.nn.representation.CombinedCompGCNRepresentations`.
+            cf. :class:`~pykeen.nn.representation.CombinedCompGCNRepresentations`.
         :param interaction:
             The interaction function to use as decoder.
         :param interaction_kwargs:
             Additional keyword based arguments for the interaction function.
         :param kwargs:
-            Additional keyword based arguments passed to :class:`pykeen.models.ERModel`.
+            Additional keyword based arguments passed to :class:`~pykeen.models.ERModel`.
         """
         encoder_kwargs = {} if encoder_kwargs is None else dict(encoder_kwargs)
         encoder_kwargs.setdefault("entity_representations_kwargs", {"embedding_dim": embedding_dim})

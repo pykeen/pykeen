@@ -1,6 +1,7 @@
 """Unit tests for triples factories."""
 
 import itertools as itt
+import pickle
 import tempfile
 import unittest
 from collections.abc import Collection, Iterable, Mapping
@@ -224,6 +225,39 @@ class TestTriplesFactory(unittest.TestCase):
         # check that in all other splits no inverse triples are to be created
         assert not any(f.create_inverse_triples for f in others)
 
+    def test_num_relations_preserved_with_inverse_triples(self):
+        """Test that derived factories do not re-double the number of relations."""
+        factory = Nations(create_inverse_triples=True).training
+        real_num_relations = factory.real_num_relations
+        assert factory.num_relations == 2 * real_num_relations
+
+        # drop a "middle" entity, so that condensing actually has to re-assign IDs
+        mapped_triples = factory.mapped_triples
+        mapped_triples = mapped_triples[(mapped_triples[:, 0] != 5) & (mapped_triples[:, 2] != 5)]
+        derived = [
+            factory.to_core_triples_factory(),
+            factory.clone_and_exchange_triples(mapped_triples=mapped_triples).condense(),
+        ]
+        for derived_factory in derived:
+            with self.subTest(derived=derived_factory.__class__.__name__):
+                assert derived_factory.create_inverse_triples
+                assert derived_factory.real_num_relations == real_num_relations
+                assert derived_factory.num_relations == 2 * real_num_relations
+
+    def test_fully_inductive_split_with_inverse_triples(self):
+        """Test that a fully inductive split does not re-double the number of relations."""
+        factory = Nations(create_inverse_triples=True).training
+        real_num_relations = factory.real_num_relations
+        training, inference, *evaluation = factory.split_fully_inductive(random_state=0)
+        for part in (training, inference):
+            assert part.create_inverse_triples
+            assert part.real_num_relations == real_num_relations
+            assert part.num_relations == 2 * real_num_relations
+        # inverse triples for evaluation are handled by the evaluation code
+        for part in evaluation:
+            assert not part.create_inverse_triples
+            assert part.num_relations == real_num_relations
+
     @needs_packages("wordcloud", "IPython")
     def test_entity_word_cloud(self):
         """Test word cloud generation."""
@@ -428,11 +462,13 @@ class TestLiterals(unittest.TestCase):
 
         assert result.shape[0] == 1, "only the fully known triple should pass through"
         assert log.output == [
-            "WARNING:pykeen.triples.triples_factory:"
-            "You're trying to map 3 triples with 2 entities "
-            "(2 as head, 1 as tail) and 0 relations"
-            " that are not in the training set. 3 of 4 triples"
-            " will be excluded from the mapping."
+            (
+                "WARNING:pykeen.triples.triples_factory:"
+                "You're trying to map 3 triples with 2 entities "
+                "(2 as head, 1 as tail) and 0 relations"
+                " that are not in the training set. 3 of 4 triples"
+                " will be excluded from the mapping."
+            )
         ]
 
     def test_inverse_triples(self):
@@ -549,6 +585,34 @@ class TestUtils(unittest.TestCase):
         tf1 = Nations(create_inverse_triples=True).training.to_core_triples_factory()
         self.assert_binary_io(tf1, CoreTriplesFactory)
 
+    def test_pickle_roundtrip(self):
+        """Test that a triples factory survives being pickled."""
+        for create_inverse_triples in (False, True):
+            with self.subTest(create_inverse_triples=create_inverse_triples):
+                tf1 = Nations(create_inverse_triples=create_inverse_triples).training
+                tf2 = pickle.loads(pickle.dumps(tf1))  # noqa: S301
+                self.assert_tf_equal(tf1, tf2)
+                assert tf2.num_relations == tf1.num_relations
+                assert tf2.real_num_relations == tf1.real_num_relations
+
+    def test_unpickle_legacy_state(self):
+        """Test that states pickled before num_relations & co. became properties still load."""
+        for create_inverse_triples in (False, True):
+            with self.subTest(create_inverse_triples=create_inverse_triples):
+                tf1 = Nations(create_inverse_triples=create_inverse_triples).training
+                # emulate the instance state as written by an older PyKEEN, where both were plain attributes
+                state = dict(tf1.__dict__)
+                state["create_inverse_triples"] = state.pop("_create_inverse_triples")
+                state["num_relations"] = tf1.num_relations
+
+                tf2 = tf1.__class__.__new__(tf1.__class__)
+                tf2.__setstate__(state)
+                self.assert_tf_equal(tf1, tf2)
+                assert tf2.create_inverse_triples == create_inverse_triples
+                assert tf2.num_relations == tf1.num_relations
+                # the stale copy must not shadow the derived property
+                assert "num_relations" not in tf2.__dict__
+
     def assert_binary_io(self, tf, tf_cls):
         """Check the triples factory can be written and reloaded properly."""
         assert isinstance(tf, tf_cls)
@@ -628,7 +692,7 @@ def _iter_get_mapped_triples_inputs() -> Iterable[tuple[Any, Mapping[str, Any]]]
     yield None, {"triples": np.asarray(labeled), "factory": factory}
 
 
-@pytest.mark.parametrize(("x", "inputs"), _iter_get_mapped_triples_inputs())
+@pytest.mark.parametrize(("x", "inputs"), list(_iter_get_mapped_triples_inputs()))
 def test_get_mapped_triples(x, inputs: Mapping[str, Any]):
     """Test get_mapped_triples."""
     mapped_triples = get_mapped_triples(x, **inputs)
@@ -649,7 +713,7 @@ def tf_one_hole() -> CoreTriplesFactory:
     return tf
 
 
-@pytest.mark.parametrize(("entities", "relations"), itt.product((False, True), repeat=2))
+@pytest.mark.parametrize(("entities", "relations"), list(itt.product((False, True), repeat=2)))
 def test_condense(tf_one_hole: CoreTriplesFactory, entities: bool, relations: bool) -> None:
     """Test condensation."""
     tf_new = tf_one_hole.condense(entities=entities, relations=relations)

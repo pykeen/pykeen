@@ -22,7 +22,6 @@ class NoRegularizerTest(cases.RegularizerTestCase):
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return torch.zeros(1, device=x.device, dtype=x.dtype)
 
-    # docstr-coverage: inherited
     def test_apply_only_once(self):  # noqa: D102
         raise unittest.SkipTest
 
@@ -115,7 +114,6 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
         "apply_only_once": False,
     }
 
-    # docstr-coverage: inherited
     def _generate_update_input(self, requires_grad: bool = False) -> Sequence[torch.FloatTensor]:  # noqa: D102
         # same size tensors
         return (
@@ -123,16 +121,13 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
             rand(self.batch_size, 12, generator=self.generator, device=self.device).requires_grad_(requires_grad),
         )
 
-    # docstr-coverage: inherited
     def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
         assert len(inputs) == 2
         return functional.cosine_similarity(*inputs).pow(2).subtract(self.instance_kwargs["epsilon"]).relu().sum()
 
-    # docstr-coverage: inherited
     def test_forward(self) -> None:  # noqa: D102
         raise unittest.SkipTest(f"{self.cls.__name__} cannot be applied to a single tensor.")
 
-    # docstr-coverage: inherited
     def test_model(self) -> None:  # noqa: D102
         raise unittest.SkipTest(f"{self.cls.__name__} is not supported by all models.")
 

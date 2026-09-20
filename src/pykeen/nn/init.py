@@ -50,7 +50,7 @@ def xavier_uniform_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     sampled from :math:`\mathcal{U}(-a, a)` where
 
     .. math::
-        a = \text{gain} \times \sqrt{\frac{6}{\text{fan_out}}}
+        a = \text{gain} \times \sqrt{\frac{6}{\text{fan\_out}}}
 
     Example usage:
 
@@ -84,7 +84,7 @@ def xavier_normal_(tensor: torch.Tensor, gain: float = 1.0) -> torch.Tensor:
     sampled from :math:`\mathcal{N}(0, \text{std}^2)` where
 
     .. math::
-        \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan_out}}}
+        \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan\_out}}}
 
     Example usage:
 
@@ -244,7 +244,7 @@ class PretrainedInitializer:
     def as_embedding(self, **kwargs: Any):
         """Get a static embedding from this pre-trained initializer.
 
-        :param kwargs: Keyword arguments to pass to :class:`pykeen.nn.representation.Embedding`
+        :param kwargs: Keyword arguments to pass to :class:`~pykeen.nn.representation.Embedding`
         :returns: An embedding
         :rtype: pykeen.nn.representation.Embedding
         """
@@ -382,7 +382,7 @@ class WeisfeilerLehmanInitializer(PretrainedInitializer):
             the triples factory
 
         :param kwargs:
-            additional keyword-based parameters passed to :func:`pykeen.utils.iter_weisfeiler_lehman`
+            additional keyword-based parameters passed to ``iter_weisfeiler_lehman``
         """
         # normalize shape
         shape = upgrade_to_sequence(shape)
@@ -484,14 +484,14 @@ class RandomWalkPositionalEncodingInitializer(PretrainedInitializer):
 # TODO: replace by automatically generated list
 #: A resolver for initializers, including elements from :mod:`pykeen.nn.init`
 #:
-#: - :func:`pykeen.nn.init.init_phases`
-#: - :func:`pykeen.nn.init.init_quaternions`
-#: - :func:`pykeen.nn.init.normal_norm_`
-#: - :func:`pykeen.nn.init.uniform_norm_`
-#: - :func:`pykeen.nn.init.xavier_uniform_`
-#: - :func:`pykeen.nn.init.xavier_uniform_norm`
-#: - :func:`pykeen.nn.init.xavier_normal_`
-#: - :func:`pykeen.nn.init.xavier_normal_norm_`
+#: - :func:`~pykeen.nn.init.init_phases`
+#: - ``init_quaternions``
+#: - :func:`~pykeen.nn.init.normal_norm_`
+#: - :func:`~pykeen.nn.init.uniform_norm_`
+#: - :func:`~pykeen.nn.init.xavier_uniform_`
+#: - :func:`~pykeen.nn.init.xavier_uniform_norm_`
+#: - :func:`~pykeen.nn.init.xavier_normal_`
+#: - :func:`~pykeen.nn.init.xavier_normal_norm_`
 #:
 #: as well as initializers from :mod:`torch.nn.init`.
 initializer_resolver: FunctionResolver[[FloatTensor], FloatTensor] = FunctionResolver(

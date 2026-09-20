@@ -94,7 +94,7 @@ def ablation_pipeline(
     :param create_inverse_triples: Either a boolean for a single entry or a list of booleans.
     :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
     :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler is
-        desired. Negative sampling is used only in combination with :class:`pykeen.training.SLCWATrainingLoop`.
+        desired. Negative sampling is used only in combination with :class:`~pykeen.training.SLCWATrainingLoop`.
     :param evaluator: The name of the evaluator to be used. Defaults to rank-based evaluator.
     :param stopper: The name of the stopper to be used. Defaults to NopStopper which doesn't define a stopping
         criterion.
@@ -104,7 +104,7 @@ def ablation_pipeline(
         model to be used in HPO.
     :param model_to_loss_to_loss_kwargs: A mapping from model name to a mapping of loss name to a mapping of default
         keyword arguments for the instantiation of that loss function. This is useful because for some losses, have
-        hyper-parameters such as :class:`pykeen.losses.MarginRankingLoss`.
+        hyper-parameters such as :class:`~pykeen.losses.MarginRankingLoss`.
     :param model_to_loss_to_loss_kwargs_ranges: A mapping from model name to a mapping of loss name to a mapping of
         keyword argument ranges for that loss to be used in HPO.
     :param model_to_optimizer_to_optimizer_kwargs: A mapping from model name to a mapping of optimizer name to a mapping

@@ -66,6 +66,11 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         With this type of sampler, filtering for false negatives is more important.
     """
 
+    # note: the corrupted position (head or tail) is chosen per negative sample based on a data-dependent
+    # (relation-specific) number of choices, so the groups are ragged and cannot be laid out rectangularly without
+    # padding, which would cost more interaction compute than it saves on lookups. Hence,
+    # `supports_grouped_corruption` stays `False`.
+
     #: The array of offsets within the data array, shape: (2 * num_relations + 1,)
     offsets: LongTensor
 
@@ -81,12 +86,11 @@ class PseudoTypedNegativeSampler(NegativeSampler):
         """Instantiate the pseudo-typed negative sampler.
 
         :param mapped_triples: the positive training triples
-        :param kwargs: Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
+        :param kwargs: Additional keyword based arguments passed to :class:`~pykeen.sampling.NegativeSampler`.
         """
         super().__init__(mapped_triples=mapped_triples, **kwargs)
         self.data, self.offsets = create_index(mapped_triples=mapped_triples, num_relations=self.num_relations)
 
-    # docstr-coverage: inherited
     def corrupt_batch(self, positive_batch: LongTensor):  # noqa: D102
         batch_size = positive_batch.shape[0]
 

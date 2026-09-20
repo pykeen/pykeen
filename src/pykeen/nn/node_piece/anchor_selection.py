@@ -130,7 +130,6 @@ class SingleSelection(AnchorSelection, ABC):
 class DegreeAnchorSelection(SingleSelection):
     """Select entities according to their (undirected) degree."""
 
-    # docstr-coverage: inherited
     def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         unique, counts = numpy.unique(edge_index, return_counts=True)
         # sort by decreasing degree
@@ -154,18 +153,16 @@ class PageRankAnchorSelection(SingleSelection):
         """Initialize the selection strategy.
 
         :param num_anchors: the number of anchors to select
-        :param kwargs: additional keyword-based parameters passed to :func:`page_rank`.
+        :param kwargs: additional keyword-based parameters passed to :func:`torch_ppr.page_rank`.
         """
         super().__init__(num_anchors=num_anchors)
         self.kwargs = kwargs
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         for key, value in self.kwargs.items():
             yield f"{key}={value}"
 
-    # docstr-coverage: inherited
     @torch.inference_mode()
     def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         # sort by decreasing page rank
@@ -188,7 +185,6 @@ class RandomAnchorSelection(SingleSelection):
         super().__init__(num_anchors=num_anchors)
         self.generator: numpy.random.Generator = numpy.random.default_rng(random_seed)
 
-    # docstr-coverage: inherited
     def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
         return self.generator.permutation(edge_index.max())
 
@@ -231,17 +227,15 @@ class MixtureAnchorSelection(AnchorSelection):
                 logger.warning(f"{selection} had wrong number of anchors. Setting to {num}")
                 selection.num_anchors = num
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"selections={self.selections}"
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         edge_index: numpy.ndarray,
         known_anchors: numpy.ndarray | None = None,
-    ) -> numpy.ndarray:  # noqa: D102
+    ) -> numpy.ndarray:
         # split this up into first and rest, because once
         # we apply one selection, even to a none value for `known_anchors`,
         # we are guaranteed to have a non-none anchor
@@ -254,7 +248,7 @@ class MixtureAnchorSelection(AnchorSelection):
 
 #: A resolver for NodePiece anchor selectors
 anchor_selection_resolver: ClassResolver[AnchorSelection] = ClassResolver.from_subclasses(
-    base=AnchorSelection,
+    base=AnchorSelection,  # type: ignore[type-abstract]
     default=DegreeAnchorSelection,
-    skip={SingleSelection},
+    skip={SingleSelection},  # type: ignore[type-abstract]
 )

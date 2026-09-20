@@ -51,8 +51,8 @@ class _NewAbstractModel(Model, ABC):
     relations' representations, how they want to be looked up, and how they should
     be scored. The :class:`ERModel` provides a commonly useful implementation
     which allows for the specification of one or more entity representations and
-    one or more relation representations in the form of :class:`pykeen.nn.Embedding`
-    as well as a matching instance of a :class:`pykeen.nn.Interaction`.
+    one or more relation representations in the form of :class:`~pykeen.nn.representation.Embedding`
+    as well as a matching instance of a :class:`~pykeen.nn.modules.Interaction`.
     """
 
     #: The default regularizer class
@@ -139,7 +139,6 @@ class _NewAbstractModel(Model, ABC):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
-    # docstr-coverage: inherited
     def collect_regularization_term(self):  # noqa: D102
         return sum(
             regularizer.pop_regularization_term()
@@ -231,7 +230,7 @@ def _repeat_when_missing_representations(
     `score_{h,t}` / `score_r` are always the same. For efficiency, they are thus
     only computed once, but to meet the API, they have to be brought into the correct shape afterwards.
 
-    For example, this is the case for :class:`pykeen.models.UM`, which does not have any relation
+    For example, this is the case for :class:`~pykeen.models.UM`, which does not have any relation
     representation. Therefore, the scores for all ``(h, *, t)`` will be the same. We calculate
     them only once, but need to repeat them for downstream use of the scores.
 
@@ -288,7 +287,7 @@ class ERModel(
     be passed through the ``super().__init__()`` in subclasses of :class:`ERModel`.
 
     Other code can still be put after the call to ``super().__init__()`` in subclasses, such as
-    registering regularizers (as done in :class:`pykeen.models.ConvKB` and :class:`pykeen.models.TransH`).
+    registering regularizers (as done in :class:`~pykeen.models.ConvKB` and :class:`~pykeen.models.TransH`).
     ---
     citation:
         author: Ali
@@ -406,9 +405,9 @@ class ERModel(
         :param regularizer_kwargs:
             additional keyword-based parameters for the regularizer's instantiation
         :param default_regularizer:
-            the default regularizer; if None, use :attr:`regularizer_default`
+            the default regularizer; if None, use ``regularizer_default``
         :param default_regularizer_kwargs:
-            the default regularizer kwargs; if None, use :attr:`regularizer_default_kwargs`
+            the default regularizer kwargs; if None, use ``regularizer_default_kwargs``
 
         :raises KeyError: If an invalid parameter name was given
         """
@@ -504,15 +503,14 @@ class ERModel(
         if self.training and get_batchnorm_modules(self):
             raise ValueError("This model does not support slicing, since it has batch normalization layers.")
 
-    # docstr-coverage: inherited
-    def score_t(
+    def score_t(  # noqa: D102
         self,
         hr_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
         tails: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # normalize before checking
         if slice_size and slice_size >= self.num_entities:
             slice_size = None
@@ -542,15 +540,14 @@ class ERModel(
             num=self._get_entity_len(mode=mode) if tails is None else tails.shape[-1],
         )
 
-    # docstr-coverage: inherited
-    def score_h(
+    def score_h(  # noqa: D102
         self,
         rt_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
         heads: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # normalize before checking
         if slice_size and slice_size >= self.num_entities:
             slice_size = None
@@ -580,15 +577,14 @@ class ERModel(
             num=self._get_entity_len(mode=mode) if heads is None else heads.shape[-1],
         )
 
-    # docstr-coverage: inherited
-    def score_r(
+    def score_r(  # noqa: D102
         self,
         ht_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
         relations: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # normalize before checking
         if slice_size and slice_size >= self.num_relations:
             slice_size = None

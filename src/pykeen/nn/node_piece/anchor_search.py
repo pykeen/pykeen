@@ -83,10 +83,9 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         top_dist = numpy.take_along_axis(arr=array, indices=top_k_indices, axis=0)
         return numpy.take_along_axis(arr=top_k_indices, indices=numpy.argsort(top_dist, axis=0), axis=0)
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
-    ) -> numpy.ndarray:  # noqa: D102
+    ) -> numpy.ndarray:
         # convert to adjacency matrix
         adjacency = edge_index_to_sparse_matrix(edge_index=torch.as_tensor(edge_index, dtype=torch.long)).coalesce()
         # convert to scipy sparse csr
@@ -113,7 +112,6 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         """
         self.max_iter = max_iter
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"max_iter={self.max_iter}"
@@ -225,10 +223,9 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
             tokens[i, : len(chosen)] = chosen
         return tokens
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
-    ) -> numpy.ndarray:  # noqa: D102
+    ) -> numpy.ndarray:
         adjacency = self.create_adjacency(edge_index=edge_index, num_entities=num_entities)
         pool = self.bfs(anchors=anchors, adjacency=adjacency, max_iter=self.max_iter, k=k)
         return self.select(pool=pool, k=k)
@@ -246,7 +243,6 @@ class SparseBFSSearcher(AnchorSearcher):
         self.max_iter = max_iter
         self.device = resolve_device(device)
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"max_iter={self.max_iter}"
@@ -255,7 +251,7 @@ class SparseBFSSearcher(AnchorSearcher):
     def create_adjacency(
         edge_index: numpy.ndarray,
         num_entities: int | None = None,
-    ) -> torch.tensor:
+    ) -> torch.Tensor:
         """Create a sparse adjacency matrix (in the form of the edge list) from a given edge index.
 
         :param edge_index: shape: (2, m) the edge index
@@ -274,11 +270,11 @@ class SparseBFSSearcher(AnchorSearcher):
     @staticmethod
     def bfs(
         anchors: numpy.ndarray,
-        edge_list: torch.tensor,
+        edge_list: torch.Tensor,
         max_iter: int,
         k: int,
         device: torch.device,
-    ) -> numpy.ndarray:
+    ) -> torch.Tensor:
         """Determine the candidate pool using breadth-first search.
 
         :param anchors: shape: (a,) the anchor node IDs
@@ -357,7 +353,7 @@ class SparseBFSSearcher(AnchorSearcher):
 
     @staticmethod
     def select(
-        pool: torch.tensor,
+        pool: torch.Tensor,
         k: int,
     ) -> numpy.ndarray:
         """Select $k$ anchors from the given pools.
@@ -374,10 +370,9 @@ class SparseBFSSearcher(AnchorSearcher):
         # since the output is sorted, no need for random sampling, we just take top-k nearest
         return indices[:, :k].detach().cpu().numpy()
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
-    ) -> numpy.ndarray:  # noqa: D102
+    ) -> numpy.ndarray:
         edge_list = self.create_adjacency(edge_index=edge_index, num_entities=num_entities)
         pool = self.bfs(anchors=anchors, edge_list=edge_list, max_iter=self.max_iter, k=k, device=self.device)
         return self.select(pool=pool, k=k)
@@ -396,14 +391,13 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
 
         :param batch_size: the batch size to use.
         :param use_tqdm: whether to use tqdm
-        :param page_rank_kwargs: keyword-based parameters used for :func:`page_rank`. Must not include `edge_index`, or
-            `x0`.
+        :param page_rank_kwargs: keyword-based parameters used for :func:`torch_ppr.page_rank`. Must not include
+            `edge_index`, or `x0`.
         """
         self.batch_size = batch_size
         self.page_rank_kwargs = page_rank_kwargs or {}
         self.use_tqdm = use_tqdm
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield f"batch_size={self.batch_size}"
         yield f"use_tqdm={self.use_tqdm}"
@@ -432,10 +426,9 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
             .numpy()
         )
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self, edge_index: numpy.ndarray, anchors: numpy.ndarray, k: int, num_entities: int | None = None
-    ) -> numpy.ndarray:  # noqa: D102
+    ) -> numpy.ndarray:
         num_entities = ensure_num_entities(edge_index, num_entities=num_entities)
         result = numpy.full(shape=(num_entities, k), fill_value=-1)
         i = 0
@@ -481,6 +474,6 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
 
 #: A resolver for NodePiece anchor searchers
 anchor_searcher_resolver: ClassResolver[AnchorSearcher] = ClassResolver.from_subclasses(
-    base=AnchorSearcher,
+    base=AnchorSearcher,  # type: ignore[type-abstract]
     default=CSGraphAnchorSearcher,
 )

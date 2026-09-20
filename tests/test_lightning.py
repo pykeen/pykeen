@@ -12,7 +12,9 @@ from tests.utils import needs_packages
 try:
     from pykeen.contrib.lightning import lit_module_resolver, lit_pipeline
 
-    LIT_MODULES = lit_module_resolver.lookup_dict.keys()
+    # sorted since lookup_dict's order is not deterministic across processes,
+    # which would break pytest-xdist's collection consistency check
+    LIT_MODULES = sorted(lit_module_resolver.lookup_dict.keys())
 except ImportError:
     LIT_MODULES = []
     lit_pipeline = None
@@ -59,10 +61,10 @@ MODEL_CONFIGURATIONS = {
     models.TuckER: {"embedding_dim": EMBEDDING_DIM},
     models.UM: {"embedding_dim": EMBEDDING_DIM},
 }
-TEST_CONFIGURATIONS = (
+TEST_CONFIGURATIONS = [
     (model, model_config, lit)
     for (model, model_config), lit in itertools.product(MODEL_CONFIGURATIONS.items(), LIT_MODULES)
-)
+]
 
 
 # test combinations of models with training loops
@@ -104,6 +106,40 @@ def test_lit_training(model, model_kwargs, training_loop):
             "enable_checkpointing": False,
             # fast run
             "max_epochs": 2,
+            # reduce fixed per-test overhead; validation itself still runs each epoch
+            "enable_progress_bar": False,
+            "enable_model_summary": False,
+            "num_sanity_val_steps": 0,
+        },
+    )
+
+
+@needs_packages("pytorch_lightning")
+def test_lit_training_grouped():
+    """Test training with the sLCWA lightning module using grouped negative sampling."""
+    dataset = get_dataset(dataset="nations")
+    lit_pipeline(
+        training_loop="slcwa",
+        training_loop_kwargs={
+            "model": "distmult",
+            "dataset": dataset,
+            "model_kwargs": {"embedding_dim": EMBEDDING_DIM},
+            "batch_size": 8,
+            "grouped": True,
+        },
+        trainer_kwargs={
+            # automatically choose accelerator
+            "accelerator": "auto",
+            # defaults to TensorBoard; explicitly disabled here
+            "logger": False,
+            # disable checkpointing
+            "enable_checkpointing": False,
+            # fast run
+            "max_epochs": 2,
+            # reduce fixed per-test overhead; validation itself still runs each epoch
+            "enable_progress_bar": False,
+            "enable_model_summary": False,
+            "num_sanity_val_steps": 0,
         },
     )
 
@@ -128,5 +164,9 @@ def test_lit_pipeline_with_dataset_without_validation():
             "enable_checkpointing": False,
             # fast run
             "max_epochs": 2,
+            # reduce fixed per-test overhead; validation itself still runs each epoch
+            "enable_progress_bar": False,
+            "enable_model_summary": False,
+            "num_sanity_val_steps": 0,
         },
     )

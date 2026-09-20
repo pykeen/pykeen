@@ -168,7 +168,7 @@ def _check_score_pack(pack: pykeen.predict.ScorePack, model: pykeen.models.Model
     assert pack.result[:, 1].max() < model.num_relations
 
 
-@pytest.mark.parametrize(("model", "k", "target", "batch_size"), _iter_predict_all_inputs())
+@pytest.mark.parametrize(("model", "k", "target", "batch_size"), list(_iter_predict_all_inputs()))
 def test_predict_all(model: pykeen.models.Model, k: int | None, target: pykeen.typing.Target, batch_size: int):
     """Test the predict method."""
     pack = pykeen.predict.predict_all(model=model, k=k, target=target, batch_size=batch_size)
@@ -222,7 +222,7 @@ def _iter_predict_triples_inputs() -> Iterable[
     yield model, factory.mapped_triples[:3], None, None
 
 
-@pytest.mark.parametrize(("model", "triples", "triples_factory", "batch_size"), _iter_predict_triples_inputs())
+@pytest.mark.parametrize(("model", "triples", "triples_factory", "batch_size"), list(_iter_predict_triples_inputs()))
 def test_predict_triples(
     model: pykeen.models.Model,
     triples: AnyTriples,
@@ -267,7 +267,7 @@ def _iter_get_input_batch_inputs() -> Iterable[
     yield factory, None, 1, "uk", pykeen.typing.LABEL_HEAD
 
 
-@pytest.mark.parametrize(("factory", "head", "relation", "tail", "exp_target"), _iter_get_input_batch_inputs())
+@pytest.mark.parametrize(("factory", "head", "relation", "tail", "exp_target"), list(_iter_get_input_batch_inputs()))
 def test_get_input_batch(
     factory: CoreTriplesFactory | None,
     head: None | int | str,
@@ -355,7 +355,9 @@ def _iter_predict_target_inputs() -> Iterable[
         yield model, 0, 1, None, factory_, [0, 3, 7]
 
 
-@pytest.mark.parametrize(("model", "head", "relation", "tail", "factory", "targets"), _iter_predict_target_inputs())
+@pytest.mark.parametrize(
+    ("model", "head", "relation", "tail", "factory", "targets"), list(_iter_predict_target_inputs())
+)
 def test_predict_target(
     model: pykeen.models.Model,
     head: None | int | str,
@@ -370,6 +372,25 @@ def test_predict_target(
     )
     assert isinstance(pred, pykeen.predict.TargetPredictions)
     assert pred.factory == factory
+
+
+@pytest.mark.parametrize("targets", [None, [1, 2, 3]])
+def test_predict_relation_target_with_inverse_triples(targets: None | Sequence[int]):
+    """Test that relation prediction reports "real" relation IDs when using inverse relations."""
+    factory = Nations(create_inverse_triples=True).training
+    model = pykeen.models.mocks.FixedModel(triples_factory=factory)
+    pred = pykeen.predict.predict_target(model=model, head=0, tail=1, triples_factory=factory, targets=targets)
+
+    # the IDs have to be the "real" ones, i.e., match the factory's relation labeling ...
+    expected_ids = set(range(factory.real_num_relations)) if targets is None else set(targets)
+    assert set(pred.df["relation_id"]) == expected_ids
+    # ... and be consistent with the labels
+    assert all(
+        factory.relation_to_id[label] == identifier
+        for identifier, label in zip(pred.df["relation_id"], pred.df["relation_label"], strict=True)
+    )
+    # ... such that they can be compared against the factory's triples
+    pred.add_membership_columns(training=factory)
 
 
 @pytest.mark.parametrize(

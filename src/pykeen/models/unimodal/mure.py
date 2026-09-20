@@ -52,7 +52,7 @@ class MuRE(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
         relation_matrix_initializer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
-        r"""Initialize MuRE via the :class:`pykeen.nn.modules.MuREInteraction` interaction.
+        r"""Initialize MuRE via the :class:`~pykeen.nn.modules.MuREInteraction` interaction.
 
         :param embedding_dim: The entity embedding dimension $d$. Defaults to 200. Is usually $d \in [50, 300]$.
 

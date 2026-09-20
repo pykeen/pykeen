@@ -10,6 +10,7 @@ import timeit
 import unittest
 from collections.abc import Iterable
 from typing import Any
+from unittest import mock
 
 import numpy
 import pytest
@@ -30,6 +31,7 @@ from pykeen.utils import (
     iter_weisfeiler_lehman,
     merge_kwargs,
     project_entity,
+    resolve_device,
     set_random_seed,
     split_complex,
     tensor_product,
@@ -401,3 +403,31 @@ def test_merge_kwargs(
     with pytest.raises(error) if error else contextlib.nullcontext():
         merged_kwargs = merge_kwargs(kwargs=kwargs, **extra)
         assert merged_kwargs == expected
+
+
+@pytest.mark.parametrize(
+    ("device", "cuda_available", "mps_available", "expected"),
+    [
+        (None, False, False, "cpu"),
+        (None, False, True, "mps"),
+        (None, True, False, "cuda"),
+        (None, True, True, "cuda"),
+        ("gpu", False, False, "cpu"),
+        ("gpu", False, True, "mps"),
+        ("gpu", True, False, "cuda"),
+        ("cuda", False, False, "cpu"),
+        ("cuda", False, True, "mps"),
+        ("cuda", True, False, "cuda"),
+        ("mps", False, False, "cpu"),
+        ("mps", False, True, "mps"),
+        ("cpu", False, False, "cpu"),
+        ("cpu", True, True, "cpu"),
+    ],
+)
+def test_resolve_device(device: str | None, cuda_available: bool, mps_available: bool, expected: str) -> None:
+    """Test device resolution with (un)available accelerators."""
+    with (
+        mock.patch("torch.cuda.is_available", return_value=cuda_available),
+        mock.patch("torch.backends.mps.is_available", return_value=mps_available),
+    ):
+        assert resolve_device(device).type == expected

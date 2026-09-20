@@ -95,14 +95,14 @@ class TransR(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
             Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
             and numerically more stable.
 
-        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`~pykeen.nn.init.xavier_uniform_`.
         :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer.
-        :param entity_constrainer: The entity constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
+        :param entity_constrainer: The entity constrainer. Defaults to :func:`~pykeen.utils.clamp_norm`.
 
         :param relation_initializer:
-            Relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`.
+            Relation initializer function. Defaults to :func:`~pykeen.nn.init.xavier_uniform_norm_`.
         :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer.
-        :param relation_constrainer: The relation constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
+        :param relation_constrainer: The relation constrainer. Defaults to :func:`~pykeen.utils.clamp_norm`.
 
         :param relation_projection_initializer:
             Relation projection initializer function. Defaults to :func:`torch.nn.init.xavier_uniform_`.

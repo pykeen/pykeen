@@ -51,7 +51,7 @@ class DistMA(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param entity_normalizer_kwargs: Keyword arguments to be used when calling the entity normalizer
         :param relation_initializer: Relation initializer function. Defaults to None
         :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer
-        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
+        :param kwargs: Remaining keyword arguments passed through to :class:`~pykeen.models.ERModel`.
         """
         super().__init__(
             interaction=DistMAInteraction,

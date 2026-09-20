@@ -19,7 +19,7 @@ __all__ = [
 class DistMultLiteralGated(LiteralModel):
     """An implementation of the LiteralE model with thhe Gated DistMult interaction from [kristiadi2018]_.
 
-    This model is different from :class:`pykeen.models.DistMultLiteral` because it uses a
+    This model is different from :class:`~pykeen.models.DistMultLiteral` because it uses a
     gate (like found in `LSTMs <https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html>`_)
     instead of a LinearDropout module.
 

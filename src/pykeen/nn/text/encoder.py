@@ -124,7 +124,7 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
     for unknown character and padding. To encoder a sentence, it converts it to a sequence of characters, obtains
     the invidual characters representations and aggregates these representations to a single one.
 
-    With :class:`pykeen.nn.representation.Embedding` character representation and :func:`torch.mean` aggregation,
+    With :class:`~pykeen.nn.representation.Embedding` character representation and :func:`torch.mean` aggregation,
     this encoder is similar to a bag-of-characters model with trainable character embeddings. Therefore, it is
     invariant to the ordering of characters:
 
@@ -162,7 +162,6 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
             character_representation, max_id=num_real_tokens + 2, shape=dim
         )
 
-    # docstr-coverage: inherited
     def forward_normalized(self, texts: Sequence[str]) -> FloatTensor:  # noqa: D102
         # tokenize
         token_ids = [[self.token_to_id.get(c, self.unknown_idx) for c in text] for text in texts]
@@ -218,7 +217,6 @@ class TransformerTextEncoder(TextEncoder):
         )
         self.max_length = max_length or 512
 
-    # docstr-coverage: inherited
     def forward_normalized(self, texts: Sequence[str]) -> FloatTensor:  # noqa: D102
         return self.model(
             **self.tokenizer(
@@ -235,6 +233,6 @@ class TransformerTextEncoder(TextEncoder):
 #: for :class:`CharacterEmbeddingTextEncoder` or 'transformer' for
 #: :class:`TransformerTextEncoder`.
 text_encoder_resolver: ClassResolver[TextEncoder] = ClassResolver.from_subclasses(
-    base=TextEncoder,
+    base=TextEncoder,  # type: ignore[type-abstract]
     default=CharacterEmbeddingTextEncoder,
 )

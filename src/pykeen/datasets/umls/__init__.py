@@ -42,7 +42,7 @@ class UMLS(PathDataset):
     def __init__(self, **kwargs):
         """Initialize the UMLS dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PathDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PathDataset`.
         """
         super().__init__(
             training_path=UMLS_TRAIN_PATH,

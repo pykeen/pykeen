@@ -1,7 +1,6 @@
-# See https://setuptools.readthedocs.io/en/latest/build_meta.html
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.11.2,<1.0"]
+build-backend = "uv_build"
 
 [project]
 name = "pykeen"
@@ -25,15 +24,15 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Framework :: Pytest",
     "Framework :: tox",
     "Framework :: Sphinx",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Chemistry",
@@ -53,9 +52,10 @@ keywords = [
 # License Information. This can be any valid SPDX identifiers that can be resolved
 # with URLs like https://spdx.org/licenses/MIT
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "dataclasses-json",
     "numpy",
@@ -77,7 +77,7 @@ dependencies = [
     "docdata>=0.0.5",
     "class_resolver>=0.6.0",
     "pyyaml",
-    "torch_max_mem>=0.1.4",
+    "torch_max_mem>=0.1.5",
     "torch-ppr>=0.0.7",
     "typing_extensions",
 ]
@@ -98,7 +98,7 @@ lightning = [
     "pytorch_lightning>=1.7.2",
 ]
 biomedicine = ["bioregistry", "pyobo>=0.8.7"]
-tests = ["unittest-templates>=0.0.5", "coverage", "pytest"]
+tests = ["unittest-templates>=0.0.5", "coverage", "pytest", "pytest-xdist"]
 docs = [
     "sphinx>=8.0",
     "sphinx-rtd-theme>=3.0",
@@ -120,18 +120,6 @@ Homepage = "https://github.com/pykeen/pykeen"
 Repository = "https://github.com/pykeen/pykeen.git"
 Documentation = "https://pykeen.readthedocs.io"
 
-[tool.setuptools]
-package-dir = { "" = "src" }
-
-[tool.setuptools.packages.find]
-# this implicitly sets `packages = ":find"`
-where = ["src"] # list of folders that contain the packages (["."] by default)
-
-# See https://setuptools.pypa.io/en/latest/userguide/datafiles.html
-[tool.setuptools.package-data]
-"*" = ["*.*"]
-
-
 [project.scripts]
 pykeen = "pykeen.cli:main"
 
@@ -151,7 +139,7 @@ plugins = []
 max-line-length = 120
 ignore-path-errors = [
     "docs/source/tutorial/inductive_lp.rst; D000",
-    "docs/source/tutorial/understanding_evaluation.rst; D000",
+    "docs/source/explanation/understanding_evaluation.rst; D000",
     # TODO reinvestigate after upgrading to sphinx 7+
 ]
 
@@ -181,7 +169,7 @@ extend-include = ["*.ipynb"]
 
 [tool.ruff.lint]
 # See https://docs.astral.sh/ruff/rules
-extend-select = [
+select = [
     # Airflow (AIR)
     # "AIR",   # (framework-specific, not used in this project)
     # eradicate (ERA)
@@ -305,7 +293,6 @@ extend-select = [
 ignore = [
     "D105", # Missing docstring in magic method
     "S101", # Use of assert detected, TODO remove
-    "D102", # Missing docstring in public method, TODO remove
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores
@@ -325,6 +312,7 @@ ignore = [
 "tests/**/*.py" = [
     "INP001", # tests are not a package
     "PIE790", # allow pass in test stubs/abstract methods
+    "D102",   # test methods document intent via their name, not a docstring
 ]
 
 [tool.ruff.lint.pydocstyle]

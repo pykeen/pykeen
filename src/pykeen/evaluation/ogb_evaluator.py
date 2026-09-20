@@ -37,7 +37,6 @@ logger = logging.getLogger(__name__)
 class OGBEvaluator(SampledRankBasedEvaluator):
     """A sampled, rank-based evaluator that applies a custom OGB evaluation."""
 
-    # docstr-coverage: inherited
     def __init__(self, filtered: bool = False, **kwargs):  # noqa:D107
         if filtered:
             raise ValueError(
@@ -63,7 +62,7 @@ class OGBEvaluator(SampledRankBasedEvaluator):
         pre_filtered_triples: bool = True,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
     ) -> MetricResults:
-        """Run :func:`evaluate_ogb` with this evaluator."""
+        """Run :func:`~pykeen.evaluation.evaluate_ogb` with this evaluator."""
         if (
             {restrict_relations_to, restrict_entities_to, additional_filter_triples} != {None}
             or do_time_consuming_checks is False

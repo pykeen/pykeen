@@ -45,7 +45,7 @@ class ConceptNet(SingleTabbedDataset):
         """Initialize the `ConceptNet <https://github.com/commonsense/conceptnet5>`_ dataset from [speer2017]_.
 
         :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.SingleTabbedDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.SingleTabbedDataset`.
         """
         super().__init__(
             url=URL,

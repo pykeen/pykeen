@@ -49,7 +49,6 @@ class FunctionalCompositionModule(CompositionModule):
     #: The stateless function that gets composed
     func: ClassVar[Composition]
 
-    # docstr-coverage: inherited
     def forward(self, a: FloatTensor, b: FloatTensor) -> FloatTensor:  # noqa: D102
         return self.__class__.func(a, b)
 
@@ -72,14 +71,14 @@ class MultiplicationCompositionModule(FunctionalCompositionModule):
 
 
 class CircularCorrelationCompositionModule(FunctionalCompositionModule):
-    """Composition by circular correlation via :func:`pykeen.nn.functional.circular_correlation`."""
+    """Composition by circular correlation via ``pykeen.utils.circular_correlation``."""
 
     func: ClassVar[Composition] = circular_correlation
 
 
 #: A resolver for compositions
 composition_resolver: ClassResolver[CompositionModule] = ClassResolver.from_subclasses(
-    CompositionModule,
+    CompositionModule,  # type: ignore[type-abstract]
     default=MultiplicationCompositionModule,
     skip={
         FunctionalCompositionModule,

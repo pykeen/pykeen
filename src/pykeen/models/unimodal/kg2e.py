@@ -78,12 +78,12 @@ class KG2E(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
         :param c_min: covariance clamp minimum bound
         :param c_max: covariance clamp maximum bound
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
-        :param entity_constrainer: Entity constrainer function. Defaults to :func:`pykeen.utils.clamp_norm`
+        :param entity_constrainer: Entity constrainer function. Defaults to :func:`~pykeen.utils.clamp_norm`
         :param entity_constrainer_kwargs: Keyword arguments to be used when calling the entity constrainer
         :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
-        :param relation_constrainer: Relation constrainer function. Defaults to :func:`pykeen.utils.clamp_norm`
+        :param relation_constrainer: Relation constrainer function. Defaults to :func:`~pykeen.utils.clamp_norm`
         :param relation_constrainer_kwargs: Keyword arguments to be used when calling the relation constrainer
-        :param kwargs: Remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
+        :param kwargs: Remaining keyword arguments to forward to :class:`~pykeen.models.ERModel`
         """
         super().__init__(
             interaction=KG2EInteraction,

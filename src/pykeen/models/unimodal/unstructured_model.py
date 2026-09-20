@@ -55,7 +55,7 @@ class UM(ERModel[FloatTensor, tuple[()], FloatTensor]):
             and numerically more stable.
 
         :param entity_initializer: The initializer for the entity embeddings.
-            Defaults to :func:`pykeen.nn.init.xavier_normal`.
+            Defaults to :func:`~pykeen.nn.init.xavier_normal_`.
 
         :param kwargs: Remaining keyword arguments passed through to :class:`~pykeen.models.ERModel`.
         """

@@ -1,14 +1,14 @@
-"""A :class:`pykeen.models.ERModel` can be constructed from :class:`pykeen.nn.modules.Interaction`.
+"""A :class:`~pykeen.models.ERModel` can be constructed from :class:`~pykeen.nn.modules.Interaction`.
 
-The new style-class, :class:`pykeen.models.ERModel` abstracts the interaction away from the representations
+The new style-class, :class:`~pykeen.models.ERModel` abstracts the interaction away from the representations
 such that different interactions can be used interchangably. A new model can be constructed directly from the
-interaction module, given a ``dimensions`` mapping. In each :class:`pykeen.nn.modules.Interaction`, there
+interaction module, given a ``dimensions`` mapping. In each :class:`~pykeen.nn.modules.Interaction`, there
 is a field called ``entity_shape`` and ``relation_shape`` that allows for using eigen-notation for defining
 the different dimensions of the model. Most models share the ``d`` dimensionality for both the entity and relation
 vectors. Some (but not all) exceptions are:
 
-- :class:`pykeen.nn.modules.RESCALInteraction`, which uses a square matrix for relations written as ``dd``
-- :class:`pykeen.nn.modules.TransDInteraction`, which uses ``d`` for entity shape and ``e`` for a different
+- :class:`~pykeen.nn.modules.RESCALInteraction`, which uses a square matrix for relations written as ``dd``
+- :class:`~pykeen.nn.modules.TransDInteraction`, which uses ``d`` for entity shape and ``e`` for a different
   relation shape.
 
 With this in mind, you'll have to investigate the dimensions of the vectors through the PyKEEN documentation.
@@ -52,7 +52,7 @@ Make a model class from an instantiated interaction module:
 >>> model_cls = make_model_cls({"d": embedding_dim}, TransEInteraction(p=2))
 
 All of these model classes can be passed directly into the ``model``
-argument of :func:`pykeen.pipeline.pipeline`.
+argument of :func:`~pykeen.pipeline.pipeline`.
 """
 
 import logging

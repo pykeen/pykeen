@@ -74,7 +74,6 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         # of total entities from another inductive inference factory
         self.num_targets = self.model.num_relations if self.target == 1 else self.model._get_entity_len(mode=self.mode)
 
-    # docstr-coverage: inherited
     def _create_training_data_loader(
         self, triples_factory: CoreTriplesFactory, sampler: str | None, **kwargs
     ) -> DataLoader[LCWABatch]:  # noqa: D102
@@ -93,7 +92,6 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         return DataLoader(dataset=dataset, **kwargs)
 
     @staticmethod
-    # docstr-coverage: inherited
     def _get_batch_size(batch: LCWABatch) -> int:  # noqa: D102
         return batch["pairs"].shape[0]
 
@@ -134,7 +132,6 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
             + model.collect_regularization_term()
         )
 
-    # docstr-coverage: inherited
     def _process_batch(
         self,
         batch: LCWABatch,
@@ -156,7 +153,6 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
             slice_size=slice_size,
         )
 
-    # docstr-coverage: inherited
     def _slice_size_search(
         self,
         *,
@@ -250,14 +246,12 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
         head+relation pairs. Thus, the name might be suboptimal and change in the future.
     """
 
-    # docstr-coverage: inherited
     def _create_training_data_loader(
         self, triples_factory: CoreTriplesFactory, sampler: str | None, **kwargs
     ) -> DataLoader[tuple[MappedTriples]]:  # noqa: D102
         assert sampler is None
         return DataLoader(dataset=TensorDataset(triples_factory.mapped_triples), **kwargs)
 
-    # docstr-coverage: inherited
     def _process_batch(
         self,
         batch: tuple[MappedTriples],
@@ -294,7 +288,6 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
         )
 
     @staticmethod
-    # docstr-coverage: inherited
     def _get_batch_size(batch: tuple[MappedTriples]) -> int:  # noqa: D102
         assert len(batch) == 1
         return batch[0].shape[0]

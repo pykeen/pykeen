@@ -6,14 +6,13 @@ Generally requires :mod:`torchvision` to be installed.
 import functools
 import pathlib
 from collections.abc import Callable, Sequence
-from typing import Any, TypeAlias
+from typing import Any, Self, TypeAlias
 
 import torch
 import torch.nn
 import torch.utils.data
 from class_resolver import OptionalKwargs
 from docdata import parse_docdata
-from typing_extensions import Self
 
 from .cache import WikidataImageCache
 from ..representation import BackfillRepresentation, Representation
@@ -83,7 +82,6 @@ class VisionDataset(torch.utils.data.Dataset):
         transforms.append(vision_transforms.ConvertImageDtype(torch.get_default_dtype()))
         self.transforms = vision_transforms.Compose(transforms=transforms)
 
-    # docstr-coverage: inherited
     def __getitem__(self, item: int) -> torch.Tensor:  # noqa:D105
         _ensure_vision(self, Image)
         image = self.images[item]
@@ -95,7 +93,6 @@ class VisionDataset(torch.utils.data.Dataset):
         assert isinstance(image, torch.Tensor | Image.Image)
         return self.transforms(image)
 
-    # docstr-coverage: inherited
     def __len__(self) -> int:  # noqa:D105
         return len(self.images)
 
@@ -186,7 +183,6 @@ class VisualRepresentation(Representation):
         """
         return pool(encoder(images)["feature"])
 
-    # docstr-coverage: inherited
     def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         dataset = self.images
         if indices is not None:
@@ -226,10 +222,10 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         :param wikidata_ids: The Wikidata IDs.
         :param max_id: The total number of IDs. If provided, must match the length of ``wikidata_ids``.
         :param image_kwargs: Keyword-based parameters passed to
-            :meth:`pykeen.nn.vision.cache.WikidataImageCache.get_image_paths`.
-        :param cache: A pre-instantiated image cache. If None, :class:`WikidataImageCache` is used.
+            :meth:`~pykeen.nn.vision.WikidataImageCache.get_image_paths`.
+        :param cache: A pre-instantiated image cache. If None, :class:`~pykeen.nn.vision.WikidataImageCache` is used.
         :param kwargs: Additional keyword-based parameters passed to
-            :class:`pykeen.nn.vision.representation.VisualRepresentation`.
+            :class:`~pykeen.nn.vision.representation.VisualRepresentation`.
 
         :raises ValueError: If the max_id does not match the number of Wikidata IDs.
         """
@@ -256,7 +252,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         :param triples_factory: The triples factory.
         :param for_entities: Whether to create the initializer for entities (or relations).
         :param kwargs: Additional keyword-based arguments passed to
-            :class:`pykeen.nn.vision.representation.WikidataVisualRepresentation`.
+            :class:`~pykeen.nn.vision.representation.WikidataVisualRepresentation`.
 
         :returns: A visual representation from the triples factory.
         """
@@ -279,7 +275,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         :param dataset: The dataset; needs to have Wikidata IDs as entity names.
         :param for_entities: Whether to create the initializer for entities (or relations).
         :param kwargs: Additional keyword-based arguments passed to
-            :class:`pykeen.nn.vision.representation.WikidataVisualRepresentation`.
+            :class:`~pykeen.nn.vision.representation.WikidataVisualRepresentation`.
 
         :returns: A visual representation from the training factory in the dataset.
 

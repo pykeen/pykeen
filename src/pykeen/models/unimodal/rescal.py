@@ -68,7 +68,7 @@ class RESCAL(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param relation_initializer:
             relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
         :param regularizer:
-            the regularizer. Default to :attr:`pykeen.models.RESCAL.default_regularizer`
+            the regularizer. Default to ``regularizer_default``
         :param regularizer_kwargs:
             additional keyword-based parameters for the regularizer
         :param kwargs:

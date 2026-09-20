@@ -54,7 +54,7 @@
 
 ## Installation ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pykeen) ![PyPI](https://img.shields.io/pypi/v/pykeen)
 
-The latest stable version of PyKEEN requires Python 3.9+. It can be downloaded
+The latest stable version of PyKEEN requires Python 3.10+. It can be downloaded
 and installed from [PyPI](https://pypi.org/project/pykeen) with:
 
 ```shell
@@ -86,15 +86,15 @@ training approach and evaluates with [rank-based evaluation](https://pykeen.read
 from pykeen.pipeline import pipeline
 
 result = pipeline(
-    model='TransE',
-    dataset='nations',
+    model="TransE",
+    dataset="nations",
 )
 ```
 
 The results are returned in an instance of the [PipelineResult](https://pykeen.readthedocs.io/en/latest/reference/pipeline.html#pykeen.pipeline.PipelineResult)
 dataclass that has attributes for the trained model, the training loop, the evaluation, and more. See the tutorials
-on [using your own dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html),
-[understanding the evaluation](https://pykeen.readthedocs.io/en/latest/tutorial/understanding_evaluation.html),
+on [using your own dataset](https://pykeen.readthedocs.io/en/latest/howto/bring_your_own_data.html),
+[understanding the evaluation](https://pykeen.readthedocs.io/en/latest/explanation/understanding_evaluation.html),
 and [making novel link predictions](https://pykeen.readthedocs.io/en/latest/tutorial/making_predictions.html).
 
 PyKEEN is extensible such that:
@@ -115,7 +115,7 @@ in ``pykeen``.
 The following {{ n_datasets }} datasets are built in to PyKEEN. The citation for each dataset corresponds to either the paper
 describing the dataset, the first paper published using the dataset with knowledge graph embedding models,
 or the URL for the dataset if neither of the first two are available. If you want to use a custom dataset,
-see the [Bring Your Own Dataset](https://pykeen.readthedocs.io/en/latest/byo/data.html) tutorial. If you
+see the [Bring Your Own Dataset](https://pykeen.readthedocs.io/en/latest/howto/bring_your_own_data.html) tutorial. If you
 have a suggestion for another dataset to include in PyKEEN, please let us know
 [here](https://github.com/pykeen/pykeen/issues/new?assignees=cthoyt&labels=New+Dataset&template=dataset-request.md&title=Add+%5BDATASET+NAME%5D).
 
