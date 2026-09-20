@@ -102,6 +102,9 @@ class WikidataImageCache(WikidataTextCache):
         if missing:
             logger.warning(f"Could not retrieve an image URL for {len(missing)} entities: {missing}")
 
+        # pystow types the header values as `str | bytes | None`, and `dict` is invariant
+        headers: dict[str, str | bytes | None] = dict(self.HEADERS)
+
         # select on image url per image in a reproducible way
         for wikidata_id, url_dict in tqdm(rate_limited(images.items(), min_avg_time=0.1), disable=not progress):
             # traverse relations in order of preference
@@ -117,7 +120,7 @@ class WikidataImageCache(WikidataTextCache):
                     "images",
                     url=image_url,
                     name=f"{wikidata_id}.{ext}",
-                    download_kwargs={"backend": "requests", "headers": self.HEADERS},
+                    download_kwargs={"backend": "requests", "headers": headers},
                 )
             else:
                 # did not break -> no image
