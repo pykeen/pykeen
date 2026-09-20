@@ -572,7 +572,7 @@ def hpo_pipeline(
     # Optuna Optimization Settings
     n_trials: int | None = None,
     timeout: int | None = None,
-    gc_after_trial: bool | None = None,
+    gc_after_trial: bool = False,
     n_jobs: int | None = None,
     save_model_directory: str | None = None,
 ) -> HpoPipelineResult:

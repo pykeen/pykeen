@@ -65,30 +65,28 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         self.numeric_literals = numeric_literals
         self.literals_to_id = literals_to_id
 
-    # docstr-coverage: inherited
     @classmethod
-    def from_path(
+    def from_path(  # noqa: D102
         cls,
         path: str | pathlib.Path | TextIO,
         *,
         path_to_numeric_triples: None | str | pathlib.Path | TextIO = None,
         **kwargs,
-    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+    ) -> "TriplesNumericLiteralsFactory":
         if path_to_numeric_triples is None:
             raise ValueError(f"{cls.__name__} requires path_to_numeric_triples.")
         numeric_triples = load_triples(path_to_numeric_triples)
         triples = load_triples(path)
         return cls.from_labeled_triples(triples=triples, numeric_triples=numeric_triples, **kwargs)
 
-    # docstr-coverage: inherited
     @classmethod
-    def from_labeled_triples(
+    def from_labeled_triples(  # noqa: D102
         cls,
         triples: LabeledTriples,
         *,
         numeric_triples: LabeledTriples | None = None,
         **kwargs,
-    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+    ) -> "TriplesNumericLiteralsFactory":
         if numeric_triples is None:
             raise ValueError(f"{cls.__name__} requires numeric_triples.")
         base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
@@ -113,19 +111,17 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         """Return the shape of the literals."""
         return self.numeric_literals.shape[1:]
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"num_literals={len(self.literals_to_id)}"
 
-    # docstr-coverage: inherited
-    def clone_and_exchange_triples(
+    def clone_and_exchange_triples(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
         create_inverse_triples: bool | None = None,
-    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+    ) -> "TriplesNumericLiteralsFactory":
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
         return TriplesNumericLiteralsFactory(
@@ -141,7 +137,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=self.literals_to_id,
         )
 
-    # docstr-coverage: inherited
     def to_path_binary(self, path: str | pathlib.Path | TextIO) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # save literal-to-id mapping

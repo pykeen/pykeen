@@ -42,7 +42,6 @@ class LCWALossCalculator(LossCalculator):
 
     weighted: bool = False
 
-    # docstr-coverage: inherited
     def __call__(self, instance: Loss, generator: torch.Generator) -> torch.Tensor:
         predictions = torch.rand(self.batch_size, self.num_entities, generator=generator)
         labels = (
@@ -71,7 +70,6 @@ class SLCWALossCalculator(LossCalculator):
 
     weighted: bool = False
 
-    # docstr-coverage: inherited
     def __call__(self, instance: Loss, generator: torch.Generator) -> torch.Tensor:
         positive_scores = torch.rand(self.batch_size, 1, generator=generator)
         negative_scores = torch.rand(self.batch_size, self.num_negatives, generator=generator)

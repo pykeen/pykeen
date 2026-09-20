@@ -349,15 +349,14 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
                 continue
             yield key, None
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if true_scores is None:
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
 
@@ -370,12 +369,10 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
             self.ranks[target, rank_type].append(v.detach().cpu().numpy())
         self.num_candidates[target].append(batch_ranks.number_of_options.detach().cpu().numpy())
 
-    # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
         self.ranks.clear()
         self.num_candidates.clear()
 
-    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
@@ -628,15 +625,14 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self.negative_samples = negatives
         self.num_entities = evaluation_factory.num_entities
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if true_scores is None:
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
 
@@ -704,15 +700,14 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         # broadcast to samples
         return weights[inverse]
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         super().process_scores_(
             hrt_batch=hrt_batch,
             target=target,
@@ -726,12 +721,10 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         # (and much larger) hrt_batch tensor in memory for the duration.
         self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().clone().cpu().numpy())
 
-    # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
         super().clear()
         self.keys.clear()
 
-    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError

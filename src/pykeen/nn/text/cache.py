@@ -51,7 +51,6 @@ class IdentityCache(TextCache):
     Mostly used for testing.
     """
 
-    # docstr-coverage: inherited
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str | None]:  # noqa: D102
         return identifiers
 
@@ -313,4 +312,4 @@ class WikidataTextCache(TextCache):
 
 
 #: A resolver for text caches
-text_cache_resolver: ClassResolver[TextCache] = ClassResolver.from_subclasses(base=TextCache)
+text_cache_resolver: ClassResolver[TextCache] = ClassResolver.from_subclasses(base=TextCache)  # type: ignore[type-abstract]

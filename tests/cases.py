@@ -265,7 +265,6 @@ def iter_hpo_configs(hpo_default: Mapping[str, Mapping[str, Any]]) -> Iterable[M
 class LossWeightTestCase(GenericTestCase[LossWeighter]):
     """Base unittest for loss weighters."""
 
-    # docstr-coverage: inherited
     def pre_setup_hook(self) -> None:
         super().pre_setup_hook()
         self.batch_size = 3
@@ -2370,7 +2369,6 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 class ZRankBasedMetricTestCase(RankBasedMetricTestCase):
     """Test cases for z-normalized metrics."""
 
-    # docstr-coverage: inherited
     def test_weights_coherence(self):  # noqa: D102
         raise unittest.SkipTest("Z-normalized metrics do not work well with the sampling weight interpretation.")
 
