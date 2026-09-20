@@ -18,6 +18,7 @@ runs:
         cache-dependency-path: |
           ./pyproject.toml
           ./tox.ini
+          ./uv.lock
 
     - name: Install dependencies
       run: pip install tox tox-uv
