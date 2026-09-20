@@ -206,12 +206,12 @@ class TestScoringBatch:
 
     def test_missing_index(self) -> None:
         """Test that only the target may be None."""
-        with pytest.raises(ValueError, match="Missing index tensors"):
+        with pytest.raises(ValueError, match="Missing index tensor"):
             TargetScoringBatch(head=self._index(BATCH_SIZE), relation=None, tail=None, target=LABEL_TAIL)
 
     def test_missing_index_without_target(self) -> None:
         """Test that all index tensors are required when there is no target."""
-        with pytest.raises(ValueError, match="Missing index tensors"):
+        with pytest.raises(ValueError, match="Missing index tensor"):
             TripleScoringBatch(head=self._index(BATCH_SIZE), relation=self._index(BATCH_SIZE), tail=None)
 
     def test_unknown_target(self) -> None:

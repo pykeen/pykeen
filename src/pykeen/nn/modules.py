@@ -174,9 +174,12 @@ def parallel_prefix_unsqueeze(x: FloatTensor, ndim: int) -> FloatTensor: ...
 
 def parallel_prefix_unsqueeze(x: FloatTensor | Sequence[FloatTensor], ndim: int) -> FloatTensor | Sequence[FloatTensor]:
     """Prepend the given number of singleton dimensions to all representations."""
-    for _ in range(ndim):
-        x = parallel_unsqueeze(x, dim=0)
-    return x
+    # note: a single view adds all leading singleton dimensions at once; prepending them is always
+    # stride-expressible, so this works for non-contiguous (e.g., transposed or expanded) inputs, too
+    prefix = (1,) * ndim
+    if not isinstance(x, Sequence):
+        return x.view(prefix + x.shape)
+    return cast(Sequence[FloatTensor], [xx.view(prefix + xx.shape) for xx in x])
 
 
 class Interaction(nn.Module, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation], ABC):

@@ -15,8 +15,8 @@ slicing, and repetition logic.
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Iterable, Mapping
-from typing import TypeAlias
+from collections.abc import Iterable
+from typing import TypeAlias, overload
 
 import torch
 
@@ -29,6 +29,12 @@ __all__ = [
     "TargetScoringBatch",
     "TripleScoringBatch",
 ]
+
+#: the index tensors of a scoring request, in the order ``(head, relation, tail)``
+_Indices: TypeAlias = tuple[LongTensor, LongTensor, LongTensor]
+
+#: the index tensors of a scoring request, where the scoring target's may be missing
+_OptionalIndices: TypeAlias = tuple[LongTensor | None, LongTensor | None, LongTensor | None]
 
 
 def _broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...]:
@@ -55,30 +61,50 @@ def _broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...
     return tuple(result)
 
 
+@overload
+def _align_batch_indices(indices: _Indices, target: None = ...) -> tuple[_Indices, int, tuple[int, ...]]: ...
+
+
+@overload
 def _align_batch_indices(
-    indices: Mapping[Target, LongTensor | None],
-) -> tuple[Mapping[Target, LongTensor], int, tuple[int, ...]]:
+    indices: _OptionalIndices, target: Target
+) -> tuple[_OptionalIndices, int, tuple[int, ...]]: ...
+
+
+def _align_batch_indices(
+    indices: _OptionalIndices, target: Target | None = None
+) -> tuple[_OptionalIndices, int, tuple[int, ...]]:
     """Align the index tensors which determine the batch shape.
 
     :param indices:
-        the index tensors which determine the batch shape, i.e., all but the scoring target's
+        the index tensors, in the order ``(head, relation, tail)``
+    :param target:
+        the scoring target, if any; its index tensor does not determine the batch shape and is passed through unchanged
 
     :raises ValueError:
-        if an index tensor is missing, or if the shapes are not broadcastable
+        if a non-target index tensor is missing, or if the shapes are not broadcastable
 
     :return:
-        the aligned index tensors, the number of batch dimensions, and the batch shape
+        the index tensors with all but the target's aligned, the number of batch dimensions, and the batch shape
     """
-    missing = sorted(label for label, index in indices.items() if index is None)
-    if missing:
-        raise ValueError(f"Missing index tensors for {missing}; only the scoring target may be None")
-    # the comprehension narrows the value type to LongTensor, given the check above
-    present = {label: index for label, index in indices.items() if index is not None}
+    batch_indices: list[LongTensor] = []
+    for label, index in zip(COLUMN_LABELS, indices, strict=True):
+        if label == target:
+            continue
+        if index is None:
+            raise ValueError(f"Missing index tensor for {label}; only the scoring target may be None")
+        batch_indices.append(index)
 
     # index tensors are left-aligned; pad them so that torch's right-aligned broadcasting agrees
-    batch_ndim = max(index.ndim for index in present.values())
-    aligned = {label: pad_trailing_dims(index, ndim=batch_ndim) for label, index in present.items()}
-    return aligned, batch_ndim, _broadcast_index_shapes(index.shape for index in aligned.values())
+    batch_ndim = max(index.ndim for index in batch_indices)
+    aligned = [pad_trailing_dims(index, ndim=batch_ndim) for index in batch_indices]
+    batch_shape = _broadcast_index_shapes(index.shape for index in aligned)
+
+    aligned_iter = iter(aligned)
+    head, relation, tail = (
+        index if label == target else next(aligned_iter) for label, index in zip(COLUMN_LABELS, indices, strict=True)
+    )
+    return (head, relation, tail), batch_ndim, batch_shape
 
 
 @dataclasses.dataclass
@@ -107,18 +133,15 @@ class TripleScoringBatch:
 
     def __post_init__(self) -> None:
         """Align the index tensors and infer the batch shape."""
-        aligned, self.batch_ndim, self.batch_shape = _align_batch_indices(
-            dict(zip(COLUMN_LABELS, self.indices, strict=True))
-        )
-        self.head, self.relation, self.tail = (aligned[label] for label in COLUMN_LABELS)
+        (self.head, self.relation, self.tail), self.batch_ndim, self.batch_shape = _align_batch_indices(self.indices)
 
     @property
-    def indices(self) -> tuple[LongTensor, LongTensor, LongTensor]:
+    def indices(self) -> _Indices:
         """Return the index tensors, in the order ``(head, relation, tail)``."""
         return self.head, self.relation, self.tail
 
     @property
-    def lookup_indices(self) -> tuple[LongTensor, LongTensor, LongTensor]:
+    def lookup_indices(self) -> _Indices:
         """Return the index tensors to look up representations with."""
         return self.indices
 
@@ -171,11 +194,8 @@ class TargetScoringBatch:
         if self.target not in COLUMN_LABELS:
             raise ValueError(f"Unknown target={self.target}; must be one of {COLUMN_LABELS}")
 
-        aligned, self.batch_ndim, self.batch_shape = _align_batch_indices(
-            {label: index for label, index in zip(COLUMN_LABELS, self.indices, strict=True) if label != self.target}
-        )
-        self.head, self.relation, self.tail = (
-            aligned.get(label, index) for label, index in zip(COLUMN_LABELS, self.indices, strict=True)
+        (self.head, self.relation, self.tail), self.batch_ndim, self.batch_shape = _align_batch_indices(
+            self.indices, target=self.target
         )
 
         if self.target_ids is not None and self.target_ids.ndim not in (1, self.batch_ndim + 1):
@@ -185,7 +205,7 @@ class TargetScoringBatch:
             )
 
     @property
-    def indices(self) -> tuple[LongTensor | None, LongTensor | None, LongTensor | None]:
+    def indices(self) -> _OptionalIndices:
         """Return the index tensors, in the order ``(head, relation, tail)``."""
         return self.head, self.relation, self.tail
 
@@ -210,7 +230,7 @@ class TargetScoringBatch:
         return next(index.device for index in self.indices if index is not None)
 
     @property
-    def lookup_indices(self) -> tuple[LongTensor | None, LongTensor | None, LongTensor | None]:
+    def lookup_indices(self) -> _OptionalIndices:
         """Return the index tensors to look up representations with.
 
         The non-target index tensors receive an additional singleton dimension, so that the looked-up
