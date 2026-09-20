@@ -6,6 +6,10 @@ on:
       - master
   merge_group:
   workflow_dispatch:
+  # weekly rather than daily: this workflow runs the full test matrix, and a dependency
+  # release that only breaks at runtime is rarer than one that breaks the linters
+  schedule:
+    - cron: "43 5 * * 1"
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
@@ -64,6 +68,17 @@ jobs:
       
       - name: Run doctests
         run: tox -e doctests
+
+  report-failure:
+    name: Report scheduled failure
+    needs: [ docs, tests ]
+    if: failure() && github.event_name == 'schedule'
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/scheduled-failure-issue.yml
+    with:
+      workflow: Common
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

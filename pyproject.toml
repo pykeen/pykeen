@@ -114,6 +114,18 @@ pyg = [
 ]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
+[dependency-groups]
+# the tooling for `tox -e mypy`; a group rather than tox `deps` so that it is
+# covered by uv.lock
+typing = [
+    "mypy",
+    "types-requests",
+    "types-setuptools",
+    "types-tabulate",
+    "types-PyYAML",
+    "types-decorator",
+]
+
 [project.urls]
 "Bug Tracker" = "https://github.com/pykeen/pykeen/issues"
 Homepage = "https://github.com/pykeen/pykeen"
@@ -381,3 +393,16 @@ replace = "release = \"{new_version}\""
 filename = "src/pykeen/version.py"
 search = "VERSION = \"{current_version}\""
 replace = "VERSION = \"{new_version}\""
+
+# uv, see https://docs.astral.sh/uv/reference/settings/
+# note: `tool.uv` applies to this workspace only. it is ignored when pykeen is resolved
+# as a dependency of something else, so it does not constrain downstream installs.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+# keep uv.lock (and therefore CI) on the CPU wheels, which are ~50x smaller than the
+# default CUDA ones. for local GPU work, install torch outside of `uv sync`.
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]

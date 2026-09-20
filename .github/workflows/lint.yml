@@ -6,6 +6,9 @@ on:
       - master
   merge_group:
   workflow_dispatch:
+  # catch dependency releases that break the linters while the repository stands still
+  schedule:
+    - cron: "17 4 * * *"
   pull_request:
     types: [opened, synchronize]
 
@@ -57,6 +60,36 @@ jobs:
     - name: Check RST formatting with docstrfmt
       run: tox -e docstrfmt
 
+
+  mypy-unlocked:
+    name: MyPy (newest dependencies)
+    # the pull-request job resolves from uv.lock; this one resolves fresh, so that
+    # upstream drift is reported here instead of in somebody's unrelated PR
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.11", "3.14" ]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup-tox
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Check static typing against the newest dependencies
+        run: tox -e mypy-unlocked
+
+  report-failure:
+    name: Report scheduled failure
+    needs: [ lint, lint-single-version, mypy-unlocked ]
+    if: failure() && github.event_name == 'schedule'
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/scheduled-failure-issue.yml
+    with:
+      workflow: Lint
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
