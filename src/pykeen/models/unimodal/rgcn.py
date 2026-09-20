@@ -65,7 +65,9 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
         "num_layers": {"type": int, "low": 1, "high": 5, "q": 1},
         "use_bias": {"type": "bool"},
         "activation": {"type": "categorical", "choices": [nn.ReLU, nn.LeakyReLU]},
-        "interaction": {"type": "categorical", "choices": ["distmult", "complex", "ermlp"]},
+        # ERMLP requires interaction_kwargs["embedding_dim"] to match the sampled embedding_dim.
+        # The default HPO search does not provide this dependent parameter (see #1568).
+        "interaction": {"type": "categorical", "choices": ["distmult", "complex"]},
         "edge_dropout": DEFAULT_DROPOUT_HPO_RANGE,
         "self_loop_dropout": DEFAULT_DROPOUT_HPO_RANGE,
         "edge_weighting": {"type": "categorical", "choices": ["inverse_in_degree", "inverse_out_degree", "symmetric"]},
