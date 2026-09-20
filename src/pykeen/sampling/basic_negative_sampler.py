@@ -98,7 +98,6 @@ class BasicNegativeSampler(NegativeSampler):
         # Set the indices
         self._corruption_indices = [TARGET_TO_INDEX[side] for side in self.corruption_scheme]
 
-    # docstr-coverage: inherited
     def corrupt_batch(self, positive_batch: LongTensor) -> LongTensor:  # noqa: D102
         batch_shape = positive_batch.shape[:-1]
 
@@ -123,7 +122,6 @@ class BasicNegativeSampler(NegativeSampler):
 
         return negative_batch.view(*batch_shape, self.num_negs_per_pos, 3)
 
-    # docstr-coverage: inherited
     def corrupt_batch_grouped(self, positive_batch: LongTensor) -> GroupedNegatives:  # noqa: D102
         num_targets = len(self.corruption_scheme)
         base, remainder = divmod(self.num_negs_per_pos, num_targets)

@@ -6,14 +6,13 @@ Generally requires :mod:`torchvision` to be installed.
 import functools
 import pathlib
 from collections.abc import Callable, Sequence
-from typing import Any, TypeAlias
+from typing import Any, Self, TypeAlias
 
 import torch
 import torch.nn
 import torch.utils.data
 from class_resolver import OptionalKwargs
 from docdata import parse_docdata
-from typing_extensions import Self
 
 from .cache import WikidataImageCache
 from ..representation import BackfillRepresentation, Representation
@@ -83,7 +82,6 @@ class VisionDataset(torch.utils.data.Dataset):
         transforms.append(vision_transforms.ConvertImageDtype(torch.get_default_dtype()))
         self.transforms = vision_transforms.Compose(transforms=transforms)
 
-    # docstr-coverage: inherited
     def __getitem__(self, item: int) -> torch.Tensor:  # noqa:D105
         _ensure_vision(self, Image)
         image = self.images[item]
@@ -95,7 +93,6 @@ class VisionDataset(torch.utils.data.Dataset):
         assert isinstance(image, torch.Tensor | Image.Image)
         return self.transforms(image)
 
-    # docstr-coverage: inherited
     def __len__(self) -> int:  # noqa:D105
         return len(self.images)
 
@@ -186,7 +183,6 @@ class VisualRepresentation(Representation):
         """
         return pool(encoder(images)["feature"])
 
-    # docstr-coverage: inherited
     def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
         dataset = self.images
         if indices is not None:

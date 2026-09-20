@@ -49,7 +49,6 @@ class FunctionalCompositionModule(CompositionModule):
     #: The stateless function that gets composed
     func: ClassVar[Composition]
 
-    # docstr-coverage: inherited
     def forward(self, a: FloatTensor, b: FloatTensor) -> FloatTensor:  # noqa: D102
         return self.__class__.func(a, b)
 
@@ -79,7 +78,7 @@ class CircularCorrelationCompositionModule(FunctionalCompositionModule):
 
 #: A resolver for compositions
 composition_resolver: ClassResolver[CompositionModule] = ClassResolver.from_subclasses(
-    CompositionModule,
+    CompositionModule,  # type: ignore[type-abstract]
     default=MultiplicationCompositionModule,
     skip={
         FunctionalCompositionModule,

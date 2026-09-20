@@ -44,26 +44,23 @@ class TensorBoardResultTracker(ResultTracker):
         #  via self.writer.log_dir
         self.writer = torch.utils.tensorboard.SummaryWriter(log_dir=experiment_path)
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         metrics = flatten_dictionary(dictionary=metrics, prefix=prefix)
         for key, value in metrics.items():
             self.writer.add_scalar(tag=key, scalar_value=value, global_step=step)
         self.writer.flush()
 
-    # docstr-coverage: inherited
     def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:  # noqa: D102
         params = flatten_dictionary(dictionary=params, prefix=prefix)
         for key, value in params.items():
             self.writer.add_text(tag=str(key), text_string=str(value))
         self.writer.flush()
 
-    # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         self.writer.flush()
         self.writer.close()

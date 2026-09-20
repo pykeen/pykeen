@@ -57,6 +57,7 @@ four kinds of content: learning-oriented *tutorials*, goal-oriented *how-to guid
     reference/models
     reference/datasets
     reference/triples
+    reference/inverse
     reference/training
     reference/stoppers
     reference/losses
