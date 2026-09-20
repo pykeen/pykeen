@@ -8,7 +8,7 @@ import logging
 import pathlib
 from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, Literal, TypeAlias, cast
 
 import torch
 from class_resolver.contrib.optuna import pruner_resolver, sampler_resolver
@@ -16,6 +16,7 @@ from optuna import Study, Trial, TrialPruned, create_study
 from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
+from optuna.study import StudyDirection
 
 from ..constants import USER_DEFINED_CODE
 from ..datasets import dataset_resolver, has_dataset
@@ -41,7 +42,11 @@ __all__ = [
     "hpo_pipeline_from_config",
     "hpo_pipeline",
     "HpoPipelineResult",
+    "Direction",
 ]
+
+#: the direction of optimization, cf. :func:`optuna.study.create_study`
+Direction: TypeAlias = Literal["minimize", "maximize"] | StudyDirection
 
 logger = logging.getLogger(__name__)
 
@@ -567,7 +572,7 @@ def hpo_pipeline(
     pruner: HintType[BasePruner] = None,
     pruner_kwargs: Mapping[str, Any] | None = None,
     study_name: str | None = None,
-    direction: str | None = None,
+    direction: Direction | None = None,
     load_if_exists: bool = False,
     # Optuna Optimization Settings
     n_trials: int | None = None,
