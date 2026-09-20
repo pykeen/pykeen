@@ -576,7 +576,7 @@ class ERModel(
             case TripleScoringBatch():
                 if slice_size:
                     raise ValueError("Slicing requires a target; there is nothing to slice along.")
-                h, r, t = self._get_representations(*batch.lookup_indices, mode=mode)
+                h, r, t = self._get_representations(*batch.indices, mode=mode)
                 return self.interaction(h=h, r=r, t=t)
             case TargetScoringBatch():
                 return self._score_target(batch, slice_size=slice_size, mode=mode)

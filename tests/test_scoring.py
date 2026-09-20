@@ -182,7 +182,7 @@ class TestScoringBatch:
         # the (batch_size,) index tensors gained a trailing singleton dimension
         assert batch.head.shape == (BATCH_SIZE, 1)
         # ... and there is no target axis to insert
-        assert batch.lookup_indices == batch.indices
+        assert batch.tail.shape == (BATCH_SIZE, NUM_IDS)
 
     @pytest.mark.parametrize("target", list(TARGETS))
     def test_lookup_indices(self, target: Target) -> None:

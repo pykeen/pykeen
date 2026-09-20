@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Iterable
-from typing import TypeAlias, overload
+from typing import Generic, NamedTuple, TypeAlias, TypeVar, overload
 
 import torch
 
@@ -30,11 +30,41 @@ __all__ = [
     "TripleScoringBatch",
 ]
 
-#: the index tensors of a scoring request, in the order ``(head, relation, tail)``
-_Indices: TypeAlias = tuple[LongTensor, LongTensor, LongTensor]
 
-#: the index tensors of a scoring request, where the scoring target's may be missing
-_OptionalIndices: TypeAlias = tuple[LongTensor | None, LongTensor | None, LongTensor | None]
+class _Indices(NamedTuple):
+    """The index tensors of a scoring request, one per triple position."""
+
+    head: LongTensor
+
+    relation: LongTensor
+
+    tail: LongTensor
+
+
+class _OptionalIndices(NamedTuple):
+    """The index tensors of a scoring request, where the scoring target's may be missing."""
+
+    head: LongTensor | None
+
+    relation: LongTensor | None
+
+    tail: LongTensor | None
+
+
+_IndicesType = TypeVar("_IndicesType", _Indices, _OptionalIndices)
+
+
+class _AlignedIndices(NamedTuple, Generic[_IndicesType]):
+    """The result of aligning a scoring request's index tensors."""
+
+    #: the index tensors, with all but the scoring target's aligned
+    indices: _IndicesType
+
+    #: the number of batch dimensions
+    batch_ndim: int
+
+    #: the common shape of the batch dimensions
+    batch_shape: tuple[int, ...]
 
 
 def _broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...]:
@@ -62,18 +92,16 @@ def _broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...
 
 
 @overload
-def _align_batch_indices(indices: _Indices, target: None = ...) -> tuple[_Indices, int, tuple[int, ...]]: ...
+def _align_batch_indices(indices: _Indices, target: None = ...) -> _AlignedIndices[_Indices]: ...
 
 
 @overload
-def _align_batch_indices(
-    indices: _OptionalIndices, target: Target
-) -> tuple[_OptionalIndices, int, tuple[int, ...]]: ...
+def _align_batch_indices(indices: _OptionalIndices, target: Target) -> _AlignedIndices[_OptionalIndices]: ...
 
 
 def _align_batch_indices(
-    indices: _OptionalIndices, target: Target | None = None
-) -> tuple[_OptionalIndices, int, tuple[int, ...]]:
+    indices: _Indices | _OptionalIndices, target: Target | None = None
+) -> _AlignedIndices[_Indices] | _AlignedIndices[_OptionalIndices]:
     """Align the index tensors which determine the batch shape.
 
     :param indices:
@@ -85,7 +113,7 @@ def _align_batch_indices(
         if a non-target index tensor is missing, or if the shapes are not broadcastable
 
     :return:
-        the index tensors with all but the target's aligned, the number of batch dimensions, and the batch shape
+        the aligned index tensors, cf. :class:`_AlignedIndices`
     """
     batch_indices: list[LongTensor] = []
     for label, index in zip(COLUMN_LABELS, indices, strict=True):
@@ -100,11 +128,21 @@ def _align_batch_indices(
     aligned = [pad_trailing_dims(index, ndim=batch_ndim) for index in batch_indices]
     batch_shape = _broadcast_index_shapes(index.shape for index in aligned)
 
+    # without a target, every position took part in the alignment, and none of them can be None
+    if target is None:
+        return _AlignedIndices(indices=_Indices(*aligned), batch_ndim=batch_ndim, batch_shape=batch_shape)
+
     aligned_iter = iter(aligned)
-    head, relation, tail = (
-        index if label == target else next(aligned_iter) for label, index in zip(COLUMN_LABELS, indices, strict=True)
+    return _AlignedIndices(
+        indices=_OptionalIndices(
+            *(
+                index if label == target else next(aligned_iter)
+                for label, index in zip(COLUMN_LABELS, indices, strict=True)
+            )
+        ),
+        batch_ndim=batch_ndim,
+        batch_shape=batch_shape,
     )
-    return (head, relation, tail), batch_ndim, batch_shape
 
 
 @dataclasses.dataclass
@@ -137,13 +175,8 @@ class TripleScoringBatch:
 
     @property
     def indices(self) -> _Indices:
-        """Return the index tensors, in the order ``(head, relation, tail)``."""
-        return self.head, self.relation, self.tail
-
-    @property
-    def lookup_indices(self) -> _Indices:
-        """Return the index tensors to look up representations with."""
-        return self.indices
+        """Return the index tensors."""
+        return _Indices(self.head, self.relation, self.tail)
 
     @property
     def device(self) -> torch.device:
@@ -206,8 +239,8 @@ class TargetScoringBatch:
 
     @property
     def indices(self) -> _OptionalIndices:
-        """Return the index tensors, in the order ``(head, relation, tail)``."""
-        return self.head, self.relation, self.tail
+        """Return the index tensors."""
+        return _OptionalIndices(self.head, self.relation, self.tail)
 
     @property
     def target_index(self) -> TargetColumn:
@@ -240,11 +273,12 @@ class TargetScoringBatch:
             the head, relation, and tail index tensors
         """
         # the `index is None` check is redundant - only the target may be None, cf. __post_init__ - but narrows
-        head, relation, tail = (
-            index if label == self.target or index is None else index.unsqueeze(dim=self.batch_ndim)
-            for label, index in zip(COLUMN_LABELS, self.indices, strict=True)
+        return _OptionalIndices(
+            *(
+                index if label == self.target or index is None else index.unsqueeze(dim=self.batch_ndim)
+                for label, index in zip(COLUMN_LABELS, self.indices, strict=True)
+            )
         )
-        return head, relation, tail
 
     def with_target_ids(self, ids: LongTensor) -> TargetScoringBatch:
         """Return a copy of this batch with the target's index tensor replaced.
