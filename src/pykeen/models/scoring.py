@@ -161,18 +161,20 @@ def _align_batch_indices(
 
     # without a target, every position took part in the alignment, and none of them can be None
     if target is None:
-        indices = _Indices(*aligned)
-    else:
-        aligned_iter = iter(aligned)
-        indices = _OptionalIndices(
+        return _AlignedIndices(
+            indices=_Indices(*aligned),
+            batch_ndim=batch_ndim,
+            batch_shape=batch_shape,
+        )
+
+    aligned_iter = iter(aligned)
+    return _AlignedIndices(
+        indices=_OptionalIndices(
             *(
                 index if label == target else next(aligned_iter)
                 for label, index in zip(COLUMN_LABELS, indices, strict=True)
             )
-        )
-
-    return _AlignedIndices(
-        indices=indices,
+        ),
         batch_ndim=batch_ndim,
         batch_shape=batch_shape,
     )
@@ -242,15 +244,16 @@ class TargetScoringBatch(NamedTuple):
     #: the common shape of the batch dimensions; inferred from the non-target index tensors
     batch_shape: tuple[int, ...]
 
+    @classmethod
     def from_transposed_batch(
-        self,
+        cls,
         head: LongTensor | None,
         relation: LongTensor | None,
         tail: LongTensor | None,
         target: Target,
     ) -> Self:
         """Construct from an HRT batch."""
-        return self.from_indices(_OptionalIndices(head, relation, tail), target)
+        return cls.from_indices(_OptionalIndices(head, relation, tail), target)
 
     @classmethod
     def from_indices(cls, indices: _OptionalIndices, target: Target) -> Self:
