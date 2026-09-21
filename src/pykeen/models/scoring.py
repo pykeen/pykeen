@@ -1,15 +1,18 @@
-"""A unified representation of scoring requests.
+r"""A unified representation of scoring requests.
 
-The scoring methods of :class:`~pykeen.models.Model` differ only in *which* of the three positions of a triple is
-scored against many candidates: :meth:`~pykeen.models.Model.score_t` scores $(h, r, *)$,
-:meth:`~pykeen.models.Model.score_h` scores $(*, r, t)$, and :meth:`~pykeen.models.Model.score_r` scores $(h, *, t)$.
-:class:`TargetScoringBatch` captures that commonality: it holds an index tensor for each position, plus the `target`
-naming the position which is scored against many candidates. Its sibling :class:`TripleScoringBatch` covers the
-remaining case, where all three positions are given.
+The scoring methods of :class:`~pykeen.models.Model` differ only in *which* of the three
+positions of a triple is scored against many candidates:
+:meth:`~pykeen.models.Model.score_t` scores $(h, r, \*)$,
+:meth:`~pykeen.models.Model.score_h` scores $(\*, r, t)$, and
+:meth:`~pykeen.models.Model.score_r` scores $(h, \*, t)$. :class:`TargetScoringBatch`
+captures that commonality: it holds an index tensor for each position, plus the `target`
+naming the position which is scored against many candidates. Its sibling
+:class:`TripleScoringBatch` covers the remaining case, where all three positions are
+given.
 
-This lets :class:`~pykeen.models.ERModel` implement the three 1:n scoring methods once, cf.
-:meth:`~pykeen.models.ERModel._score`, instead of maintaining three near-identical copies of the same broadcasting,
-slicing, and repetition logic.
+This lets :class:`~pykeen.models.ERModel` implement the three ``1:n`` scoring methods
+once, cf. :meth:`~pykeen.models.ERModel._score`, instead of maintaining three
+near-identical copies of the same broadcasting, slicing, and repetition logic.
 """
 
 from __future__ import annotations
@@ -65,13 +68,10 @@ class _OptionalIndices(NamedTuple):
     def with_target_ids(self, ids: LongTensor, target: Target) -> Self:
         """Return a copy of this batch with the target's index tensor replaced.
 
-        :param ids:
-            the new target index tensor
-        :param target:
-            the target where to put the new tensor
+        :param ids: the new target index tensor
+        :param target: the target where to put the new tensor
 
-        :return:
-            the new batch
+        :returns: the new batch
         """
         match target:
             case "head":
@@ -101,15 +101,12 @@ class _AlignedIndices(NamedTuple, Generic[_IndicesType]):
 def _broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...]:
     """Determine the common shape of the given index shapes.
 
-    :param shapes:
-        the shapes of the index tensors; they must have the same number of dimensions, cf.
-        :func:`~pykeen.utils.pad_trailing_dims`
+    :param shapes: the shapes of the index tensors; they must have the same number of
+        dimensions, cf. :func:`~pykeen.utils.pad_trailing_dims`
 
-    :raises ValueError:
-        if the shapes are not broadcastable
+    :returns: the broadcasted shape
 
-    :return:
-        the broadcasted shape
+    :raises ValueError: if the shapes are not broadcastable
     """
     # note: this is equivalent to torch.broadcast_shapes for equal-ndim shapes, but about an order of magnitude
     # faster, and scoring constructs one batch per call
@@ -135,16 +132,14 @@ def _align_batch_indices(
 ) -> _AlignedIndices[_Indices] | _AlignedIndices[_OptionalIndices]:
     """Align the index tensors which determine the batch shape.
 
-    :param indices:
-        the index tensors, in the order ``(head, relation, tail)``
-    :param target:
-        the scoring target, if any; its index tensor does not determine the batch shape and is passed through unchanged
+    :param indices: the index tensors, in the order ``(head, relation, tail)``
+    :param target: the scoring target, if any; its index tensor does not determine the
+        batch shape and is passed through unchanged
 
-    :raises ValueError:
-        if a non-target index tensor is missing, or if the shapes are not broadcastable
+    :returns: the aligned index tensors, cf. :class:`_AlignedIndices`
 
-    :return:
-        the aligned index tensors, cf. :class:`_AlignedIndices`
+    :raises ValueError: if a non-target index tensor is missing, or if the shapes are
+        not broadcastable
     """
     batch_indices: list[LongTensor] = []
     for label, index in zip(COLUMN_LABELS, indices, strict=True):
@@ -183,9 +178,10 @@ def _align_batch_indices(
 class TripleScoringBatch(NamedTuple):
     """A request to score the given triples.
 
-    All three index tensors are required, and are broadcast against each other, so that the resulting score tensor
-    has shape ``(*batch_shape,)``. This covers :meth:`~pykeen.models.Model.score_hrt`, as well as the general case
-    of scoring an arbitrarily shaped block of triples.
+    All three index tensors are required, and are broadcast against each other, so that
+    the resulting score tensor has shape ``(*batch_shape,)``. This covers
+    :meth:`~pykeen.models.Model.score_hrt`, as well as the general case of scoring an
+    arbitrarily shaped block of triples.
     """
 
     indices: _Indices
@@ -216,16 +212,18 @@ class TripleScoringBatch(NamedTuple):
 class TargetScoringBatch(NamedTuple):
     """A request to score one position of a triple against many candidates.
 
-    The index tensor of the `target` position may be
+    The index tensor of the `target` position may be one of:
 
-    - `None`, to score against *all* candidates,
-    - of shape ``(num,)``, to score against the same candidates for each batch element, or
-    - of shape ``(*batch_shape, num)``, to score against different candidates per batch element.
+    - `None`, to score against *all* candidates
+    - of shape ``(num,)``, to score against the same candidates for each batch element
+    - of shape ``(*batch_shape, num)``, to score against different candidates per batch
+      element.
 
-    The latter is what grouped sLCWA training uses, cf. :class:`~pykeen.triples.instances.GroupedSLCWABatch`.
+    The latter is what grouped sLCWA training uses, cf.
+    :class:`~pykeen.triples.instances.GroupedSLCWABatch`.
 
-    The other two index tensors are required, and determine the batch shape; the resulting score tensor has shape
-    ``(*batch_shape, num)``.
+    The other two index tensors are required, and determine the batch shape; the
+    resulting score tensor has shape ``(*batch_shape, num)``.
     """
 
     indices: _OptionalIndices
@@ -254,8 +252,9 @@ class TargetScoringBatch(NamedTuple):
     def from_indices(cls, indices: _OptionalIndices, target: Target) -> Self:
         """Align the non-target index tensors, infer the batch shape, and validate the target IDs.
 
-        :raises ValueError:
-            if the target is invalid, or if the target IDs do not have a usable number of dimensions
+        :raises ValueError: if the target is invalid, or if the target IDs do not have a
+            usable number of dimensions
+
         """
         if target not in COLUMN_LABELS:
             raise ValueError(f"Unknown target={target}; must be one of {COLUMN_LABELS}")
@@ -291,11 +290,11 @@ class TargetScoringBatch(NamedTuple):
     def lookup_indices(self) -> _OptionalIndices:
         """Return the index tensors to look up representations with.
 
-        The non-target index tensors receive an additional singleton dimension, so that the looked-up
-        representations broadcast against the target's candidate dimension.
+        The non-target index tensors receive an additional singleton dimension, so that
+        the looked-up representations broadcast against the target's candidate
+        dimension.
 
-        :return:
-            the head, relation, and tail index tensors
+        :returns: the head, relation, and tail index tensors
         """
         # the `index is None` check is redundant - only the target may be None, cf. __post_init__ - but narrows
         return _OptionalIndices(
@@ -308,11 +307,9 @@ class TargetScoringBatch(NamedTuple):
     def with_target_ids(self, ids: LongTensor) -> Self:
         """Return a copy of this batch with the target's index tensor replaced.
 
-        :param ids:
-            the new target index tensor
+        :param ids: the new target index tensor
 
-        :return:
-            the new batch
+        :returns: the new batch
         """
         return self.__class__(
             self.indices.with_target_ids(ids, self.target),
