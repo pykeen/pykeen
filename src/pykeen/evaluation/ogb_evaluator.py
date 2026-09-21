@@ -159,6 +159,9 @@ def evaluate_ogb(
     y_pred_pos: dict[Target, torch.Tensor] = {}
     y_pred_neg: dict[Target, torch.Tensor] = {}
 
+    # a single batch, if no batch size is given; `Tensor.split` requires an integer
+    batch_size = batch_size or mapped_triples.shape[0]
+
     # move tensor to device
     device = device or model.device
     model = model.to(device)
@@ -217,7 +220,7 @@ def _hasher(kwargs: Mapping[str, Any]) -> int:
 @maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
 def _evaluate_ogb(
     *,
-    evaluator: OGBEvaluator,
+    evaluator: SampledRankBasedEvaluator,
     batch_size: int,
     slice_size: int,
     mapped_triples: MappedTriples,
