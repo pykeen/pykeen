@@ -212,11 +212,6 @@ class TripleScoringBatch(NamedTuple):
         indices_, batch_ndim, batch_shape = _align_batch_indices(indices)
         return cls(indices_, batch_ndim, batch_shape)
 
-    @property
-    def device(self) -> torch.device:
-        """Return the device of the index tensors."""
-        return self.indices.head.device
-
 
 class TargetScoringBatch(NamedTuple):
     """A request to score one position of a triple against many candidates.
