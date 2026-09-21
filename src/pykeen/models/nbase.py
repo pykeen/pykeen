@@ -643,7 +643,9 @@ class ERModel(
         tails: LongTensor | None = None,
     ) -> FloatTensor:
         return self._score(
-            TargetScoringBatch(head=hr_batch[..., 0], relation=hr_batch[..., 1], tail=tails, target=LABEL_TAIL),
+            TargetScoringBatch.from_transposed_batch(
+                head=hr_batch[..., 0], relation=hr_batch[..., 1], tail=tails, target=LABEL_TAIL
+            ),
             slice_size=slice_size,
             mode=mode,
         )
@@ -657,7 +659,9 @@ class ERModel(
         heads: LongTensor | None = None,
     ) -> FloatTensor:
         return self._score(
-            TargetScoringBatch(head=heads, relation=rt_batch[..., 0], tail=rt_batch[..., 1], target=LABEL_HEAD),
+            TargetScoringBatch.from_transposed_batch(
+                head=heads, relation=rt_batch[..., 0], tail=rt_batch[..., 1], target=LABEL_HEAD
+            ),
             slice_size=slice_size,
             mode=mode,
         )
@@ -671,7 +675,9 @@ class ERModel(
         relations: LongTensor | None = None,
     ) -> FloatTensor:
         return self._score(
-            TargetScoringBatch(head=ht_batch[..., 0], relation=relations, tail=ht_batch[..., 1], target=LABEL_RELATION),
+            TargetScoringBatch.from_transposed_batch(
+                head=ht_batch[..., 0], relation=relations, tail=ht_batch[..., 1], target=LABEL_RELATION
+            ),
             slice_size=slice_size,
             mode=mode,
         )

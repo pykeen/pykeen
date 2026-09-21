@@ -14,14 +14,13 @@ slicing, and repetition logic.
 
 from __future__ import annotations
 
-import dataclasses
 from collections.abc import Iterable
 from typing import Generic, NamedTuple, Self, TypeAlias, TypeVar, overload
 
 import torch
 
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
-from ..typing import LongTensor, Target, TargetColumn
+from ..typing import LongTensor, Target
 from ..utils import pad_trailing_dims
 
 __all__ = [
@@ -200,8 +199,7 @@ class TripleScoringBatch(NamedTuple):
         return self.head.device
 
 
-@dataclasses.dataclass
-class TargetScoringBatch:
+class TargetScoringBatch(NamedTuple):
     """A request to score one position of a triple against many candidates.
 
     The index tensor of the `target` position may be
@@ -229,29 +227,43 @@ class TargetScoringBatch:
     target: Target
 
     #: the number of batch dimensions; inferred from the non-target index tensors
-    batch_ndim: int = dataclasses.field(init=False)
+    batch_ndim: int
 
     #: the common shape of the batch dimensions; inferred from the non-target index tensors
-    batch_shape: tuple[int, ...] = dataclasses.field(init=False)
+    batch_shape: tuple[int, ...]
 
-    def __post_init__(self) -> None:
+    def from_transposed_batch(
+        self,
+        head: LongTensor | None,
+        relation: LongTensor | None,
+        tail: LongTensor | None,
+        target: Target,
+    ) -> Self:
+        """Construct from an HRT batch."""
+        return self.from_indices(_OptionalIndices(head, relation, tail), target)
+
+    @classmethod
+    def from_indices(cls, indices: _OptionalIndices, target: Target) -> Self:
         """Align the non-target index tensors, infer the batch shape, and validate the target IDs.
 
         :raises ValueError:
             if the target is invalid, or if the target IDs do not have a usable number of dimensions
         """
-        if self.target not in COLUMN_LABELS:
-            raise ValueError(f"Unknown target={self.target}; must be one of {COLUMN_LABELS}")
+        if target not in COLUMN_LABELS:
+            raise ValueError(f"Unknown target={target}; must be one of {COLUMN_LABELS}")
 
-        (self.head, self.relation, self.tail), self.batch_ndim, self.batch_shape = _align_batch_indices(
-            self.indices, target=self.target
-        )
+        (head, relation, tail), batch_ndim, batch_shape = _align_batch_indices(indices, target=target)
 
-        if self.target_ids is not None and self.target_ids.ndim not in (1, self.batch_ndim + 1):
+        rv = cls(head, relation, tail, target, batch_ndim, batch_shape)
+
+        target_ids = rv.target_ids
+        if target_ids is not None and target_ids.ndim not in (1, batch_ndim + 1):
             raise ValueError(
-                f"The target IDs for {self.target} must have shape (num,) or (*batch_shape, num) with "
-                f"batch_shape={self.batch_shape}, but have shape {tuple(self.target_ids.shape)}"
+                f"The target IDs for {target} must have shape (num,) or (*batch_shape, num) with "
+                f"batch_shape={batch_shape}, but have shape {tuple(target_ids.shape)}"
             )
+
+        return rv
 
     @property
     def indices(self) -> _OptionalIndices:
@@ -259,14 +271,9 @@ class TargetScoringBatch:
         return _OptionalIndices(self.head, self.relation, self.tail)
 
     @property
-    def target_index(self) -> TargetColumn:
-        """Return the index of the target into ``(head, relation, tail)``."""
-        return TARGET_TO_INDEX[self.target]
-
-    @property
     def target_ids(self) -> LongTensor | None:
         """Return the target's index tensor, or None if scoring against all candidates."""
-        return self.indices[self.target_index]
+        return self.indices[TARGET_TO_INDEX[self.target]]
 
     @property
     def shared_target(self) -> bool:
@@ -296,7 +303,7 @@ class TargetScoringBatch:
             )
         )
 
-    def with_target_ids(self, ids: LongTensor) -> TargetScoringBatch:
+    def with_target_ids(self, ids: LongTensor) -> Self:
         """Return a copy of this batch with the target's index tensor replaced.
 
         :param ids:
@@ -305,7 +312,34 @@ class TargetScoringBatch:
         :return:
             the new batch
         """
-        return dataclasses.replace(self, **{self.target: ids})
+        match self.target:
+            case "head":
+                return self.__class__(
+                    ids,
+                    self.relation,
+                    self.tail,
+                    self.target,
+                    self.batch_ndim,
+                    self.batch_shape,
+                )
+            case "relation":
+                return self.__class__(
+                    self.head,
+                    ids,
+                    self.tail,
+                    self.target,
+                    self.batch_ndim,
+                    self.batch_shape,
+                )
+            case "tail":
+                return self.__class__(
+                    self.head,
+                    self.relation,
+                    ids,
+                    self.target,
+                    self.batch_ndim,
+                    self.batch_shape,
+                )
 
 
 #: A scoring request: either the given triples, or one position scored against many candidates.
