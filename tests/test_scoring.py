@@ -1,10 +1,12 @@
 """Contract tests for the model scoring API.
 
-These tests pin the shape and value semantics shared by :meth:`~pykeen.models.Model.score_hrt`,
-:meth:`~pykeen.models.Model.score_h`, :meth:`~pykeen.models.Model.score_r`, :meth:`~pykeen.models.Model.score_t`,
-and the :meth:`~pykeen.models.Model.score` dispatcher, in particular the ``heads`` / ``relations`` / ``tails``
-restriction, which may be given either shared across the batch (shape: ``(num,)``) or per batch element
-(shape: ``(batch_size, num)``). The latter is what grouped sLCWA training relies on, cf.
+These tests pin the shape and value semantics shared by
+:meth:`~pykeen.models.Model.score_hrt`, :meth:`~pykeen.models.Model.score_h`,
+:meth:`~pykeen.models.Model.score_r`, :meth:`~pykeen.models.Model.score_t`, and the
+:meth:`~pykeen.models.Model.score` dispatcher, in particular the ``heads`` /
+``relations`` / ``tails`` restriction, which may be given either shared across the batch
+(shape: ``(num,)``) or per batch element (shape: ``(batch_size, num)``). The latter is
+what grouped sLCWA training relies on, cf.
 :class:`~pykeen.triples.instances.GroupedSLCWABatch`.
 """
 
