@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Iterable
-from typing import Generic, NamedTuple, TypeAlias, TypeVar, overload
+from typing import Generic, NamedTuple, Self, TypeAlias, TypeVar, overload
 
 import torch
 
@@ -39,6 +39,11 @@ class _Indices(NamedTuple):
     relation: LongTensor
 
     tail: LongTensor
+
+    @classmethod
+    def from_batch(cls, batch: LongTensor) -> Self:
+        """Construct indices from an HRT batch."""
+        return cls(batch[:, 0], batch[:, 1], batch[:, 2])
 
 
 class _OptionalIndices(NamedTuple):
@@ -145,8 +150,7 @@ def _align_batch_indices(
     )
 
 
-@dataclasses.dataclass
-class TripleScoringBatch:
+class TripleScoringBatch(NamedTuple):
     """A request to score the given triples.
 
     All three index tensors are required, and are broadcast against each other, so that the resulting score tensor
@@ -164,14 +168,26 @@ class TripleScoringBatch:
     tail: LongTensor
 
     #: the number of batch dimensions; inferred from the index tensors
-    batch_ndim: int = dataclasses.field(init=False)
+    batch_ndim: int
 
     #: the common shape of the batch dimensions; inferred from the index tensors
-    batch_shape: tuple[int, ...] = dataclasses.field(init=False)
+    batch_shape: tuple[int, ...]
 
-    def __post_init__(self) -> None:
-        """Align the index tensors and infer the batch shape."""
-        (self.head, self.relation, self.tail), self.batch_ndim, self.batch_shape = _align_batch_indices(self.indices)
+    @classmethod
+    def from_batch(cls, batch: LongTensor) -> Self:
+        """Construct from an HRT batch."""
+        return cls.from_indices(_Indices.from_batch(batch))
+
+    @classmethod
+    def from_transposed_batch(cls, head: LongTensor, relation: LongTensor, tail: LongTensor) -> Self:
+        """Construct from a transposed HRT batch."""
+        return cls.from_indices(_Indices(head, relation, tail))
+
+    @classmethod
+    def from_indices(cls, indices: _Indices) -> Self:
+        """Construct from an indices object."""
+        (head, relation, tail), batch_ndim, batch_shape = _align_batch_indices(indices)
+        return cls(head, relation, tail, batch_ndim, batch_shape)
 
     @property
     def indices(self) -> _Indices:

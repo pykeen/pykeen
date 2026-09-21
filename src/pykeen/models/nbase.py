@@ -534,9 +534,7 @@ class ERModel(
         # Note: slicing cannot be used here: the indices for score_hrt only have a batch
         # dimension, and slicing along this dimension is already considered by sub-batching.
         # Note: repetition is not necessary here
-        return self._score(
-            TripleScoringBatch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=hrt_batch[:, 2]), mode=mode
-        ).unsqueeze(dim=-1)
+        return self._score(TripleScoringBatch.from_batch(hrt_batch), mode=mode).unsqueeze(dim=-1)
 
     def _check_slicing(self, slice_size: int | None) -> None:
         """Raise an error, if slicing is requested, but the model does not support it."""

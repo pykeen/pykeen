@@ -207,12 +207,16 @@ class TestScoringBatch:
     def test_missing_index(self) -> None:
         """Test that only the target may be None."""
         with pytest.raises(ValueError, match="Missing index tensor"):
-            TargetScoringBatch(head=self._index(BATCH_SIZE), relation=None, tail=None, target=LABEL_TAIL)
+            TargetScoringBatch.from_transposed_batch(
+                head=self._index(BATCH_SIZE), relation=None, tail=None, target=LABEL_TAIL
+            )
 
     def test_missing_index_without_target(self) -> None:
         """Test that all index tensors are required when there is no target."""
         with pytest.raises(ValueError, match="Missing index tensor"):
-            TripleScoringBatch(head=self._index(BATCH_SIZE), relation=self._index(BATCH_SIZE), tail=None)
+            TripleScoringBatch.from_transposed_batch(
+                head=self._index(BATCH_SIZE), relation=self._index(BATCH_SIZE), tail=None
+            )
 
     def test_unknown_target(self) -> None:
         """Test that an invalid target is rejected."""
@@ -241,13 +245,13 @@ class TestScoringBatch:
 
     def test_no_target_slicing(self, model: ERModel, hrt_batch: LongTensor) -> None:
         """Test that slicing a batch without a target is rejected."""
-        batch = TripleScoringBatch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=hrt_batch[:, 2])
+        batch = TripleScoringBatch.from_batch(hrt_batch)
         with pytest.raises(ValueError, match="requires a target"):
             model._score(batch, slice_size=2)
 
     def test_no_target_scoring(self, model: ERModel, hrt_batch: LongTensor) -> None:
         """Test that scoring without a target picks the triples out of the 1:n scores."""
-        batch = TripleScoringBatch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=hrt_batch[:, 2])
+        batch = TripleScoringBatch.from_batch(hrt_batch)
         # note: ``score_hrt`` itself delegates here, so it cannot serve as the reference
         expected = model.score(hrt_batch, target=LABEL_TAIL).gather(dim=-1, index=hrt_batch[:, 2:]).squeeze(dim=-1)
         torch.testing.assert_close(model._score(batch), expected)
@@ -255,7 +259,7 @@ class TestScoringBatch:
     def test_no_target_broadcasting(self, model: ERModel, hrt_batch: LongTensor) -> None:
         """Test that scoring without a target broadcasts a block of triples."""
         tails = _ids(target=LABEL_TAIL, per_batch=True)
-        batch = TripleScoringBatch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=tails)
+        batch = TripleScoringBatch.from_transposed_batch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=tails)
         assert batch.batch_shape == (BATCH_SIZE, NUM_IDS)
         torch.testing.assert_close(
             model._score(batch), model.score_t(hrt_batch[:, TARGET_TO_KEYS[LABEL_TAIL]], tails=tails)
