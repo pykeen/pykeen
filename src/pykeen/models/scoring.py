@@ -48,11 +48,38 @@ class _Indices(NamedTuple):
 class _OptionalIndices(NamedTuple):
     """The index tensors of a scoring request, where the scoring target's may be missing."""
 
+    #: shape: broadcastable to ``(*batch_shape,)``, or the target shape described above
     head: LongTensor | None
 
+    #: shape: broadcastable to ``(*batch_shape,)``, or the target shape described above
     relation: LongTensor | None
 
+    #: shape: broadcastable to ``(*batch_shape,)``, or the target shape described above
     tail: LongTensor | None
+
+    @property
+    def device(self) -> torch.device:
+        """Return the device of the index tensors."""
+        return next(index.device for index in self if index is not None)
+
+    def with_target_ids(self, ids: LongTensor, target: Target) -> Self:
+        """Return a copy of this batch with the target's index tensor replaced.
+
+        :param ids:
+            the new target index tensor
+        :param target:
+            the target where to put the new tensor
+
+        :return:
+            the new batch
+        """
+        match target:
+            case "head":
+                return self.__class__(ids, self.relation, self.tail)
+            case "relation":
+                return self.__class__(self.head, ids, self.tail)
+            case "tail":
+                return self.__class__(self.head, self.relation, ids)
 
 
 _IndicesType = TypeVar("_IndicesType", _Indices, _OptionalIndices)
@@ -96,11 +123,15 @@ def _broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...
 
 
 @overload
-def _align_batch_indices(indices: _Indices, target: None = ...) -> _AlignedIndices[_Indices]: ...
+def _align_batch_indices(
+    indices: _Indices, target: None = ...
+) -> _AlignedIndices[_Indices]: ...
 
 
 @overload
-def _align_batch_indices(indices: _OptionalIndices, target: Target) -> _AlignedIndices[_OptionalIndices]: ...
+def _align_batch_indices(
+    indices: _OptionalIndices, target: Target
+) -> _AlignedIndices[_OptionalIndices]: ...
 
 
 def _align_batch_indices(
@@ -124,7 +155,9 @@ def _align_batch_indices(
         if label == target:
             continue
         if index is None:
-            raise ValueError(f"Missing index tensor for {label}; only the scoring target may be None")
+            raise ValueError(
+                f"Missing index tensor for {label}; only the scoring target may be None"
+            )
         batch_indices.append(index)
 
     # index tensors are left-aligned; pad them so that torch's right-aligned broadcasting agrees
@@ -134,16 +167,18 @@ def _align_batch_indices(
 
     # without a target, every position took part in the alignment, and none of them can be None
     if target is None:
-        return _AlignedIndices(indices=_Indices(*aligned), batch_ndim=batch_ndim, batch_shape=batch_shape)
-
-    aligned_iter = iter(aligned)
-    return _AlignedIndices(
-        indices=_OptionalIndices(
+        indices = _Indices(*aligned)
+    else:
+        aligned_iter = iter(aligned)
+        indices = _OptionalIndices(
             *(
                 index if label == target else next(aligned_iter)
                 for label, index in zip(COLUMN_LABELS, indices, strict=True)
             )
-        ),
+        )
+
+    return _AlignedIndices(
+        indices=indices,
         batch_ndim=batch_ndim,
         batch_shape=batch_shape,
     )
@@ -157,14 +192,7 @@ class TripleScoringBatch(NamedTuple):
     of scoring an arbitrarily shaped block of triples.
     """
 
-    #: shape: broadcastable to ``(*batch_shape,)``
-    head: LongTensor
-
-    #: shape: broadcastable to ``(*batch_shape,)``
-    relation: LongTensor
-
-    #: shape: broadcastable to ``(*batch_shape,)``
-    tail: LongTensor
+    indices: _Indices
 
     #: the number of batch dimensions; inferred from the index tensors
     batch_ndim: int
@@ -178,25 +206,22 @@ class TripleScoringBatch(NamedTuple):
         return cls.from_indices(_Indices.from_batch(batch))
 
     @classmethod
-    def from_transposed_batch(cls, head: LongTensor, relation: LongTensor, tail: LongTensor) -> Self:
+    def from_transposed_batch(
+        cls, head: LongTensor, relation: LongTensor, tail: LongTensor
+    ) -> Self:
         """Construct from a transposed HRT batch."""
         return cls.from_indices(_Indices(head, relation, tail))
 
     @classmethod
     def from_indices(cls, indices: _Indices) -> Self:
         """Construct from an indices object."""
-        (head, relation, tail), batch_ndim, batch_shape = _align_batch_indices(indices)
-        return cls(head, relation, tail, batch_ndim, batch_shape)
-
-    @property
-    def indices(self) -> _Indices:
-        """Return the index tensors."""
-        return _Indices(self.head, self.relation, self.tail)
+        indices_, batch_ndim, batch_shape = _align_batch_indices(indices)
+        return cls(indices_, batch_ndim, batch_shape)
 
     @property
     def device(self) -> torch.device:
         """Return the device of the index tensors."""
-        return self.head.device
+        return self.indices.head.device
 
 
 class TargetScoringBatch(NamedTuple):
@@ -214,14 +239,7 @@ class TargetScoringBatch(NamedTuple):
     ``(*batch_shape, num)``.
     """
 
-    #: shape: broadcastable to ``(*batch_shape,)``, or the target shape described above
-    head: LongTensor | None
-
-    #: shape: broadcastable to ``(*batch_shape,)``, or the target shape described above
-    relation: LongTensor | None
-
-    #: shape: broadcastable to ``(*batch_shape,)``, or the target shape described above
-    tail: LongTensor | None
+    indices: _OptionalIndices
 
     #: the position which is scored against many candidates
     target: Target
@@ -252,9 +270,8 @@ class TargetScoringBatch(NamedTuple):
         if target not in COLUMN_LABELS:
             raise ValueError(f"Unknown target={target}; must be one of {COLUMN_LABELS}")
 
-        (head, relation, tail), batch_ndim, batch_shape = _align_batch_indices(indices, target=target)
-
-        rv = cls(head, relation, tail, target, batch_ndim, batch_shape)
+        indices_, batch_ndim, batch_shape = _align_batch_indices(indices, target=target)
+        rv = cls(indices_, target, batch_ndim, batch_shape)
 
         target_ids = rv.target_ids
         if target_ids is not None and target_ids.ndim not in (1, batch_ndim + 1):
@@ -264,11 +281,6 @@ class TargetScoringBatch(NamedTuple):
             )
 
         return rv
-
-    @property
-    def indices(self) -> _OptionalIndices:
-        """Return the index tensors."""
-        return _OptionalIndices(self.head, self.relation, self.tail)
 
     @property
     def target_ids(self) -> LongTensor | None:
@@ -283,7 +295,7 @@ class TargetScoringBatch(NamedTuple):
     @property
     def device(self) -> torch.device:
         """Return the device of the index tensors."""
-        return next(index.device for index in self.indices if index is not None)
+        return self.indices.device
 
     @property
     def lookup_indices(self) -> _OptionalIndices:
@@ -298,7 +310,11 @@ class TargetScoringBatch(NamedTuple):
         # the `index is None` check is redundant - only the target may be None, cf. __post_init__ - but narrows
         return _OptionalIndices(
             *(
-                index if label == self.target or index is None else index.unsqueeze(dim=self.batch_ndim)
+                (
+                    index
+                    if label == self.target or index is None
+                    else index.unsqueeze(dim=self.batch_ndim)
+                )
                 for label, index in zip(COLUMN_LABELS, self.indices, strict=True)
             )
         )
@@ -312,34 +328,12 @@ class TargetScoringBatch(NamedTuple):
         :return:
             the new batch
         """
-        match self.target:
-            case "head":
-                return self.__class__(
-                    ids,
-                    self.relation,
-                    self.tail,
-                    self.target,
-                    self.batch_ndim,
-                    self.batch_shape,
-                )
-            case "relation":
-                return self.__class__(
-                    self.head,
-                    ids,
-                    self.tail,
-                    self.target,
-                    self.batch_ndim,
-                    self.batch_shape,
-                )
-            case "tail":
-                return self.__class__(
-                    self.head,
-                    self.relation,
-                    ids,
-                    self.target,
-                    self.batch_ndim,
-                    self.batch_shape,
-                )
+        return self.__class__(
+            self.indices.with_target_ids(ids, self.target),
+            self.target,
+            self.batch_ndim,
+            self.batch_shape,
+        )
 
 
 #: A scoring request: either the given triples, or one position scored against many candidates.
