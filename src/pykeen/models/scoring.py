@@ -123,15 +123,11 @@ def _broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...
 
 
 @overload
-def _align_batch_indices(
-    indices: _Indices, target: None = ...
-) -> _AlignedIndices[_Indices]: ...
+def _align_batch_indices(indices: _Indices, target: None = ...) -> _AlignedIndices[_Indices]: ...
 
 
 @overload
-def _align_batch_indices(
-    indices: _OptionalIndices, target: Target
-) -> _AlignedIndices[_OptionalIndices]: ...
+def _align_batch_indices(indices: _OptionalIndices, target: Target) -> _AlignedIndices[_OptionalIndices]: ...
 
 
 def _align_batch_indices(
@@ -155,9 +151,7 @@ def _align_batch_indices(
         if label == target:
             continue
         if index is None:
-            raise ValueError(
-                f"Missing index tensor for {label}; only the scoring target may be None"
-            )
+            raise ValueError(f"Missing index tensor for {label}; only the scoring target may be None")
         batch_indices.append(index)
 
     # index tensors are left-aligned; pad them so that torch's right-aligned broadcasting agrees
@@ -206,9 +200,7 @@ class TripleScoringBatch(NamedTuple):
         return cls.from_indices(_Indices.from_batch(batch))
 
     @classmethod
-    def from_transposed_batch(
-        cls, head: LongTensor, relation: LongTensor, tail: LongTensor
-    ) -> Self:
+    def from_transposed_batch(cls, head: LongTensor, relation: LongTensor, tail: LongTensor) -> Self:
         """Construct from a transposed HRT batch."""
         return cls.from_indices(_Indices(head, relation, tail))
 
@@ -310,11 +302,7 @@ class TargetScoringBatch(NamedTuple):
         # the `index is None` check is redundant - only the target may be None, cf. __post_init__ - but narrows
         return _OptionalIndices(
             *(
-                (
-                    index
-                    if label == self.target or index is None
-                    else index.unsqueeze(dim=self.batch_ndim)
-                )
+                index if label == self.target or index is None else index.unsqueeze(dim=self.batch_ndim)
                 for label, index in zip(COLUMN_LABELS, self.indices, strict=True)
             )
         )
