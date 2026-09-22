@@ -17,14 +17,13 @@ near-identical copies of the same broadcasting, slicing, and repetition logic.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Generic, NamedTuple, Self, TypeAlias, TypeVar, overload
 
 import torch
 
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..typing import LongTensor, Target
-from ..utils import pad_trailing_dims
+from ..utils import broadcast_index_shapes, pad_trailing_dims
 
 __all__ = [
     "ScoringBatch",
@@ -100,27 +99,6 @@ class _AlignedIndices(NamedTuple, Generic[_IndicesType]):
     batch_shape: tuple[int, ...]
 
 
-def _broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...]:
-    """Determine the common shape of the given index shapes.
-
-    :param shapes: the shapes of the index tensors; they must have the same number of
-        dimensions, cf. :func:`~pykeen.utils.pad_trailing_dims`
-
-    :returns: the broadcasted shape
-
-    :raises ValueError: if the shapes are not broadcastable
-    """
-    # note: this is equivalent to torch.broadcast_shapes for equal-ndim shapes, but about an order of magnitude
-    # faster, and scoring constructs one batch per call
-    materialized = list(shapes)
-    result = []
-    for sizes in zip(*materialized, strict=True):
-        if len(set(sizes) - {1}) > 1:
-            raise ValueError(f"Cannot broadcast index shapes {materialized}")
-        result.append(max(sizes))
-    return tuple(result)
-
-
 @overload
 def _align_batch_indices(indices: Indices, target: None = ...) -> _AlignedIndices[Indices]: ...
 
@@ -154,7 +132,7 @@ def _align_batch_indices(
     # index tensors are left-aligned; pad them so that torch's right-aligned broadcasting agrees
     batch_ndim = max(index.ndim for index in batch_indices)
     aligned = [pad_trailing_dims(index, ndim=batch_ndim) for index in batch_indices]
-    batch_shape = _broadcast_index_shapes(index.shape for index in aligned)
+    batch_shape = broadcast_index_shapes(index.shape for index in aligned)
 
     # without a target, every position took part in the alignment, and none of them can be None
     if target is None:

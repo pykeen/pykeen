@@ -17,7 +17,7 @@ from torch import nn
 from .base import Model
 from .scoring import ScoringBatch, TargetScoringBatch, TripleScoringBatch
 from ..nn import representation_resolver
-from ..nn.modules import Interaction, interaction_resolver, parallel_prefix_unsqueeze
+from ..nn.modules import Interaction, interaction_resolver
 from ..nn.representation import Representation
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import KGInfo
@@ -33,7 +33,7 @@ from ..typing import (
     TailRepresentation,
     Target,
 )
-from ..utils import check_shapes, get_batchnorm_modules
+from ..utils import check_shapes, get_batchnorm_modules, parallel_prefix_unsqueeze
 
 __all__ = [
     "_NewAbstractModel",

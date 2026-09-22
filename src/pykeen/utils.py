@@ -27,6 +27,7 @@ from typing import (
     Generic,
     TextIO,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -50,6 +51,8 @@ __all__ = [
     "broadcast_upgrade_to_sequences",
     "compose",
     "clamp_norm",
+    "parallel_prefix_unsqueeze",
+    "broadcast_index_shapes",
     "compact_mapping",
     "create_relation_to_entity_set_mapping",
     "ensure_complex",
@@ -1727,3 +1730,42 @@ def merge_kwargs(kwargs: OneOrManyOptionalKwargs, **extra_kwargs: Any | None) ->
             raise ValueError(f"Found inconsistency for {key=} : {extra_kwargs[key]=} vs. {kwargs[key]=}")
         kwargs[key] = value
     return kwargs
+
+
+def broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...]:
+    """Determine the common shape of the given index shapes.
+
+    :param shapes: the shapes of the index tensors; they must have the same number of
+        dimensions, cf. :func:`~pykeen.utils.pad_trailing_dims`
+
+    :returns: the broadcasted shape
+
+    :raises ValueError: if the shapes are not broadcastable
+    """
+    # note: this is equivalent to torch.broadcast_shapes for equal-ndim shapes, but about an order of magnitude
+    # faster, and scoring constructs one batch per call
+    materialized = list(shapes)
+    result = []
+    for sizes in zip(*materialized, strict=True):
+        if len(set(sizes) - {1}) > 1:
+            raise ValueError(f"Cannot broadcast index shapes {materialized}")
+        result.append(max(sizes))
+    return tuple(result)
+
+
+@overload
+def parallel_prefix_unsqueeze(x: Sequence[FloatTensor], ndim: int) -> Sequence[FloatTensor]: ...
+
+
+@overload
+def parallel_prefix_unsqueeze(x: FloatTensor, ndim: int) -> FloatTensor: ...
+
+
+def parallel_prefix_unsqueeze(x: FloatTensor | Sequence[FloatTensor], ndim: int) -> FloatTensor | Sequence[FloatTensor]:
+    """Prepend the given number of singleton dimensions to all representations."""
+    # note: a single view adds all leading singleton dimensions at once; prepending them is always
+    # stride-expressible, so this works for non-contiguous (e.g., transposed or expanded) inputs, too
+    prefix = (1,) * ndim
+    if not isinstance(x, Sequence):
+        return x.view(prefix + x.shape)
+    return cast(Sequence[FloatTensor], [xx.view(prefix + xx.shape) for xx in x])
