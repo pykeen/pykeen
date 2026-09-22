@@ -73,6 +73,8 @@ class OptionalIndices(NamedTuple):
         :param target: the target where to put the new tensor
 
         :returns: the new batch
+
+        :raises ValueError: if the target is invalid
         """
         match target:
             case "head":
@@ -81,6 +83,7 @@ class OptionalIndices(NamedTuple):
                 return self.__class__(self.head, ids, self.tail)
             case "tail":
                 return self.__class__(self.head, self.relation, ids)
+        raise ValueError(f"Unknown target={target}; must be one of {COLUMN_LABELS}")
 
 
 _IndicesType = TypeVar("_IndicesType", Indices, OptionalIndices)
@@ -276,7 +279,7 @@ class TargetScoringBatch(NamedTuple):
 
         :returns: the head, relation, and tail index tensors
         """
-        # the `index is None` check is redundant - only the target may be None, cf. __post_init__ - but narrows
+        # the `index is None` check is redundant - only the target may be None, cf. from_indices - but narrows
         return OptionalIndices(
             *(
                 index if label == self.target or index is None else index.unsqueeze(dim=self.batch_ndim)
