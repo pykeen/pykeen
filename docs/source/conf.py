@@ -327,6 +327,7 @@ nitpick_ignore = [
     ("py:class", "TrainingCallbackKwargsHint"),
     ("py:class", "X"),
     ("py:class", "class_resolver"),
+    ("py:class", "class_resolver.api.ClassResolver"),
     ("py:class", "class_resolver.func.FunctionResolver"),
     ("py:class", "class_resolver.utils.X"),
     ("py:class", "collections.abc.Mapping"),
