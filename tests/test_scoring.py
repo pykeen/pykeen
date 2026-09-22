@@ -176,15 +176,15 @@ class TestScoringBatch:
 
     def test_no_target(self) -> None:
         """Test that the index tensors are left-aligned when there is no target."""
-        batch = TripleScoringBatch(
+        batch = TripleScoringBatch.from_transposed_batch(
             head=self._index(BATCH_SIZE), relation=self._index(BATCH_SIZE), tail=self._index(BATCH_SIZE, NUM_IDS)
         )
         assert batch.batch_ndim == 2
         assert batch.batch_shape == (BATCH_SIZE, NUM_IDS)
         # the (batch_size,) index tensors gained a trailing singleton dimension
-        assert batch.head.shape == (BATCH_SIZE, 1)
+        assert batch.indices.head.shape == (BATCH_SIZE, 1)
         # ... and there is no target axis to insert
-        assert batch.tail.shape == (BATCH_SIZE, NUM_IDS)
+        assert batch.indices.tail.shape == (BATCH_SIZE, NUM_IDS)
 
     @pytest.mark.parametrize("target", list(TARGETS))
     def test_lookup_indices(self, target: Target) -> None:
