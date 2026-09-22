@@ -1,7 +1,6 @@
 """Training loops for KGE models using multi-modal information."""
 
 import gc
-import inspect
 import logging
 import pathlib
 import pickle
@@ -97,21 +96,6 @@ class SubBatchingNotSupportedError(NotImplementedError):
         )
 
 
-def _get_init_kwargs(instance: object, state: Mapping[str, Any]) -> dict[str, Any]:
-    """Extract the keyword arguments to re-create an instance from its state.
-
-    Only keys which are parameters of the class' ``__init__`` are kept, e.g., to drop
-    :class:`torch.optim.AdamW`'s ``decoupled_weight_decay``, which is part of its ``defaults`` but not an ``__init__``
-    parameter.
-    """
-    parameters = inspect.signature(instance.__class__.__init__).parameters
-    return {
-        key: value
-        for key, value in state.items()
-        if key in parameters and key not in {"params", "optimizer", "last_epoch"}
-    }
-
-
 class TrainingLoop(Generic[BatchType], ABC):
     """A training loop."""
 
@@ -125,6 +109,9 @@ class TrainingLoop(Generic[BatchType], ABC):
     _optimizer_kwargs: OptionalKwargs
     _lr_scheduler_hint: HintOrType[LRScheduler]
     _lr_scheduler_kwargs: OptionalKwargs
+
+    #: whether the optimizer and LR scheduler can be re-created, i.e., whether they were not passed pre-instantiated
+    _recreatable: bool
 
     #: whether the current optimizer has already been used for training
     _optimizer_used: bool
@@ -163,10 +150,13 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         :param model: The model to train
         :param triples_factory: The training triples factory
-        :param optimizer: The optimizer to use while training the model
+        :param optimizer: The optimizer to use while training the model. A pre-instantiated optimizer can only be used
+            for a single fresh training run; pass its class and `optimizer_kwargs` instead to allow re-creating it for
+            subsequent fresh runs.
         :param optimizer_kwargs: additional keyword-based parameters to instantiate the optimizer (if necessary).
             `params` will be added automatically based on the `model`.
-        :param lr_scheduler: The learning rate scheduler you want to use while training the model
+        :param lr_scheduler: The learning rate scheduler you want to use while training the model. The same restriction
+            as for pre-instantiated optimizers applies.
         :param lr_scheduler_kwargs: additional keyword-based parameters to instantiate the LR scheduler (if necessary).
             `optimizer` will be added automatically.
         :param automatic_memory_optimization: bool Whether to automatically optimize the sub-batch size during training
@@ -182,15 +172,14 @@ class TrainingLoop(Generic[BatchType], ABC):
         self._optimizer_kwargs = optimizer_kwargs
         self._lr_scheduler_hint = lr_scheduler
         self._lr_scheduler_kwargs = lr_scheduler_kwargs
+        self._recreatable = True
         self._reset_optimizer()
-        # pre-instantiated optimizers and LR schedulers are used as-is for the first training run; for later fresh
-        # runs, we need to remember how to re-create them
-        if isinstance(optimizer, Optimizer):
-            self._optimizer_hint = optimizer.__class__
-            self._optimizer_kwargs = _get_init_kwargs(optimizer, optimizer.defaults)
-        if isinstance(lr_scheduler, LRScheduler):
-            self._lr_scheduler_hint = lr_scheduler.__class__
-            self._lr_scheduler_kwargs = _get_init_kwargs(lr_scheduler, lr_scheduler.state_dict())
+        # pre-instantiated optimizers and LR schedulers are used as-is, but cannot be re-created, since their
+        # constructor parameters cannot be reliably recovered from the instance
+        if isinstance(optimizer, Optimizer) or isinstance(lr_scheduler, LRScheduler):
+            self._recreatable = False
+            # do not keep references to the instances, such that clearing the optimizer releases them
+            self._optimizer_hint = self._lr_scheduler_hint = None
         self.losses_per_epochs = []
         self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
@@ -223,7 +212,16 @@ class TrainingLoop(Generic[BatchType], ABC):
         return self.model.loss
 
     def _reset_optimizer(self) -> None:
-        """Create a fresh optimizer and LR scheduler for the model's current parameters."""
+        """Create a fresh optimizer and LR scheduler for the model's current parameters.
+
+        :raises ValueError: if the optimizer or LR scheduler were passed pre-instantiated, and thus cannot be re-created
+        """
+        if not self._recreatable:
+            raise ValueError(
+                "Cannot create a fresh optimizer, since the optimizer or LR scheduler were passed pre-instantiated, "
+                "and have already been used or cleared. Pass them as class and kwargs instead, to allow re-creating "
+                "them for fresh training runs.",
+            )
         self.optimizer = optimizer_resolver.make(
             self._optimizer_hint, self._optimizer_kwargs, params=self.model.get_grad_params()
         )

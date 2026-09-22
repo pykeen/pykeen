@@ -37,18 +37,21 @@ def test_pipeline_adamw() -> None:
 
 
 def test_fresh_run(triples_factory: CoreTriplesFactory) -> None:
-    """Test that a pre-instantiated optimizer is used for the first run, and re-created for subsequent fresh runs."""
+    """Test that each fresh run re-creates the optimizer and LR scheduler from their hints."""
     model = TransE(triples_factory=triples_factory, embedding_dim=2)
-    optimizer = AdamW(params=model.get_grad_params(), lr=0.1, weight_decay=0.2)
-    lr_scheduler = StepLR(optimizer=optimizer, step_size=3, gamma=0.5)
     training_loop = SLCWATrainingLoop(
         model=model,
         triples_factory=triples_factory,
-        optimizer=optimizer,
-        lr_scheduler=lr_scheduler,
+        optimizer=AdamW,
+        optimizer_kwargs={"lr": 0.1, "weight_decay": 0.2},
+        lr_scheduler=StepLR,
+        lr_scheduler_kwargs={"step_size": 3, "gamma": 0.5},
         automatic_memory_optimization=False,
     )
+    optimizer = training_loop.optimizer
+    lr_scheduler = training_loop.lr_scheduler
 
+    # the first run uses the optimizer created on initialization
     _train(training_loop, triples_factory)
     assert training_loop.optimizer is optimizer
     assert training_loop.lr_scheduler is lr_scheduler
@@ -65,6 +68,31 @@ def test_fresh_run(triples_factory: CoreTriplesFactory) -> None:
     assert new_lr_scheduler.optimizer is new_optimizer
     assert new_lr_scheduler.step_size == 3
     assert new_lr_scheduler.gamma == 0.5
+
+
+def test_fresh_run_pre_instantiated(triples_factory: CoreTriplesFactory) -> None:
+    """Test that a pre-instantiated optimizer is used for the first run, but not re-created for further fresh runs."""
+    model = TransE(triples_factory=triples_factory, embedding_dim=2)
+    optimizer = AdamW(params=model.get_grad_params(), lr=0.1, weight_decay=0.2)
+    lr_scheduler = StepLR(optimizer=optimizer, step_size=3, gamma=0.5)
+    training_loop = SLCWATrainingLoop(
+        model=model,
+        triples_factory=triples_factory,
+        optimizer=optimizer,
+        lr_scheduler=lr_scheduler,
+        automatic_memory_optimization=False,
+    )
+
+    _train(training_loop, triples_factory)
+    assert training_loop.optimizer is optimizer
+    assert training_loop.lr_scheduler is lr_scheduler
+
+    # continuing is fine
+    _train(training_loop, triples_factory, continue_training=True)
+    assert training_loop.optimizer is optimizer
+
+    with pytest.raises(ValueError, match="pre-instantiated"):
+        _train(training_loop, triples_factory)
 
 
 def test_continue_training(triples_factory: CoreTriplesFactory) -> None:
@@ -100,6 +128,19 @@ def test_clear_optimizer(triples_factory: CoreTriplesFactory) -> None:
     with pytest.raises(ValueError, match="optimizer has been cleared"):
         _train(training_loop, triples_factory, continue_training=True)
 
-    # a fresh run re-creates the optimizer
+    # a pre-instantiated optimizer cannot be re-created
+    with pytest.raises(ValueError, match="pre-instantiated"):
+        _train(training_loop, triples_factory)
+
+
+def test_clear_optimizer_recreate(triples_factory: CoreTriplesFactory) -> None:
+    """Test that a fresh run after clearing re-creates the optimizer from its hint."""
+    model = TransE(triples_factory=triples_factory, embedding_dim=2)
+    training_loop = SLCWATrainingLoop(
+        model=model, triples_factory=triples_factory, optimizer=Adam, automatic_memory_optimization=False
+    )
+    _train(training_loop, triples_factory, clear_optimizer=True)
+    assert training_loop.optimizer is None
+
     _train(training_loop, triples_factory)
     assert isinstance(training_loop.optimizer, Adam)
