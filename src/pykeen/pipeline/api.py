@@ -1205,25 +1205,21 @@ def _handle_training_loop(
     negative_sampler: HintType[NegativeSampler] = None,
     negative_sampler_kwargs: Mapping[str, Any] | None = None,
 ) -> TrainingLoop:
-    optimizer_kwargs = dict(optimizer_kwargs or {})
+    # note: the instances are only created to log their class names and default parameters; the training loop
+    # receives the hints instead, so that it can re-create them for fresh training runs
     optimizer_instance = optimizer_resolver.make(
         optimizer,
         optimizer_kwargs,
         params=model_instance.get_grad_params(),
     )
-    for key, value in optimizer_instance.defaults.items():
-        optimizer_kwargs.setdefault(key, value)
     _result_tracker.log_params(
         params={
             "optimizer": optimizer_instance.__class__.__name__,
-            "optimizer_kwargs": optimizer_kwargs,
+            "optimizer_kwargs": {**optimizer_instance.defaults, **(optimizer_kwargs or {})},
         },
     )
 
-    lr_scheduler_instance: LRScheduler | None
-    if lr_scheduler is None:
-        lr_scheduler_instance = None
-    else:
+    if lr_scheduler is not None:
         lr_scheduler_instance = lr_scheduler_resolver.make(
             lr_scheduler,
             lr_scheduler_kwargs,
@@ -1265,8 +1261,10 @@ def _handle_training_loop(
     training_loop_instance = training_loop_cls(
         model=model_instance,
         triples_factory=training,
-        optimizer=optimizer_instance,
-        lr_scheduler=lr_scheduler_instance,
+        optimizer=optimizer,
+        optimizer_kwargs=optimizer_kwargs,
+        lr_scheduler=lr_scheduler,
+        lr_scheduler_kwargs=lr_scheduler_kwargs,
         result_tracker=_result_tracker,
         **training_loop_kwargs,
     )
