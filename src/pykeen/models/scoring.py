@@ -28,12 +28,14 @@ from ..utils import pad_trailing_dims
 
 __all__ = [
     "ScoringBatch",
+    "Indices",
+    "OptionalIndices",
     "TargetScoringBatch",
     "TripleScoringBatch",
 ]
 
 
-class _Indices(NamedTuple):
+class Indices(NamedTuple):
     """The index tensors of a scoring request, one per triple position."""
 
     head: LongTensor
@@ -48,7 +50,7 @@ class _Indices(NamedTuple):
         return cls(batch[:, 0], batch[:, 1], batch[:, 2])
 
 
-class _OptionalIndices(NamedTuple):
+class OptionalIndices(NamedTuple):
     """The index tensors of a scoring request, where the scoring target's may be missing."""
 
     #: shape: broadcastable to ``(*batch_shape,)``, or the target shape described above
@@ -82,7 +84,7 @@ class _OptionalIndices(NamedTuple):
                 return self.__class__(self.head, self.relation, ids)
 
 
-_IndicesType = TypeVar("_IndicesType", _Indices, _OptionalIndices)
+_IndicesType = TypeVar("_IndicesType", Indices, OptionalIndices)
 
 
 class _AlignedIndices(NamedTuple, Generic[_IndicesType]):
@@ -120,16 +122,16 @@ def _broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...
 
 
 @overload
-def _align_batch_indices(indices: _Indices, target: None = ...) -> _AlignedIndices[_Indices]: ...
+def _align_batch_indices(indices: Indices, target: None = ...) -> _AlignedIndices[Indices]: ...
 
 
 @overload
-def _align_batch_indices(indices: _OptionalIndices, target: Target) -> _AlignedIndices[_OptionalIndices]: ...
+def _align_batch_indices(indices: OptionalIndices, target: Target) -> _AlignedIndices[OptionalIndices]: ...
 
 
 def _align_batch_indices(
-    indices: _Indices | _OptionalIndices, target: Target | None = None
-) -> _AlignedIndices[_Indices] | _AlignedIndices[_OptionalIndices]:
+    indices: Indices | OptionalIndices, target: Target | None = None
+) -> _AlignedIndices[Indices] | _AlignedIndices[OptionalIndices]:
     """Align the index tensors which determine the batch shape.
 
     :param indices: the index tensors, in the order ``(head, relation, tail)``
@@ -157,14 +159,14 @@ def _align_batch_indices(
     # without a target, every position took part in the alignment, and none of them can be None
     if target is None:
         return _AlignedIndices(
-            indices=_Indices(*aligned),
+            indices=Indices(*aligned),
             batch_ndim=batch_ndim,
             batch_shape=batch_shape,
         )
 
     aligned_iter = iter(aligned)
     return _AlignedIndices(
-        indices=_OptionalIndices(
+        indices=OptionalIndices(
             *(
                 index if label == target else next(aligned_iter)
                 for label, index in zip(COLUMN_LABELS, indices, strict=True)
@@ -184,7 +186,7 @@ class TripleScoringBatch(NamedTuple):
     arbitrarily shaped block of triples.
     """
 
-    indices: _Indices
+    indices: Indices
 
     #: the number of batch dimensions; inferred from the index tensors
     batch_ndim: int
@@ -195,15 +197,15 @@ class TripleScoringBatch(NamedTuple):
     @classmethod
     def from_batch(cls, batch: LongTensor) -> Self:
         """Construct from an HRT batch."""
-        return cls.from_indices(_Indices.from_batch(batch))
+        return cls.from_indices(Indices.from_batch(batch))
 
     @classmethod
     def from_transposed_batch(cls, head: LongTensor, relation: LongTensor, tail: LongTensor) -> Self:
         """Construct from a transposed HRT batch."""
-        return cls.from_indices(_Indices(head, relation, tail))
+        return cls.from_indices(Indices(head, relation, tail))
 
     @classmethod
-    def from_indices(cls, indices: _Indices) -> Self:
+    def from_indices(cls, indices: Indices) -> Self:
         """Construct from an indices object."""
         indices_, batch_ndim, batch_shape = _align_batch_indices(indices)
         return cls(indices_, batch_ndim, batch_shape)
@@ -226,7 +228,7 @@ class TargetScoringBatch(NamedTuple):
     resulting score tensor has shape ``(*batch_shape, num)``.
     """
 
-    indices: _OptionalIndices
+    indices: OptionalIndices
 
     #: the position which is scored against many candidates
     target: Target
@@ -246,10 +248,10 @@ class TargetScoringBatch(NamedTuple):
         target: Target,
     ) -> Self:
         """Construct from an HRT batch."""
-        return cls.from_indices(_OptionalIndices(head, relation, tail), target)
+        return cls.from_indices(OptionalIndices(head, relation, tail), target)
 
     @classmethod
-    def from_indices(cls, indices: _OptionalIndices, target: Target) -> Self:
+    def from_indices(cls, indices: OptionalIndices, target: Target) -> Self:
         """Align the non-target index tensors, infer the batch shape, and validate the target IDs.
 
         :raises ValueError: if the target is invalid, or if the target IDs do not have a
@@ -287,7 +289,7 @@ class TargetScoringBatch(NamedTuple):
         return self.indices.device
 
     @property
-    def lookup_indices(self) -> _OptionalIndices:
+    def lookup_indices(self) -> OptionalIndices:
         """Return the index tensors to look up representations with.
 
         The non-target index tensors receive an additional singleton dimension, so that
@@ -297,7 +299,7 @@ class TargetScoringBatch(NamedTuple):
         :returns: the head, relation, and tail index tensors
         """
         # the `index is None` check is redundant - only the target may be None, cf. __post_init__ - but narrows
-        return _OptionalIndices(
+        return OptionalIndices(
             *(
                 index if label == self.target or index is None else index.unsqueeze(dim=self.batch_ndim)
                 for label, index in zip(COLUMN_LABELS, self.indices, strict=True)

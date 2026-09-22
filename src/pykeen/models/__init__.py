@@ -55,7 +55,7 @@ from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
-from .scoring import ScoringBatch, TargetScoringBatch, TripleScoringBatch
+from .scoring import ScoringBatch, TargetScoringBatch, TripleScoringBatch, Indices, OptionalIndices
 from .unimodal import (
     CP,
     ERMLP,
@@ -103,6 +103,8 @@ __all__ = [
     "ScoringBatch",
     "TargetScoringBatch",
     "TripleScoringBatch",
+    "Indices",
+    "OptionalIndices",
     # Concrete Models
     "AutoSF",
     "BoxE",
