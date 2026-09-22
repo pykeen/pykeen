@@ -43,7 +43,21 @@ from torch import nn
 from typing_extensions import ParamSpec
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import BoolTensor, DeviceHint, FloatTensor, LongTensor, MappedTriples, TorchRandomHint
+from .typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    BoolTensor,
+    DeviceHint,
+    FloatTensor,
+    HeadRepresentation,
+    LongTensor,
+    MappedTriples,
+    RelationRepresentation,
+    TailRepresentation,
+    Target,
+    TorchRandomHint,
+)
 from .version import get_git_hash
 
 __all__ = [
@@ -115,6 +129,7 @@ __all__ = [
     "split_workload",
     "batched_dot",
     "merge_kwargs",
+    "prefix_unsqueeze_target",
 ]
 
 logger = logging.getLogger(__name__)
@@ -1769,3 +1784,35 @@ def parallel_prefix_unsqueeze(x: FloatTensor | Sequence[FloatTensor], ndim: int)
     if not isinstance(x, Sequence):
         return x.view(prefix + x.shape)
     return cast(Sequence[FloatTensor], [xx.view(prefix + xx.shape) for xx in x])
+
+
+def prefix_unsqueeze_target(
+    target: Target,
+    ndim: int,
+    h: HeadRepresentation,
+    r: RelationRepresentation,
+    t: TailRepresentation,
+) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
+    """Prepend batch dimensions to the target's representations.
+
+    When the same candidates are scored for each batch element, the target's representations are looked up once,
+    with shape ``(num, *dims)``. They need the batch dimensions prepended to broadcast against the other two
+    positions, which have shape ``(*batch_shape, 1, *dims)``.
+
+    :param target: the target position
+    :param ndim: the number of batch dimensions to prepend
+    :param h: the head representations
+    :param r: the relation representations
+    :param t: the tail representations
+
+    :raises ValueError: if the target is invalid
+
+    :return: the representations, with the target's ones unsqueezed
+    """
+    if target == LABEL_HEAD:
+        return parallel_prefix_unsqueeze(h, ndim=ndim), r, t
+    if target == LABEL_RELATION:
+        return h, parallel_prefix_unsqueeze(r, ndim=ndim), t
+    if target == LABEL_TAIL:
+        return h, r, parallel_prefix_unsqueeze(t, ndim=ndim)
+    raise ValueError(f"Unknown target={target}")
