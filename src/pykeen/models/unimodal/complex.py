@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from typing import Any, ClassVar
 
 import torch
-from class_resolver.api import HintOrType
+from class_resolver import HintOrType
 from torch.nn.init import normal_
 
 from ..nbase import ERModel
