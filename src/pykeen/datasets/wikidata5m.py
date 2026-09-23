@@ -49,7 +49,7 @@ class Wikidata5M(TarFileRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the Wikidata5M dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileRemoteDataset`.
         """
         super().__init__(
             url=TRANSDUCTIVE_URL,

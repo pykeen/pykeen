@@ -14,7 +14,9 @@ class TestAblation(unittest.TestCase):
     def test_quate(self):
         """Test using a model with no regularizer argument.
 
-        .. seealso:: https://github.com/pykeen/pykeen/issues/451
+        .. seealso::
+
+            https://github.com/pykeen/pykeen/issues/451
         """
         with tempfile.TemporaryDirectory() as directory:
             ablation_pipeline(

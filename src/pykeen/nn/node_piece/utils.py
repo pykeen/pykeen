@@ -27,16 +27,13 @@ def random_sample_no_replacement(
 
     If a graph has disconnected nodes, then num_entities > number of rows in the pool.
 
-    :param pool:
-        a dictionary of entity: [relations]
-    :param num_tokens:
-        the number of tokens to sample for each entity
-    :param num_entities:
-        the total number of nodes in the graph, might be bigger than the pool size for graphs with disconnected nodes.
-        If not given, is calculated based the length of ``pool``.
+    :param pool: a dictionary of entity: [relations]
+    :param num_tokens: the number of tokens to sample for each entity
+    :param num_entities: the total number of nodes in the graph, might be bigger than the pool size for graphs with
+        disconnected nodes. If not given, is calculated based the length of ``pool``.
 
-    :return: shape: (num_entities, num_tokens), -1 <= res < vocabulary_size
-        the selected relation IDs for each entity. -1 is used as a padding token.
+    :returns: shape: (num_entities, num_tokens), -1 <= res < vocabulary_size the selected relation IDs for each entity.
+        -1 is used as a padding token.
     """
     if num_entities is None:
         num_entities = len(pool)

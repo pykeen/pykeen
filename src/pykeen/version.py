@@ -1,6 +1,7 @@
 """Version information for PyKEEN."""
 
 import os
+import pathlib
 import sys
 from functools import lru_cache
 from subprocess import CalledProcessError, check_output  # noqa: S404
@@ -13,7 +14,7 @@ __all__ = [
     "env",
 ]
 
-VERSION = "1.11.1-dev"
+VERSION = "1.11.2-dev"
 
 
 @lru_cache(maxsize=2)
@@ -21,9 +22,9 @@ def get_git_hash(terse: bool = True) -> str:
     """Get the PyKEEN git hash.
 
     :param terse: Should the hash be clipped to 8 characters?
-    :return:
-        The git hash, equals 'UNHASHED' if encountered CalledProcessError, signifying that the
-        code is not installed in development mode.
+
+    :returns: The git hash, equals 'UNHASHED' if encountered CalledProcessError, signifying that the code is not
+        installed in development mode.
     """
     rv = _run("git", "rev-parse", "HEAD")
     if rv is None:
@@ -37,18 +38,17 @@ def get_git_hash(terse: bool = True) -> str:
 def get_git_branch() -> str | None:
     """Get the PyKEEN branch, if installed from git in editable mode.
 
-    :return:
-        Returns the name of the current branch, or None if not installed in development mode.
+    :returns: Returns the name of the current branch, or None if not installed in development mode.
     """
     return _run("git", "branch", "--show-current")
 
 
 def _run(*args: str) -> str | None:
-    with open(os.devnull, "w") as devnull:
+    with pathlib.Path(os.devnull).open("w") as devnull:
         try:
             ret = check_output(  # noqa: S603,S607
                 args,  # noqa:S603
-                cwd=os.path.dirname(__file__),
+                cwd=pathlib.Path(__file__).parent,
                 stderr=devnull,
             )
         except (CalledProcessError, FileNotFoundError):
@@ -60,9 +60,9 @@ def _run(*args: str) -> str | None:
 def get_version(with_git_hash: bool = False) -> str:
     """Get the PyKEEN version string, including a git hash.
 
-    :param with_git_hash:
-        If set to True, the git hash will be appended to the version.
-    :return: The PyKEEN version as well as the git hash, if the parameter with_git_hash was set to true.
+    :param with_git_hash: If set to True, the git hash will be appended to the version.
+
+    :returns: The PyKEEN version as well as the git hash, if the parameter with_git_hash was set to true.
     """
     return f"{VERSION}-{get_git_hash(terse=True)}" if with_git_hash else VERSION
 
@@ -88,7 +88,7 @@ def env_table(tablefmt: str = "github", headers: tuple[str, str] = ("Key", "Valu
         ("CUDA Available?", str(torch.cuda.is_available()).lower()),
         ("CUDA Version", torch.version.cuda or "N/A"),
         ("cuDNN Version", torch.backends.cudnn.version() or "N/A"),
-        ("MPS built?", str(torch.backends.mps.is_built()).lower()),
+        ("MPS Built?", str(torch.backends.mps.is_built()).lower()),
         ("MPS Available?", str(torch.backends.mps.is_available()).lower()),
     ]
     return tabulate(rows, tablefmt=tablefmt, headers=headers)
@@ -105,17 +105,18 @@ def env(file=None):
     """Print the env or output as HTML if in Jupyter.
 
     :param file: The file to print to if not in a Jupyter setting. Defaults to sys.stdout
+
     :returns: A :class:`IPython.display.HTML` if in a Jupyter notebook setting, otherwise none.
     """
     if _in_jupyter():
         return env_html()
-    else:
-        print(env_table(), file=file)  # noqa:T201
+    print(env_table(), file=file)  # noqa:T201
+    return None
 
 
 def _in_jupyter() -> bool:
     try:
-        get_ipython = sys.modules["IPython"].get_ipython  # type: ignore
+        get_ipython = sys.modules["IPython"].get_ipython
         if "IPKernelApp" not in get_ipython().config:
             raise ImportError("console")
         if "VSCODE_PID" in os.environ:

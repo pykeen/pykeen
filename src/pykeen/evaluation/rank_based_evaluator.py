@@ -19,7 +19,7 @@ import numpy as np
 import numpy.random
 import pandas as pd
 import torch
-from class_resolver import OneOrManyHintOrType, OneOrManyOptionalKwargs
+from class_resolver import HintOrType, OneOrManyHintOrType, OneOrManyOptionalKwargs, OptionalKwargs
 
 from .evaluator import Evaluator, MetricResults, prepare_filter_triples
 from .ranks import Ranks
@@ -27,6 +27,7 @@ from ..constants import COLUMN_LABELS, TARGET_TO_KEY_LABELS, TARGET_TO_KEYS
 from ..metrics.ranking import HITS_METRICS, RankBasedMetric, rank_based_metric_resolver
 from ..metrics.utils import Metric
 from ..triples.triples_factory import CoreTriplesFactory
+from ..triples.utils import get_num_ids
 from ..typing import (
     LABEL_HEAD,
     LABEL_TAIL,
@@ -98,10 +99,7 @@ def _iter_ranks(
     ranks_flat = _flatten(ranks)
     num_candidates_flat = _flatten(num_candidates)
     weights_flat: Mapping[Target, np.ndarray]
-    if weights is None:
-        weights_flat = dict()
-    else:
-        weights_flat = _flatten(weights)
+    weights_flat = {} if weights is None else _flatten(weights)
     for rank_type in RANK_TYPES:
         # individual side
         for side in sides:
@@ -151,8 +149,8 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         3. The metric name, e.g., "adjusted_mean_rank_index", "adjusted_mean_rank", "mean_rank, "mean_reciprocal_rank",
             "inverse_geometric_mean_rank", or "hits@k" where k defaults to 10 but can be substituted for an integer.
             By default, 1, 3, 5, and 10 are available. Other K's can be calculated by setting the appropriate
-            variable in the ``evaluation_kwargs`` in the :func:`pykeen.pipeline.pipeline` or setting ``ks`` in the
-            :class:`pykeen.evaluation.RankBasedEvaluator`.
+            variable in the ``evaluation_kwargs`` in the :func:`~pykeen.pipeline.pipeline` or setting ``ks`` in the
+            :class:`~pykeen.evaluation.RankBasedEvaluator`.
 
         In general, all metrics are available for all combinations of sides/types except AMR and AMRI, which
         are only calculated for the average type. This is because the calculation of the expected MR in the
@@ -269,14 +267,19 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         metric_cls: type[RankBasedMetric]
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
-            for (target, i), (j, rank_type) in itertools.product(
-                ((LABEL_HEAD, 0), (LABEL_TAIL, 1), (SIDE_BOTH, slice(None))), enumerate(RANK_TYPES)
-            ):
+            for (target, i), (j, rank_type) in itertools.product(RANDOM_TARGET_SLICE, enumerate(RANK_TYPES)):
                 this_ranks = ranks[j, i].flatten()
                 data[RankBasedMetricKey(side=target, rank_type=rank_type, metric=metric.key)] = metric(
                     ranks=this_ranks, num_candidates=num_candidates[i].flatten()
                 )
         return cls(data=data)
+
+
+RANDOM_TARGET_SLICE: list[tuple[ExtendedTarget, int | slice]] = [
+    (LABEL_HEAD, 0),
+    (LABEL_TAIL, 1),
+    (SIDE_BOTH, slice(None)),
+]
 
 
 class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
@@ -326,28 +329,34 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
             metrics = []
         self.metrics = rank_based_metric_resolver.make_many(metrics, metrics_kwargs)
         if add_defaults:
-            hits_at_k_keys = [rank_based_metric_resolver.normalize_cls(cls) for cls in HITS_METRICS]
-            ks = (1, 3, 5, 10)
-            metrics = [key for key in rank_based_metric_resolver.lookup_dict if key not in hits_at_k_keys]
-            metrics_kwargs = [None] * len(metrics)
-            for hits_at_k_key in hits_at_k_keys:
-                metrics += [hits_at_k_key] * len(ks)
-                metrics_kwargs += [dict(k=k) for k in ks]
-            self.metrics.extend(rank_based_metric_resolver.make_many(metrics, metrics_kwargs))
+            self.metrics.extend(
+                rank_based_metric_resolver.make(metric, kwargs) for metric, kwargs in self._iter_default_metrics()
+            )
         self.ranks = defaultdict(list)
         self.num_candidates = defaultdict(list)
         self.num_entities = None
         self.clear_on_finalize = clear_on_finalize
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    @classmethod
+    def _iter_default_metrics(cls) -> Iterable[tuple[HintOrType[RankBasedMetric], OptionalKwargs]]:
+        hits_at_k_keys = [rank_based_metric_resolver.normalize_cls(cls) for cls in HITS_METRICS]
+        ks = (1, 3, 5, 10)
+        for hits_at_k_key in hits_at_k_keys:
+            for k in ks:
+                yield hits_at_k_key, {"k": k}
+        for key in rank_based_metric_resolver.lookup_dict:
+            if key in hits_at_k_keys:
+                continue
+            yield key, None
+
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if true_scores is None:
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
 
@@ -360,12 +369,10 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
             self.ranks[target, rank_type].append(v.detach().cpu().numpy())
         self.num_candidates[target].append(batch_ranks.number_of_options.detach().cpu().numpy())
 
-    # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
         self.ranks.clear()
         self.num_candidates.clear()
 
-    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError
@@ -510,23 +517,21 @@ def sample_negatives(
     :return:
         A mapping of sides to negative samples
     """
-    additional_filter_triples = prepare_filter_triples(
+    additional_filter_triples_t = prepare_filter_triples(
         mapped_triples=evaluation_triples,
         additional_filter_triples=additional_filter_triples,
     )
-    num_entities = num_entities or (additional_filter_triples[:, [0, 2]].max().item() + 1)
+    num_entities = num_entities or get_num_ids(additional_filter_triples_t[:, [0, 2]])
     num_triples = evaluation_triples.shape[0]
     df = pd.DataFrame(data=evaluation_triples.numpy(), columns=COLUMN_LABELS)
-    all_df = pd.DataFrame(data=additional_filter_triples.numpy(), columns=COLUMN_LABELS)
+    all_df = pd.DataFrame(data=additional_filter_triples_t.numpy(), columns=COLUMN_LABELS)
     id_df = df.reset_index()
     all_ids = set(range(num_entities))
     negatives = {}
     for side in [LABEL_HEAD, LABEL_TAIL]:
         this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
         other = TARGET_TO_KEY_LABELS[side]
-        for _, group in pd.merge(id_df, all_df, on=other, suffixes=["_eval", "_all"]).groupby(
-            by=other,
-        ):
+        for _, group in id_df.merge(all_df, on=other, suffixes=["_eval", "_all"]).groupby(by=other):
             pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
             if len(pool) < num_samples:
                 logger.warning(
@@ -571,17 +576,17 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             the factory with evaluation triples
         :param additional_filter_triples:
             additional true triples to use for filtering; only relevant if not explicit negatives are given.
-            cf. :func:`pykeen.evaluation.rank_based_evaluator.sample_negatives`
+            cf. :func:`~pykeen.evaluation.sample_negatives`
         :param num_negatives:
             the number of negatives to sample; only relevant if not explicit negatives are given.
-            cf. :func:`pykeen.evaluation.rank_based_evaluator.sample_negatives`
+            cf. :func:`~pykeen.evaluation.sample_negatives`
         :param head_negatives: shape: (num_triples, num_negatives)
             the entity IDs of negative samples for head prediction for each evaluation triple
         :param tail_negatives: shape: (num_triples, num_negatives)
             the entity IDs of negative samples for tail prediction for each evaluation triple
         :param kwargs:
             additional keyword-based arguments passed to
-            :meth:`pykeen.evaluation.rank_based_evaluator.RankBasedEvaluator.__init__`
+            :meth:`~pykeen.evaluation.rank_based_evaluator.RankBasedEvaluator.__init__`
 
         :raises ValueError:
             if only a single side's negatives are given, or the negatives are in wrong shape
@@ -620,15 +625,14 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self.negative_samples = negatives
         self.num_entities = evaluation_factory.num_entities
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if true_scores is None:
             raise ValueError(f"{self.__class__.__name__} needs the true scores!")
 
@@ -670,6 +674,13 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         super().__init__(**kwargs)
         self.keys = defaultdict(list)
 
+    @classmethod
+    def _iter_default_metrics(cls) -> Iterable[tuple[HintOrType[RankBasedMetric], OptionalKwargs]]:
+        for metric, kwargs in super()._iter_default_metrics():
+            metric_cls = rank_based_metric_resolver.lookup(metric)
+            if metric_cls.supports_weights:
+                yield metric, kwargs
+
     @staticmethod
     def _calculate_weights(keys: Iterable[np.ndarray]) -> np.ndarray:
         """Calculate macro weights, i.e., weights inversely proportional to the key frequency.
@@ -683,21 +694,20 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         # combine key batches
         keys = np.concatenate(list(keys), axis=0)
         # calculate key frequency
-        inverse, counts = np.unique(keys, axis=0, return_inverse=True, return_counts=True)[1:]
+        inverse, counts = np.unique(keys, axis=0, return_inverse=True, return_counts=True)[1:]  # type: ignore[call-overload]
         # weight = inverse frequency
         weights = np.reciprocal(counts, dtype=float)
         # broadcast to samples
         return weights[inverse]
 
-    # docstr-coverage: inherited
-    def process_scores_(
+    def process_scores_(  # noqa: D102
         self,
         hrt_batch: MappedTriples,
         target: Target,
         scores: FloatTensor,
         true_scores: FloatTensor | None = None,
         dense_positive_mask: FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         super().process_scores_(
             hrt_batch=hrt_batch,
             target=target,
@@ -706,14 +716,15 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
             dense_positive_mask=dense_positive_mask,
         )
         # store keys for calculating macro weights
-        self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().cpu().numpy())
+        # note: TARGET_TO_KEYS[target] is a slice, so indexing with it returns a view into hrt_batch rather than a
+        # copy; since we keep these arrays around for the whole evaluation, clone() first so we don't pin the full
+        # (and much larger) hrt_batch tensor in memory for the duration.
+        self.keys[target].append(hrt_batch[:, TARGET_TO_KEYS[target]].detach().clone().cpu().numpy())
 
-    # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
         super().clear()
         self.keys.clear()
 
-    # docstr-coverage: inherited
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
         if self.num_entities is None:
             raise ValueError

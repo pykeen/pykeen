@@ -12,6 +12,7 @@ import click
 import docdata
 import pandas as pd
 import scipy.stats
+import torch
 from more_click import force_option, log_level_option, verbose_option
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
@@ -41,7 +42,7 @@ IMG_DIR = ROOT.joinpath("docs", "source", "img")
 
 
 @click.group()
-def main():
+def main() -> None:
     """Run the dataset CLI."""
 
 
@@ -50,7 +51,7 @@ def main():
 @dataset_regex_option
 @min_triples_option
 @max_triples_option
-def summarize(dataset_regex: str | None, min_triples: int | None, max_triples: int | None):
+def summarize(dataset_regex: str | None, min_triples: int | None, max_triples: int | None) -> None:
     """Load all datasets."""
     for name, dataset in iter_dataset_instances(
         regex_name_filter=dataset_regex, min_triples=min_triples, max_triples=max_triples
@@ -78,7 +79,7 @@ def analyze(
     force: bool,
     countplots: bool,
     directory,
-):
+) -> None:
     """Generate analysis."""
     for name, dataset in iter_dataset_instances(
         regex_name_filter=dataset_regex, min_triples=min_triples, max_triples=max_triples
@@ -98,7 +99,7 @@ def _analyze(
     force: bool,
     countplots: bool,
     directory: None | str | pathlib.Path,
-):
+) -> None:
     from . import analysis
 
     plt, sns = _get_plotting_libraries()
@@ -206,7 +207,7 @@ def _get_plotting_libraries():
 @dataset_regex_option
 @min_triples_option
 @max_triples_option
-def verify(dataset_regex: str | None, min_triples: int | None, max_triples: int | None):
+def verify(dataset_regex: str | None, min_triples: int | None, max_triples: int | None) -> None:
     """Verify dataset integrity."""
     data = []
     keys = None
@@ -234,10 +235,7 @@ def verify(dataset_regex: str | None, min_triples: int | None, max_triples: int 
     valid = None
     for part, a in itt.product(("validation", "testing"), ("entities", "relations")):
         this_valid = df[f"num_training_{a}"] == df[f"num_{part}_{a}"]
-        if valid is None:
-            valid = this_valid
-        else:
-            valid = valid & this_valid
+        valid = this_valid if valid is None else valid & this_valid
     df["valid"] = valid
     click.echo(df.to_markdown())
 
@@ -266,7 +264,7 @@ def expected_metrics(
     samples: int,
     force: bool,
     output_directory: pathlib.Path,
-):
+) -> None:
     """Compute expected metrics for all datasets (matching the given pattern)."""
     logging.getLogger("pykeen").setLevel(level=log_level)
     df_data: list[tuple[str, str, str, str, float]] = []
@@ -279,8 +277,9 @@ def expected_metrics(
         if expected_metrics_path.is_file() and not force:
             expected_metrics_dict = json.loads(expected_metrics_path.read_text())
         else:
-            expected_metrics_dict = dict()
+            expected_metrics_dict = {}
             for key, factory in dataset_instance.factory_dict.items():
+                additional_filter_triples: list[torch.Tensor] | None
                 if key == "training":
                     additional_filter_triples = None
                 elif key == "validation":
@@ -319,9 +318,9 @@ def expected_metrics(
                     MedianRank(),
                     InverseMedianRank(),
                 ]
-                this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
+                this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = {}
                 for label, sides in SIDE_MAPPING.items():
-                    num_candidates = df[[f"{side}_candidates" for side in sides]].values.ravel()
+                    num_candidates = df[[f"{side}_candidates" for side in sides]].to_numpy().ravel()
                     this_metrics[label] = {
                         metric.key: metric.expected_value(
                             num_candidates=num_candidates,
@@ -394,7 +393,7 @@ def degree(
     force: bool,
     plot: bool,
     output_root: pathlib.Path,
-):
+) -> None:
     """Analyze degree distributions."""
     output_root.mkdir(exist_ok=True, parents=True)
     base_path = output_root.joinpath("degree-distributions")
@@ -442,7 +441,7 @@ def degree(
         value_vars=["mean", "variance", "skewness", "kurtosis"],
         var_name="statistic",
     )
-    grid_1: sns.FacetGrid = sns.relplot(  # type: ignore
+    grid_1: sns.FacetGrid = sns.relplot(  # type: ignore[name-defined]
         data=df,
         hue="dataset",
         x="num_triples",
@@ -450,10 +449,10 @@ def degree(
         col="statistic",
         row="target",
         y="value",
-        facet_kws=dict(
-            margin_titles=True,
-            sharey="col",
-        ),
+        facet_kws={
+            "margin_titles": True,
+            "sharey": "col",
+        },
         height=2.5,
         hue_order=sorted(df["dataset"].unique()),
     )
@@ -475,11 +474,11 @@ def degree(
     logger.info(f"Saved plot to {path}")
 
     # Plot: difference between mean head and tail degree
-    df_2 = df.loc[df["statistic"] == "mean"].pivot(
+    df_2 = df.loc[df["statistic"] == "mean"].pivot_table(
         index=["dataset", "split", "num_triples"], columns="target", values="value"
     )
     df_2["difference"] = df_2["head"] - df_2["tail"]
-    grid_2: sns.FacetGrid = sns.relplot(  # type: ignore
+    grid_2: sns.FacetGrid = sns.relplot(  # type: ignore[name-defined]
         data=df_2,
         hue="dataset",
         x="num_triples",

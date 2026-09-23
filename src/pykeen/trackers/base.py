@@ -46,8 +46,7 @@ class ResultTracker:
 
         HAS to be called after the experiment is finished.
 
-        :param success:
-            Can be used to signal failed runs. May be ignored.
+        :param success: Can be used to signal failed runs. May be ignored.
         """
 
 
@@ -70,7 +69,6 @@ class PythonResultTracker(ResultTracker):
         print("Default configuration:")
         for k, v in tracker.configuration.items():
             print(f"{k:20} = {v}")
-
     """
 
     #: The name of the run
@@ -89,27 +87,24 @@ class PythonResultTracker(ResultTracker):
         """Initialize the tracker."""
         super().__init__()
         self.store_metrics = store_metrics
-        self.configuration = dict()
+        self.configuration = {}
         self.metrics = defaultdict(dict)
         self.run_name = None
 
-    # docstr-coverage: inherited
     def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         self.run_name = run_name
 
-    # docstr-coverage: inherited
     def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:  # noqa: D102
         if prefix is not None:
             params = {f"{prefix}.{key}": value for key, value in params.items()}
         self.configuration.update(params)
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if not self.store_metrics:
             return
 
@@ -131,21 +126,14 @@ class ConsoleResultTracker(ResultTracker):
         start_end_run: bool = False,
         writer: str = "tqdm",
     ):
-        """
-        Initialize the tracker.
+        """Initialize the tracker.
 
-        :param track_parameters:
-            Whether to print parameters.
-        :param parameter_filter:
-            A regular expression to filter parameters. If None, print all parameters.
-        :param track_metrics:
-            Whether to print metrics.
-        :param metric_filter:
-            A regular expression to filter metrics. If None, print all parameters.
-        :param start_end_run:
-            Whether to print start/end run messages.
-        :param writer:
-            The writer to use - one of "tqdm", "builtin", or "logger".
+        :param track_parameters: Whether to print parameters.
+        :param parameter_filter: A regular expression to filter parameters. If None, print all parameters.
+        :param track_metrics: Whether to print metrics.
+        :param metric_filter: A regular expression to filter metrics. If None, print all parameters.
+        :param start_end_run: Whether to print start/end run messages.
+        :param writer: The writer to use - one of "tqdm", "builtin", or "logger".
         """
         self.start_end_run = start_end_run
 
@@ -162,16 +150,14 @@ class ConsoleResultTracker(ResultTracker):
         if writer == "tqdm":
             self.write = tqdm.write
         elif writer == "builtin":
-            self.write = print  # noqa:T202
+            self.write = print
         elif writer == "logging":
             self.write = logging.getLogger("pykeen").info
 
-    # docstr-coverage: inherited
     def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         if run_name is not None and self.start_end_run:
             self.write(f"Starting run: {run_name}")
 
-    # docstr-coverage: inherited
     def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:  # noqa: D102
         if not self.track_parameters:
             return
@@ -180,13 +166,12 @@ class ConsoleResultTracker(ResultTracker):
             if not self.parameter_filter or self.parameter_filter.match(key):
                 self.write(f"Parameter: {key} = {value}")
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         if not self.track_metrics:
             return
 
@@ -195,7 +180,6 @@ class ConsoleResultTracker(ResultTracker):
             if not self.metric_filter or self.metric_filter.match(key):
                 self.write(f"Metric: {key} = {value}")
 
-    # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         if not success:
             self.write("Run failed.")
@@ -213,11 +197,9 @@ class MultiResultTracker(ResultTracker):
     trackers: list[ResultTracker]
 
     def __init__(self, trackers: TrackerHint = None) -> None:
-        """
-        Initialize the tracker.
+        """Initialize the tracker.
 
-        :param trackers:
-            the base tracker(s).
+        :param trackers: the base tracker(s).
         """
         if trackers is None:
             self.trackers = []
@@ -226,27 +208,23 @@ class MultiResultTracker(ResultTracker):
         else:
             self.trackers = list(trackers)
 
-    # docstr-coverage: inherited
     def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         for tracker in self.trackers:
             tracker.start_run(run_name=run_name)
 
-    # docstr-coverage: inherited
     def log_params(self, params: Mapping[str, Any], prefix: str | None = None) -> None:  # noqa: D102
         for tracker in self.trackers:
             tracker.log_params(params=params, prefix=prefix)
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         for tracker in self.trackers:
             tracker.log_metrics(metrics=metrics, step=step, prefix=prefix)
 
-    # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         for tracker in self.trackers:
             tracker.end_run(success=success)

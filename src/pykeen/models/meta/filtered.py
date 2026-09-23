@@ -42,10 +42,10 @@ class CooccurrenceFilteredModel(Model):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        base=dict(type="categorical", choices=["distmult", "mure", "rescal", "rotate", "transe"]),
-        conjunctive=dict(type=bool),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "base": {"type": "categorical", "choices": ["distmult", "mure", "rescal", "rotate", "transe"]},
+        "conjunctive": {"type": bool},
+    }
 
     #: the indexed filter triples, i.e., sparse masks
     indexes: Mapping[Target, Mapping[Target, scipy.sparse.csr_matrix]]
@@ -115,7 +115,8 @@ class CooccurrenceFilteredModel(Model):
                     row_indices=mapped_triples[:, row_index],
                     col_indices=mapped_triples[:, col_index],
                     shape=(num_rows, num_cols),
-                    dtype=bool,
+                    # TODO how to type this properly? np.bool and np.bool_ don't work either
+                    dtype=bool,  # type: ignore[arg-type]
                     norm=None,
                 )
                 for num_rows, (row_label, row_index) in zip(nums, TARGET_TO_INDEX.items(), strict=False)
@@ -154,25 +155,20 @@ class CooccurrenceFilteredModel(Model):
         new_scores[rows, cols] = scores[rows, cols]
         return new_scores
 
-    # docstr-coverage: inherited
-    def _get_entity_len(self, *, mode: InductiveMode | None) -> int | None:
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int:
         return self.base._get_entity_len(mode=mode)
 
-    # docstr-coverage: inherited
     def _reset_parameters_(self):
         return self.base._reset_parameters_()
 
-    # docstr-coverage: inherited
     def collect_regularization_term(self) -> FloatTensor:  # noqa: D102
         return self.base.collect_regularization_term()
 
-    # docstr-coverage: inherited
     def score_hrt(self, hrt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         if self.apply_in_training:
             raise NotImplementedError
         return self.base.score_hrt(hrt_batch=hrt_batch, **kwargs)
 
-    # docstr-coverage: inherited
     def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=self.base.score_h(rt_batch=rt_batch, **kwargs),
@@ -181,7 +177,6 @@ class CooccurrenceFilteredModel(Model):
             in_training=True,
         )
 
-    # docstr-coverage: inherited
     def score_r(self, ht_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=self.base.score_r(ht_batch=ht_batch, **kwargs),
@@ -190,7 +185,6 @@ class CooccurrenceFilteredModel(Model):
             in_training=True,
         )
 
-    # docstr-coverage: inherited
     def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=self.base.score_t(hr_batch=hr_batch, **kwargs),
@@ -199,7 +193,6 @@ class CooccurrenceFilteredModel(Model):
             in_training=True,
         )
 
-    # docstr-coverage: inherited
     def predict_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=super().predict_h(rt_batch, **kwargs),
@@ -208,7 +201,6 @@ class CooccurrenceFilteredModel(Model):
             in_training=False,
         )
 
-    # docstr-coverage: inherited
     def predict_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=super().predict_t(hr_batch, **kwargs),
@@ -217,7 +209,6 @@ class CooccurrenceFilteredModel(Model):
             in_training=False,
         )
 
-    # docstr-coverage: inherited
     def predict_r(self, ht_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
             scores=super().predict_r(ht_batch, **kwargs),

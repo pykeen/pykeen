@@ -23,11 +23,11 @@ High-Level
 ==========
 The prediction workflow offers three high-level methods to perform predictions
 
-- :func:`pykeen.predict.predict_triples` can be used to calculate scores for a given set of triples.
-- :func:`pykeen.predict.predict_target` can be used to score choices for a given prediction target, i.e.
+- :func:`~pykeen.predict.predict_triples` can be used to calculate scores for a given set of triples.
+- :func:`~pykeen.predict.predict_target` can be used to score choices for a given prediction target, i.e.
   calculate scores for head entities, relations, or tail entities given the other two.
-- :func:`pykeen.predict.predict_all` can be used to calculate scores for all possible triples.
-  Scientifically, :func:`pykeen.predict.predict_all` is the most interesting in a scenario where
+- :func:`~pykeen.predict.predict_all` can be used to calculate scores for all possible triples.
+  Scientifically, :func:`~pykeen.predict.predict_all` is the most interesting in a scenario where
   predictions could be tested and validated experimentally.
 
 .. warning ::
@@ -38,7 +38,7 @@ The prediction workflow offers three high-level methods to perform predictions
 Triple Scoring
 --------------
 
-When scoring triples with :func:`pykeen.predict.predict_triples`, we obtain a score for each of the given
+When scoring triples with :func:`~pykeen.predict.predict_triples`, we obtain a score for each of the given
 triples. As an example, we will calculate scores for all validation triples from the dataset we trained the model upon.
 
 >>> from pykeen.datasets import get_dataset
@@ -46,7 +46,7 @@ triples. As an example, we will calculate scores for all validation triples from
 >>> dataset = get_dataset(dataset="nations")
 >>> pack = predict_triples(model=result.model, triples=dataset.validation)
 
-The variable :data:`pack` now contains a :class:`pykeen.predict.ScorePack`, which essentially is a pair of
+The variable ``pack`` now contains a :class:`~pykeen.predict.ScorePack`, which essentially is a pair of
 ID-based triples with their predicted scores. For interpretation, it can be helpful to add their corresponding labels,
 which the `"nations"` dataset offers, and convert them to a pandas dataframe:
 
@@ -65,7 +65,7 @@ or investigate whether certain entities generally receive larger scores
 Target Scoring
 --------------
 
-:func:`pykeen.predict.predict_target`'s primary usecase is link prediction or relation prediction.
+:func:`~pykeen.predict.predict_target`'s primary usecase is link prediction or relation prediction.
 For instance, we could use our models to score all possible tail entities for the query `("uk", "conferences", ?)` via
 
 >>> from pykeen.datasets import get_dataset
@@ -78,7 +78,7 @@ For instance, we could use our models to score all possible tail entities for th
 ...     triples_factory=result.training,
 ... )
 
-Notice that the result stored into `pred` is a :class:`pykeen.predict.Predictions` object, which offers some
+Notice that the result stored into `pred` is a :class:`~pykeen.predict.Predictions` object, which offers some
 post-processing options. For instance, we can remove all targets which are already know from the training set
 
 >>> pred_filtered = pred.filter_triples(dataset.training)
@@ -94,7 +94,7 @@ The predictions object also exposes filtered / annotated dataframe through its `
 
 Full Scoring
 ------------
-Finally, we can use :func:`pykeen.predict.predict` to calculate scores for *all* possible triples. Notice that
+Finally, we can use :func:`~pykeen.predict.predict_all` to calculate scores for *all* possible triples. Notice that
 this operation can be prohibitively expensive for reasonably sized knowledge graphs, and the model may produce
 additional ill-calibrated scores for entity/relation combinations it has never seen paired before during training.
 The next line calculates *and* stores all triples and scores
@@ -128,25 +128,25 @@ which require calculating scores for all triples. The algorithm works are follow
     for consumer in consumers:
       consumer(batch, scores)
 
-Here, `dataset` is a :class:`pykeen.predict.PredictionDataset`, which breaks
+Here, `dataset` is a :class:`~pykeen.predict.PredictionDataset`, which breaks
 the score calculation down into individual target predictions (e.g., tail predictions).
-Implementations include :class:`pykeen.predict.AllPredictionDataset` and
-:class:`pykeen.predict.PartiallyRestrictedPredictionDataset`. Notice that the
+Implementations include :class:`~pykeen.predict.AllPredictionDataset` and
+:class:`~pykeen.predict.PartiallyRestrictedPredictionDataset`. Notice that the
 prediction tasks are built lazily, i.e., only instantiating the prediction tasks when
 accessed. Moreover, the :mod:`torch_max_mem` package is used to automatically tune the
 batch size to maximize the memory utilization of the hardware at hand.
 
 For each batch, the scores of the prediction task are calculated once. Afterwards, multiple
-*consumers* can process these scores. A consumer extends :class:`pykeen.predict.ScoreConsumer`
+*consumers* can process these scores. A consumer extends :class:`~pykeen.predict.ScoreConsumer`
 and receives the batch, i.e., input to the predict method, as well as the tensor of predicted scores.
 Examples include
 
-- :class:`pykeen.predict.CountScoreConsumer`: a simple consumer which only counts how many scores
+- :class:`~pykeen.predict.CountScoreConsumer`: a simple consumer which only counts how many scores
   it has seen. Mostly used for debugging or testing purposes
-- :class:`pykeen.predict.AllScoreConsumer`: accumulates all scores into a single huge tensor.
+- :class:`~pykeen.predict.AllScoreConsumer`: accumulates all scores into a single huge tensor.
   This incurs massive memory requirements for reasonably sized datasets, and often can be avoided by
   interleaving the processing of the scores with calculation of individual batches.
-- :class:`pykeen.predict.TopKScoreConsumer`: keeps only the top $k$ scores as well as the inputs
+- :class:`~pykeen.predict.TopKScoreConsumer`: keeps only the top $k$ scores as well as the inputs
   leading to them. This is a memory-efficient variant of first accumulating all scores, then sorting by
   score and keeping only the top entries.
 
@@ -270,9 +270,7 @@ import math
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
-from typing import (
-    TypeAlias,  # Python <=3.9
-)
+from typing import TypeAlias
 
 import numpy
 import pandas
@@ -323,7 +321,7 @@ logger = logging.getLogger(__name__)
 
 
 # cf. https://github.com/python/mypy/issues/5374
-@dataclasses.dataclass  # type: ignore
+@dataclasses.dataclass
 class Predictions(ABC):
     """Base class for predictions."""
 
@@ -340,7 +338,7 @@ class Predictions(ABC):
 
     def exchange_df(self, df: pandas.DataFrame) -> "Predictions":
         """Create a copy of the object with its dataframe exchanged."""
-        return self.__class__(**collections.ChainMap(dict(df=df), dataclasses.asdict(self)))
+        return self.__class__(**collections.ChainMap({"df": df}, dataclasses.asdict(self)))
 
     @abstractmethod
     def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
@@ -388,14 +386,12 @@ class Predictions(ABC):
 class TriplePredictions(Predictions):
     """Triples with their predicted scores."""
 
-    # docstr-coverage: inherited
     def __post_init__(self):  # noqa: D105
         super().__post_init__()
-        columns = set(f"{column}_id" for column in COLUMN_LABELS)
+        columns = {f"{column}_id" for column in COLUMN_LABELS}
         if not columns.issubset(self.df.columns):
             raise ValueError(f"df must have a columns named {columns}, but df.columns={self.df.columns}")
 
-    # docstr-coverage: inherited
     def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:  # noqa: D102
         contained = (
             isin_many_dim(
@@ -423,13 +419,11 @@ class TargetPredictions(Predictions):
     #: the other column's fixed IDs
     other_columns_fixed_ids: tuple[int, int]
 
-    # docstr-coverage: inherited
     def __post_init__(self):  # noqa: D105
         super().__post_init__()
         if f"{self.target}_id" not in self.df.columns:
             raise ValueError(f"df must have a column named '{self.target}_id', but df.columns={self.df.columns}")
 
-    # docstr-coverage: inherited
     def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:  # noqa: D102
         col = TARGET_TO_INDEX[self.target]
         other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
@@ -516,7 +510,7 @@ def _get_targets(
             ids = [i if isinstance(i, int) else label_to_id[i] for i in ids]
         # now, restriction is a sequence of integers
         assert all(isinstance(i, int) for i in ids)
-        id_list = sorted(ids)  # type: ignore
+        id_list = sorted(ids)  # type: ignore[arg-type]
         tensor = torch.as_tensor(id_list, dtype=torch.long, device=device)
     # if explicit ids have been given, and label information is available, extract list of labels
     if id_list is not None and id_to_label is not None:
@@ -621,13 +615,12 @@ class CountScoreConsumer(ScoreConsumer):
         self.batch_count = 0
         self.score_count = 0
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         batch: PredictionBatch,
         target: Target,
         scores: FloatTensor,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self.batch_count += batch.shape[0]
         self.score_count += scores.numel()
 
@@ -652,13 +645,12 @@ class TopKScoreConsumer(ScoreConsumer):
         self.result = torch.empty(0, 3, dtype=torch.long, device=device)
         self.scores = torch.empty(0, device=device)
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         batch: PredictionBatch,
         target: Target,
         scores: FloatTensor,
-    ) -> None:  # noqa: D102
+    ) -> None:
         batch_size, num_scores = scores.shape
         assert batch.shape == (batch_size, 2)
 
@@ -730,13 +722,12 @@ class AllScoreConsumer(ScoreConsumer):
             dim=-1,
         ).view(-1, 3)
 
-    # docstr-coverage: inherited
-    def __call__(
+    def __call__(  # noqa: D102
         self,
         batch: PredictionBatch,
         target: Target,
         scores: FloatTensor,
-    ) -> None:  # noqa: D102
+    ) -> None:
         j = 0
         selectors: list[slice | LongTensor] = []
         for col in COLUMN_LABELS:
@@ -765,12 +756,10 @@ class PredictionDataset(torch.utils.data.Dataset):
         # TODO: variable targets across batches/samples?
         self.target = target
 
-    # docstr-coverage: inherited
     @abstractmethod
     def __getitem__(self, item: int) -> PredictionBatch:  # noqa: D105
         raise NotImplementedError
 
-    # docstr-coverage: inherited
     @abstractmethod
     def __len__(self) -> int:  # noqa: D105
         raise NotImplementedError
@@ -797,13 +786,11 @@ class AllPredictionDataset(PredictionDataset):
         # (h, r, ?) => h.stride > r.stride
         self.divisor = num_relations if self.target == LABEL_TAIL else num_entities
 
-    # docstr-coverage: inherited
     def __len__(self) -> int:  # noqa: D105
         if self.target == LABEL_RELATION:
             return self.num_entities**2
         return self.num_entities * self.num_relations
 
-    # docstr-coverage: inherited
     def __getitem__(self, item: int) -> LongTensor:  # noqa: D105
         quotient, remainder = divmod(item, self.divisor)
         return torch.as_tensor([quotient, remainder])
@@ -884,18 +871,16 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
                 continue
             if restriction is None:
                 raise NotImplementedError("Requires size info")
-            elif isinstance(restriction, int):
+            if isinstance(restriction, int):
                 restriction = [restriction]
             restriction = torch.as_tensor(restriction)
             parts.append(restriction)
         assert len(parts) == 2
         self.parts = (parts[0], parts[1])  # for mypy
 
-    # docstr-coverage: inherited
     def __len__(self) -> int:  # noqa: D105
         return math.prod(map(len, self.parts))
 
-    # docstr-coverage: inherited
     def __getitem__(self, item: int) -> PredictionBatch:  # noqa: D105
         remainder, quotient = divmod(item, len(self.parts[0]))
         return torch.as_tensor([self.parts[0][quotient], self.parts[1][remainder]])
@@ -1092,13 +1077,6 @@ def predict_target(
     if ids is None:
         ids = range(len(scores))
 
-    # note: maybe we want to expose these scores, too?
-    if target == LABEL_RELATION and model.use_inverse_triples:
-        ids_t = torch.as_tensor(ids)
-        non_inv_mask = ~model.relation_inverter.is_inverse(ids_t)
-        ids = ids_t[non_inv_mask].tolist()
-        scores = scores[non_inv_mask]
-
     # create raw dataframe
     data = {f"{target}_id": ids, "score": scores.tolist()}
     if labels is not None:
@@ -1111,7 +1089,7 @@ def predict_target(
 def predict_triples(
     model: Model,
     *,
-    triples: None | MappedTriples | LabeledTriples | tuple[str, str, str] | Sequence[tuple[str, str, str]],
+    triples: None | MappedTriples | LabeledTriples | tuple[str, str, str] | Sequence[tuple[str, str, str]] = None,
     triples_factory: CoreTriplesFactory | None = None,
     batch_size: int | None = None,
     mode: InductiveMode | None = None,

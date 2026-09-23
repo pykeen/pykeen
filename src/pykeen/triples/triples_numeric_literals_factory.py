@@ -32,12 +32,11 @@ def create_matrix_of_literals(
 
     # TODO vectorize code
     for h, r, lit in numeric_triples:
-        try:
-            # row define entity, and column the literal. Set the corresponding literal for the entity
-            num_literals[entity_to_id[h], data_rel_to_id[r]] = lit
-        except KeyError:
+        if h not in entity_to_id or r not in data_rel_to_id:
             logger.info("Either entity or relation to literal doesn't exist.")
             continue
+        # row define entity, and column the literal. Set the corresponding literal for the entity
+        num_literals[entity_to_id[h], data_rel_to_id[r]] = lit
 
     return num_literals, data_rel_to_id
 
@@ -57,41 +56,37 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     ) -> None:
         """Initialize the multi-modal triples factory.
 
-        :param numeric_literals: shape: (num_entities, num_literals)
-            the numeric literals as a dense matrix.
-        :param literals_to_id:
-            a mapping from literal names to their IDs, i.e., the columns in the `numeric_literals` matrix.
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`TriplesFactory.__init__`.
+        :param numeric_literals: shape: (num_entities, num_literals) the numeric literals as a dense matrix.
+        :param literals_to_id: a mapping from literal names to their IDs, i.e., the columns in the `numeric_literals`
+            matrix.
+        :param kwargs: additional keyword-based parameters passed to :meth:`TriplesFactory.__init__`.
         """
         super().__init__(**kwargs)
         self.numeric_literals = numeric_literals
         self.literals_to_id = literals_to_id
 
-    # docstr-coverage: inherited
     @classmethod
-    def from_path(
+    def from_path(  # noqa: D102
         cls,
         path: str | pathlib.Path | TextIO,
         *,
         path_to_numeric_triples: None | str | pathlib.Path | TextIO = None,
         **kwargs,
-    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+    ) -> "TriplesNumericLiteralsFactory":
         if path_to_numeric_triples is None:
             raise ValueError(f"{cls.__name__} requires path_to_numeric_triples.")
         numeric_triples = load_triples(path_to_numeric_triples)
         triples = load_triples(path)
         return cls.from_labeled_triples(triples=triples, numeric_triples=numeric_triples, **kwargs)
 
-    # docstr-coverage: inherited
     @classmethod
-    def from_labeled_triples(
+    def from_labeled_triples(  # noqa: D102
         cls,
         triples: LabeledTriples,
         *,
-        numeric_triples: LabeledTriples = None,
+        numeric_triples: LabeledTriples | None = None,
         **kwargs,
-    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+    ) -> "TriplesNumericLiteralsFactory":
         if numeric_triples is None:
             raise ValueError(f"{cls.__name__} requires numeric_triples.")
         base = TriplesFactory.from_labeled_triples(triples=triples, **kwargs)
@@ -116,19 +111,17 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         """Return the shape of the literals."""
         return self.numeric_literals.shape[1:]
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"num_literals={len(self.literals_to_id)}"
 
-    # docstr-coverage: inherited
-    def clone_and_exchange_triples(
+    def clone_and_exchange_triples(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
         create_inverse_triples: bool | None = None,
-    ) -> "TriplesNumericLiteralsFactory":  # noqa: D102
+    ) -> "TriplesNumericLiteralsFactory":
         if create_inverse_triples is None:
             create_inverse_triples = self.create_inverse_triples
         return TriplesNumericLiteralsFactory(
@@ -138,13 +131,12 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
-                **(self.metadata if keep_metadata else {}),  # type: ignore
+                **(self.metadata if keep_metadata else {}),  # type: ignore[dict-item]
             },
             numeric_literals=self.numeric_literals,
             literals_to_id=self.literals_to_id,
         )
 
-    # docstr-coverage: inherited
     def to_path_binary(self, path: str | pathlib.Path | TextIO) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # save literal-to-id mapping

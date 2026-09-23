@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
-    This model uses the :class:`pykeen.nn.NodePieceRepresentation` instead of a typical
-    :class:`pykeen.nn.representation.Embedding` to more efficiently store representations.
+    This model uses the :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation` instead of a typical
+    :class:`~pykeen.nn.representation.Embedding` to more efficiently store representations.
     ---
     citation:
         author: Galkin
@@ -37,9 +37,9 @@ class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         github: https://github.com/migalkin/NodePiece
     """
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
 
     def __init__(
         self,
@@ -68,7 +68,7 @@ class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
             the triples factory. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
-            :class:`pykeen.nn.NodePieceRepresentation`.
+            :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation`.
         :param tokenizers:
             the tokenizer to use, cf. `pykeen.nn.node_piece.tokenizer_resolver`.
         :param tokenizers_kwargs:
@@ -131,13 +131,13 @@ class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         )
 
         # normalize embedding specification
-        anchor_kwargs = dict(
-            shape=embedding_dim,
-            initializer=entity_initializer,
-            normalizer=entity_normalizer,
-            constrainer=entity_constrainer,
-            regularizer=entity_regularizer,
-        )
+        anchor_kwargs = {
+            "shape": embedding_dim,
+            "initializer": entity_initializer,
+            "normalizer": entity_normalizer,
+            "constrainer": entity_constrainer,
+            "regularizer": entity_regularizer,
+        }
 
         # prepare token representations & kwargs
         token_representations = []
@@ -154,19 +154,19 @@ class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
             triples_factory=triples_factory,
             interaction=interaction,
             entity_representations=NodePieceRepresentation,
-            entity_representations_kwargs=dict(
-                triples_factory=triples_factory,
-                token_representations=token_representations,
-                token_representations_kwargs=token_representations_kwargs,
-                tokenizers=tokenizers,
-                tokenizers_kwargs=tokenizers_kwargs,
-                aggregation=aggregation,
-                num_tokens=num_tokens,
-            ),
+            entity_representations_kwargs={
+                "triples_factory": triples_factory,
+                "token_representations": token_representations,
+                "token_representations_kwargs": token_representations_kwargs,
+                "tokenizers": tokenizers,
+                "tokenizers_kwargs": tokenizers_kwargs,
+                "aggregation": aggregation,
+                "num_tokens": num_tokens,
+            },
             relation_representations=SubsetRepresentation,
-            relation_representations_kwargs=dict(  # hide padding relation
+            relation_representations_kwargs={  # hide padding relation
                 # max_id=triples_factory.num_relations,  # will get added by ERModel
-                base=relation_representations,
-            ),
+                "base": relation_representations,
+            },
             **kwargs,
         )

@@ -1,8 +1,7 @@
-"""
-Checkpoint cleanup methods.
+"""Checkpoint cleanup methods.
 
-The cleanup methods determine, for any given set of existing checkpoints, which of them can be pruned.
-We provide a set of basic rules that can be easily combined into more complex logic.
+The cleanup methods determine, for any given set of existing checkpoints, which of them can be pruned. We provide a set
+of basic rules that can be easily combined into more complex logic.
 """
 
 import abc
@@ -32,11 +31,11 @@ class CheckpointKeeper(abc.ABC):
     def __call__(self, steps: Sequence[int]) -> Iterator[int]:
         """Iterate over the steps for which checkpoints should be kept.
 
-        :param steps:
-            the sorted list of steps at which checkpoints were written.
+        :param steps: the sorted list of steps at which checkpoints were written.
 
-        :yields:
-            the steps for which checkpoints should be kept
+        :yields: the steps for which checkpoints should be kept
+
+        # noqa:DAR302
         """
 
 
@@ -47,7 +46,7 @@ class LastCheckpointKeeper(CheckpointKeeper):
     #: the number of checkpoints to keep
     keep: int = 1
 
-    def __call__(self, steps: Sequence[int]) -> Iterator[int]:
+    def __call__(self, steps: Sequence[int]) -> Iterator[int]:  # noqa: D102  # dunder override, see D105
         yield from steps[-self.keep :]
 
 
@@ -57,7 +56,7 @@ class ModuloCheckpointKeeper(CheckpointKeeper):
 
     divisor: int = 10
 
-    def __call__(self, steps: Sequence[int]) -> Iterator[int]:
+    def __call__(self, steps: Sequence[int]) -> Iterator[int]:  # noqa: D102  # dunder override, see D105
         for step in steps:
             if step % self.divisor == 0:
                 yield step
@@ -73,7 +72,7 @@ class ExplicitCheckpointKeeper(CheckpointKeeper):
         # convert to set for better lookup speed
         self.keep = set(self.keep)
 
-    def __call__(self, steps: Sequence[int]) -> Iterator[int]:
+    def __call__(self, steps: Sequence[int]) -> Iterator[int]:  # noqa: D102  # dunder override, see D105
         # the set operation should be a nop of sets
         yield from set(self.keep).intersection(steps)
 
@@ -96,7 +95,7 @@ class BestCheckpointKeeper(CheckpointKeeper):
     def __post_init__(self):
         self._adapter = ResultListenerAdapter(self.result_tracker, metric_selection=self.metric_selection)
 
-    def __call__(self, steps: Sequence[int]) -> Iterator[int]:
+    def __call__(self, steps: Sequence[int]) -> Iterator[int]:  # noqa: D102  # dunder override, see D105
         return filter(self._adapter.is_best, steps)
 
 
@@ -112,7 +111,7 @@ class UnionCheckpointKeeper(CheckpointKeeper):
     def __post_init__(self):
         self._bases = keeper_resolver.make_many(self.bases, self.bases_kwargs)
 
-    def __call__(self, steps: Sequence[int]) -> Iterator[int]:
+    def __call__(self, steps: Sequence[int]) -> Iterator[int]:  # noqa: D102  # dunder override, see D105
         result: set[int] = set()
         for base in self._bases:
             result.update(base(steps))
@@ -121,5 +120,6 @@ class UnionCheckpointKeeper(CheckpointKeeper):
 
 #: a resolver for checkpoint keepers
 keeper_resolver: ClassResolver[CheckpointKeeper] = ClassResolver.from_subclasses(
-    CheckpointKeeper, default=CheckpointKeeper
+    CheckpointKeeper,  # type: ignore[type-abstract]
+    default=CheckpointKeeper,
 )

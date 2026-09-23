@@ -17,14 +17,11 @@ def rand(*size: int, generator: torch.Generator, device: torch.device) -> torch.
 
 
 def is_installed(name: str) -> bool:
-    """
-    Return whether a package is installed.
+    """Return whether a package is installed.
 
-    :param name:
-        the package's name
+    :param name: the package's name
 
-    :return:
-        whether the package can be imported
+    :returns: whether the package can be imported
     """
     try:
         importlib.import_module(name=name)

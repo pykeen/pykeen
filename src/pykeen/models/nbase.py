@@ -15,12 +15,16 @@ from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs, n
 from torch import nn
 
 from .base import Model
+from .scoring import ScoringBatch, TargetScoringBatch, TripleScoringBatch
 from ..nn import representation_resolver
-from ..nn.modules import Interaction, interaction_resolver, parallel_unsqueeze
+from ..nn.modules import Interaction, interaction_resolver
 from ..nn.representation import Representation
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import KGInfo
 from ..typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
     FloatTensor,
     HeadRepresentation,
     InductiveMode,
@@ -28,7 +32,7 @@ from ..typing import (
     RelationRepresentation,
     TailRepresentation,
 )
-from ..utils import check_shapes, get_batchnorm_modules
+from ..utils import check_shapes, get_batchnorm_modules, prefix_unsqueeze_target
 
 __all__ = [
     "_NewAbstractModel",
@@ -51,8 +55,8 @@ class _NewAbstractModel(Model, ABC):
     relations' representations, how they want to be looked up, and how they should
     be scored. The :class:`ERModel` provides a commonly useful implementation
     which allows for the specification of one or more entity representations and
-    one or more relation representations in the form of :class:`pykeen.nn.Embedding`
-    as well as a matching instance of a :class:`pykeen.nn.Interaction`.
+    one or more relation representations in the form of :class:`~pykeen.nn.representation.Embedding`
+    as well as a matching instance of a :class:`~pykeen.nn.modules.Interaction`.
     """
 
     #: The default regularizer class
@@ -139,7 +143,6 @@ class _NewAbstractModel(Model, ABC):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
-    # docstr-coverage: inherited
     def collect_regularization_term(self):  # noqa: D102
         return sum(
             regularizer.pop_regularization_term()
@@ -192,7 +195,7 @@ def _prepare_representation_module_list(
             raise ValueError(
                 f"{r} only provides {r.max_id} {label} representations, but should provide {max_id}.",
             )
-        elif r.max_id > max_id:
+        if r.max_id > max_id:
             logger.warning(
                 f"{r} provides {r.max_id} {label} representations, although only {max_id} are needed."
                 f"While this is not necessarily wrong, it can indicate an error where the number of {label} "
@@ -219,10 +222,10 @@ def _prepare_representation_module_list(
     return rs
 
 
-def repeat_if_necessary(
+def _repeat_when_missing_representations(
     scores: FloatTensor,
     representations: Sequence[Representation],
-    num: int | None,
+    num: int,
 ) -> FloatTensor:
     """
     Repeat score tensor if necessary.
@@ -231,7 +234,11 @@ def repeat_if_necessary(
     `score_{h,t}` / `score_r` are always the same. For efficiency, they are thus
     only computed once, but to meet the API, they have to be brought into the correct shape afterwards.
 
-    :param scores: shape: (batch_size, ?)
+    For example, this is the case for :class:`~pykeen.models.UM`, which does not have any relation
+    representation. Therefore, the scores for all ``(h, *, t)`` will be the same. We calculate
+    them only once, but need to repeat them for downstream use of the scores.
+
+    :param scores: shape: (*batch_shape, ?)
         the score tensor
     :param representations:
         the representations. If empty (i.e. no representations for this 1:n scoring), repetition needs to be applied
@@ -243,7 +250,7 @@ def repeat_if_necessary(
     """
     if representations:
         return scores
-    return scores.repeat(1, num)
+    return scores.repeat(*(1,) * (scores.ndim - 1), num)
 
 
 def iter_slices(
@@ -284,7 +291,7 @@ class ERModel(
     be passed through the ``super().__init__()`` in subclasses of :class:`ERModel`.
 
     Other code can still be put after the call to ``super().__init__()`` in subclasses, such as
-    registering regularizers (as done in :class:`pykeen.models.ConvKB` and :class:`pykeen.models.TransH`).
+    registering regularizers (as done in :class:`~pykeen.models.ConvKB` and :class:`~pykeen.models.TransH`).
     ---
     citation:
         author: Ali
@@ -402,9 +409,9 @@ class ERModel(
         :param regularizer_kwargs:
             additional keyword-based parameters for the regularizer's instantiation
         :param default_regularizer:
-            the default regularizer; if None, use :attr:`regularizer_default`
+            the default regularizer; if None, use ``regularizer_default``
         :param default_regularizer_kwargs:
-            the default regularizer kwargs; if None, use :attr:`regularizer_default_kwargs`
+            the default regularizer kwargs; if None, use ``regularizer_default_kwargs``
 
         :raises KeyError: If an invalid parameter name was given
         """
@@ -426,7 +433,7 @@ class ERModel(
             if isinstance(param, str):
                 if param not in weights:
                     raise KeyError(f"Invalid parameter_name={parameter}. Available are: {sorted(weights.keys())}.")
-                param: nn.Parameter = weights[param]  # type: ignore
+                param = weights[param]
             regularizer.add_parameter(parameter=param)
         self.weight_regularizers.append(regularizer)
 
@@ -486,10 +493,8 @@ class ERModel(
         """
         # Note: slicing cannot be used here: the indices for score_hrt only have a batch
         # dimension, and slicing along this dimension is already considered by sub-batching.
-        # Note: we do not delegate to the general method for performance reasons
         # Note: repetition is not necessary here
-        h, r, t = self._get_representations(h=hrt_batch[:, 0], r=hrt_batch[:, 1], t=hrt_batch[:, 2], mode=mode)
-        return self.interaction.score_hrt(h=h, r=r, t=t)
+        return self._score(TripleScoringBatch.from_batch(hrt_batch), mode=mode).unsqueeze(dim=-1)
 
     def _check_slicing(self, slice_size: int | None) -> None:
         """Raise an error, if slicing is requested, but the model does not support it."""
@@ -500,118 +505,141 @@ class ERModel(
         if self.training and get_batchnorm_modules(self):
             raise ValueError("This model does not support slicing, since it has batch normalization layers.")
 
-    # docstr-coverage: inherited
-    def score_t(
+    def _score(
+        self,
+        batch: ScoringBatch,
+        *,
+        slice_size: int | None = None,
+        mode: InductiveMode | None = None,
+    ) -> FloatTensor:
+        """Calculate the scores for a scoring request.
+
+        This is the single implementation behind :meth:`score_h`, :meth:`score_r`, and :meth:`score_t`.
+
+        :param batch:
+            the scoring request
+        :param slice_size: >0
+            the maximum number of candidates to score at once; only supported for 1:n scoring
+        :param mode:
+            the pass mode, which is None in the transductive setting and one of "training", "validation", or
+            "testing" in the inductive setting
+
+        :raises ValueError:
+            if slicing is requested for a batch without a scoring target
+
+        :return: shape: (*batch_shape,) or (*batch_shape, num)
+            the scores
+        """
+        match batch:
+            case TripleScoringBatch():
+                if slice_size:
+                    raise ValueError("Slicing requires a target; there is nothing to slice along.")
+                h, r, t = self._get_representations(*batch.indices, mode=mode)
+                return self.interaction(h=h, r=r, t=t)
+            case TargetScoringBatch():
+                return self._score_target(batch, slice_size=slice_size, mode=mode)
+
+    def _score_target(
+        self,
+        batch: TargetScoringBatch,
+        *,
+        slice_size: int | None = None,
+        mode: InductiveMode | None = None,
+    ) -> FloatTensor:
+        """Score a single position against many candidates.
+
+        :param batch:
+            the scoring request
+        :param slice_size: >0
+            the maximum number of candidates to score at once
+        :param mode:
+            the pass mode, which is None in the transductive setting and one of "training", "validation", or
+            "testing" in the inductive setting
+
+        :return: shape: (*batch_shape, num)
+            the scores
+        """
+        # the target's representations, and the total number of candidates
+        if batch.target == LABEL_RELATION:
+            target_representations = self.relation_representations
+            total = self.num_relations
+        else:
+            target_representations = self.entity_representations
+            total = self._get_entity_len(mode=mode)
+
+        # normalize before checking
+        if slice_size and slice_size >= total:
+            slice_size = None
+        self._check_slicing(slice_size=slice_size)
+
+        # slice early to allow lazy computation of target representations
+        if slice_size:
+            return torch.cat(
+                [
+                    self._score_target(batch.with_target_ids(partial_ids), slice_size=None, mode=mode)
+                    for partial_ids in iter_slices(
+                        ids=batch.target_ids, slice_size=slice_size, total=total, device=batch.device
+                    )
+                ],
+                dim=-1,
+            )
+
+        h, r, t = self._get_representations(*batch.lookup_indices, mode=mode)
+        # the same candidates are scored for each batch element -> prepend the batch dimensions
+        if batch.shared_target:
+            h, r, t = prefix_unsqueeze_target(batch.target, batch.batch_ndim, h, r, t)
+        return _repeat_when_missing_representations(
+            scores=self.interaction(h=h, r=r, t=t),
+            representations=target_representations,
+            num=total if batch.target_ids is None else batch.target_ids.shape[-1],
+        )
+
+    def score_t(  # noqa: D102
         self,
         hr_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
         tails: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
-        # normalize before checking
-        if slice_size and slice_size >= self.num_entities:
-            slice_size = None
-        self._check_slicing(slice_size=slice_size)
-
-        # slice early to allow lazy computation of target representations
-        if slice_size:
-            return torch.cat(
-                [
-                    self.score_t(hr_batch=hr_batch, slice_size=None, mode=mode, tails=partial_tails)
-                    for partial_tails in iter_slices(
-                        ids=tails, slice_size=slice_size, total=self.num_entities, device=hr_batch.device
-                    )
-                ],
-                dim=-1,
-            )
-
-        # add broadcast dimension
-        hr_batch = hr_batch.unsqueeze(dim=1)
-        h, r, t = self._get_representations(h=hr_batch[..., 0], r=hr_batch[..., 1], t=tails, mode=mode)
-        # unsqueeze if necessary
-        if tails is None or tails.ndimension() == 1:
-            t = parallel_unsqueeze(t, dim=0)
-        return repeat_if_necessary(
-            scores=self.interaction(h=h, r=r, t=t),
-            representations=self.entity_representations,
-            num=self._get_entity_len(mode=mode) if tails is None else tails.shape[-1],
+    ) -> FloatTensor:
+        return self._score(
+            TargetScoringBatch.from_transposed_batch(
+                head=hr_batch[..., 0], relation=hr_batch[..., 1], tail=tails, target=LABEL_TAIL
+            ),
+            slice_size=slice_size,
+            mode=mode,
         )
 
-    # docstr-coverage: inherited
-    def score_h(
+    def score_h(  # noqa: D102
         self,
         rt_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
         heads: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
-        # normalize before checking
-        if slice_size and slice_size >= self.num_entities:
-            slice_size = None
-        self._check_slicing(slice_size=slice_size)
-
-        # slice early to allow lazy computation of target representations
-        if slice_size:
-            return torch.cat(
-                [
-                    self.score_h(rt_batch=rt_batch, slice_size=None, mode=mode, heads=partial_heads)
-                    for partial_heads in iter_slices(
-                        ids=heads, slice_size=slice_size, total=self.num_entities, device=rt_batch.device
-                    )
-                ],
-                dim=-1,
-            )
-
-        # add broadcast dimension
-        rt_batch = rt_batch.unsqueeze(dim=1)
-        h, r, t = self._get_representations(h=heads, r=rt_batch[..., 0], t=rt_batch[..., 1], mode=mode)
-        # unsqueeze if necessary
-        if heads is None or heads.ndimension() == 1:
-            h = parallel_unsqueeze(h, dim=0)
-        return repeat_if_necessary(
-            scores=self.interaction(h=h, r=r, t=t),
-            representations=self.entity_representations,
-            num=self._get_entity_len(mode=mode) if heads is None else heads.shape[-1],
+    ) -> FloatTensor:
+        return self._score(
+            TargetScoringBatch.from_transposed_batch(
+                head=heads, relation=rt_batch[..., 0], tail=rt_batch[..., 1], target=LABEL_HEAD
+            ),
+            slice_size=slice_size,
+            mode=mode,
         )
 
-    # docstr-coverage: inherited
-    def score_r(
+    def score_r(  # noqa: D102
         self,
         ht_batch: LongTensor,
         *,
         slice_size: int | None = None,
         mode: InductiveMode | None = None,
         relations: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
-        # normalize before checking
-        if slice_size and slice_size >= self.num_relations:
-            slice_size = None
-        self._check_slicing(slice_size=slice_size)
-
-        # slice early to allow lazy computation of target representations
-        if slice_size:
-            return torch.cat(
-                [
-                    self.score_r(ht_batch=ht_batch, slice_size=None, mode=mode, relations=partial_relations)
-                    for partial_relations in iter_slices(
-                        ids=relations, slice_size=slice_size, total=self.num_relations, device=ht_batch.device
-                    )
-                ],
-                dim=-1,
-            )
-
-        # add broadcast dimension
-        ht_batch = ht_batch.unsqueeze(dim=1)
-        h, r, t = self._get_representations(h=ht_batch[..., 0], r=relations, t=ht_batch[..., 1], mode=mode)
-        # unsqueeze if necessary
-        if relations is None or relations.ndimension() == 1:
-            r = parallel_unsqueeze(r, dim=0)
-        return repeat_if_necessary(
-            scores=self.interaction(h=h, r=r, t=t),
-            representations=self.relation_representations,
-            num=self.num_relations if relations is None else relations.shape[-1],
+    ) -> FloatTensor:
+        return self._score(
+            TargetScoringBatch.from_transposed_batch(
+                head=ht_batch[..., 0], relation=relations, tail=ht_batch[..., 1], target=LABEL_RELATION
+            ),
+            slice_size=slice_size,
+            mode=mode,
         )
 
     def _get_entity_representations_from_inductive_mode(
@@ -634,7 +662,7 @@ class ERModel(
             raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         return self.entity_representations
 
-    def _get_entity_len(self, *, mode: InductiveMode | None) -> int | None:  # noqa:D105
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int:  # noqa:D105
         """
         Return the number of entities for the given inductive mode.
 

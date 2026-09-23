@@ -51,10 +51,9 @@ class FileResultTracker(ResultTracker):
     ):
         """Initialize the tracker.
 
-        :param path:
-            The path of the log file.
-        :param name: The default file name for a file if no path is given. If no default is given,
-            the current time is used.
+        :param path: The path of the log file.
+        :param name: The default file name for a file if no path is given. If no default is given, the current time is
+            used.
         """
         if name is None:
             name = datetime.datetime.now().isoformat()
@@ -62,7 +61,6 @@ class FileResultTracker(ResultTracker):
         logger.info(f"Logging to {path.as_uri()}.")
         self.file = path.open(mode="w", newline="", encoding="utf8")
 
-    # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         self.file.close()
 
@@ -90,21 +88,17 @@ class CSVResultTracker(FileResultTracker):
     ):
         """Initialize the tracker.
 
-        :param path:
-            The path of the log file.
-        :param name: The default file name for a file if no path is given. If no default is given,
-            the current time is used.
-        :param kwargs:
-            Additional keyword based arguments forwarded to csv.writer.
+        :param path: The path of the log file.
+        :param name: The default file name for a file if no path is given. If no default is given, the current time is
+            used.
+        :param kwargs: Additional keyword based arguments forwarded to csv.writer.
         """
         super().__init__(path=path, name=name)
         self.csv_writer = csv.writer(self.file, **kwargs)
 
-    # docstr-coverage: inherited
     def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         self.csv_writer.writerow(self.HEADER)
 
-    # docstr-coverage: inherited
     def _write(
         self,
         dictionary: Mapping[str, Any],
@@ -116,21 +110,19 @@ class CSVResultTracker(FileResultTracker):
         self.csv_writer.writerows((label, step, key, value) for key, value in dictionary.items())
         self.file.flush()
 
-    # docstr-coverage: inherited
-    def log_params(
+    def log_params(  # noqa: D102
         self,
         params: Mapping[str, Any],
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self._write(dictionary=params, label="parameter", step=0, prefix=prefix)
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self._write(dictionary=metrics, label="metric", step=step, prefix=prefix)
 
 
@@ -149,19 +141,17 @@ class JSONResultTracker(FileResultTracker):
     def _write(self, obj) -> None:
         print(json.dumps(obj), file=self.file, flush=True)  # noqa:T201
 
-    # docstr-coverage: inherited
-    def log_params(
+    def log_params(  # noqa: D102
         self,
         params: Mapping[str, Any],
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self._write({"params": params, "prefix": prefix})
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self._write({"metrics": metrics, "prefix": prefix, "step": step})

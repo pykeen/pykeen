@@ -43,13 +43,11 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         gnn_encoder: Iterable[nn.Module] | None = None,
         **kwargs,
     ) -> None:
-        """
-        Initialize the model.
+        """Initialize the model.
 
-        :param gnn_encoder:
-            an iterable of message passing layers. Defaults to 2-layer CompGCN with Hadamard composition.
-        :param kwargs:
-            additional keyword-based parameters passed to `InductiveNodePiece.__init__`.
+        :param gnn_encoder: an iterable of message passing layers. Defaults to 2-layer CompGCN with Hadamard
+            composition.
+        :param kwargs: additional keyword-based parameters passed to `InductiveNodePiece.__init__`.
         """
         super().__init__(**kwargs)
 
@@ -88,9 +86,8 @@ class InductiveNodePieceGNN(InductiveNodePiece):
             self.register_buffer(name="testing_edge_index", tensor=inference_edge_index)
             self.register_buffer(name="testing_edge_type", tensor=inference_edge_type)
         else:
-            assert validation_factory is not None and test_factory is not None, (
-                "Validation and test factories must be triple factories"
-            )
+            assert validation_factory is not None, "Validation factory must be triples factory"
+            assert test_factory is not None, "Test factory must be triple factory"
             self.register_buffer(
                 name="validation_edge_index", tensor=get_edge_index(triples_factory=validation_factory)
             )

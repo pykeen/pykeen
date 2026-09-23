@@ -1,5 +1,7 @@
 """Utilities for non-parametric baseline models."""
 
+from typing import Literal, TypeAlias
+
 import numpy
 import scipy.sparse
 import torch
@@ -13,32 +15,29 @@ __all__ = [
     "get_csr_matrix",
     "marginal_score",
     "get_relation_similarity",
+    "VectorNormalizationMethod",
 ]
+
+#: Methods allowed for vector normalization in :func:`sklearn.preprocessing.normalize`
+VectorNormalizationMethod: TypeAlias = Literal["l1", "l2", "max"]
 
 
 def get_csr_matrix(
     row_indices: numpy.ndarray,
     col_indices: numpy.ndarray,
     shape: tuple[int, int],
-    dtype: numpy.dtype = numpy.float32,
-    norm: str | None = "l1",
+    dtype: type[numpy.number] = numpy.float32,
+    norm: VectorNormalizationMethod | None = "l1",
 ) -> scipy.sparse.csr_matrix:
-    """
-    Create a sparse matrix, with ones for the given non-zero locations.
+    """Create a sparse matrix, with ones for the given non-zero locations.
 
-    :param row_indices: shape: (nnz,)
-        the non-zero row indices
-    :param col_indices: shape: (nnz,)
-        the non-zero column indices
-    :param shape:
-        the matrix' shape
-    :param dtype:
-        the data type to use
-    :param norm:
-        if not None, perform row-wise normalization with :func:`sklearn.preprocessing.normalize`
+    :param row_indices: shape: (nnz,) the non-zero row indices
+    :param col_indices: shape: (nnz,) the non-zero column indices
+    :param shape: the matrix' shape
+    :param dtype: the data type to use
+    :param norm: if not None, perform row-wise normalization with :func:`sklearn.preprocessing.normalize`
 
-    :return: shape: shape
-        a sparse csr matrix
+    :returns: shape: shape a sparse csr matrix
     """
     # create sparse matrix of absolute counts
     matrix = scipy.sparse.coo_matrix(
@@ -87,16 +86,12 @@ def sparsify(
     matrix: numpy.ndarray,
     threshold: float | None = None,
 ) -> scipy.sparse.spmatrix:
-    """
-    Sparsify a matrix.
+    """Sparsify a matrix.
 
-    :param matrix: shape: (m, n)
-        the (dense) matrix
-    :param threshold:
-        the absolute threshold for sparsification
+    :param matrix: shape: (m, n) the (dense) matrix
+    :param threshold: the absolute threshold for sparsification
 
-    :return: shape: (m, n)
-        a sparsified matrix
+    :returns: shape: (m, n) a sparsified matrix
     """
     if threshold is not None:
         matrix = numpy.copy(matrix)
@@ -110,16 +105,12 @@ def get_relation_similarity(
     triples_factory: CoreTriplesFactory,
     threshold: float | None = None,
 ) -> tuple[scipy.sparse.csr_matrix, scipy.sparse.csr_matrix]:
-    """
-    Compute Jaccard similarity of relations' (and their inverse's) entity-pair sets.
+    """Compute Jaccard similarity of relations' (and their inverse's) entity-pair sets.
 
-    :param triples_factory:
-        the triples factory
-    :param threshold:
-        an absolute sparsification threshold.
+    :param triples_factory: the triples factory
+    :param threshold: an absolute sparsification threshold.
 
-    :return: shape: (num_relations, num_relations)
-        a pair of similarity matrices.
+    :returns: shape: (num_relations, num_relations) a pair of similarity matrices.
     """
     r, r_inv = triples_factory_to_sparse_matrices(triples_factory=triples_factory)
     sim, sim_inv = (sparsify(jaccard_similarity_scipy(r, r2), threshold=threshold) for r2 in (r, r_inv))

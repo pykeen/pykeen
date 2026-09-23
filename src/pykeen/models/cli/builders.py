@@ -27,7 +27,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-_OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}  # noqa:UP007
+_OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}  # noqa:UP045
 _SKIP_ARGS = {
     "return",
     "triples_factory",
@@ -41,45 +41,43 @@ _SKIP_ARGS = {
     "coefficients",  # from AutoSF
 }
 _SKIP_ANNOTATIONS = {
-    Optional[nn.Embedding],  # noqa:UP007
-    Optional[nn.Parameter],  # noqa:UP007
-    Optional[nn.Module],  # noqa:UP007
-    Optional[Mapping[str, Any]],  # noqa:UP007
+    Optional[nn.Embedding],  # noqa:UP045
+    Optional[nn.Parameter],  # noqa:UP045
+    Optional[nn.Module],  # noqa:UP045
+    Optional[Mapping[str, Any]],  # noqa:UP045
     Union[None, str, nn.Module],  # noqa:UP007
     Union[None, str, Decomposition],  # noqa:UP007
 }
 _SKIP_HINTS = {
-    Hint[Initializer],
-    Hint[Constrainer],
-    Hint[Normalizer],
-    Hint[Regularizer],
-    HintOrType[nn.Module],
+    Hint[Initializer],  # type:ignore[misc]
+    Hint[Constrainer],  # type:ignore[misc]
+    Hint[Normalizer],  # type:ignore[misc]
+    Hint[Regularizer],  # type:ignore[misc]
+    HintOrType[nn.Module],  # type:ignore[misc]
 }
 
 
 def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
     """Build a :mod:`click` command line interface for a KGE model.
 
-    Allows users to specify all of the (hyper)parameters to the
-    model via command line options using :class:`click.Option`.
+    Allows users to specify all of the (hyper)parameters to the model via command line options using
+    :class:`click.Option`.
 
-    :param model:
-        the model class
+    :param model: the model class
 
-    :return:
-        a click command for training a model of the given class
+    :returns: a click command for training a model of the given class
     """
     signature = inspect.signature(model.__init__)
 
-    def _decorate_model_kwargs(command: click.Command) -> click.Command:
+    def _decorate_model_kwargs(command: click.decorators.FC) -> click.decorators.FC:
         for name, annotation in model.__init__.__annotations__.items():
             if name in _SKIP_ARGS or annotation in _SKIP_ANNOTATIONS:
                 continue
 
-            elif name in CLI_OPTIONS:
+            if name in CLI_OPTIONS:
                 option = CLI_OPTIONS[name]
 
-            elif annotation in {t.Optional[int], t.Optional[str]}:  # noqa:UP007
+            elif annotation in {t.Optional[int], t.Optional[str]}:  # noqa:UP045
                 option = click.option(f"--{name.replace('_', '-')}", type=_OPTIONAL_MAP[annotation])
 
             else:
@@ -104,7 +102,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
 
         return command
 
-    @click.command(help=f"CLI for {model.__name__}", name=model.__name__.lower())  # type: ignore
+    @click.command(help=f"CLI for {model.__name__}", name=model.__name__.lower())
     @options.device_option
     @options.dataset_option
     @options.training_option
@@ -183,31 +181,31 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:  # noqa: D202
             model=model,
             model_kwargs=model_kwargs,
             dataset=dataset,
-            dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
+            dataset_kwargs={"create_inverse_triples": create_inverse_triples},
             training=training,
             testing=testing or training,
             validation=validation,
             optimizer=optimizer,
-            optimizer_kwargs=dict(
-                lr=learning_rate,
-            ),
+            optimizer_kwargs={
+                "lr": learning_rate,
+            },
             training_loop=training_loop,
-            training_loop_kwargs=dict(
-                automatic_memory_optimization=automatic_memory_optimization,
-            ),
+            training_loop_kwargs={
+                "automatic_memory_optimization": automatic_memory_optimization,
+            },
             evaluator=evaluator,
-            evaluator_kwargs=dict(),
-            training_kwargs=dict(
-                num_epochs=number_epochs,
-                batch_size=batch_size,
-                num_workers=num_workers,
-            ),
+            evaluator_kwargs={},
+            training_kwargs={
+                "num_epochs": number_epochs,
+                "batch_size": batch_size,
+                "num_workers": num_workers,
+            },
             stopper=stopper,
             result_tracker=result_tracker,
             result_tracker_kwargs=result_tracker_kwargs,
-            metadata=dict(
-                title=title,
-            ),
+            metadata={
+                "title": title,
+            },
             random_seed=random_seed,
         )
         if output_directory:

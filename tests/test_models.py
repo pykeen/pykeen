@@ -1,11 +1,13 @@
 """Test that models can be executed."""
 
+import contextlib
 import importlib
-import os
+import pathlib
 import unittest
 from collections.abc import Iterable, MutableMapping
 from typing import Any
 
+import pytest
 import torch
 import unittest_templates
 
@@ -56,14 +58,14 @@ class TestCompGCN(cases.ModelTestCase):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         dim = kwargs.pop("embedding_dim")
-        kwargs["encoder_kwargs"] = dict(
-            entity_representations_kwargs=dict(
-                shape=(dim,),
-            ),
-            relation_representations_kwargs=dict(
-                shape=(dim,),
-            ),
-        )
+        kwargs["encoder_kwargs"] = {
+            "entity_representations_kwargs": {
+                "shape": (dim,),
+            },
+            "relation_representations_kwargs": {
+                "shape": (dim,),
+            },
+        }
         return kwargs
 
 
@@ -199,15 +201,15 @@ class TestNodePiece(cases.BaseNodePieceTest):
 class TestNodePieceMLP(cases.BaseNodePieceTest):
     """Test the NodePiece model with MLP aggregation."""
 
-    kwargs = dict(aggregation="mlp")
+    kwargs = {"aggregation": "mlp"}
 
     def test_aggregation(self):
         """Test that the MLP gets registered properly and is trainable."""
-        self.assertIsInstance(self.instance, pykeen.models.NodePiece)
+        assert isinstance(self.instance, pykeen.models.NodePiece)
         r = self.instance.entity_representations[0]
-        self.assertIsInstance(r, NodePieceRepresentation)
-        self.assertIsInstance(r.combination, ConcatAggregationCombination)
-        self.assertIsInstance(r.combination.aggregation, ConcatMLP)
+        assert isinstance(r, NodePieceRepresentation)
+        assert isinstance(r.combination, ConcatAggregationCombination)
+        assert isinstance(r.combination.aggregation, ConcatMLP)
 
         # Test that the weight in the MLP is trainable (i.e. requires grad)
         for key in [
@@ -215,22 +217,22 @@ class TestNodePieceMLP(cases.BaseNodePieceTest):
             for key in ("0.weight", "0.bias", "3.weight", "3.bias")
         ]:
             params = dict(self.instance.named_parameters())
-            self.assertIn(key, set(params))
+            assert key in set(params)
             tensor = params[key]
-            self.assertIsInstance(tensor, torch.Tensor)
-            self.assertTrue(tensor.requires_grad)
+            assert isinstance(tensor, torch.Tensor)
+            assert tensor.requires_grad
 
 
 class TestNodePieceAnchors(cases.BaseNodePieceTest):
     """Test the NodePiece model with anchors."""
 
-    kwargs = dict(
-        tokenizers="anchor",
-    )
+    kwargs = {
+        "tokenizers": "anchor",
+    }
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        kwargs["tokenizers_kwargs"] = dict(selection_kwargs=dict(num_anchors=self.factory.num_entities // 3))
+        kwargs["tokenizers_kwargs"] = {"selection_kwargs": {"num_anchors": self.factory.num_entities // 3}}
         return kwargs
 
 
@@ -239,21 +241,21 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
 
     num_anchors = 5
     num_tokens = [3, 2]
-    kwargs = dict(
-        tokenizers=["anchor", "relation"],
-        tokenizers_kwargs=[
-            dict(
-                selection="degree",
-                searcher="scipy-sparse",
-            ),
-            dict(),
+    kwargs = {
+        "tokenizers": ["anchor", "relation"],
+        "tokenizers_kwargs": [
+            {
+                "selection": "degree",
+                "searcher": "scipy-sparse",
+            },
+            {},
         ],
-    )
+    }
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["num_tokens"] = self.num_tokens
-        kwargs["tokenizers_kwargs"][0]["selection_kwargs"] = dict(num_anchors=self.num_anchors)
+        kwargs["tokenizers_kwargs"][0]["selection_kwargs"] = {"num_anchors": self.num_anchors}
         return kwargs
 
     def test_vocabulary_size(self):
@@ -346,11 +348,11 @@ class TestRGCNBasis(cases.BaseRGCNTest):
 
     kwargs = {
         "interaction": "transe",
-        "interaction_kwargs": dict(p=1),
+        "interaction_kwargs": {"p": 1},
         "decomposition": "bases",
-        "decomposition_kwargs": dict(
-            num_bases=3,
-        ),
+        "decomposition_kwargs": {
+            "num_bases": 3,
+        },
     }
 
 
@@ -361,9 +363,9 @@ class TestRGCNBlock(cases.BaseRGCNTest):
     kwargs = {
         "interaction": "distmult",
         "decomposition": "block",
-        "decomposition_kwargs": dict(
-            num_blocks=3,
-        ),
+        "decomposition_kwargs": {
+            "num_blocks": 3,
+        },
         "edge_weighting": "symmetric",
     }
 
@@ -464,10 +466,10 @@ class TestTransD(cases.DistanceModelTestCase):
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
         scores = self.instance.score_hrt(hrt_batch=batch)
-        self.assertEqual(scores.shape[0], 2)
-        self.assertEqual(scores.shape[1], 1)
+        assert scores.shape[0] == 2
+        assert scores.shape[1] == 1
         first_score = scores[0].item()
-        self.assertAlmostEqual(first_score, -16, delta=0.01)
+        assert first_score == pytest.approx(-16, abs=0.01)
 
         # Use different dimension for relation embedding: relation_dim > entity_dim
         # relation embeddings
@@ -491,16 +493,16 @@ class TestTransD(cases.DistanceModelTestCase):
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0]], dtype=torch.long)
         scores = self.instance.score_hrt(hrt_batch=batch)
-        self.assertAlmostEqual(scores.item(), -27, delta=0.01)
+        assert scores.item() == pytest.approx(-27, abs=0.01)
 
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
         scores = self.instance.score_hrt(hrt_batch=batch)
-        self.assertEqual(scores.shape[0], 2)
-        self.assertEqual(scores.shape[1], 1)
+        assert scores.shape[0] == 2
+        assert scores.shape[1] == 1
         first_score = scores[0].item()
         second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -27, delta=0.01)
-        self.assertAlmostEqual(second_score, -27, delta=0.01)
+        assert first_score == pytest.approx(-27, abs=0.01)
+        assert second_score == pytest.approx(-27, abs=0.01)
 
         # Use different dimension for relation embedding: relation_dim < entity_dim
         # entity embeddings
@@ -540,12 +542,12 @@ class TestTransD(cases.DistanceModelTestCase):
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
         scores = self.instance.score_hrt(hrt_batch=batch)
-        self.assertEqual(scores.shape[0], 2)
-        self.assertEqual(scores.shape[1], 1)
+        assert scores.shape[0] == 2
+        assert scores.shape[1] == 1
         first_score = scores[0].item()
         second_score = scores[1].item()
-        self.assertAlmostEqual(first_score, -18, delta=0.01)
-        self.assertAlmostEqual(second_score, -18, delta=0.01)
+        assert first_score == pytest.approx(-18, abs=0.01)
+        assert second_score == pytest.approx(-18, abs=0.01)
 
 
 class TestTransE(cases.DistanceModelTestCase):
@@ -658,47 +660,42 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
                     docdata = cls.__docdata__
                 except AttributeError:
                     self.fail("missing __docdata__")
-                self.assertIn("citation", docdata)
-                self.assertIn("author", docdata["citation"])
-                self.assertIn("link", docdata["citation"])
-                self.assertIn("year", docdata["citation"])
+                assert "citation" in docdata
+                assert "author" in docdata["citation"]
+                assert "link" in docdata["citation"]
+                assert "year" in docdata["citation"]
 
     def test_importing(self):
         """Test that all models are available from :mod:`pykeen.models`."""
-        models_path = os.path.abspath(os.path.dirname(pykeen.models.__file__))
+        models_path = pathlib.Path(pykeen.models.__file__).parent.absolute()
 
-        model_names = set()
-        for directory, _, filenames in os.walk(models_path):
-            for filename in filenames:
-                if not filename.endswith(".py"):
-                    continue
+        # Find models
+        model_names: set[str] = set()
+        for path in models_path.rglob("*.py"):
+            # skip private / __init__
+            if path.stem.startswith("_"):
+                continue
 
-                path = os.path.join(directory, filename)
-                relpath = os.path.relpath(path, models_path)
-                if relpath.endswith("__init__.py"):
-                    continue
+            # build import path
+            rel_path = path.relative_to(models_path).with_suffix("")
+            import_path = ".".join(("pykeen", "models", *rel_path.parts))
+            module = importlib.import_module(import_path)
 
-                import_path = "pykeen.models." + relpath[: -len(".py")].replace(os.sep, ".")
-                module = importlib.import_module(import_path)
+            # Search for sub-classes of Model
+            for name in dir(module):
+                value = getattr(module, name)
+                with contextlib.suppress(TypeError):
+                    if isinstance(value, type) and issubclass(value, Model):
+                        model_names.add(value.__name__)
 
-                for name in dir(module):
-                    value = getattr(module, name)
-                    try:
-                        if isinstance(value, type) and issubclass(value, Model):
-                            model_names.add(value.__name__)
-                    except TypeError:
-                        continue
-
-        star_model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES)
-        # FIXME definitely a type mismatch going on here
-        model_names = _remove_non_models(model_names - SKIP_MODULES)
-
-        self.assertEqual(model_names, star_model_names, msg="Forgot to add some imports")
+        # remove skip modules
+        model_names.difference_update(m.__name__ for m in SKIP_MODULES)
+        assert model_names.issubset(pykeen.models.__all__), "Forgot to add some imports"
 
     @unittest.skip("no longer necessary?")
     def test_models_have_experiments(self):
         """Test that each model has an experiment folder in :mod:`pykeen.experiments`."""
-        experiments_path = os.path.abspath(os.path.dirname(pykeen.experiments.__file__))
+        experiments_path = pathlib.Path(pykeen.experiments.__file__).parent.absolute()
         experiment_blacklist = {
             "DistMultLiteral",  # FIXME
             "ComplExLiteral",  # FIXME
@@ -714,10 +711,10 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
         }
         model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist)
         for model in _remove_non_models(model_names):
+            model_name = model_resolver.normalize_cls(model)
             with self.subTest(model=model):
-                self.assertTrue(
-                    os.path.exists(os.path.join(experiments_path, model.lower())),
-                    msg=f"Missing experimental configuration for {model}",
+                assert experiments_path.joinpath(model_name.lower()).exists(), (
+                    f"Missing experimental configuration for {model}"
                 )
 
 
@@ -726,7 +723,7 @@ def _remove_non_models(elements: Iterable[str | type[Model]]) -> set[type[Model]
     for element in elements:
         try:
             model_cls = model_resolver.lookup(element)
-        except KeyError:  # invalid model name - aka not actually a model
+        except KeyError:  # invalid model name - aka not actually a model  # noqa: PERF203
             continue
         else:
             rv.add(model_cls)
@@ -751,7 +748,7 @@ class TestModelUtilities(unittest.TestCase):
             assert h_ext_batch.shape == (batch_size * num_choices, 3)
 
             # check content
-            actual_content = set(tuple(map(int, hrt)) for hrt in h_ext_batch)
+            actual_content = {tuple(map(int, hrt)) for hrt in h_ext_batch}
             exp_content = set()
             for i in range(max_id):
                 for b in batch:
@@ -766,15 +763,15 @@ class ERModelTests(cases.ModelTestCase):
     """Tests for the general ER-Model."""
 
     cls = pykeen.models.ERModel
-    kwargs = dict(
-        interaction="distmult",  # use name to test interaction resolution
-    )
+    kwargs = {
+        "interaction": "distmult",  # use name to test interaction resolution
+    }
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         shape = (kwargs.pop("embedding_dim"),)
-        kwargs["entity_representations_kwargs"] = dict(shape=shape)
-        kwargs["relation_representations_kwargs"] = dict(shape=shape)
+        kwargs["entity_representations_kwargs"] = {"shape": shape}
+        kwargs["relation_representations_kwargs"] = {"shape": shape}
         return kwargs
 
     def test_has_hpo_defaults(self):  # noqa: D102

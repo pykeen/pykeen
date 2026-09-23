@@ -1,8 +1,7 @@
 """PyTorch Lightning integration.
 
-PyTorch Lightning poses an alternative way to implement a training
-loop and evaluation loop for knowledge graph embedding models that
-has some nice features:
+PyTorch Lightning poses an alternative way to implement a training loop and evaluation loop for knowledge graph
+embedding models that has some nice features:
 
 - mixed precision training
 - multi-gpu training
@@ -22,10 +21,9 @@ has some nice features:
         precision=16,  # mixed precision training
     )
     trainer.fit(model=model)
-
 """
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 import click
 import pytorch_lightning
@@ -41,8 +39,7 @@ from pykeen.models.cli import options
 from pykeen.optimizers import optimizer_resolver
 from pykeen.sampling import NegativeSampler
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
-from pykeen.training.lcwa import create_lcwa_instances
-from pykeen.training.slcwa import create_slcwa_instances
+from pykeen.triples.instances import BatchedSLCWAInstances, LCWAInstances
 from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.typing import FloatTensor, InductiveMode, LongTensor, OneOrSequence
 
@@ -54,12 +51,12 @@ __all__ = [
 ]
 
 
-class LitModule(pytorch_lightning.LightningModule):
-    """
-    A base module for training models with PyTorch Lightning.
+class LitModule(pytorch_lightning.LightningModule, ABC):
+    """A base module for training models with PyTorch Lightning.
 
     .. seealso::
-        :class:`pykeen.training.training_loop.TrainingLoop`
+
+        :class:`~pykeen.training.training_loop.TrainingLoop`
     """
 
     def __init__(
@@ -79,32 +76,19 @@ class LitModule(pytorch_lightning.LightningModule):
         optimizer: HintOrType[torch.optim.Optimizer] = None,
         optimizer_kwargs: OptionalKwargs = None,
     ):
-        """
-        Create the lightning module.
+        """Create the lightning module.
 
-        :param dataset:
-            the dataset, or a hint thereof
-        :param dataset_kwargs:
-            additional keyword-based parameters passed to the dataset
-        :param mode:
-            the inductive mode; defaults to transductive training
-
-        :param model:
-            the model, or a hint thereof
-        :param model_kwargs:
-            additional keyword-based parameters passed to the model
-
-        :param batch_size:
-            the training batch size
-        :param learning_rate:
-            the learning rate
-        :param label_smoothing:
-            the label smoothing
-
-        :param optimizer:
-            the optimizer, or a hint thereof
-        :param optimizer_kwargs:
-            additional keyword-based parameters passed to the optimizer. should not contain `lr`, or `params`.
+        :param dataset: the dataset, or a hint thereof
+        :param dataset_kwargs: additional keyword-based parameters passed to the dataset
+        :param mode: the inductive mode; defaults to transductive training
+        :param model: the model, or a hint thereof
+        :param model_kwargs: additional keyword-based parameters passed to the model
+        :param batch_size: the training batch size
+        :param learning_rate: the learning rate
+        :param label_smoothing: the label smoothing
+        :param optimizer: the optimizer, or a hint thereof
+        :param optimizer_kwargs: additional keyword-based parameters passed to the optimizer. should not contain `lr`,
+            or `params`.
         """
         super().__init__()
         self.dataset = get_dataset(dataset=dataset, dataset_kwargs=dataset_kwargs)
@@ -118,15 +102,14 @@ class LitModule(pytorch_lightning.LightningModule):
         self.label_smoothing = label_smoothing
 
     def forward(self, hr_batch: LongTensor) -> FloatTensor:
-        """
-        Perform the prediction or inference step by wrapping :meth:`pykeen.models.ERModel.predict_t`.
+        """Perform the prediction or inference step by wrapping :meth:`~pykeen.models.Model.predict_t`.
 
-        :param hr_batch: shape: (batch_size, 2), dtype: long
-            The indices of (head, relation) pairs.
-        :return: shape: (batch_size, num_entities), dtype: float
-            For each h-r pair, the scores for all possible tails.
+        :param hr_batch: shape: (batch_size, 2), dtype: long The indices of (head, relation) pairs.
+
+        :returns: shape: (batch_size, num_entities), dtype: float For each h-r pair, the scores for all possible tails.
 
         .. note::
+
             in lightning, forward defines the prediction/inference actions
         """
         return self.model.predict_t(hr_batch)
@@ -166,7 +149,6 @@ class LitModule(pytorch_lightning.LightningModule):
             self.optimizer, self.optimizer_kwargs, params=self.parameters(), lr=self.learning_rate
         )
 
-    # docstr-coverage: inherited
     def on_before_zero_grad(self, optimizer: torch.optim.Optimizer) -> None:  # noqa: D102
         # call post_parameter_update
         self.model.post_parameter_update()
@@ -180,24 +162,23 @@ class SLCWALitModule(LitModule):
         *,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
+        grouped: bool = False,
         **kwargs,
     ):
-        """
-        Initialize the lightning module.
+        """Initialize the lightning module.
 
-        :param negative_sampler:
-            the negative sampler, cf. :meth:`pykeen.triples.CoreTriplesFactory.create_slcwa_instances`
-        :param negative_sampler_kwargs:
-            keyword-based parameters passed to the negative sampler, cf.
-            :meth:`pykeen.triples.CoreTriplesFactory.create_slcwa_instances`
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`LitModule.__init__`
+        :param negative_sampler: the negative sampler, cf. :class:`~pykeen.training.SLCWATrainingLoop`
+        :param negative_sampler_kwargs: keyword-based parameters passed to the negative sampler, cf.
+            :class:`~pykeen.training.SLCWATrainingLoop`
+        :param grouped: whether to keep negatives grouped by corrupted position, cf.
+            :attr:`~pykeen.training.SLCWATrainingLoop.grouped`
+        :param kwargs: additional keyword-based parameters passed to :meth:`LitModule.__init__`
         """
         super().__init__(**kwargs)
         self.negative_sampler = negative_sampler
         self.negative_sampler_kwargs = negative_sampler_kwargs
+        self.grouped = grouped
 
-    # docstr-coverage: inherited
     def _step(self, batch, prefix: str):  # noqa: D102
         loss = SLCWATrainingLoop._process_batch_static(
             model=self.model,
@@ -213,10 +194,9 @@ class SLCWALitModule(LitModule):
         self.log(f"{prefix}_loss", loss)
         return loss
 
-    # docstr-coverage: inherited
     def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:  # noqa: D102
         return torch.utils.data.DataLoader(
-            dataset=create_slcwa_instances(
+            dataset=BatchedSLCWAInstances.from_triples_factory(
                 triples_factory,
                 batch_size=self.batch_size,
                 # TODO:
@@ -225,6 +205,7 @@ class SLCWALitModule(LitModule):
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=self.negative_sampler_kwargs,
                 # sampler=sampler,
+                grouped=self.grouped,
             ),
             # shuffle=shuffle,
             # disable automatic batching in data loader
@@ -236,10 +217,11 @@ class SLCWALitModule(LitModule):
 class LCWALitModule(LitModule):
     """A PyTorch Lightning module for training a model with LCWA training loop.
 
-    .. seealso:: https://github.com/pykeen/pykeen/pull/905
+    .. seealso::
+
+        https://github.com/pykeen/pykeen/pull/905
     """
 
-    # docstr-coverage: inherited
     def _step(self, batch, prefix: str):  # noqa: D102
         loss = LCWATrainingLoop._process_batch_static(
             model=self.model,
@@ -257,10 +239,9 @@ class LCWALitModule(LitModule):
         self.log(f"{prefix}_loss", loss)
         return loss
 
-    # docstr-coverage: inherited
     def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:  # noqa: D102
         return torch.utils.data.DataLoader(
-            dataset=create_lcwa_instances(triples_factory),
+            dataset=LCWAInstances.from_triples_factory(triples_factory),
             batch_size=self.batch_size,
             shuffle=shuffle,
         )
@@ -268,7 +249,7 @@ class LCWALitModule(LitModule):
 
 #: A resolver for PyTorch Lightning training modules
 lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
-    base=LitModule,
+    base=LitModule,  # type: ignore[type-abstract]
     default=SLCWALitModule,
     # note: since this file is executed via __main__, its module name is replaced by __name__
     #       hence, the two classes' fully qualified names start with "_" and are considered private
@@ -282,18 +263,16 @@ def lit_pipeline(
     training_loop_kwargs: OptionalKwargs = None,
     trainer_kwargs: OptionalKwargs = None,
 ) -> None:
-    """
-    Create a :class:`LitModule` and run :class:`pytorch_lightning.Trainer` with it.
+    """Create a :class:`LitModule` and run :class:`pytorch_lightning.Trainer` with it.
 
     .. note::
+
         this method modifies the model's parameters in-place.
 
-    :param training_loop:
-        the training loop or a hint thereof
-    :param training_loop_kwargs:
-        keyword-based parameters passed to the respective :class:`LitModule` subclass upon instantiation.
-    :param trainer_kwargs:
-        keyword-based parameters passed to :class:`pytorch_lightning.Trainer`
+    :param training_loop: the training loop or a hint thereof
+    :param training_loop_kwargs: keyword-based parameters passed to the respective :class:`LitModule` subclass upon
+        instantiation.
+    :param trainer_kwargs: keyword-based parameters passed to :class:`pytorch_lightning.Trainer`
     """
     pytorch_lightning.Trainer(**(trainer_kwargs or {})).fit(
         model=lit_module_resolver.make(training_loop, pos_kwargs=training_loop_kwargs)
@@ -321,28 +300,28 @@ def _main(
     embedding_dim: int,
     mixed_precision: bool,
     number_epochs: int,
-):
+) -> None:
     """Run PyTorch lightning model."""
     lit_pipeline(
         training_loop=training_loop,
-        training_loop_kwargs=dict(
-            dataset=dataset,
-            dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
-            model=model,
-            model_kwargs=dict(embedding_dim=embedding_dim, loss=loss),
-            batch_size=batch_size,
-        ),
-        trainer_kwargs=dict(
+        training_loop_kwargs={
+            "dataset": dataset,
+            "dataset_kwargs": {"create_inverse_triples": create_inverse_triples},
+            "model": model,
+            "model_kwargs": {"embedding_dim": embedding_dim, "loss": loss},
+            "batch_size": batch_size,
+        },
+        trainer_kwargs={
             # automatically choose accelerator
-            accelerator="auto",
+            "accelerator": "auto",
             # defaults to TensorBoard; explicitly disabled here
-            logger=False,
+            "logger": False,
             # disable checkpointing
-            enable_checkpointing=False,
+            "enable_checkpointing": False,
             # mixed precision training
-            precision=16 if mixed_precision else 32,
-            max_epochs=number_epochs,
-        ),
+            "precision": 16 if mixed_precision else 32,
+            "max_epochs": number_epochs,
+        },
     )
 
 

@@ -3,7 +3,6 @@
 import gc
 import inspect
 import logging
-import os
 import pathlib
 import pickle
 import random
@@ -14,11 +13,11 @@ from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import IO, Any, ClassVar, Generic, TypeVar
+from typing import IO, Any, ClassVar, Generic, Literal, TypeVar
 
 import numpy as np
 import torch
-from class_resolver import HintOrType, OptionalKwargs
+from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from class_resolver.contrib.torch import lr_scheduler_resolver, optimizer_resolver
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
@@ -43,6 +42,7 @@ from ..models import RGCN, Model
 from ..stoppers import Stopper
 from ..trackers import ResultTracker, tracker_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples.weights import LossWeighter
 from ..typing import FloatTensor, InductiveMode
 from ..utils import format_relative_comparison, get_batchnorm_modules, get_preferred_device, normalize_string
 
@@ -54,7 +54,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-SampleType = TypeVar("SampleType")
 BatchType = TypeVar("BatchType")
 
 
@@ -84,11 +83,9 @@ class SubBatchingNotSupportedError(NotImplementedError):
     """An exception raised when sub batching is not implemented."""
 
     def __init__(self, model: Model):
-        """
-        Initialize the error.
+        """Initialize the error.
 
-        :param model:
-            the unsupported model
+        :param model: the unsupported model
         """
         super().__init__(model)
         self.model = model
@@ -102,10 +99,9 @@ class SubBatchingNotSupportedError(NotImplementedError):
 
 def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     optimizer_kwargs = optimizer.state_dict()
-    optimizer_kwargs = {
+    return {
         key: value for key, value in optimizer_kwargs["param_groups"][0].items() if key not in ["params", "initial_lr"]
     }
-    return optimizer_kwargs
 
 
 def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
@@ -118,7 +114,7 @@ def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
     }
 
 
-class TrainingLoop(Generic[SampleType, BatchType], ABC):
+class TrainingLoop(Generic[BatchType], ABC):
     """A training loop."""
 
     lr_scheduler: LRScheduler | None
@@ -127,13 +123,19 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
     losses_per_epochs: list[float]
 
-    hpo_default = dict(
-        num_epochs=dict(type=int, low=100, high=1000, q=100),
-        batch_size=dict(type=int, low=4, high=12, scale="power_two"),  # [16, 4096]
-    )
+    hpo_default = {
+        "num_epochs": {"type": int, "low": 100, "high": 1000, "q": 100},
+        "batch_size": {"type": int, "low": 4, "high": 12, "scale": "power_two"},  # [16, 4096]
+    }
 
     supports_slicing: ClassVar[bool] = False
 
+    @update_docstring_with_resolver_keys(
+        ResolverKey("optimizer", "class_resolver.contrib.torch.optimizer_resolver"),
+        ResolverKey("lr_scheduler", "class_resolver.contrib.torch.lr_scheduler_resolver"),
+        ResolverKey("result_tracker", "pykeen.trackers.tracker_resolver"),
+        ResolverKey("loss_weighter", "pykeen.triples.weights.loss_weighter_resolver"),
+    )
     def __init__(
         self,
         model: Model,
@@ -146,27 +148,26 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         mode: InductiveMode | None = None,
         result_tracker: HintOrType[ResultTracker] = None,
         result_tracker_kwargs: OptionalKwargs = None,
+        loss_weighter: HintOrType[LossWeighter] = None,
+        loss_weighter_kwargs: OptionalKwargs = None,
     ) -> None:
         """Initialize the training loop.
 
         :param model: The model to train
         :param triples_factory: The training triples factory
         :param optimizer: The optimizer to use while training the model
-        :param optimizer_kwargs:
-            additional keyword-based parameters to instantiate the optimizer (if necessary). `params` will be added
-            automatically based on the `model`.
+        :param optimizer_kwargs: additional keyword-based parameters to instantiate the optimizer (if necessary).
+            `params` will be added automatically based on the `model`.
         :param lr_scheduler: The learning rate scheduler you want to use while training the model
-        :param lr_scheduler_kwargs:
-            additional keyword-based parameters to instantiate the LR scheduler (if necessary). `optimizer` will be
-            added automatically.
-        :param automatic_memory_optimization: bool
-            Whether to automatically optimize the sub-batch size during
-            training and batch size during evaluation with regards to the hardware at hand.
+        :param lr_scheduler_kwargs: additional keyword-based parameters to instantiate the LR scheduler (if necessary).
+            `optimizer` will be added automatically.
+        :param automatic_memory_optimization: bool Whether to automatically optimize the sub-batch size during training
+            and batch size during evaluation with regards to the hardware at hand.
         :param mode: The inductive training mode. None if transductive.
-        :param result_tracker:
-            the result tracker
-        :param result_tracker_kwargs:
-            additional keyword-based parameters to instantiate the result tracker
+        :param result_tracker: the result tracker
+        :param result_tracker_kwargs: additional keyword-based parameters to instantiate the result tracker
+        :param loss_weighter: The method to determine loss weights for each triple.
+        :param loss_weighter_kwargs: Parameters for the method to determine loss weights.
         """
         self.model = model
         self.optimizer = optimizer_resolver.make(optimizer, pos_kwargs=optimizer_kwargs, params=model.get_grad_params())
@@ -184,6 +185,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # The internal epoch state tracks the last finished epoch of the training loop to allow for
         # seamless loading and saving of training checkpoints
         self._epoch = 0
+
+        # store sample weighter
+        self.loss_weighter = loss_weighter
+        self.loss_weighter_kwargs = loss_weighter_kwargs
 
     @classmethod
     def get_normalized_name(cls) -> str:
@@ -215,7 +220,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         batch_size: int | None = None,
         slice_size: int | None = None,
         label_smoothing: float = 0.0,
-        sampler: str | None = None,
+        sampler: Literal["schlichtkrull"] | None = None,
         continue_training: bool = False,
         only_size_probing: bool = False,
         use_tqdm: bool = True,
@@ -239,80 +244,62 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     ) -> list[float] | None:
         """Train the KGE model.
 
-        .. note ::
+        .. note::
 
-            Gradient clipping is a technique to avoid the exploding gradient problem. Clip by norm and clip by value
-            are two alternative implementations.
+            Gradient clipping is a technique to avoid the exploding gradient problem. Clip by norm and clip by value are
+            two alternative implementations.
 
-        :param triples_factory:
-            The training triples.
-        :param num_epochs:
-            The number of epochs to train the model.
-        :param batch_size:
-            If set the batch size to use for mini-batch training. Otherwise find the largest possible batch_size
-            automatically.
-        :param slice_size: >0
-            The divisor for the scoring function when using slicing. This is only possible for LCWA training loops in
-            general and only for models that have the slicing capability implemented.
-        :param label_smoothing: (0 <= label_smoothing < 1)
-            If larger than zero, use label smoothing.
-        :param sampler: (None or 'schlichtkrull')
-            The type of sampler to use. At the moment sLCWA in R-GCN is the only user of schlichtkrull sampling.
-        :param continue_training:
-            If set to False, (re-)initialize the model's weights. Otherwise continue training.
-        :param only_size_probing:
-            The evaluation is only performed for two batches to test the memory footprint, especially on GPUs.
+        :param triples_factory: The training triples.
+        :param num_epochs: The number of epochs to train the model.
+        :param batch_size: If set the batch size to use for mini-batch training. Otherwise find the largest possible
+            batch_size automatically.
+        :param slice_size: >0 The divisor for the scoring function when using slicing. This is only possible for LCWA
+            training loops in general and only for models that have the slicing capability implemented.
+        :param label_smoothing: (0 <= label_smoothing < 1) If larger than zero, use label smoothing.
+        :param sampler: (None or 'schlichtkrull') The type of sampler to use. At the moment sLCWA in R-GCN is the only
+            user of schlichtkrull sampling.
+        :param continue_training: If set to False, (re-)initialize the model's weights. Otherwise continue training.
+        :param only_size_probing: The evaluation is only performed for two batches to test the memory footprint,
+            especially on GPUs.
         :param use_tqdm: Should a progress bar be shown for epochs?
         :param use_tqdm_batch: Should a progress bar be shown for batching (inside the epoch progress bar)?
-        :param tqdm_kwargs:
-            Keyword arguments passed to :mod:`tqdm` managing the progress bar.
-        :param stopper:
-            An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking
-            if training should stop early
-        :param sub_batch_size:
-            If provided split each batch into sub-batches to avoid memory issues for large models / small GPUs.
-        :param num_workers:
-            The number of child CPU workers used for loading data. If None, data are loaded in the main process.
-        :param clear_optimizer:
-            Whether to delete the optimizer instance after training (as the optimizer might have additional memory
-            consumption due to e.g. moments in Adam).
-        :param checkpoint_directory:
-            An optional directory to store the checkpoint files. If None, a subdirectory named ``checkpoints`` in the
-            directory defined by :data:`pykeen.constants.PYKEEN_HOME` is used. Unless the environment variable
-            ``PYKEEN_HOME`` is overridden, this will be ``~/.pykeen/checkpoints``.
-        :param checkpoint_name:
-            The filename for saving checkpoints. If the given filename exists already, that file will be loaded and used
-            to continue training.
-        :param checkpoint_frequency:
-            The frequency of saving checkpoints in minutes. Setting it to 0 will save a checkpoint after every epoch.
-        :param checkpoint_on_failure:
-            Whether to save a checkpoint in cases of a RuntimeError or MemoryError. This option differs from ordinary
-            checkpoints, since ordinary checkpoints are only saved after a successful epoch. When saving checkpoints
-            due to failure of the training loop there is no guarantee that all random states can be recovered correctly,
-            which might cause problems with regards to the reproducibility of that specific training loop. Therefore,
-            these checkpoints are saved with a distinct checkpoint name, which will be
-            ``PyKEEN_just_saved_my_day_{datetime}.pt`` in the given checkpoint_root.
-        :param drop_last:
-            Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False, except if the
-            model contains batch normalization layers. Can be provided explicitly to override.
-        :param callbacks:
-            An optional :class:`pykeen.training.TrainingCallback` or collection of callback instances that define
-            one of several functionalities. Their interface was inspired by Keras.
-        :param callbacks_kwargs:
-            additional keyword-based parameter to instantiate the training callback.
-        :param gradient_clipping_max_norm:
-            The maximum gradient norm for use with gradient clipping. If None, no gradient norm clipping is used.
-        :param gradient_clipping_norm_type:
-            The gradient norm type to use for maximum gradient norm, cf. :func:`torch.nn.utils.clip_grad_norm_`
-        :param gradient_clipping_max_abs_value:
-            The maximum absolute value in gradients, cf. :func:`torch.nn.utils.clip_grad_value_`. If None, no
-            gradient clipping will be used.
-        :param pin_memory:
-            whether to use memory pinning in the data loader, cf.
+        :param tqdm_kwargs: Keyword arguments passed to :mod:`tqdm` managing the progress bar.
+        :param stopper: An instance of :class:`~pykeen.stoppers.early_stopping.EarlyStopper` with settings for
+            checking if training should stop early
+        :param sub_batch_size: If provided split each batch into sub-batches to avoid memory issues for large models /
+            small GPUs.
+        :param num_workers: The number of child CPU workers used for loading data. If None, data are loaded in the main
+            process.
+        :param clear_optimizer: Whether to delete the optimizer instance after training (as the optimizer might have
+            additional memory consumption due to e.g. moments in Adam).
+        :param checkpoint_directory: An optional directory to store the checkpoint files. If None, a subdirectory named
+            ``checkpoints`` in the directory defined by :data:`~pykeen.constants.PYKEEN_HOME` is used. Unless the
+            environment variable ``PYKEEN_HOME`` is overridden, this will be ``~/.pykeen/checkpoints``.
+        :param checkpoint_name: The filename for saving checkpoints. If the given filename exists already, that file
+            will be loaded and used to continue training.
+        :param checkpoint_frequency: The frequency of saving checkpoints in minutes. Setting it to 0 will save a
+            checkpoint after every epoch.
+        :param checkpoint_on_failure: Whether to save a checkpoint in cases of a RuntimeError or MemoryError. This
+            option differs from ordinary checkpoints, since ordinary checkpoints are only saved after a successful
+            epoch. When saving checkpoints due to failure of the training loop there is no guarantee that all random
+            states can be recovered correctly, which might cause problems with regards to the reproducibility of that
+            specific training loop. Therefore, these checkpoints are saved with a distinct checkpoint name, which will
+            be ``PyKEEN_just_saved_my_day_{datetime}.pt`` in the given checkpoint_root.
+        :param drop_last: Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False,
+            except if the model contains batch normalization layers. Can be provided explicitly to override.
+        :param callbacks: An optional :class:`~pykeen.training.TrainingCallback` or collection of callback
+            instances that define one of several functionalities. Their interface was inspired by Keras.
+        :param callbacks_kwargs: additional keyword-based parameter to instantiate the training callback.
+        :param gradient_clipping_max_norm: The maximum gradient norm for use with gradient clipping. If None, no
+            gradient norm clipping is used.
+        :param gradient_clipping_norm_type: The gradient norm type to use for maximum gradient norm, cf.
+            :func:`torch.nn.utils.clip_grad_norm_`
+        :param gradient_clipping_max_abs_value: The maximum absolute value in gradients, cf.
+            :func:`torch.nn.utils.clip_grad_value_`. If None, no gradient clipping will be used.
+        :param pin_memory: whether to use memory pinning in the data loader, cf.
             https://pytorch.org/docs/stable/notes/cuda.html#cuda-memory-pinning
 
-        :return:
-            The losses per epoch.
+        :returns: The losses per epoch.
         """
         self._should_stop = False
 
@@ -442,28 +429,18 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         only_size_probing: bool,
         backward: bool = True,
     ) -> float:
-        """
-        Run one epoch.
+        """Run one epoch.
 
-        :param batches:
-            the batches to process
-        :param callbacks:
-            the callbacks to apply (wrapped into a single object)
-        :param sub_batch_size:
-            the sub-batch size to use
-        :param label_smoothing:
-            the label-smoothing to apply
-        :param slice_size:
-            the optional slice size
-        :param epoch:
-            the current epoch (only used to forward to callbacks)
-        :param only_size_probing:
-            whether to stop after the second batch
-        :param backward:
-            whether to calculate gradients via backward
+        :param batches: the batches to process
+        :param callbacks: the callbacks to apply (wrapped into a single object)
+        :param sub_batch_size: the sub-batch size to use
+        :param label_smoothing: the label-smoothing to apply
+        :param slice_size: the optional slice size
+        :param epoch: the current epoch (only used to forward to callbacks)
+        :param only_size_probing: whether to stop after the second batch
+        :param backward: whether to calculate gradients via backward
 
-        :return:
-            the epoch loss
+        :returns: the epoch loss
         """
         # Accumulate loss over epoch
         current_epoch_loss = 0.0
@@ -524,7 +501,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         batch_size: int | None = None,
         slice_size: int | None = None,
         label_smoothing: float = 0.0,
-        sampler: str | None = None,
+        sampler: Literal["schlichtkrull"] | None = None,
         continue_training: bool = False,
         only_size_probing: bool = False,
         use_tqdm: bool = True,
@@ -591,7 +568,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                     batch_size_sufficient = True
                     logger.info(
                         "Currently automatic memory optimization only supports GPUs, but you're using a CPU. "
-                        "Therefore, the batch_size will be set to the default value '{batch_size}'",
+                        f"Therefore, the batch_size will be set to the default value '{batch_size}'",
                     )
                 else:
                     batch_size, batch_size_sufficient = self.batch_size_search(triples_factory=triples_factory)
@@ -656,7 +633,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         # When size probing, we don't want progress bars
         if _use_outer_tqdm:
             # Create progress bar
-            _tqdm_kwargs = dict(desc=f"Training epochs on {self.device}", unit="epoch")
+            _tqdm_kwargs = {"desc": f"Training epochs on {self.device}", "unit": "epoch"}
             if tqdm_kwargs is not None:
                 _tqdm_kwargs.update(tqdm_kwargs)
             epochs = trange(self._epoch + 1, 1 + num_epochs, **_tqdm_kwargs, initial=self._epoch, total=num_epochs)
@@ -677,7 +654,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
             sampler=sampler,
         )
         if len(train_data_loader) == 0:
-            raise NoTrainingBatchError()
+            raise NoTrainingBatchError
         if drop_last and not only_size_probing:
             logger.info(
                 "Dropping last (incomplete) batch each epoch (%s batches).",
@@ -720,6 +697,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         desc=f"Training batches on {self.device}",
                         leave=False,
                         unit="batch",
+                        unit_scale=True,
                     )
                 else:
                     batches = train_data_loader
@@ -777,8 +755,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         f"used as 'checkpoint_file' argument.",
                     )
                 # Delete temporary best epoch model
-                if best_epoch_model_file_path is not None and best_epoch_model_file_path.is_file():
-                    os.remove(best_epoch_model_file_path)
+                if best_epoch_model_file_path:
+                    best_epoch_model_file_path.unlink(missing_ok=True)
                 raise e
 
             # Includes a call to result_tracker.log_metrics
@@ -786,13 +764,10 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints and checkpoint_path is not None:
+                assert checkpoint_frequency is not None
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 # MyPy overrides are because you should
-                if (
-                    minutes_since_last_checkpoint >= checkpoint_frequency  # type: ignore
-                    or self._should_stop
-                    or epoch == num_epochs
-                ):
+                if minutes_since_last_checkpoint >= checkpoint_frequency or self._should_stop or epoch == num_epochs:
                     # When there wasn't a best epoch the checkpoint path should be None
                     if last_best_epoch is not None and best_epoch_model_file_path is not None:
                         best_epoch_model_checkpoint_file_path = best_epoch_model_file_path
@@ -801,15 +776,14 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                         stopper=stopper,
                         best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
                         triples_factory=triples_factory,
-                    )  # type: ignore
+                    )
                     last_checkpoint = time.time()
 
             if self._should_stop:
                 if last_best_epoch is not None and best_epoch_model_file_path is not None:
                     self._load_state(path=best_epoch_model_file_path)
                     # Delete temporary best epoch model
-                    if pathlib.Path.is_file(best_epoch_model_file_path):
-                        os.remove(best_epoch_model_file_path)
+                    best_epoch_model_file_path.unlink(missing_ok=True)
                 return self.losses_per_epochs
 
         callback.post_train(losses=self.losses_per_epochs)
@@ -819,31 +793,29 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if stopper is not None and last_best_epoch is not None and best_epoch_model_file_path is not None:
             self._load_state(path=best_epoch_model_file_path)
             # Delete temporary best epoch model
-            if pathlib.Path.is_file(best_epoch_model_file_path):
-                os.remove(best_epoch_model_file_path)
+            best_epoch_model_file_path.unlink(missing_ok=True)
 
         return self.losses_per_epochs
 
     @abstractmethod
     def _create_training_data_loader(
-        self, triples_factory: CoreTriplesFactory, *, sampler: str | None, batch_size: int, drop_last: bool, **kwargs
+        self,
+        triples_factory: CoreTriplesFactory,
+        *,
+        sampler: Literal["schlichtkrull"] | None,
+        batch_size: int,
+        drop_last: bool,
+        **kwargs,
     ) -> DataLoader[BatchType]:
-        """
-        Create a data loader over training instances.
+        """Create a data loader over training instances.
 
-        :param triples_factory:
-            the training triples' factory
-        :param batch_size:
-            the batch size to use
-        :param drop_last:
-            whether to drop the last (incomplete) batch, cf. torch.utils.data.DataLoader
-        :param sampler:
-            the batch sampler to use. Either None, or "schlichtkrull".
-        :param kwargs:
-            additional keyword-based parameters passed to :meth:`torch.utils.data.DataLoader.__init__`
+        :param triples_factory: the training triples' factory
+        :param batch_size: the batch size to use
+        :param drop_last: whether to drop the last (incomplete) batch, cf. torch.utils.data.DataLoader
+        :param sampler: the batch sampler to use. Either None, or "schlichtkrull".
+        :param kwargs: additional keyword-based parameters passed to :meth:`torch.utils.data.DataLoader.__init__`
 
-        :return:
-            a data loader over training instances.
+        :returns: a data loader over training instances.
         """
         raise NotImplementedError
 
@@ -916,17 +888,14 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         that this batch size was successfully evaluated. Otherwise, the output will be batch size 1 and the boolean
         value will be False.
 
-        :param triples_factory:
-            The triples factory over which search is run
-        :param batch_size:
-            The batch size to start the search with. If None, set batch_size=num_triples (i.e. full batch training).
+        :param triples_factory: The triples factory over which search is run
+        :param batch_size: The batch size to start the search with. If None, set batch_size=num_triples (i.e. full batch
+            training).
 
-        :return:
-            Tuple containing the maximum possible batch size as well as an indicator if the evaluation with that size
-            was successful.
+        :returns: Tuple containing the maximum possible batch size as well as an indicator if the evaluation with that
+            size was successful.
 
-        :raises RuntimeError:
-            If a runtime error is raised during training
+        :raises RuntimeError: If a runtime error is raised during training
         """
         if batch_size is None:
             batch_size = 8_192
@@ -979,7 +948,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         *,
         batch_size: int,
-        sampler: str | None,
+        sampler: Literal["schlichtkrull"] | None,
         triples_factory: CoreTriplesFactory,
     ) -> tuple[int, int | None]:
         """Check if sub-batching and/or slicing is necessary to train the model on the hardware at hand."""
@@ -1015,20 +984,15 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         and sub_batch size on the hardware at hand. If even the slice size 1 is too high, it will raise an error.
         Otherwise it will return the determined slice size.
 
-        :param triples_factory:
-            A triples factory
-        :param batch_size:
-            The batch size to use.
-        :param sub_batch_size:
-            The sub-batch size to use.
-        :param supports_sub_batching:
-            Indicator if the model supports sub-batching. This is used to create appropriate error messages, if needed.
+        :param triples_factory: A triples factory
+        :param batch_size: The batch size to use.
+        :param sub_batch_size: The sub-batch size to use.
+        :param supports_sub_batching: Indicator if the model supports sub-batching. This is used to create appropriate
+            error messages, if needed.
 
-        :return:
-            The slice_size that allows training the model with the given parameters on this hardware.
+        :returns: The slice_size that allows training the model with the given parameters on this hardware.
 
-        :raises MemoryError:
-            If it is not possible to train the model on the hardware at hand with the given parameters.
+        :raises MemoryError: If it is not possible to train the model on the hardware at hand with the given parameters.
         """
         raise NotImplementedError
 
@@ -1036,7 +1000,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         self,
         *,
         batch_size: int,
-        sampler: str | None,
+        sampler: Literal["schlichtkrull"] | None,
         triples_factory: CoreTriplesFactory,
     ) -> tuple[int, bool, bool]:
         """Find the allowable sub batch size for training with the current setting.
@@ -1045,19 +1009,14 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         on the hardware at hand. If possible, the sub-batch size equals the batch size. Otherwise, the maximum
         permissible sub-batch size is determined.
 
-        :param batch_size:
-            The initial batch size to start with.
-        :param sampler:
-            The sampler (None or schlichtkrull)
-        :param triples_factory:
-            A triples factory
+        :param batch_size: The initial batch size to start with.
+        :param sampler: The sampler (None or schlichtkrull)
+        :param triples_factory: A triples factory
 
-        :return:
-            Tuple containing the sub-batch size to use and indicating if the search was finished, i.e. successfully
-            without hardware errors, as well as if sub-batching is possible
+        :returns: Tuple containing the sub-batch size to use and indicating if the search was finished, i.e.
+            successfully without hardware errors, as well as if sub-batching is possible
 
-        :raises RuntimeError:
-            If a runtime error is raised during training
+        :raises RuntimeError: If a runtime error is raised during training
         """
         sub_batch_size = batch_size
         finished_search = False
@@ -1136,15 +1095,13 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     ) -> None:
         """Save the state of the training loop.
 
-        :param path:
-            Path of the file where to store the state in.
-        :param stopper:
-            An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking
-            if training should stop early
-        :param best_epoch_model_checkpoint_file_path:
-            The file path for the checkpoint of the best epoch model when using early stopping.
-        :param triples_factory:
-            The triples factory being used in the current training loop.
+        :param path: Path of the file where to store the state in.
+        :param stopper: An instance of :class:`~pykeen.stoppers.early_stopping.EarlyStopper` with settings for
+            checking if training should stop early
+        :param best_epoch_model_checkpoint_file_path: The file path for the checkpoint of the best epoch model when
+            using early stopping.
+        :param triples_factory: The triples factory being used in the current training loop.
+
         :raises ValueError: if the internal optimizer is not set
         """
         if self.optimizer is None:
@@ -1153,25 +1110,19 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         logger.debug("=> Saving checkpoint.")
 
         if stopper is None:
-            stopper_dict: Mapping[str, Any] = dict()
+            stopper_dict: Mapping[str, Any] = {}
         else:
             stopper_dict = stopper.get_summary_dict()
 
         # Only if a cuda device is available, the random state is accessed
-        if torch.cuda.is_available():
-            torch_cuda_random_state = torch.cuda.get_rng_state()
-        else:
-            torch_cuda_random_state = None
+        torch_cuda_random_state = torch.cuda.get_rng_state() if torch.cuda.is_available() else None
 
         if best_epoch_model_checkpoint_file_path is not None:
             best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_file_path, weights_only=False)
         else:
             best_epoch_model_checkpoint = None
 
-        if self.lr_scheduler is None:
-            lr_scheduler_state_dict = None
-        else:
-            lr_scheduler_state_dict = self.lr_scheduler.state_dict()
+        lr_scheduler_state_dict = None if self.lr_scheduler is None else self.lr_scheduler.state_dict()
 
         relation_to_id_dict = None
         entity_to_id_dict = None
@@ -1190,7 +1141,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
                 "random_seed": self.model._random_seed,
                 "stopper_dict": stopper_dict,
                 "random_state": random.getstate(),
-                "np_random_state": np.random.get_state(),
+                "np_random_state": np.random.get_state(),  # noqa: NPY002
                 "torch_random_state": torch.random.get_rng_state(),
                 "torch_cuda_random_state": torch_cuda_random_state,
                 # This is an entire checkpoint for the optional best model when using early stopping
@@ -1211,20 +1162,17 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
     ) -> tuple[pathlib.Path | None, int | None]:
         """Load the state of the training loop from a checkpoint.
 
-        :param path:
-            Path of the file where to load the state from.
-        :param triples_factory:
-            The triples factory being used in the current training loop. This is being used to check whether the
-            entity and relation to id mappings from the checkpoint match those provided by the current triples
-            factory.
+        :param path: Path of the file where to load the state from.
+        :param triples_factory: The triples factory being used in the current training loop. This is being used to check
+            whether the entity and relation to id mappings from the checkpoint match those provided by the current
+            triples factory.
 
-        :return:
-            Temporary file path of the best epoch model and the best epoch when using early stoppers, None otherwise.
+        :returns: Temporary file path of the best epoch model and the best epoch when using early stoppers, None
+            otherwise.
 
-        :raises ValueError:
-            If the internal optimizer is none
-        :raises CheckpointMismatchError:
-            If the given checkpoint file has a non-matching checksum, i.e. it was saved with a different configuration.
+        :raises ValueError: If the internal optimizer is none
+        :raises CheckpointMismatchError: If the given checkpoint file has a non-matching checksum, i.e. it was saved
+            with a different configuration.
         """
         if self.optimizer is None:
             raise ValueError
@@ -1257,7 +1205,8 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         best_epoch_model_file_path = None
         best_epoch = None
         if checkpoint.get("best_epoch_model_checkpoint"):
-            best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
+            with NamedTemporaryFile(delete=False) as ntf:
+                best_epoch_model_file_path = pathlib.Path(ntf.name)
             best_epoch = checkpoint["best_epoch_model_checkpoint"]["epoch"]
             torch.save(
                 checkpoint["best_epoch_model_checkpoint"],
@@ -1296,7 +1245,7 @@ class TrainingLoop(Generic[SampleType, BatchType], ABC):
         if self.lr_scheduler is not None:
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
         random.setstate(checkpoint["random_state"])
-        np.random.set_state(checkpoint["np_random_state"])
+        np.random.set_state(checkpoint["np_random_state"])  # noqa: NPY002
         torch.random.set_rng_state(checkpoint["torch_random_state"])
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
 

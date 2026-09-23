@@ -113,7 +113,7 @@ class LazyInductiveDataset(InductiveDataset):
     cache_root: pathlib.Path
 
     @property
-    def transductive_training(self) -> TriplesFactory:  # type:ignore # noqa: D401
+    def transductive_training(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The training triples factory."""
         if not self._loaded:
             self._load()
@@ -121,7 +121,7 @@ class LazyInductiveDataset(InductiveDataset):
         return self._transductive_training
 
     @property
-    def inductive_inference(self) -> TriplesFactory:  # type:ignore # noqa: D401
+    def inductive_inference(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The inductive inference triples factory. MIGHT or MIGHT NOT share indices with the transductive train."""
         if not self._loaded:
             self._load()
@@ -129,7 +129,7 @@ class LazyInductiveDataset(InductiveDataset):
         return self._inductive_inference
 
     @property
-    def inductive_testing(self) -> TriplesFactory:  # type:ignore # noqa: D401
+    def inductive_testing(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The testing triples factory that share indices with the INDUCTIVE INFERENCE triples factory."""
         if not self._loaded:
             self._load()
@@ -137,7 +137,7 @@ class LazyInductiveDataset(InductiveDataset):
         return self._inductive_testing
 
     @property
-    def inductive_validation(self) -> TriplesFactory | None:  # type:ignore # noqa: D401
+    def inductive_validation(self) -> TriplesFactory | None:  # type: ignore[override]  # noqa: D401
         """The validation triples factory that shares indices with the INDUCTIVE INFERENCE triples factory."""
         if not self._loaded:
             self._load()
@@ -162,12 +162,12 @@ class LazyInductiveDataset(InductiveDataset):
     ) -> pathlib.Path:
         """Get the appropriate cache root directory.
 
-        :param cache_root: If none is passed, defaults to a subfolder of the
-            PyKEEN home directory defined in :data:`pykeen.constants.PYKEEN_HOME`.
-            The subfolder is named based on the class inheriting from
-            :class:`pykeen.datasets.base.Dataset`.
+        :param cache_root: If none is passed, defaults to a subfolder of the PyKEEN home directory defined in
+            :data:`~pykeen.constants.PYKEEN_HOME`. The subfolder is named based on the class inheriting from
+            :class:`~pykeen.datasets.base.Dataset`.
         :param version: accepts a string "v1" to "v4" to select among Teru et al inductive datasets
         :param sep_train_inference: a flag to store training and inference splits in different folders
+
         :returns: A path object for the calculated cache root directory
         """
         cache_root = normalize_path(
@@ -214,8 +214,8 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
         :param inductive_validation_path: Path to the validation triples file or validation triples file.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
-            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
+        :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
+            and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
         """
         self.transductive_training_path = pathlib.Path(transductive_training_path)
         self.inductive_inference_path = pathlib.Path(inductive_inference_path)
@@ -295,14 +295,14 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
         :param inductive_inference_url: The URL of the inductive inference graph file
         :param inductive_testing_url: The URL of the inductive testing file
         :param inductive_validation_url: The URL of the inductive validation file
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.data/pykeen``.
         :param force: If true, redownload any cached files
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
-            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
+        :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
+            and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
         :param version: accepts a string "v1" to "v4" to select among Teru et al inductive datasets
         """

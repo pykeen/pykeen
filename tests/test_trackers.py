@@ -36,12 +36,12 @@ class MultiResultTrackerTests(cases.ResultTrackerTests):
     """Tests for multi tracker."""
 
     cls = MultiResultTracker
-    kwargs = dict(
-        trackers=(
+    kwargs = {
+        "trackers": (
             ConsoleResultTracker(),
             ConsoleResultTracker(),
         )
-    )
+    }
 
 
 @needs_packages("tensorboard")

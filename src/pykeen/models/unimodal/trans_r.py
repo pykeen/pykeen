@@ -54,11 +54,11 @@ class TransR(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        scoring_fct_norm=dict(type=int, low=1, high=2),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "relation_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "scoring_fct_norm": {"type": int, "low": 1, "high": 2},
+    }
 
     def __init__(
         self,
@@ -72,11 +72,11 @@ class TransR(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         # entity embedding
         entity_initializer: Hint[Initializer] = xavier_uniform_,
         entity_initializer_kwargs: OptionalKwargs = None,
-        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        entity_constrainer: Hint[Constrainer] = clamp_norm,
         # relation embedding
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
         relation_initializer_kwargs: OptionalKwargs = None,
-        relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        relation_constrainer: Hint[Constrainer] = clamp_norm,
         # relation projection
         relation_projection_initializer: Hint[Initializer] = torch.nn.init.xavier_uniform_,
         relation_projection_initializer_kwargs: OptionalKwargs = None,
@@ -95,14 +95,14 @@ class TransR(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
             Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
             and numerically more stable.
 
-        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`~pykeen.nn.init.xavier_uniform_`.
         :param entity_initializer_kwargs: Keyword arguments to be used when calling the entity initializer.
-        :param entity_constrainer: The entity constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
+        :param entity_constrainer: The entity constrainer. Defaults to :func:`~pykeen.utils.clamp_norm`.
 
         :param relation_initializer:
-            Relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`.
+            Relation initializer function. Defaults to :func:`~pykeen.nn.init.xavier_uniform_norm_`.
         :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer.
-        :param relation_constrainer: The relation constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
+        :param relation_constrainer: The relation constrainer. Defaults to :func:`~pykeen.utils.clamp_norm`.
 
         :param relation_projection_initializer:
             Relation projection initializer function. Defaults to :func:`torch.nn.init.xavier_uniform_`.
@@ -114,29 +114,29 @@ class TransR(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         # TODO: Initialize from TransE
         super().__init__(
             interaction=TransRInteraction,
-            interaction_kwargs=dict(p=scoring_fct_norm, power_norm=power_norm),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-                initializer_kwargs=entity_initializer_kwargs,
-                constrainer=entity_constrainer,
-                constrainer_kwargs=dict(maxnorm=max_projection_norm, p=scoring_fct_norm, dim=-1),
-            ),
+            interaction_kwargs={"p": scoring_fct_norm, "power_norm": power_norm},
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+                "initializer_kwargs": entity_initializer_kwargs,
+                "constrainer": entity_constrainer,
+                "constrainer_kwargs": {"maxnorm": max_projection_norm, "p": scoring_fct_norm, "dim": -1},
+            },
             relation_representations_kwargs=[
                 # relation embedding
-                dict(
-                    shape=(relation_dim,),
-                    initializer=relation_initializer,
-                    initializer_kwargs=relation_initializer_kwargs,
-                    constrainer=relation_constrainer,
-                    constrainer_kwargs=dict(maxnorm=max_projection_norm, p=scoring_fct_norm, dim=-1),
-                ),
+                {
+                    "shape": (relation_dim,),
+                    "initializer": relation_initializer,
+                    "initializer_kwargs": relation_initializer_kwargs,
+                    "constrainer": relation_constrainer,
+                    "constrainer_kwargs": {"maxnorm": max_projection_norm, "p": scoring_fct_norm, "dim": -1},
+                },
                 # relation projection
-                dict(
-                    shape=(embedding_dim, relation_dim),
-                    initializer=relation_projection_initializer,
-                    initializer_kwargs=relation_projection_initializer_kwargs,
-                ),
+                {
+                    "shape": (embedding_dim, relation_dim),
+                    "initializer": relation_projection_initializer,
+                    "initializer_kwargs": relation_projection_initializer_kwargs,
+                },
             ],
             **kwargs,
         )

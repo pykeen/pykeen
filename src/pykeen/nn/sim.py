@@ -25,33 +25,25 @@ class KG2ESimilarity(nn.Module, abc.ABC):
     """
 
     def __init__(self, exact: bool = True):
-        """
-        Initialize the similarity module.
+        """Initialize the similarity module.
 
-        :param exact:
-            Whether to return the exact similarity, or leave out constant offsets for slightly improved speed.
+        :param exact: Whether to return the exact similarity, or leave out constant offsets for slightly improved speed.
         """
         super().__init__()
         self.exact = exact
 
     @abc.abstractmethod
     def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:
+        """Calculate the similarity.
+
+        :param h: shape: (`*batch_dims`, `d`) The head entity Gaussian distribution.
+        :param r: shape: (`*batch_dims`, `d`) The relation Gaussian distribution.
+        :param t: shape: (`*batch_dims`, `d`) The tail entity Gaussian distribution.
+
+        :returns: torch.Tensor, shape: (`*batch_dims`) # noqa: DAR202 The similarity.
+
+        # noqa:DAR202
         """
-        Calculate the similarity.
-
-        # noqa: DAR401
-
-        :param h: shape: (`*batch_dims`, `d`)
-            The head entity Gaussian distribution.
-        :param r: shape: (`*batch_dims`, `d`)
-            The relation Gaussian distribution.
-        :param t: shape: (`*batch_dims`, `d`)
-            The tail entity Gaussian distribution.
-
-        :return: torch.Tensor, shape: (`*batch_dims`)  # noqa: DAR202
-            The similarity.
-        """
-        raise NotImplementedError
 
 
 class ExpectedLikelihood(KG2ESimilarity):
@@ -68,8 +60,7 @@ class ExpectedLikelihood(KG2ESimilarity):
         \right)
     """
 
-    # docstr-coverage: inherited
-    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:
+    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:  # noqa: D102
         var = tensor_sum(*(d.diagonal_covariance for d in (h, r, t)))
         mean = tensor_sum(h.mean, -t.mean, -r.mean)
 
@@ -101,6 +92,7 @@ class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
     Since all covariance matrices are diagonal, we can further simplify:
 
     .. math::
+
         tr\left(\Sigma_r^{-1} \Sigma_e\right)
         &=&
         \sum_i \Sigma_e[i] / \Sigma_r[i]
@@ -113,13 +105,13 @@ class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
         &=&
         \sum_i \ln \Sigma_r[i] - \sum_i \ln \Sigma_e[i]
 
-    .. seealso ::
+    .. seealso::
+
         `Wikipedia: Multivariate_normal_distribution > Kullback-Leibler Divergence
         <https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Kullback%E2%80%93Leibler_divergence>`_
     """
 
-    # docstr-coverage: inherited
-    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:
+    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:  # noqa: D102
         e_var = h.diagonal_covariance + t.diagonal_covariance
         r_var_safe = at_least_eps(r.diagonal_covariance)
         terms = []
@@ -157,9 +149,9 @@ class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
         return -result
 
 
-#: A resolver for similarities for :class:`pykeen.nn.modules.KG2EInteraction`
+#: A resolver for similarities for :class:`~pykeen.nn.modules.KG2EInteraction`
 kg2e_similarity_resolver: ClassResolver[KG2ESimilarity] = ClassResolver.from_subclasses(
-    base=KG2ESimilarity,
+    base=KG2ESimilarity,  # type: ignore[type-abstract]
     synonyms={"kl": NegativeKullbackLeiblerDivergence, "el": ExpectedLikelihood},
     default=NegativeKullbackLeiblerDivergence,
 )

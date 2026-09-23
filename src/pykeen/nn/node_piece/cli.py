@@ -35,7 +35,7 @@ def tokenize(
     output_path: pathlib.Path | None,
     log_level: str,
     force: bool,
-):
+) -> None:
     """Pre-compute tokenization."""
     logging.basicConfig(level=log_level)
 

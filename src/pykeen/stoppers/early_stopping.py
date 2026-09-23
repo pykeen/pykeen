@@ -37,20 +37,14 @@ def is_improvement(
     larger_is_better: bool,
     relative_delta: float = 0.0,
 ) -> bool:
-    """
-    Decide whether the current value is an improvement over the best value.
+    """Decide whether the current value is an improvement over the best value.
 
-    :param best_value:
-        The best value so far.
-    :param current_value:
-        The current value.
-    :param larger_is_better:
-        Whether a larger value is better.
-    :param relative_delta:
-        A minimum relative improvement until it is considered as an improvement.
+    :param best_value: The best value so far.
+    :param current_value: The current value.
+    :param larger_is_better: Whether a larger value is better.
+    :param relative_delta: A minimum relative improvement until it is considered as an improvement.
 
-    :return:
-        Whether the current value is better.
+    :returns: Whether the current value is better.
     """
     better = current_value > best_value if larger_is_better else current_value < best_value
     return better and not math.isclose(current_value, best_value, rel_tol=relative_delta)
@@ -93,19 +87,14 @@ class EarlyStoppingLogic:
         )
 
     def report_result(self, metric: float, epoch: int) -> bool:
-        """
-        Report a result at the given epoch.
+        """Report a result at the given epoch.
 
-        :param metric:
-            The result metric.
-        :param epoch:
-            The epoch.
+        :param metric: The result metric.
+        :param epoch: The epoch.
 
-        :return:
-            If the result did not improve more than delta for patience evaluations
+        :returns: If the result did not improve more than delta for patience evaluations
 
-        :raises ValueError:
-            if more than one metric is reported for a single epoch
+        :raises ValueError: if more than one metric is reported for a single epoch
         """
         if self.best_epoch is not None and epoch <= self.best_epoch:
             raise ValueError("Cannot report more than one metric for one epoch")
@@ -176,6 +165,9 @@ class EarlyStopper(Stopper):
     use_tqdm: bool = False
     #: Keyword arguments for the tqdm progress bar
     tqdm_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
+    #: Additional keyword arguments passed to :meth:`~pykeen.evaluation.Evaluator.evaluate`.
+    #: Do not include ``batch_size`` or ``slice_size`` here; use the dedicated fields instead.
+    evaluation_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
 
     _stopper: EarlyStoppingLogic = dataclasses.field(init=False, repr=False)
 
@@ -236,6 +228,7 @@ class EarlyStopper(Stopper):
             slice_size=self.evaluation_slice_size,
             # Only perform time-consuming checks for the first call.
             do_time_consuming_checks=self.evaluation_batch_size is None,
+            **self.evaluation_kwargs,
         )
         # After the first evaluation pass the optimal batch and slice size is obtained and saved for re-use
         self.evaluation_batch_size = self.evaluator.batch_size
@@ -282,18 +275,18 @@ class EarlyStopper(Stopper):
 
     def get_summary_dict(self) -> Mapping[str, Any]:
         """Get a summary dict."""
-        return dict(
-            frequency=self.frequency,
-            patience=self.patience,
-            remaining_patience=self.remaining_patience,
-            relative_delta=self.relative_delta,
-            metric=self.metric,
-            larger_is_better=self.larger_is_better,
-            results=self.results,
-            stopped=self.stopped,
-            best_epoch=self.best_epoch,
-            best_metric=self.best_metric,
-        )
+        return {
+            "frequency": self.frequency,
+            "patience": self.patience,
+            "remaining_patience": self.remaining_patience,
+            "relative_delta": self.relative_delta,
+            "metric": self.metric,
+            "larger_is_better": self.larger_is_better,
+            "results": self.results,
+            "stopped": self.stopped,
+            "best_epoch": self.best_epoch,
+            "best_metric": self.best_metric,
+        }
 
     def _write_from_summary_dict(
         self,

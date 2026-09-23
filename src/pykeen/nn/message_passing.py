@@ -58,7 +58,7 @@ class Decomposition(nn.Module, ExtraReprMixin, ABC):
 
     The implementations use the efficient version based on adjacency tensor stacking from [thanapalasingam2021]_.
     The adjacency tensor is reshaped into a sparse matrix to support message passing by a
-    single sparse matrix multiplication, cf. :func:`pykeen.nn.utils.adjacency_tensor_to_stacked_matrix`.
+    single sparse matrix multiplication, cf. :func:`~pykeen.nn.utils.adjacency_tensor_to_stacked_matrix`.
 
     .. note ::
         this module does neither take care of the self-loop, nor of applying an activation function.
@@ -199,7 +199,7 @@ class BasesDecomposition(Decomposition):
         :param num_bases:
             The number of bases.
         :param kwargs:
-            Additional keyword-based parameters passed to :class:`pykeen.nn.message_passing.Decomposition`.
+            Additional keyword-based parameters passed to :class:`~pykeen.nn.message_passing.Decomposition`.
         """
         super().__init__(**kwargs)
 
@@ -215,11 +215,10 @@ class BasesDecomposition(Decomposition):
             max_id=self.num_relations,
             shape=(self.input_dim, self.output_dim),
             num_bases=num_bases,
-            weight_initializer=uniform_norm_p1_,
-            initializer=nn.init.xavier_normal_,
+            weight_kwargs={"initializer": uniform_norm_p1_},
+            base_kwargs={"initializer": nn.init.xavier_normal_},
         )
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"num_bases={self.relation_representations.num_bases}"
@@ -227,25 +226,22 @@ class BasesDecomposition(Decomposition):
     @property
     def bases(self) -> torch.Tensor:
         """Return the base representations."""
-        return self.relation_representations.bases(indices=None)
+        return self.relation_representations.base(indices=None)
 
     @property
     def base_weights(self) -> torch.Tensor:
         """Return the base weights."""
-        return self.relation_representations.weight
+        return self.relation_representations.weight(indices=None)
 
-    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         # note: the only parameters are inside the relation representation module, which has its own reset_parameters
         pass
 
-    # docstr-coverage: inherited
     def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
         x = einsum("ni, rb, bio -> rno", x, self.base_weights, self.bases)
         # TODO: can we change the dimension order to make this contiguous?
         return torch.spmm(adj, x.reshape(-1, self.output_dim))
 
-    # docstr-coverage: inherited
     def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
         x = torch.spmm(adj, x)
         x = x.view(self.num_relations, -1, self.input_dim)
@@ -307,7 +303,7 @@ class BlockDecomposition(Decomposition):
         :param num_blocks:
             The number of blocks.
         :param kwargs:
-            Keyword-based parameters passed to :class:`pykeen.nn.message_passing.Decomposition`.
+            Keyword-based parameters passed to :class:`~pykeen.nn.message_passing.Decomposition`.
         """
         super().__init__(**kwargs)
 
@@ -341,7 +337,6 @@ class BlockDecomposition(Decomposition):
         """Reset the layer's parameters."""
         xavier_normal_(self.blocks.data)
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"num_blocks={self.num_blocks}"
@@ -351,7 +346,6 @@ class BlockDecomposition(Decomposition):
             yield f"input_block_size={self.input_block_size}"
             yield f"output_block_size={self.output_block_size}"
 
-    # docstr-coverage: inherited
     def forward_horizontally_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
         # apply padding if necessary
         x = _pad_if_necessary(x=x, dim=self.padded_input_dim)
@@ -367,7 +361,6 @@ class BlockDecomposition(Decomposition):
         # remove padding if necessary
         return _unpad_if_necessary(x=x, dim=self.padded_output_dim)
 
-    # docstr-coverage: inherited
     def forward_vertically_stacked(self, x: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:  # noqa: D102
         # apply padding if necessary
         x = _pad_if_necessary(x=x, dim=self.padded_input_dim)
@@ -507,7 +500,8 @@ class RGCNLayer(nn.Module):
 
 
 decomposition_resolver: ClassResolver[Decomposition] = ClassResolver.from_subclasses(
-    base=Decomposition, default=BasesDecomposition
+    base=Decomposition,  # type: ignore[type-abstract]
+    default=BasesDecomposition,
 )
 
 
@@ -683,14 +677,12 @@ class RGCNRepresentation(Representation):
         self.enriched_embeddings = None
         self.cache = cache
 
-    # docstr-coverage: inherited
     def post_parameter_update(self) -> None:  # noqa: D102
         super().post_parameter_update()
 
         # invalidate enriched embeddings
         self.enriched_embeddings = None
 
-    # docstr-coverage: inherited
     def reset_parameters(self):  # noqa: D102
         self.entity_embeddings.reset_parameters()
 

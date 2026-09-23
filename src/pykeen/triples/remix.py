@@ -1,12 +1,12 @@
 """Remixing and dataset distance utilities.
 
-Most datasets are given in with a pre-defined split, but it's often not discussed
-how this split was created. This module contains utilities for investigating the
-effects of remixing pre-split datasets like :class`pykeen.datasets.Nations`.
+Most datasets are given in with a pre-defined split, but it's often not discussed how this split was created. This
+module contains utilities for investigating the effects of remixing pre-split datasets like
+:class:`~pykeen.datasets.Nations`.
 
-Further, it defines a metric for the "distance" between two splits of a given dataset.
-Later, this will be used to map the landscape and see if there is a smooth, continuous
-relationship between datasets' splits' distances and their maximum performance.
+Further, it defines a metric for the "distance" between two splits of a given dataset. Later, this will be used to map
+the landscape and see if there is a smooth, continuous relationship between datasets' splits' distances and their
+maximum performance.
 """
 
 from collections.abc import Sequence
@@ -25,7 +25,8 @@ def remix(*triples_factories: CoreTriplesFactory, **kwargs) -> list[CoreTriplesF
     """Remix the triples from the training, testing, and validation set.
 
     :param triples_factories: A sequence of triples factories
-    :param kwargs: Keyword arguments to be passed to :func:`split`
+    :param kwargs: Keyword arguments to be passed to :func:`~pykeen.triples.splitting.split`
+
     :returns: A sequence of triples factories of the same sizes but randomly re-assigned triples
 
     :raises NotImplementedError: if any of the triples factories have ``create_inverse_triples``
@@ -45,8 +46,7 @@ def remix(*triples_factories: CoreTriplesFactory, **kwargs) -> list[CoreTriplesF
 
 def _get_ratios(*triples_factories: CoreTriplesFactory) -> Sequence[float]:
     total = sum(tf.num_triples for tf in triples_factories)
-    ratios = normalize_ratios([tf.num_triples / total for tf in triples_factories])
-    return ratios
+    return normalize_ratios([tf.num_triples / total for tf in triples_factories])
 
 
 @click.command()

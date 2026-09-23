@@ -5,11 +5,10 @@ import ftplib
 import inspect
 import json
 import logging
-import os
 import pathlib
 from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, Literal, TypeAlias, cast
 
 import torch
 from class_resolver.contrib.optuna import pruner_resolver, sampler_resolver
@@ -17,6 +16,7 @@ from optuna import Study, Trial, TrialPruned, create_study
 from optuna.pruners import BasePruner
 from optuna.samplers import BaseSampler
 from optuna.storages import BaseStorage
+from optuna.study import StudyDirection
 
 from ..constants import USER_DEFINED_CODE
 from ..datasets import dataset_resolver, has_dataset
@@ -42,7 +42,11 @@ __all__ = [
     "hpo_pipeline_from_config",
     "hpo_pipeline",
     "HpoPipelineResult",
+    "Direction",
 ]
+
+#: the direction of optimization, cf. :func:`optuna.study.create_study`
+Direction: TypeAlias = Literal["minimize", "maximize"] | StudyDirection
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +124,7 @@ class Objective:
     result_tracker_kwargs: Mapping[str, Any] | None = None
     # Misc.
     device: None | str | torch.device = None
-    save_model_directory: str | None = None
+    save_model_directory: str | pathlib.Path | None = None
 
     @staticmethod
     def _update_stopper_callbacks(
@@ -135,12 +139,12 @@ class Objective:
             trial.report(result, step=epoch)
             if trial.should_prune():
                 # log pruning
-                result_tracker.log_metrics(metrics=dict(pruned=1), step=epoch)
+                result_tracker.log_metrics(metrics={"pruned": 1}, step=epoch)
                 # trial was successful, but has to be ended
                 result_tracker.end_run(success=True)
                 # also show info
                 logger.info(f"Pruned trial: {trial} at epoch {epoch} due to {metric}={result}")
-                raise TrialPruned()
+                raise TrialPruned
 
         def _stopped_callback(_early_stopper: EarlyStopper, _result: float | int, epoch: int) -> None:
             trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
@@ -317,8 +321,8 @@ class Objective:
             raise e
         else:
             if self.save_model_directory:
-                model_directory = os.path.join(self.save_model_directory, str(trial.number))
-                os.makedirs(model_directory, exist_ok=True)
+                model_directory = pathlib.Path(self.save_model_directory).joinpath(str(trial.number))
+                model_directory.mkdir(parents=True, exist_ok=True)
                 result.save_to_directory(model_directory)
 
             trial.set_user_attr("random_seed", result.random_seed)
@@ -345,11 +349,11 @@ class HpoPipelineResult(Result):
             "best_trial_evaluation": self.study.best_value,
         }
 
-        pipeline_config = dict()
+        pipeline_config = {}
         for k, v in self.study.user_attrs.items():
             if k.startswith("pykeen_"):
                 metadata[k[len("pykeen_") :]] = v
-            elif k in {"metric"}:
+            elif k == "metric":
                 continue
             else:
                 pipeline_config[k] = v
@@ -393,7 +397,7 @@ class HpoPipelineResult(Result):
                 f" early stopping will now switch it to {int(stopped_epoch)}"
             )
             pipeline_config["training_kwargs"]["num_epochs"] = int(stopped_epoch)
-        return dict(metadata=metadata, pipeline=pipeline_config)
+        return {"metadata": metadata, "pipeline": pipeline_config}
 
     def save_to_directory(self, directory: str | pathlib.Path, **kwargs) -> None:
         """Dump the results of a study to the given directory."""
@@ -413,24 +417,25 @@ class HpoPipelineResult(Result):
         with best_pipeline_directory.joinpath("pipeline_config.json").open("w") as file:
             json.dump(self._get_best_study_config(), file, indent=2, sort_keys=True)
 
-    def save_to_ftp(self, directory: str, ftp: ftplib.FTP):
+    def save_to_ftp(self, directory: str | pathlib.Path, ftp: ftplib.FTP):
         """Save the results to the directory in an FTP server.
 
         :param directory: The directory in the FTP server to save to
         :param ftp: A connection to the FTP server
         """
-        ensure_ftp_directory(ftp=ftp, directory=directory)
+        directory_p = pathlib.Path(directory)
+        ensure_ftp_directory(ftp=ftp, directory=directory_p)
 
-        study_path = os.path.join(directory, "study.json")
+        study_path = directory_p / "study.json"
         ftp.storbinary(f"STOR {study_path}", get_json_bytes_io(self.study.user_attrs))
 
-        trials_path = os.path.join(directory, "trials.tsv")
+        trials_path = directory_p / "trials.tsv"
         ftp.storbinary(f"STOR {trials_path}", get_df_io(self.study.trials_dataframe()))
 
-        best_pipeline_directory = os.path.join(directory, "best_pipeline")
+        best_pipeline_directory = directory_p / "best_pipeline"
         ensure_ftp_directory(ftp=ftp, directory=best_pipeline_directory)
 
-        best_config_path = os.path.join(best_pipeline_directory, "pipeline_config.json")
+        best_config_path = best_pipeline_directory / "pipeline_config.json"
         ftp.storbinary(f"STOR {best_config_path}", get_json_bytes_io(self._get_best_study_config()))
 
     def save_to_s3(self, directory: str, bucket: str, s3=None) -> None:
@@ -445,13 +450,14 @@ class HpoPipelineResult(Result):
 
             s3 = boto3.client("s3")
 
-        study_path = os.path.join(directory, "study.json")
+        directory_p = pathlib.Path(directory)
+        study_path = directory_p / "study.json"
         s3.upload_fileobj(get_json_bytes_io(self.study.user_attrs), bucket, study_path)
 
-        trials_path = os.path.join(directory, "trials.tsv")
+        trials_path = directory_p / "trials.tsv"
         s3.upload_fileobj(get_df_io(self.study.trials_dataframe()), bucket, trials_path)
 
-        best_config_path = os.path.join(directory, "best_pipeline", "pipeline_config.json")
+        best_config_path = directory_p / "best_pipeline", "pipeline_config.json"
         s3.upload_fileobj(get_json_bytes_io(self._get_best_study_config()), bucket, best_config_path)
 
     def replicate_best_pipeline(
@@ -472,7 +478,7 @@ class HpoPipelineResult(Result):
         :param save_training: Should the training triples be saved?
 
         :raises ValueError:
-            if :data:`"use_testing_data"` is provided in the best pipeline's `config`.
+            if ``"use_testing_data"`` is provided in the best pipeline's `config`.
         """
         config = self._get_best_study_config()
 
@@ -492,7 +498,7 @@ class HpoPipelineResult(Result):
 
 def hpo_pipeline_from_path(path: str | pathlib.Path, **kwargs) -> HpoPipelineResult:
     """Run a HPO study from the configuration at the given path."""
-    with open(path) as file:
+    with pathlib.Path(path).open() as file:
         config = json.load(file)
     return hpo_pipeline_from_config(config, **kwargs)
 
@@ -566,20 +572,20 @@ def hpo_pipeline(
     pruner: HintType[BasePruner] = None,
     pruner_kwargs: Mapping[str, Any] | None = None,
     study_name: str | None = None,
-    direction: str | None = None,
+    direction: Direction | None = None,
     load_if_exists: bool = False,
     # Optuna Optimization Settings
     n_trials: int | None = None,
     timeout: int | None = None,
-    gc_after_trial: bool | None = None,
+    gc_after_trial: bool = False,
     n_jobs: int | None = None,
     save_model_directory: str | None = None,
 ) -> HpoPipelineResult:
     """Train a model on the given dataset.
 
     :param dataset:
-        The name of the dataset (a key for the :data:`pykeen.datasets.dataset_resolver`) or the
-        :class:`pykeen.datasets.Dataset` instance. Alternatively, the training triples factory (``training``), testing
+        The name of the dataset (a key for the :data:`~pykeen.datasets.dataset_resolver`) or the
+        :class:`~pykeen.datasets.Dataset` instance. Alternatively, the training triples factory (``training``), testing
         triples factory (``testing``), and validation triples factory (``validation``; optional) can be specified.
     :param dataset_kwargs:
         The keyword arguments passed to the dataset upon instantiation
@@ -592,14 +598,14 @@ def hpo_pipeline(
     :param evaluation_entity_whitelist:
         Optional restriction of evaluation to triples containing *only* these entities. Useful if the downstream task
         is only interested in certain entities, but the relational patterns with other entities improve the entity
-        embedding quality. Passed to :func:`pykeen.pipeline.pipeline`.
+        embedding quality. Passed to :func:`~pykeen.pipeline.pipeline`.
     :param evaluation_relation_whitelist:
         Optional restriction of evaluation to triples containing *only* these relations. Useful if the downstream task
         is only interested in certain relation, but the relational patterns with other relations improve the entity
-        embedding quality. Passed to :func:`pykeen.pipeline.pipeline`.
+        embedding quality. Passed to :func:`~pykeen.pipeline.pipeline`.
 
     :param model:
-        The name of the model or the model class to pass to :func:`pykeen.pipeline.pipeline`
+        The name of the model or the model class to pass to :func:`~pykeen.pipeline.pipeline`
     :param model_kwargs:
         Keyword arguments to pass to the model class on instantiation
     :param model_kwargs_ranges:
@@ -607,7 +613,7 @@ def hpo_pipeline(
         the defaults
 
     :param loss:
-        The name of the loss or the loss class to pass to :func:`pykeen.pipeline.pipeline`
+        The name of the loss or the loss class to pass to :func:`~pykeen.pipeline.pipeline`
     :param loss_kwargs:
         Keyword arguments to pass to the loss on instantiation
     :param loss_kwargs_ranges:
@@ -615,7 +621,7 @@ def hpo_pipeline(
         the defaults
 
     :param regularizer:
-        The name of the regularizer or the regularizer class to pass to :func:`pykeen.pipeline.pipeline`
+        The name of the regularizer or the regularizer class to pass to :func:`~pykeen.pipeline.pipeline`
     :param regularizer_kwargs:
         Keyword arguments to pass to the regularizer on instantiation
     :param regularizer_kwargs_ranges:
@@ -639,12 +645,12 @@ def hpo_pipeline(
 
     :param training_loop:
         The name of the training approach (``'slcwa'`` or ``'lcwa'``) or the training loop class
-        to pass to :func:`pykeen.pipeline.pipeline`
+        to pass to :func:`~pykeen.pipeline.pipeline`
     :param training_loop_kwargs:
         additional keyword-based parameters passed to the training loop upon instantiation.
     :param negative_sampler:
         The name of the negative sampler (``'basic'`` or ``'bernoulli'``) or the negative sampler class
-        to pass to :func:`pykeen.pipeline.pipeline`. Only allowed when training with sLCWA.
+        to pass to :func:`~pykeen.pipeline.pipeline`. Only allowed when training with sLCWA.
     :param negative_sampler_kwargs:
         Keyword arguments to pass to the negative sampler class on instantiation
     :param negative_sampler_kwargs_ranges:
@@ -665,7 +671,7 @@ def hpo_pipeline(
         Keyword arguments to pass to the stopper upon instantiation.
 
     :param evaluator:
-        The name of the evaluator or an evaluator class. Defaults to :class:`pykeen.evaluation.RankBasedEvaluator`.
+        The name of the evaluator or an evaluator class. Defaults to :class:`~pykeen.evaluation.RankBasedEvaluator`.
     :param evaluator_kwargs:
         Keyword arguments to pass to the evaluator on instantiation
     :param evaluation_kwargs:
@@ -767,7 +773,7 @@ def hpo_pipeline(
     if regularizer is not None:
         regularizer_cls = regularizer_resolver.lookup(regularizer)
     elif getattr(model_cls, "regularizer_default", None):
-        regularizer_cls = model_cls.regularizer_default  # type:ignore
+        regularizer_cls = model_cls.regularizer_default
     else:
         regularizer_cls = None
     if regularizer_cls:
@@ -1004,7 +1010,7 @@ def _set_study_dataset(
     if dataset is not None:
         if training is not None or testing is not None or validation is not None:
             raise ValueError("Cannot specify dataset and training, testing and validation")
-        elif isinstance(dataset, str | pathlib.Path):
+        if isinstance(dataset, str | pathlib.Path):
             if isinstance(dataset, str) and has_dataset(dataset):
                 study.set_user_attr("dataset", dataset_resolver.normalize(dataset))
             else:

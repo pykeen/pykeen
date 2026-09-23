@@ -29,7 +29,7 @@ testing = generate_triples_factory(num_entities=num_entities, num_relations=5, n
 pipeline(
     interaction="distmult",
     dimensions={"d": shape[0]},
-    model_kwargs=dict(entity_representations=entity_repr),
+    model_kwargs={"entity_representations": entity_repr},
     training=training,
     testing=testing,
 )

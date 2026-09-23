@@ -36,6 +36,7 @@ def iter_dataset_classes(
     :param max_triples: An optional maximum number of triples for the dataset
     :param min_triples: An optional minimum number of triples for the dataset
     :param use_tqdm: Should a progress bar be shown?
+
     :yields: Pairs of dataset names and dataset classes
     """
     from . import dataset_resolver
@@ -76,6 +77,7 @@ def iter_dataset_instances(
     :param max_triples: An optional maximum number of triples for the dataset
     :param min_triples: An optional minimum number of triples for the dataset
     :param use_tqdm: Should a progress bar be shown?
+
     :yields: Pairs of dataset names and dataset instances
     """
     for name, cls in iter_dataset_classes(
@@ -99,17 +101,17 @@ def get_dataset(
     """Get a dataset, cached based on the given kwargs.
 
     :param dataset: The name of a dataset, an instance of a dataset, or the class for a dataset.
-    :param dataset_kwargs: The keyword arguments, only to be used when a class for a dataset is used for
-        the ``dataset`` keyword argument.
+    :param dataset_kwargs: The keyword arguments, only to be used when a class for a dataset is used for the ``dataset``
+        keyword argument.
     :param training: A triples factory for training triples or a path to a training triples file if ``dataset=None``
-    :param testing: A triples factory for testing triples or a path to a testing triples file  if ``dataset=None``
-    :param validation: A triples factory for validation triples or a path to a validation triples file
-        if ``dataset=None``
+    :param testing: A triples factory for testing triples or a path to a testing triples file if ``dataset=None``
+    :param validation: A triples factory for validation triples or a path to a validation triples file if
+        ``dataset=None``
+
     :returns: An instantiated dataset
 
     :raises ValueError: for incorrect usage of the input of the function
-    :raises TypeError: If a type is given for ``dataset`` but it's not a subclass of
-        :class:`pykeen.datasets.Dataset`
+    :raises TypeError: If a type is given for ``dataset`` but it's not a subclass of :class:`~pykeen.datasets.Dataset`
     """
     from . import dataset_resolver, has_dataset
 
@@ -134,9 +136,8 @@ def get_dataset(
     if isinstance(dataset, str):
         if has_dataset(dataset):
             return _cached_get_dataset(dataset, dataset_kwargs)
-        else:
-            # Assume it's a file path
-            return Dataset.from_path(dataset)
+        # Assume it's a file path
+        return Dataset.from_path(dataset)
 
     if dataset is not None:
         raise TypeError(f"Dataset is invalid type: {type(dataset)}")
@@ -149,7 +150,7 @@ def get_dataset(
                 validation_path=validation,
                 **(dataset_kwargs or {}),
             )
-        elif validation is not None:
+        if validation is not None:
             raise TypeError(f"Validation is invalid type: {type(validation)}")
 
     if isinstance(training, CoreTriplesFactory) and isinstance(testing, CoreTriplesFactory):
@@ -171,7 +172,7 @@ def get_dataset(
     )
 
 
-def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = tuple()) -> str:
+def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = ()) -> str:
     digester = hashlib.sha256()
     for key in sorted(dataset_kwargs.keys()):
         if key in ignore:
@@ -179,17 +180,6 @@ def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = 
         digester.update(key.encode(encoding="utf8"))
         digester.update(str(dataset_kwargs[key]).encode(encoding="utf8"))
     return base64.urlsafe_b64encode(digester.digest()).decode("utf8")[:32]
-
-
-def _set_inverse_triples_(dataset_instance: Dataset, create_inverse_triples: bool) -> Dataset:
-    # note: we only need to set the create_inverse_triples in the training factory.
-    if dataset_instance.create_inverse_triples and not create_inverse_triples:
-        assert dataset_instance.training.num_relations % 2 == 0
-        dataset_instance.training.num_relations //= 2
-    elif create_inverse_triples and not dataset_instance.training.create_inverse_triples:
-        dataset_instance.training.num_relations *= 2
-    dataset_instance.training.create_inverse_triples = create_inverse_triples
-    return dataset_instance
 
 
 def _cached_get_dataset(
@@ -219,10 +209,11 @@ def _cached_get_dataset(
     # try to use cached dataset
     if path.is_dir() and not force:
         logger.info(f"Loading cached preprocessed dataset from {path.as_uri()}")
-        return _set_inverse_triples_(
-            dataset_cls.from_directory_binary(path),
-            create_inverse_triples=dataset_kwargs.get("create_inverse_triples", False),
-        )
+        dataset_instance = dataset_cls.from_directory_binary(path)
+        # the cache is shared across create_inverse_triples settings, cf. the ignored key above.
+        # note: we only need to set the flag on the training factory; its setter keeps num_relations in sync.
+        dataset_instance.training.create_inverse_triples = dataset_kwargs.get("create_inverse_triples", False)
+        return dataset_instance
 
     # load dataset without cache
     dataset_instance = dataset_resolver.make(dataset, dataset_kwargs)

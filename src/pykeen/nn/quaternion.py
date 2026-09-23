@@ -14,8 +14,7 @@ __all__ = [
 
 
 def normalize(x: FloatTensor) -> FloatTensor:
-    r"""
-    Normalize the length of relation vectors, if the forward constraint has not been applied yet.
+    r"""Normalize the length of relation vectors, if the forward constraint has not been applied yet.
 
     Absolute value of a quaternion
 
@@ -26,14 +25,13 @@ def normalize(x: FloatTensor) -> FloatTensor:
     L2 norm of quaternion vector:
 
     .. math::
+
         \|x\|^2 = \sum_{i=1}^d |x_i|^2
                  = \sum_{i=1}^d (x_i.re^2 + x_i.im_1^2 + x_i.im_2^2 + x_i.im_3^2)
 
-    :param x: shape: ``(*batch_dims, 4 \cdot d)``
-        The vector in flat form.
+    :param x: shape: ``(*batch_dims, 4 \cdot d)`` The vector in flat form.
 
-    :return: shape: ``(*batch_dims, 4 \cdot d)``
-        The normalized vector.
+    :returns: shape: ``(*batch_dims, 4 \cdot d)`` The normalized vector.
     """
     # Normalize relation embeddings
     shape = x.shape
@@ -57,11 +55,9 @@ def hamiltonian_product(qa: FloatTensor, qb: FloatTensor) -> FloatTensor:
 
 @lru_cache(1)
 def multiplication_table() -> FloatTensor:
-    """
-    Create the quaternion basis multiplication table.
+    """Create the quaternion basis multiplication table.
 
-    :return: shape: (4, 4, 4)
-        the table of products of basis elements.
+    :returns: shape: (4, 4, 4) the table of products of basis elements.
 
     ..seealso:: https://en.wikipedia.org/wiki/Quaternion#Multiplication_of_basis_elements
     """

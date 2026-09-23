@@ -50,15 +50,11 @@ class WikidataImageCache(WikidataTextCache):
     ) -> Sequence[pathlib.Path | None]:
         """Get paths to images for the given IDs.
 
-        :param ids:
-            the Wikidata IDs.
-        :param extensions:
-            the allowed file extensions
-        :param progress:
-            whether to display a progress bar
+        :param ids: the Wikidata IDs.
+        :param extensions: the allowed file extensions
+        :param progress: whether to display a progress bar
 
-        :return:
-            the paths to images for the given IDs.
+        :returns: the paths to images for the given IDs.
         """
         id_to_path = self._discover_images(extensions=extensions)
         missing = sorted(set(ids).difference(id_to_path.keys()))
@@ -99,7 +95,7 @@ class WikidataImageCache(WikidataTextCache):
             # image URL
             image_url = nested_get(entry, "image", "value", default=None)
             assert image_url is not None
-            images.setdefault(wikidata_id, dict()).setdefault(relation_id, []).append(image_url)
+            images.setdefault(wikidata_id, {}).setdefault(relation_id, []).append(image_url)
 
         # check whether images are still missing
         missing = sorted(set(missing).difference(images.keys()))
@@ -113,7 +109,7 @@ class WikidataImageCache(WikidataTextCache):
                 if relation not in url_dict:
                     continue
                 # now there is an image available -> select reproducible by URL sorting
-                image_url = sorted(url_dict[relation])[0]
+                image_url = min(url_dict[relation])
                 ext = image_url.rsplit(".", maxsplit=1)[-1].lower()
                 if ext not in extensions:
                     logger.warning(f"Unknown extension: {ext} for {image_url}")
@@ -121,7 +117,7 @@ class WikidataImageCache(WikidataTextCache):
                     "images",
                     url=image_url,
                     name=f"{wikidata_id}.{ext}",
-                    download_kwargs=dict(backend="requests", headers=self.HEADERS),
+                    download_kwargs={"backend": "requests", "headers": self.HEADERS},
                 )
             else:
                 # did not break -> no image

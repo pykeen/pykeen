@@ -17,6 +17,8 @@ __all__ = [
     "get_entities",
     "get_relations",
     "tensor_to_df",
+    "max_value",
+    "get_num_ids",
 ]
 
 TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label")
@@ -24,14 +26,26 @@ TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", 
 Importer = Callable[[str], LabeledTriples]
 
 #: Functions for specifying exotic resources with a given prefix
-PREFIX_IMPORTER_RESOLVER: FunctionResolver[Importer] = FunctionResolver.from_entrypoint(
+PREFIX_IMPORTER_RESOLVER: FunctionResolver[[str], LabeledTriples] = FunctionResolver.from_entrypoint(
     "pykeen.triples.prefix_importer"
 )
 
 #: Functions for specifying exotic resources based on their file extension
-EXTENSION_IMPORTER_RESOLVER: FunctionResolver[Importer] = FunctionResolver.from_entrypoint(
+EXTENSION_IMPORTER_RESOLVER: FunctionResolver[[str], LabeledTriples] = FunctionResolver.from_entrypoint(
     "pykeen.triples.extension_importer"
 )
+
+
+class InvalidRemappingLengthError(ValueError):
+    """An error in the length of a remapping."""
+
+    def __init__(self, length: int) -> None:
+        """Instantiate the error.
+
+        :param length:
+            The actual length of the remapping.
+        """
+        super().__init__(f"Remapping must have length of three, but has {length}")
 
 
 def load_triples(
@@ -42,13 +56,14 @@ def load_triples(
 ) -> LabeledTriples:
     """Load triples saved as tab separated values.
 
-    :param path: The key for the data to be loaded. Typically, this will be a file path ending in ``.tsv``
-        that points to a file with three columns - the head, relation, and tail. This can also be used to
-        invoke PyKEEN data importer entrypoints (see below).
+    :param path: The key for the data to be loaded. Typically, this will be a file path ending in ``.tsv`` that points
+        to a file with three columns - the head, relation, and tail. This can also be used to invoke PyKEEN data
+        importer entrypoints (see below).
     :param delimiter: The delimiter between the columns in the file
     :param encoding: The encoding for the file. Defaults to utf-8.
-    :param column_remapping: A remapping if the three columns do not follow the order head-relation-tail.
-        For example, if the order is head-tail-relation, pass ``(0, 2, 1)``
+    :param column_remapping: A remapping if the three columns do not follow the order head-relation-tail. For example,
+        if the order is head-tail-relation, pass ``(0, 2, 1)``
+
     :returns: A numpy array representing "labeled" triples.
 
     :raises ValueError: if a column remapping was passed, but it was not a length 3 sequence
@@ -70,9 +85,8 @@ def load_triples(
 
     if encoding is None:
         encoding = "utf-8"
-    if column_remapping is not None:
-        if len(column_remapping) != 3:
-            raise ValueError("remapping must have length of three")
+    if column_remapping is not None and len(column_remapping) != 3:
+        raise InvalidRemappingLengthError(len(column_remapping))
     df = pandas.read_csv(
         path,
         sep=delimiter,
@@ -103,17 +117,13 @@ def tensor_to_df(
 ) -> pandas.DataFrame:
     """Take a tensor of triples and make a pandas dataframe with labels.
 
-    :param tensor: shape: (n, 3)
-        The triples, ID-based and in format (head_id, relation_id, tail_id).
-    :param kwargs:
-        Any additional number of columns. Each column needs to be of shape (n,). Reserved column names:
+    :param tensor: shape: (n, 3) The triples, ID-based and in format (head_id, relation_id, tail_id).
+    :param kwargs: Any additional number of columns. Each column needs to be of shape (n,). Reserved column names:
         {"head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label"}.
 
-    :return:
-        A dataframe with n rows, and 3 + len(kwargs) columns.
+    :returns: A dataframe with n rows, and 3 + len(kwargs) columns.
 
-    :raises ValueError:
-        If a reserved column name appears in kwargs.
+    :raises ValueError: If a reserved column name appears in kwargs.
     """
     # Input validation
     additional_columns = set(kwargs.keys())
@@ -150,12 +160,10 @@ def compute_compressed_adjacency_list(
 
     The compressed adjacency list format is inspired by CSR sparse matrix format.
 
-    :param mapped_triples:
-        the ID-based triples
-    :param num_entities:
-        the number of entities.
+    :param mapped_triples: the ID-based triples
+    :param num_entities: the number of entities.
 
-    :return: a tuple `(degrees, offsets, compressed_adj_lists)` where
+    :returns: a tuple `(degrees, offsets, compressed_adj_lists)` where
 
             - degrees: shape: `(num_entities,)`
             - offsets: shape: `(num_entities,)`
@@ -163,7 +171,7 @@ def compute_compressed_adjacency_list(
 
         with
 
-        .. code::
+        .. code-block::
 
             adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
     """
@@ -181,3 +189,18 @@ def compute_compressed_adjacency_list(
     offset[1:] = torch.cumsum(degrees, dim=0)[:-1]
     compressed_adj_lists = torch.cat([torch.as_tensor(adj_list, dtype=torch.long) for adj_list in adj_lists], dim=0)
     return degrees, offset, compressed_adj_lists
+
+
+def max_value(x: LongTensor) -> int | None:
+    """Return the maximum value, or None if the tensor is empty."""
+    if x.numel():
+        return x.max().item()
+    return None
+
+
+def get_num_ids(x: LongTensor) -> int:
+    """Return the number of ids values."""
+    max_id = max_value(x)
+    if max_id is None:
+        return 0
+    return max_id + 1

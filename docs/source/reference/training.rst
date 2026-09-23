@@ -1,5 +1,6 @@
 Training
 ========
+
 .. automodapi:: pykeen.training
     :no-heading:
     :headings: --
@@ -8,6 +9,7 @@ Training
 
 Callbacks
 ---------
+
 .. automodapi:: pykeen.training.callbacks
     :no-heading:
     :headings: ~~
@@ -15,6 +17,7 @@ Callbacks
 
 Learning Rate Schedulers
 ------------------------
+
 .. automodapi:: pykeen.lr_schedulers
     :no-heading:
     :headings: ~~

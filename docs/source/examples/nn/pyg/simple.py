@@ -12,9 +12,9 @@ embedding_dim = 64
 dataset = get_dataset(dataset="nations")
 entities = SimpleMessagePassingRepresentation(
     triples_factory=dataset.training,
-    base_kwargs=dict(shape=embedding_dim),
+    base_kwargs={"shape": embedding_dim},
     layers=["gcn"] * 2,
-    layers_kwargs=dict(in_channels=embedding_dim, out_channels=embedding_dim),
+    layers_kwargs={"in_channels": embedding_dim, "out_channels": embedding_dim},
 )
 result = pipeline(
     dataset=dataset,
@@ -22,7 +22,7 @@ result = pipeline(
     model=ERModel(
         triples_factory=dataset.training,
         entity_representations=entities,
-        relation_representations_kwargs=dict(embedding_dim=embedding_dim),  # use embedding with same dimension
+        relation_representations_kwargs={"embedding_dim": embedding_dim},  # use embedding with same dimension
         interaction="DistMult",
     ),
 )

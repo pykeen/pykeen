@@ -29,9 +29,9 @@ class TransF(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
 
     def __init__(
         self,
@@ -53,21 +53,21 @@ class TransF(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param entity_normalizer_kwargs: Keyword arguments to be used when calling the entity normalizer
         :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
         :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer
-        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
+        :param kwargs: Remaining keyword arguments passed through to :class:`~pykeen.models.ERModel`.
         """
         super().__init__(
             interaction=TransFInteraction,
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-                initializer_kwargs=entity_initializer_kwargs,
-                normalizer=entity_normalizer,
-                normalizer_kwargs=entity_normalizer_kwargs,
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-                initializer_kwargs=relation_initializer_kwargs,
-            ),
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+                "initializer_kwargs": entity_initializer_kwargs,
+                "normalizer": entity_normalizer,
+                "normalizer_kwargs": entity_normalizer_kwargs,
+            },
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
+                "initializer_kwargs": relation_initializer_kwargs,
+            },
             **kwargs,
         )

@@ -1,9 +1,9 @@
-"""
-Classification metrics.
+"""Classification metrics.
 
 The metrics in this module assume the link prediction setting to be a (binary) classification of individual triples.
 
-.. note ::
+.. note::
+
     many metrics in this module use `scikit-learn` under the hood, cf.
     https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
 """
@@ -35,18 +35,13 @@ ZeroDivisionPolicy = Literal["warn", 0, 1]
 
 
 def safe_divide(numerator: float, denominator: float, zero_division: ZeroDivisionPolicy = "warn") -> float:
-    """
-    Perform division and handle divide-by-zero similar to scikit-learn.
+    """Perform division and handle divide-by-zero similar to scikit-learn.
 
-    :param numerator:
-        the numerator
-    :param denominator:
-        the denominator
-    :param zero_division:
-        the zero-division policy; If "warn", act like 0, but warn about the case.
+    :param numerator: the numerator
+    :param denominator: the denominator
+    :param zero_division: the zero-division policy; If "warn", act like 0, but warn about the case.
 
-    :return:
-        the division result
+    :returns: the division result
     """
     # todo: do we need numpy support?
     if denominator != 0:
@@ -64,24 +59,21 @@ def safe_divide(numerator: float, denominator: float, zero_division: ZeroDivisio
 def construct_indicator(*, y_score: numpy.ndarray, y_true: numpy.ndarray) -> numpy.ndarray:
     """Construct binary indicators from a list of scores.
 
-    If there are $n$ positively labeled entries in ``y_true``, this function
-    assigns the top $n$ highest scores in ``y_score`` as positive and remainder
-    as negative.
+    If there are $n$ positively labeled entries in ``y_true``, this function assigns the top $n$ highest scores in
+    ``y_score`` as positive and remainder as negative.
 
-    .. note ::
-        Since the method uses the number of true labels to determine a threshold, the
-        results will typically be overly optimistic estimates of the generalization performance.
+    .. note::
 
-    .. todo ::
-        Add a method which estimates a threshold based on a validation set, and applies this
-        threshold for binarization on the test set.
+        Since the method uses the number of true labels to determine a threshold, the results will typically be overly
+        optimistic estimates of the generalization performance.
 
-    :param y_score:
-        A 1-D array of the score values
-    :param y_true:
-        A 1-D array of binary values (1 and 0)
-    :return:
-        A 1-D array of indicator values
+    .. todo:: Add a method which estimates a threshold based on a validation set, and applies this
+    threshold for binarization on the test set.
+
+    :param y_score: A 1-D array of the score values
+    :param y_true: A 1-D array of binary values (1 and 0)
+
+    :returns: A 1-D array of indicator values
 
     .. seealso::
 
@@ -102,21 +94,18 @@ class ClassificationMetric(Metric, abc.ABC):
     def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
         """Evaluate the metric.
 
-        :param y_true: shape: (num_samples,)
-            the true labels, either 0 or 1.
-        :param y_score: shape: (num_samples,)
-            the predictions, either continuous or binarized.
-        :param weights: shape: (num_samples,)
-            weights for individual predictions
+        :param y_true: shape: (num_samples,) the true labels, either 0 or 1.
+        :param y_score: shape: (num_samples,) the predictions, either continuous or binarized.
+        :param weights: shape: (num_samples,) weights for individual predictions
 
-            .. warning ::
+            .. warning::
+
                 not all metrics support sample weights - check :attr:`supports_weights` first
 
-        :return:
-            the scalar metric value
 
-        :raises ValueError:
-            when weights are provided but the function does not support them.
+        :returns: the scalar metric value
+
+        :raises ValueError: when weights are provided but the function does not support them.
         """
         if weights is None:
             return self.forward(y_true=y_true, y_score=y_score)
@@ -128,19 +117,14 @@ class ClassificationMetric(Metric, abc.ABC):
     def forward(
         self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
     ) -> float:
-        """
-        Calculate the metric.
+        """Calculate the metric.
 
-        :param y_true: shape: (num_samples,)
-            the true label, either 0 or 1.
-        :param y_score: shape: (num_samples,)
-            the predictions, either as continuous scores, or as binarized prediction
+        :param y_true: shape: (num_samples,) the true label, either 0 or 1.
+        :param y_score: shape: (num_samples,) the predictions, either as continuous scores, or as binarized prediction
             (depending on the concrete metric at hand).
-        :param sample_weight: shape: (num_samples,)
-            sample weights
+        :param sample_weight: shape: (num_samples,) sample weights
 
-        :return:
-            a scalar metric value
+        :returns: a scalar metric value
 
         # noqa:DAR202
         """
@@ -148,8 +132,7 @@ class ClassificationMetric(Metric, abc.ABC):
 
 @parse_docdata
 class NumScores(ClassificationMetric):
-    """
-    The number of scores.
+    """The number of scores.
 
     Lower numbers may indicate unreliable results.
     ---
@@ -162,7 +145,6 @@ class NumScores(ClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("score_count",)
 
-    # docstr-coverage: inherited
     def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:  # noqa: D102
         return y_score.size
 
@@ -172,7 +154,6 @@ class BinarizedClassificationMetric(ClassificationMetric, abc.ABC):
 
     binarize: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
     def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:  # noqa: D102
         return super().__call__(
             y_true=y_true, y_score=construct_indicator(y_score=y_score, y_true=y_true), weights=weights
@@ -181,8 +162,7 @@ class BinarizedClassificationMetric(ClassificationMetric, abc.ABC):
 
 @parse_docdata
 class BalancedAccuracyScore(BinarizedClassificationMetric):
-    """
-    The average of recall obtained on each class.
+    """The average of recall obtained on each class.
 
     ---
     link: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.balanced_accuracy_score.html
@@ -195,7 +175,6 @@ class BalancedAccuracyScore(BinarizedClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("b-acc", "bas")
     supports_weights: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
     def forward(
         self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
     ) -> float:  # noqa: D102
@@ -206,9 +185,10 @@ class BalancedAccuracyScore(BinarizedClassificationMetric):
 class AveragePrecisionScore(ClassificationMetric):
     """The average precision from prediction scores.
 
-    .. note ::
-        this metric is different from the area under the precision-recall curve, which uses
-        interpolation and can be too optimistic.
+    .. note::
+
+        this metric is different from the area under the precision-recall curve, which uses interpolation and can be too
+        optimistic.
 
     ---
     link: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html
@@ -223,7 +203,6 @@ class AveragePrecisionScore(ClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("aps", "ap")
     supports_weights: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
     def forward(
         self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
     ) -> float:  # noqa: D102
@@ -232,8 +211,7 @@ class AveragePrecisionScore(ClassificationMetric):
 
 @parse_docdata
 class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
-    """
-    The area under the receiver operating characteristic curve.
+    """The area under the receiver operating characteristic curve.
 
     ---
     link: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html
@@ -246,7 +224,6 @@ class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("roc-auc",)
     supports_weights: ClassVar[bool] = True
 
-    # docstr-coverage: inherited
     def forward(
         self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
     ) -> float:  # noqa: D102
@@ -260,15 +237,21 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
     zero_division: ZeroDivisionPolicy = "warn"
 
     @abc.abstractmethod
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         """
-        Calculate the metric from the confusion table.
+        Calculate the metric from the confusion matrix entries.
 
-        :param matrix: shape: (2, 2)
-            the confusion table of the form::
+        The unpacking follows the sklearn convention:
 
-                [[ TP, FN ]
-                 [ FP, TN ]]
+        .. code-block:: python
+
+            # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html
+            tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+
+        :param tn: true negatives
+        :param fp: false positives
+        :param fn: false negatives
+        :param tp: true positives
 
         :return:
             the scalar metric
@@ -277,19 +260,20 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
         """
         # todo: it would make sense to have a separate evaluator which constructs the confusion matrix only once
 
-    # docstr-coverage: inherited
     def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:  # noqa: D102
         y_pred = construct_indicator(y_score=y_score, y_true=y_true)
         matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred, sample_weight=weights, normalize=None)
-        return self.extract_from_confusion_matrix(matrix=matrix)
+        # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html
+        tn, fp, fn, tp = matrix.ravel().tolist()
+        return self.extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
 
 
 @parse_docdata
 class TruePositiveRate(ConfusionMatrixClassificationMetric):
-    """
-    The true positive rate is the probability that the prediction is positive, given the triple is truly positive.
+    """The true positive rate is the probability that the prediction is positive, given the triple is truly positive.
 
-    .. math ::
+    .. math::
+
         TPR = TP / (TP + FN)
 
     ---
@@ -302,24 +286,22 @@ class TruePositiveRate(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("tpr", "sensitivity", "recall", "hit rate")
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[1, 1].item(), denominator=matrix[1, :].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tp, denominator=tp + fn, zero_division=self.zero_division)
 
 
 @parse_docdata
 class TrueNegativeRate(ConfusionMatrixClassificationMetric):
-    """
-    The true negative rate is the probability that the prediction is negative, given the triple is truly negative.
+    """The true negative rate is the probability that the prediction is negative, given the triple is truly negative.
 
-    .. math ::
+    .. math::
+
         TNR = TN / (TN + FP)
 
-    .. warning ::
-        most knowledge graph datasets do not have true negatives, i.e., verified false facts, but rather are
-        collection of (mostly) true facts, where the missing ones are generally unknown rather than false.
+    .. warning::
+
+        most knowledge graph datasets do not have true negatives, i.e., verified false facts, but rather are collection
+        of (mostly) true facts, where the missing ones are generally unknown rather than false.
 
     ---
     link: https://en.wikipedia.org/wiki/Specificity_(tests)
@@ -331,19 +313,16 @@ class TrueNegativeRate(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("tnr", "specificity", "selectivity")
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[0, 0].item(), denominator=matrix[0, :].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tn, denominator=tn + fp, zero_division=self.zero_division)
 
 
 @parse_docdata
 class FalsePositiveRate(ConfusionMatrixClassificationMetric):
-    """
-    The false positive rate is the probability that the prediction is positive, given the triple is truly negative.
+    """The false positive rate is the probability that the prediction is positive, given the triple is truly negative.
 
-    .. math ::
+    .. math::
+
         FPR = FP / (FP + TN)
 
     ---
@@ -356,19 +335,16 @@ class FalsePositiveRate(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("fpr", "fall-out", "false alarm ratio")
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[1, 0].item(), denominator=matrix[1, :].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=fp, denominator=fp + tn, zero_division=self.zero_division)
 
 
 @parse_docdata
 class FalseNegativeRate(ConfusionMatrixClassificationMetric):
-    """
-    The false negative rate is the probability that the prediction is negative, given the triple is truly positive.
+    """The false negative rate is the probability that the prediction is negative, given the triple is truly positive.
 
-    .. math ::
+    .. math::
+
         FNR = FN / (FN + TP)
 
     ---
@@ -381,19 +357,16 @@ class FalseNegativeRate(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("fnr", "miss-rate")
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[0, 1].item(), denominator=matrix[0, :].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=fn, denominator=fn + tp, zero_division=self.zero_division)
 
 
 @parse_docdata
 class PositivePredictiveValue(ConfusionMatrixClassificationMetric):
-    """
-    The positive predictive value is the proportion of predicted positives which are true positive.
+    """The positive predictive value is the proportion of predicted positives which are true positive.
 
-    .. math ::
+    .. math::
+
         PPV = TP / (TP + FP)
 
     ---
@@ -406,19 +379,16 @@ class PositivePredictiveValue(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("ppv",)
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[0, 0].item(), denominator=matrix[:, 0].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tp, denominator=tp + fp, zero_division=self.zero_division)
 
 
 @parse_docdata
 class NegativePredictiveValue(ConfusionMatrixClassificationMetric):
-    """
-    The negative predictive value is the proportion of predicted negatives which are true negative.
+    """The negative predictive value is the proportion of predicted negatives which are true negative.
 
-    .. math ::
+    .. math::
+
         NPV = TN / (TN + FN)
 
     ---
@@ -431,19 +401,16 @@ class NegativePredictiveValue(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("npv",)
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[1, 1].item(), denominator=matrix[:, 1].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tn, denominator=tn + fn, zero_division=self.zero_division)
 
 
 @parse_docdata
 class FalseDiscoveryRate(ConfusionMatrixClassificationMetric):
-    """
-    The false discovery rate is the proportion of predicted negatives which are true positive.
+    """The false discovery rate is the proportion of predicted negatives which are true positive.
 
-    .. math ::
+    .. math::
+
         FDR = FP / (FP + TP)
 
     ---
@@ -456,19 +423,16 @@ class FalseDiscoveryRate(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("fdr",)
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[1, 0].item(), denominator=matrix[:, 0].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=fp, denominator=fp + tp, zero_division=self.zero_division)
 
 
 @parse_docdata
 class FalseOmissionRate(ConfusionMatrixClassificationMetric):
-    """
-    The false omission rate is the proportion of predicted positives which are true negative.
+    """The false omission rate is the proportion of predicted positives which are true negative.
 
-    .. math ::
+    .. math::
+
         FOR = FN / (FN + TN)
 
     ---
@@ -481,19 +445,16 @@ class FalseOmissionRate(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("fom",)
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[0, 1].item(), denominator=matrix[:, 1].sum().item(), zero_division=self.zero_division
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=fn, denominator=fn + tn, zero_division=self.zero_division)
 
 
 @parse_docdata
 class PositiveLikelihoodRatio(ConfusionMatrixClassificationMetric):
-    r"""
-    The positive likelihood ratio is the ratio of true positive rate to false positive rate.
+    r"""The positive likelihood ratio is the ratio of true positive rate to false positive rate.
 
-    .. math ::
+    .. math::
+
         LR+ = TPR / FPR = \frac{TP / (TP + FN)}{FP / (FP + TN)} = \frac{TP \cdot (FP + TN)}{FP \cdot (TP + FN)}
 
     ---
@@ -506,21 +467,20 @@ class PositiveLikelihoodRatio(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("lr+",)
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
         return safe_divide(
-            numerator=(matrix[0, 0] * matrix[1, :].sum()).item(),
-            denominator=(matrix[1, 0] * matrix[0, :].sum()).item(),
+            numerator=tp * (tn + fp),
+            denominator=fp * (tp + fn),
             zero_division=self.zero_division,
         )
 
 
 @parse_docdata
 class NegativeLikelihoodRatio(ConfusionMatrixClassificationMetric):
-    r"""
-    The negative likelihood ratio is the ratio of false negative rate to true negative rate.
+    r"""The negative likelihood ratio is the ratio of false negative rate to true negative rate.
 
-    .. math ::
+    .. math::
+
         LR- = FNR / TNR = \frac{FN / (TP + FN)}{TN / (FP + TN)} = \frac{FN \cdot (FP + TN)}{TN \cdot (TP + FN)}
 
     ---
@@ -533,21 +493,20 @@ class NegativeLikelihoodRatio(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("lr-",)
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
         return safe_divide(
-            numerator=(matrix[0, 1] * matrix[0, :].sum()).item(),
-            denominator=(matrix[1, 1] * matrix[1, :].sum()).item(),
+            numerator=fn * (tn + fp),
+            denominator=tn * (tp + fn),
             zero_division=self.zero_division,
         )
 
 
 @parse_docdata
 class DiagnosticOddsRatio(ConfusionMatrixClassificationMetric):
-    r"""
-    The ratio of positive and negative likelihood ratio.
+    r"""The ratio of positive and negative likelihood ratio.
 
-    .. math ::
+    .. math::
+
         DOR = \frac{LR+}{LR-} = \frac{TP \cdot TN}{FP \cdot FN}
 
     ---
@@ -562,21 +521,16 @@ class DiagnosticOddsRatio(ConfusionMatrixClassificationMetric):
 
     # todo: https://en.wikipedia.org/wiki/Diagnostic_odds_ratio#Confidence_interval
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=(matrix[0, 0] * matrix[1, 1]).item(),
-            denominator=(matrix[0, 1] * matrix[1, 0]).item(),
-            zero_division=self.zero_division,
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tp * tn, denominator=fp * fn, zero_division=self.zero_division)
 
 
 @parse_docdata
 class Accuracy(ConfusionMatrixClassificationMetric):
-    r"""
-    The ratio of the number of correct classifications to the total number.
+    r"""The ratio of the number of correct classifications to the total number.
 
-    .. math ::
+    .. math::
+
         ACC = (TP + TN) / (TP + TN + FP + FN)
 
     ---
@@ -589,21 +543,16 @@ class Accuracy(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("acc", "fraction correct", "fc")
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=(matrix[0, 0] * matrix[1, 1]).item(),
-            denominator=matrix.sum().item(),
-            zero_division=self.zero_division,
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tp + tn, denominator=tp + tn + fp + fn, zero_division=self.zero_division)
 
 
 @parse_docdata
 class F1Score(ConfusionMatrixClassificationMetric):
-    r"""
-    The harmonic mean of precision and recall.
+    r"""The harmonic mean of precision and recall.
 
-    .. math ::
+    .. math::
+
         F1 = 2TP / (2TP + FP + FN)
 
     ---
@@ -616,21 +565,16 @@ class F1Score(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("f1",)
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=2 * matrix[0, 0].item(),
-            denominator=(2 * matrix[0, 0] + matrix[0, 1] + matrix[1, 0]).item(),
-            zero_division=self.zero_division,
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=2 * tp, denominator=2 * tp + fp + fn, zero_division=self.zero_division)
 
 
 @parse_docdata
 class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
-    r"""
-    The prevalence threshold.
+    r"""The prevalence threshold.
 
-    .. math ::
+    .. math::
+
         PT = √FPR / (√TPR + √FPR)
 
     ---
@@ -644,10 +588,9 @@ class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("pt",)
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        fpr = FalsePositiveRate().extract_from_confusion_matrix(matrix=matrix)
-        tpr = TruePositiveRate().extract_from_confusion_matrix(matrix=matrix)
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        fpr = FalsePositiveRate().extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
+        tpr = TruePositiveRate().extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
         return safe_divide(
             numerator=numpy.sqrt(fpr).item(),
             denominator=(numpy.sqrt(fpr) + numpy.sqrt(tpr)).item(),
@@ -657,10 +600,10 @@ class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class ThreatScore(ConfusionMatrixClassificationMetric):
-    r"""
-    The threat score.
+    r"""The threat score.
 
-    .. math ::
+    .. math::
+
         TS = TP / (TP + FN + FP)
 
     ---
@@ -673,21 +616,16 @@ class ThreatScore(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("ts", "critical success index", "csi", "jaccard index")
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return safe_divide(
-            numerator=matrix[0, 0].item(),
-            denominator=(matrix[0, 0] + matrix[0, 1] + matrix[1, 0]).item(),
-            zero_division=self.zero_division,
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return safe_divide(numerator=tp, denominator=tp + fn + fp, zero_division=self.zero_division)
 
 
 @parse_docdata
 class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
-    r"""
-    The Fowlkes Mallows index.
+    r"""The Fowlkes Mallows index.
 
-    .. math ::
+    .. math::
+
         FM = \sqrt{\frac{TP^2}{(2TP + FP + FN)}}
 
     ---
@@ -700,23 +638,16 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("fm", "fmi")
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
-        return math.sqrt(
-            safe_divide(
-                numerator=matrix[0, 0].item() ** 2,
-                denominator=(2 * matrix[0, 0] + matrix[0, 1] + matrix[1, 0]).item(),
-                zero_division=self.zero_division,
-            )
-        )
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+        return math.sqrt(safe_divide(numerator=tp**2, denominator=2 * tp + fp + fn, zero_division=self.zero_division))
 
 
 @parse_docdata
 class Informedness(ConfusionMatrixClassificationMetric):
-    r"""
-    The informedness metric.
+    r"""The informedness metric.
 
-    .. math ::
+    .. math::
+
         YI = TPR + TNR - 1 = TP / (TP + FN) + TN / (TN + FP) - 1
 
     ---
@@ -729,27 +660,22 @@ class Informedness(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("Youden's J", "Youden's Index", "yi")
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
         return (
-            safe_divide(
-                numerator=matrix[1, 1].item(), denominator=matrix[1, :].sum().item(), zero_division=self.zero_division
-            )
-            + safe_divide(
-                numerator=matrix[0, 0].item(), denominator=matrix[0, :].sum().item(), zero_division=self.zero_division
-            )
+            safe_divide(numerator=tp, denominator=tp + fn, zero_division=self.zero_division)
+            + safe_divide(numerator=tn, denominator=tn + fp, zero_division=self.zero_division)
             - 1
         )
 
 
 @parse_docdata
 class MatthewsCorrelationCoefficient(ConfusionMatrixClassificationMetric):
-    r"""
-    The Matthews Correlation Coefficient (MCC).
+    r"""The Matthews Correlation Coefficient (MCC).
 
     A balanced measure applicable even with class imbalance.
 
-    .. math ::
+    .. math::
+
         MCC = (TP * TN - FP * FN) / sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))
 
     ---
@@ -762,18 +688,17 @@ class MatthewsCorrelationCoefficient(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("mcc",)
 
-    # docstr-coverage: inherited
-    def extract_from_confusion_matrix(self, matrix: numpy.ndarray) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
         return safe_divide(
-            numerator=(matrix[0, 0] * matrix[1, 1] - matrix[1, 0] * matrix[0, 1]).item(),
-            denominator=(matrix.sum(axis=1).prod() * matrix.sum(axis=0).prod()).item(),
+            numerator=tp * tn - fp * fn,
+            denominator=math.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)),
             zero_division=self.zero_division,
         )
 
 
 #: A resolver for classification metrics
 classification_metric_resolver: ClassResolver[ClassificationMetric] = ClassResolver.from_subclasses(
-    base=ClassificationMetric,
+    base=ClassificationMetric,  # type: ignore[type-abstract]
     default=AveragePrecisionScore,
-    skip={BinarizedClassificationMetric, ConfusionMatrixClassificationMetric},
+    skip={BinarizedClassificationMetric, ConfusionMatrixClassificationMetric},  # type: ignore[type-abstract]
 )

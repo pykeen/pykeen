@@ -17,7 +17,7 @@ __all__ = [
 
 
 class ERMLPE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
-    r"""An extension of :class:`pykeen.models.ERMLP` proposed by [sharifzadeh2019]_.
+    r"""An extension of :class:`~pykeen.models.ERMLP` proposed by [sharifzadeh2019]_.
 
     This model represents both entities and relations as $d$-dimensional vectors stored in an
     :class:`~pykeen.nn.representation.Embedding` matrix.
@@ -25,7 +25,7 @@ class ERMLPE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     scores.
 
     ConvE can be seen as a special case of ER-MLP (E) that contains the unnecessary inductive bias of convolutional
-    filters. The aim of this model is to show that lifting this bias from :class:`pykeen.models.ConvE` (which simply
+    filters. The aim of this model is to show that lifting this bias from :class:`~pykeen.models.ConvE` (which simply
     leaves us with a modified ER-MLP model), not only reduces the number of parameters but also improves performance.
     ---
     name: ER-MLP (E)
@@ -37,14 +37,14 @@ class ERMLPE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        hidden_dim=dict(type=int, low=5, high=9, scale="power_two"),
-        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-        hidden_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "hidden_dim": {"type": int, "low": 5, "high": 9, "scale": "power_two"},
+        "input_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+        "hidden_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+    }
     #: The default loss function class
-    loss_default: ClassVar[type[Loss]] = BCEAfterSigmoidLoss
+    loss_default: ClassVar[type[Loss]] = BCEAfterSigmoidLoss  # type: ignore[type-abstract]
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
@@ -79,19 +79,19 @@ class ERMLPE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         """
         super().__init__(
             interaction=ERMLPEInteraction,
-            interaction_kwargs=dict(
-                embedding_dim=embedding_dim,
-                hidden_dim=hidden_dim,
-                input_dropout=input_dropout,
-                hidden_dropout=hidden_dropout,
-            ),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer or entity_initializer,
-            ),
+            interaction_kwargs={
+                "embedding_dim": embedding_dim,
+                "hidden_dim": hidden_dim,
+                "input_dropout": input_dropout,
+                "hidden_dropout": hidden_dropout,
+            },
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+            },
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer or entity_initializer,
+            },
             **kwargs,
         )

@@ -33,7 +33,7 @@ class Countries(UnpackedRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the Countries small dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             training_url=f"{BASE_URL}/train.txt",

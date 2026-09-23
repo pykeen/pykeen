@@ -1,11 +1,10 @@
-# See https://setuptools.readthedocs.io/en/latest/build_meta.html
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.11.2,<1.0"]
+build-backend = "uv_build"
 
 [project]
 name = "pykeen"
-version = "1.11.1-dev"
+version = "1.11.2-dev"
 description = "A package for training and evaluating multimodal knowledge graph embeddings"
 readme = "README.md"
 authors = [
@@ -25,15 +24,15 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Framework :: Pytest",
     "Framework :: tox",
     "Framework :: Sphinx",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Chemistry",
@@ -42,7 +41,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 keywords = [
-    "snekpack", # please keep this keyword to credit the cookiecutter-snekpack template
+    "snekpack",                   # please keep this keyword to credit the cookiecutter-snekpack template
     "cookiecutter",
     "Knowledge Graph Embeddings",
     "Machine Learning",
@@ -53,9 +52,10 @@ keywords = [
 # License Information. This can be any valid SPDX identifiers that can be resolved
 # with URLs like https://spdx.org/licenses/MIT
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "dataclasses-json",
     "numpy",
@@ -64,7 +64,8 @@ dependencies = [
     "click",
     "click_default_group",
     "scikit-learn",
-    "torch>=2.0",
+    "torch>=2.0,<2.10; sys_platform == 'win32'",
+    "torch>=2.0; sys_platform != 'win32'",
     "tqdm",
     "requests",
     "optuna>=2.0.0",
@@ -72,60 +73,32 @@ dependencies = [
     "tabulate",
     "more_click",
     "more_itertools",
-    "pystow>=0.4.3",
-    "docdata",
-    "class_resolver>=0.5.4",
+    "pystow>=0.8.4",
+    "docdata>=0.0.5",
+    "class_resolver>=0.8.1",
     "pyyaml",
-    "torch_max_mem>=0.1.3",
+    "torch_max_mem>=0.1.5",
     "torch-ppr>=0.0.7",
     "typing_extensions",
 ]
 
 [project.optional-dependencies]
-templating = [
-    "jinja2",
-]
-plotting = [
-    "matplotlib",
-    "seaborn",
-]
-wordcloud = [
-    "wordcloud",
-    "IPython",
-]
-opt_einsum = [
-    "opt_einsum",
-]
-mlflow = [
-    "mlflow>=1.8.0",
-]
-ogb = [
-    "ogb>=1.3.4",
-]
-wandb = [
-    "wandb", ]
-neptune = [
-    "neptune-client",
-]
-tensorboard = [
-    "tensorboard",
-]
-transformers = [
-    "transformers",
-]
+templating = ["jinja2"]
+plotting = ["matplotlib", "seaborn"]
+wordcloud = ["wordcloud", "IPython"]
+opt_einsum = ["opt_einsum"]
+mlflow = ["mlflow>=1.8.0"]
+ogb = ["ogb>=1.3.4"]
+wandb = ["wandb"]
+neptune = ["neptune-client"]
+tensorboard = ["tensorboard"]
+transformers = ["transformers"]
 lightning = [
     # cf. https://github.com/Lightning-AI/lightning/pull/14117
     "pytorch_lightning>=1.7.2",
 ]
-biomedicine = [
-    "bioregistry",
-    "pyobo>=0.8.7",
-]
-tests = [
-    "unittest-templates>=0.0.5",
-    "coverage",
-    "pytest",
-]
+biomedicine = ["bioregistry", "pyobo>=0.8.7"]
+tests = ["unittest-templates>=0.0.5", "coverage", "pytest", "pytest-xdist"]
 docs = [
     "sphinx>=8.0",
     "sphinx-rtd-theme>=3.0",
@@ -147,18 +120,6 @@ Homepage = "https://github.com/pykeen/pykeen"
 Repository = "https://github.com/pykeen/pykeen.git"
 Documentation = "https://pykeen.readthedocs.io"
 
-[tool.setuptools]
-package-dir = { "" = "src" }
-
-[tool.setuptools.packages.find]
-# this implicitly sets `packages = ":find"`
-where = ["src"]  # list of folders that contain the packages (["."] by default)
-
-# See https://setuptools.pypa.io/en/latest/userguide/datafiles.html
-[tool.setuptools.package-data]
-"*" = ["*.*"]
-
-
 [project.scripts]
 pykeen = "pykeen.cli:main"
 
@@ -167,43 +128,47 @@ pykeen = "pykeen.cli:main"
 #    hetionet         = pykeen.datasets.hetionet:Hetionet
 
 [tool.cruft]
-skip = [
-    "**/__init__.py",
-    "tests/*"
-]
+skip = ["**/__init__.py", "tests/*"]
 
 # MyPy, see https://mypy.readthedocs.io/en/stable/config_file.html
 [tool.mypy]
-plugins = [
-]
+plugins = []
+ignore_missing_imports = true
+
+# Libraries whose types are not checked yet. `follow_imports = "skip"` makes their
+# symbols `Any`, which is what happened implicitly while the mypy tox environment
+# installed a hand-picked subset of the dependencies instead of the package itself.
+# Removing an entry here is how type coverage gets widened, one library at a time.
+[[tool.mypy.overrides]]
+# ~150 errors, cf. https://github.com/pykeen/pykeen/pull/1623
+module = ["torch.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
+
+[[tool.mypy.overrides]]
+# ~90 errors beyond the `type-abstract` ones already suppressed at the call sites,
+# cf. https://github.com/pykeen/pykeen/pull/1623
+module = ["class_resolver.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
 
 # Doc8, see https://doc8.readthedocs.io/en/stable/readme.html#ini-file-usage
 [tool.doc8]
 max-line-length = 120
 ignore-path-errors = [
     "docs/source/tutorial/inductive_lp.rst; D000",
-    "docs/source/tutorial/understanding_evaluation.rst; D000",
+    "docs/source/explanation/understanding_evaluation.rst; D000",
     # TODO reinvestigate after upgrading to sphinx 7+
 ]
 
 # Coverage, see https://coverage.readthedocs.io/en/latest/config.html
 [tool.coverage.run]
 branch = true
-source = [
-    "pykeen",
-]
-omit = [
-    "tests/*",
-    "docs/*",
-    "src/pykeen/cli/*",
-    "src/pykeen/__main__.py",
-]
+source = ["pykeen"]
+omit = ["tests/*", "docs/*", "src/pykeen/cli/*", "src/pykeen/__main__.py"]
 
 [tool.coverage.paths]
-source = [
-    "src/pykeen",
-    ".tox/*/lib/python*/site-packages/pykeen",
-]
+source = ["src/pykeen", ".tox/*/lib/python*/site-packages/pykeen"]
 
 [tool.coverage.report]
 show_missing = true
@@ -216,58 +181,157 @@ exclude_lines = [
     "def __repr__",
 ]
 
-[tool.black]
-line-length = 120
-target-version = [
-    "py39",
-    "py310",
-    "py311",
-    "py312",
-]
-
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 120
-
 [tool.ruff]
 line-length = 120
 extend-include = ["*.ipynb"]
 
 [tool.ruff.lint]
 # See https://docs.astral.sh/ruff/rules
-extend-select = [
-    "F", # pyflakes
+select = [
+    # Airflow (AIR)
+    # "AIR",   # (framework-specific, not used in this project)
+    # eradicate (ERA)
+    # "ERA",   # commented out code; false positives for "mathy" comments
+    # FastAPI (FAST)
+    # "FAST",  # (framework-specific, not used in this project)
+    # flake8-2020 (YTT)
+    # "YTT",   # (not needed for Python >=3.10)
+    # flake8-annotations (ANN)
+    # "ANN",
+    # flake8-async (ASYNC)
+    # "ASYNC",
+    # flake8-bandit (S)
+    "S",
+    # flake8-blind-except (BLE)
+    # "BLE",
+    # flake8-boolean-trap (FBT)
+    # "FBT",
+    # flake8-bugbear (B)
+    "B",
+    # flake8-builtins (A)
+    "A",
+    # flake8-commas (COM)
+    # "COM",
+    # flake8-comprehensions (C4)
+    "C4",
+    # flake8-copyright (CPY)
+    # "CPY",
+    # flake8-datetimez (DTZ)
+    # "DTZ",
+    # flake8-debugger (T10)
+    "T10",
+    # flake8-django (DJ)
+    # "DJ",    # (framework-specific, not used in this project)
+    # flake8-errmsg (EM)
+    # "EM",
+    # flake8-executable (EXE)
+    "EXE",
+    # flake8-fixme (FIX)
+    # "FIX",
+    # flake8-future-annotations (FA)
+    "FA",
+    # flake8-gettext (INT)
+    # "INT",   # (framework-specific, not used in this project)
+    # flake8-implicit-str-concat (ISC)
+    "ISC",
+    # flake8-import-conventions (ICN)
+    # "ICN",
+    # flake8-logging (LOG)
+    "LOG",
+    # flake8-logging-format (G)
+    # "G",
+    # flake8-no-pep420 (INP)
+    "INP",
+    # flake8-pie (PIE)
+    "PIE",
+    # flake8-print (T20)
+    "T20",
+    # flake8-pyi (PYI)
+    # "PYI",
+    # flake8-pytest-style (PT)
+    "PT",
+    # flake8-quotes (Q)
+    "Q",
+    # flake8-raise (RSE)
+    "RSE",
+    # flake8-return (RET)
+    "RET",
+    # flake8-self (SLF)
+    # "SLF",
+    # flake8-simplify (SIM)
+    "SIM",
+    # flake8-slots (SLOT)
+    "SLOT",
+    # flake8-tidy-imports (TID)
+    # "TID",
+    # flake8-todos (TD)
+    # "TD",
+    # flake8-type-checking (TC)
+    # "TC",
+    # flake8-unused-arguments (ARG)
+    # "ARG",
+    # flake8-use-pathlib (PTH)
+    "PTH",
+    # flynt (FLY)
+    "FLY",
+    # isort (I)
+    "I",
+    # mccabe (C90)
+    "C90",
+    # NumPy-specific rules (NPY)
+    "NPY",
+    # pandas-vet (PD)
+    "PD",
+    # pep8-naming (N)
+    "N",
+    # Perflint (PERF)
+    "PERF",
+    # pycodestyle (E, W)
     "E", # pycodestyle errors
     "W", # pycodestyle warnings
-    "C90", # mccabe
-    "I", # isort
-    "UP", # pyupgrade
-    "D", # pydocstyle
-    "B", # bugbear
-    "S", # bandit
-    "T20", # print
-    "N", # pep8 naming
-    # "ERA", # eradicate commented out code
-    # "NPY", # numpy checks
-    # "RUF", # ruff rules
+    # pydoclint (DOC)
+    # "DOC",   # requires preview; supersedes darglint
+    # pydocstyle (D)
+    "D",
+    # Pyflakes (F)
+    "F",
+    # pygrep-hooks (PGH)
+    "PGH",
+    # Pylint (PL)
+    # "PL",
+    # pyupgrade (UP)
+    "UP",
+    # refurb (FURB)
+    "FURB",
+    # Ruff-specific rules (RUF)
+    # "RUF",
+    # tryceratops (TRY)
+    # "TRY",
 ]
 ignore = [
     "D105", # Missing docstring in magic method
-    "E203", # Black conflicts with the following
-    "S101", # Asserts, TODO remove
-    "D102", # Missing docstring in init TODO remove
+    "S101", # Use of assert detected, TODO remove
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores
 [tool.ruff.lint.per-file-ignores]
-# Ignore commented out code in Sphinx configuration file
-"docs/source/conf.py" = ["ERA001"]
-"docs/source/examples/**/*.py" = [
-    "E402",  # allow imports not at top for narrative purposes
-    "T201",  # allow prints
+"docs/**/*.py" = [
+    "INP001", # docs are not a package
+    "E402",   # allow imports not at top for narrative purposes
+    "T201",   # allow prints
+    "PTH",    # allow os.path
 ]
-"notebooks/**/*.ipynb" = ["T201"]
+"notebooks/**" = [
+    "INP001", # notebooks are not a package
+    "T201",   # allow prints
+    "PTH",    # os.path instead of pathlib
+]
+"benchmarking/**/*.py" = ["INP001"] # benchmarking scripts are not a package
+"tests/**/*.py" = [
+    "INP001", # tests are not a package
+    "PIE790", # allow pass in test stubs/abstract methods
+    "D102",   # test methods document intent via their name, not a docstring
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
@@ -284,12 +348,10 @@ max-complexity = 21
 # Pytest, see https://docs.pytest.org/en/stable/reference/customize.html#pyproject-toml
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')"
-]
+markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
 
 [tool.bumpversion]
-current_version = "1.11.1-dev"
+current_version = "1.11.2-dev"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(?:-(?P<release>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+(?P<build>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?"
 serialize = [
     "{major}.{minor}.{patch}-{release}+{build}",
@@ -303,10 +365,7 @@ tag = false
 [tool.bumpversion.parts.release]
 optional_value = "production"
 first_value = "dev"
-values = [
-    "dev",
-    "production",
-]
+values = ["dev", "production"]
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"

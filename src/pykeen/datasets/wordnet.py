@@ -34,7 +34,7 @@ class WN18(TarFileRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the WordNet-18 dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileRemoteDataset`.
 
         .. warning:: This dataset contains testing leakage. Use :class:`WN18RR` instead.
         """
@@ -69,7 +69,7 @@ class WN18RR(TarFileRemoteDataset):
     def __init__(self, **kwargs):
         """Initialize the WordNet-18 (RR) dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileRemoteDataset`.
         """
         super().__init__(
             url="https://github.com/TimDettmers/ConvE/raw/master/WN18RR.tar.gz",

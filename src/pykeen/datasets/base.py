@@ -9,7 +9,7 @@ import zipfile
 from abc import abstractmethod
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from io import BytesIO
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar, Self, cast
 
 import click
 import docdata
@@ -19,7 +19,6 @@ import torch
 from more_click import verbose_option
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
-from typing_extensions import Self
 
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
@@ -56,13 +55,13 @@ def dataset_similarity(a: Dataset, b: Dataset, metric: str | None = None) -> flo
 
     :param a: The reference dataset
     :param b: The target dataset
-    :param metric: The similarity metric to use. Defaults to `tanimoto`. Could either be a symmetric
-        or asymmetric metric.
-    :returns: A scalar value between 0 and 1 where closer to 1 means the datasets are more
-        similar based on the metric.
+    :param metric: The similarity metric to use. Defaults to `tanimoto`. Could either be a symmetric or asymmetric
+        metric.
 
-    :raises ValueError: if an invalid metric type is passed. Right now, there's only `tanimoto`,
-        but this could change in later.
+    :returns: A scalar value between 0 and 1 where closer to 1 means the datasets are more similar based on the metric.
+
+    :raises ValueError: if an invalid metric type is passed. Right now, there's only `tanimoto`, but this could change
+        in later.
     """
     if metric == "tanimoto" or metric is None:
         return splits_similarity(a._tup(), b._tup())
@@ -165,10 +164,10 @@ class Dataset(ExtraReprMixin):
     @property
     def factory_dict(self) -> Mapping[str, CoreTriplesFactory]:
         """Return a dictionary of the three factories."""
-        rv = dict(
-            training=self.training,
-            testing=self.testing,
-        )
+        rv = {
+            "training": self.training,
+            "testing": self.testing,
+        }
         if self.validation:
             rv["validation"] = self.validation
         return rv
@@ -269,7 +268,7 @@ class Dataset(ExtraReprMixin):
         if not path.is_dir():
             raise NotADirectoryError(path)
 
-        tfs = dict()
+        tfs = {}
         # TODO: Make a constant for the names
         for key in ("training", "testing", "validation"):
             tf_path = path.joinpath(key)
@@ -320,7 +319,7 @@ class Dataset(ExtraReprMixin):
         return normalize_string((self.metadata or {}).get("name") or self.__class__.__name__)
 
     def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
-        """Remix a dataset using :func:`pykeen.triples.remix.remix`."""
+        """Remix a dataset using :func:`~pykeen.triples.remix.remix`."""
         return EagerDataset(
             *remix(
                 *self._tup(),
@@ -330,7 +329,7 @@ class Dataset(ExtraReprMixin):
         )
 
     def deteriorate(self, n: int | float, random_state: TorchRandomHint = None) -> Dataset:
-        """Deteriorate n triples from the dataset's training with :func:`pykeen.triples.deteriorate.deteriorate`."""
+        """Deteriorate n triples from the dataset's training with :func:`~pykeen.triples.deteriorate.deteriorate`."""
         return EagerDataset(
             *deteriorate(
                 *self._tup(),
@@ -344,9 +343,12 @@ class Dataset(ExtraReprMixin):
 
         :param other: The other shuffling of the dataset
         :param metric: The metric to use. Defaults to `tanimoto`.
-        :return: A float of the similarity
 
-        .. seealso:: :func:`pykeen.triples.triples_factory.splits_similarity`.
+        :returns: A float of the similarity
+
+        .. seealso::
+
+            :func:`~pykeen.triples.splits_similarity`.
         """
         return dataset_similarity(self, other, metric=metric)
 
@@ -364,30 +366,25 @@ class Dataset(ExtraReprMixin):
     ) -> EagerDataset | Self:
         """Restrict a dataset to the given entities/relations.
 
-        Example::
-
         >>> from pykeen.datasets import get_dataset
         >>> full_dataset = get_dataset(dataset="nations")
-        >>> restricted_dataset = dataset.restrict(entities={"burma", "china", "india", "indonesia"})
+        >>> restricted_dataset = full_dataset.restrict(entities={"burma", "china", "india", "indonesia"})
 
-        :param entities:
-            The entities to keep (or discard, cf. `invert_entity_selection`).
-            `None` corresponds to selecting all entities (but is handled more efficiently).
-        :param relations:
-            The relations to keep (or discard, cf. `invert_relation_selection`).
-            `None` corresponds to selecting all relations (but is handled more efficiently).
-        :param invert_entity_selection:
-            Whether to invert the entity selection, i.e., discard the selected entities rather than all remaining ones.
-        :param invert_relation_selection:
-            Whether to invert the relation selection, i.e., discard the selected relations rather than all remaining
-            ones.
+        :param entities: The entities to keep (or discard, cf. `invert_entity_selection`). `None` corresponds to
+            selecting all entities (but is handled more efficiently).
+        :param relations: The relations to keep (or discard, cf. `invert_relation_selection`). `None` corresponds to
+            selecting all relations (but is handled more efficiently).
+        :param invert_entity_selection: Whether to invert the entity selection, i.e., discard the selected entities
+            rather than all remaining ones.
+        :param invert_relation_selection: Whether to invert the relation selection, i.e., discard the selected relations
+            rather than all remaining ones.
 
-        :returns:
-            a new dataset with different entity and relation mappins and a restricted set of triples.
+        :returns: a new dataset with different entity and relation mappins and a restricted set of triples.
 
-        .. warning ::
-            This is different to :meth:`pykeen.triples.triples_factory.CoreTriplesFactory.new_with_restriction`
-            as it does modify the label to id mapping.
+        .. warning::
+
+            This is different to :meth:`~pykeen.triples.CoreTriplesFactory.new_with_restriction` as it
+            does modify the label to id mapping.
         """
         # early termination for simple case
         if entities is None and relations is None:
@@ -516,7 +513,6 @@ class EagerDataset(Dataset):
         self.validation = validation
         self.metadata = metadata
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"metadata={self.metadata}"
@@ -535,7 +531,7 @@ class LazyDataset(Dataset):
     cache_root: pathlib.Path
 
     @property
-    def training(self) -> TriplesFactory:  # type:ignore # noqa: D401
+    def training(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The training triples factory."""
         if not self._loaded:
             self._load()
@@ -543,7 +539,7 @@ class LazyDataset(Dataset):
         return self._training
 
     @property
-    def testing(self) -> TriplesFactory:  # type:ignore # noqa: D401
+    def testing(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The testing triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
@@ -551,7 +547,7 @@ class LazyDataset(Dataset):
         return self._testing
 
     @property
-    def validation(self) -> TriplesFactory | None:  # type:ignore # noqa: D401
+    def validation(self) -> TriplesFactory | None:  # type: ignore[override]  # noqa: D401
         """The validation triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
@@ -576,10 +572,10 @@ class LazyDataset(Dataset):
     def _help_cache(self, cache_root: None | str | pathlib.Path) -> pathlib.Path:
         """Get the appropriate cache root directory.
 
-        :param cache_root: If none is passed, defaults to a subfolder of the
-            PyKEEN home directory defined in :data:`pykeen.constants.PYKEEN_HOME`.
-            The subfolder is named based on the class inheriting from
-            :class:`pykeen.datasets.base.Dataset`.
+        :param cache_root: If none is passed, defaults to a subfolder of the PyKEEN home directory defined in
+            :data:`~pykeen.constants.PYKEEN_HOME`. The subfolder is named based on the class inheriting from
+            :class:`~pykeen.datasets.base.Dataset`.
+
         :returns: A path object for the calculated cache root directory
         """
         cache_root = normalize_path(cache_root, *self._cache_sub_directories(), mkdir=True, default=PYKEEN_DATASETS)
@@ -611,8 +607,8 @@ class PathDataset(LazyDataset):
         :param validation_path: Path to the validation triples file or validation triples file.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
-            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
+        :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
+            and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
         """
         self.training_path = pathlib.Path(training_path)
         self.testing_path = pathlib.Path(testing_path)
@@ -677,20 +673,20 @@ class UnpackedRemoteDataset(PathDataset):
         create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
         download_kwargs: Mapping[str, Any] | None = None,
-    ):
+    ) -> None:
         """Initialize dataset.
 
         :param training_url: The URL of the training file
         :param testing_url: The URL of the testing file
         :param validation_url: The URL of the validation file
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.data/pykeen``.
         :param force: If true, redownload any cached files
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`TriplesFactory.from_path`
-            and ultimately through to :func:`pykeen.triples.utils.load_triples`.
+        :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
+            and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
         """
         self.cache_root = self._help_cache(cache_root)
@@ -737,17 +733,16 @@ class RemoteDataset(PathDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         timeout=None,
-    ):
+    ) -> None:
         """Initialize dataset.
 
-        :param url:
-            The url where to download the dataset from.
+        :param url: The url where to download the dataset from.
         :param relative_training_path: The path inside the cache root where the training path gets extracted
         :param relative_testing_path: The path inside the cache root where the testing path gets extracted
         :param relative_validation_path: The path inside the cache root where the validation path gets extracted
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.data/pykeen``.
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.data/pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param timeout: The timeout number of seconds for waiting to download the dataset. Defaults to 60.
@@ -788,7 +783,6 @@ class RemoteDataset(PathDataset):
         res.raise_for_status()
         return BytesIO(res.content)
 
-    # docstr-coverage: inherited
     def _load(self) -> None:  # noqa: D102
         all_unpacked = all(path.is_file() for path in self._get_paths())
 
@@ -803,7 +797,6 @@ class RemoteDataset(PathDataset):
 class TarFileRemoteDataset(RemoteDataset):
     """A remote dataset stored as a tar file."""
 
-    # docstr-coverage: inherited
     def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
         with tarfile.open(fileobj=archive_file) as tf:
             tf.extractall(path=self.cache_root)  # noqa:S202
@@ -828,19 +821,17 @@ class PackedZipRemoteDataset(LazyDataset):
         cache_root: str | None = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
-    ):
+    ) -> None:
         """Initialize dataset.
 
         :param relative_training_path: The path inside the zip file for the training data
         :param relative_testing_path: The path inside the zip file for the testing data
         :param relative_validation_path: The path inside the zip file for the validation data
-        :param url:
-            The url where to download the dataset from
-        :param name:
-            The name of the file. If not given, tries to get the name from the end of the URL
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param url: The url where to download the dataset from
+        :param name: The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
 
@@ -848,7 +839,12 @@ class PackedZipRemoteDataset(LazyDataset):
         """
         self.cache_root = self._help_cache(cache_root)
 
-        self.name = name or name_from_url(url)
+        if name:
+            self.name = name
+        elif url:
+            self.name = name_from_url(url)
+        else:
+            raise ValueError("must give at least one of name or URL")
         self.path = self.cache_root.joinpath(self.name)
         logger.debug("file path at %s", self.path)
 
@@ -864,7 +860,6 @@ class PackedZipRemoteDataset(LazyDataset):
             self._load()
             self._load_validation()
 
-    # docstr-coverage: inherited
     def _load(self) -> None:  # noqa: D102
         self._training = self._load_helper(self.relative_training_path)
         self._testing = self._load_helper(
@@ -893,23 +888,22 @@ class PackedZipRemoteDataset(LazyDataset):
             logger.info("downloading data from %s to %s", self.url, self.path)
             download(url=self.url, path=self.path)
 
-        with zipfile.ZipFile(file=self.path) as zf:
-            # relative paths within zip file's always follow Posix path, even on Windows
-            with zf.open(relative_path.as_posix()) as file:
-                logger.debug("loading %s", relative_path)
-                df = pd.read_csv(
-                    file,
-                    usecols=[self.head_column, self.relation_column, self.tail_column],
-                    header=self.header,
-                    sep=self.sep,
-                )
-                return TriplesFactory.from_labeled_triples(
-                    triples=df.values,
-                    create_inverse_triples=self._create_inverse_triples,
-                    metadata={"path": relative_path},
-                    entity_to_id=entity_to_id,
-                    relation_to_id=relation_to_id,
-                )
+        # relative paths within zip file's always follow Posix path, even on Windows
+        with zipfile.ZipFile(file=self.path) as zf, zf.open(relative_path.as_posix()) as file:
+            logger.debug("loading %s", relative_path)
+            df = pd.read_csv(
+                file,
+                usecols=[self.head_column, self.relation_column, self.tail_column],
+                header=self.header,
+                sep=self.sep,
+            )
+            return TriplesFactory.from_labeled_triples(
+                triples=df.values,
+                create_inverse_triples=self._create_inverse_triples,
+                metadata={"path": relative_path},
+                entity_to_id=entity_to_id,
+                relation_to_id=relation_to_id,
+            )
 
 
 class CompressedSingleDataset(LazyDataset):
@@ -931,20 +925,16 @@ class CompressedSingleDataset(LazyDataset):
     ):
         """Initialize dataset.
 
-        :param url:
-            The url where to download the dataset from
-        :param relative_path:
-            The path inside the archive to the contained dataset.
-        :param name:
-            The name of the file. If not given, tries to get the name from the end of the URL
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param url: The url where to download the dataset from
+        :param relative_path: The path inside the archive to the contained dataset.
+        :param name: The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
-        :param delimiter:
-            The delimiter for the contained dataset.
+        :param delimiter: The delimiter for the contained dataset.
         :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
         """
         self.cache_root = self._help_cache(cache_root)
@@ -996,10 +986,8 @@ class ZipSingleDataset(CompressedSingleDataset):
         if not path.is_file():
             download(self.url, self._get_path())  # noqa:S310
 
-        with zipfile.ZipFile(path) as zip_file:
-            with zip_file.open(self._relative_path.as_posix()) as file:
-                df = pd.read_csv(file, sep=self.delimiter)
-        return df
+        with zipfile.ZipFile(path) as zip_file, zip_file.open(self._relative_path.as_posix()) as file:
+            return pd.read_csv(file, sep=self.delimiter)
 
 
 class TarFileSingleDataset(CompressedSingleDataset):
@@ -1047,9 +1035,9 @@ class TabbedDataset(LazyDataset):
     ):
         """Initialize dataset.
 
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
@@ -1078,7 +1066,7 @@ class TabbedDataset(LazyDataset):
         tf = TriplesFactory.from_labeled_triples(
             triples=df.values,
             create_inverse_triples=self._create_inverse_triples,
-            metadata=dict(path=path) if path else None,
+            metadata={"path": path} if path else None,
         )
         self._training, self._testing, self._validation = cast(
             tuple[TriplesFactory, TriplesFactory, TriplesFactory],
@@ -1114,13 +1102,11 @@ class SingleTabbedDataset(TabbedDataset):
     ):
         """Initialize dataset.
 
-        :param url:
-            The url where to download the dataset from
-        :param name:
-            The name of the file. If not given, tries to get the name from the end of the URL
-        :param cache_root:
-            An optional directory to store the extracted files. Is none is given, the default PyKEEN directory is used.
-            This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to ``~/.pykeen``.
+        :param url: The url where to download the dataset from
+        :param name: The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.

@@ -1,5 +1,6 @@
 Hyper-parameter Optimization
 ============================
+
 .. autoclass:: pykeen.hpo.HpoPipelineResult
     :members:
 

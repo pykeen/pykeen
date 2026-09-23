@@ -33,9 +33,9 @@ class ERMLP(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
 
     @update_docstring_with_resolver_keys(
         ResolverKey(name="activation", resolver="class_resolver.contrib.torch.activation_resolver")
@@ -68,23 +68,23 @@ class ERMLP(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param relation_initializer:
             the method to initialize the entity embeddings
         :param kwargs:
-            additional keyword-based parameters passed to :class:`pykeen.models.ERModel`
+            additional keyword-based parameters passed to :class:`~pykeen.models.ERModel`
         """
         super().__init__(
             interaction=ERMLPInteraction,
-            interaction_kwargs=dict(
-                embedding_dim=embedding_dim,
-                hidden_dim=hidden_dim,
-                activation=activation,
-                activation_kwargs=activation_kwargs,
-            ),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-            ),
+            interaction_kwargs={
+                "embedding_dim": embedding_dim,
+                "hidden_dim": hidden_dim,
+                "activation": activation,
+                "activation_kwargs": activation_kwargs,
+            },
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+            },
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
+            },
             **kwargs,
         )

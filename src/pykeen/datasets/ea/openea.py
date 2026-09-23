@@ -112,14 +112,13 @@ class OpenEA(EADataset):
         self.zip_path = OPEN_EA_MODULE.ensure(
             url=OpenEA.FIGSHARE_LINK,
             name="OpenEA_dataset_v2.0.zip",
-            download_kwargs=dict(hexdigests=dict(sha512=OpenEA.SHA512)),
+            download_kwargs={"hexdigests": {"sha512": OpenEA.SHA512}},
         )
         # save relative paths beforehand so they are present for loading
         self.inner_path = pathlib.PurePosixPath("OpenEA_dataset_v2.0", f"{graph_pair}_{size}_{version}")
         # delegate to super class
         super().__init__(**kwargs)
 
-    # docstr-coverage: inherited
     def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
         # left side has files ending with 1, right side with 2
         one_or_two = "1" if side == EA_SIDE_LEFT else "2"
@@ -137,7 +136,6 @@ class OpenEA(EADataset):
             metadata={"path": self.zip_path},
         )
 
-    # docstr-coverage: inherited
     def _load_alignment(self) -> pandas.DataFrame:  # noqa: D102
         return read_zipfile_csv(
             path=self.zip_path,
