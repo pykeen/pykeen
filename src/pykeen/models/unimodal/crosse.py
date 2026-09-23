@@ -34,9 +34,9 @@ class CrossE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
 
     @update_docstring_with_resolver_keys(
         ResolverKey("combination_activation", "class_resolver.contrib.torch.activation_resolver")
@@ -75,29 +75,29 @@ class CrossE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         """
         super().__init__(
             interaction=CrossEInteraction,
-            interaction_kwargs=dict(
-                combination_activation=combination_activation,
-                combination_activation_kwargs=combination_activation_kwargs,
-                combination_dropout=combination_dropout,
-                embedding_dim=embedding_dim,
-            ),
+            interaction_kwargs={
+                "combination_activation": combination_activation,
+                "combination_activation_kwargs": combination_activation_kwargs,
+                "combination_dropout": combination_dropout,
+                "embedding_dim": embedding_dim,
+            },
             entity_representations_kwargs=[
-                dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": entity_initializer,
+                },
             ],
             relation_representations_kwargs=[
                 # Regular relation embeddings
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
+                },
                 # The relation-specific interaction vector
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_interaction_initializer,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_interaction_initializer,
+                },
             ],
             **kwargs,
         )

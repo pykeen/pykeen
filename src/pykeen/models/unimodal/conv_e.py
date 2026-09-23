@@ -44,12 +44,12 @@ class ConvE(ERModel[FloatTensor, FloatTensor, tuple[FloatTensor, FloatTensor]]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        output_channels=dict(type=int, low=4, high=6, scale="power_two"),
-        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-        output_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-        feature_map_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "output_channels": {"type": int, "low": 4, "high": 6, "scale": "power_two"},
+        "input_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+        "output_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+        "feature_map_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+    }
     #: The default loss function class
     loss_default: ClassVar[type[Loss]] = BCEAfterSigmoidLoss  # type: ignore[type-abstract]
     #: The default parameters for the default loss function class
@@ -91,34 +91,34 @@ class ConvE(ERModel[FloatTensor, FloatTensor, tuple[FloatTensor, FloatTensor]]):
         super().__init__(
             triples_factory=triples_factory,
             interaction=ConvEInteraction,
-            interaction_kwargs=dict(
-                input_channels=input_channels,
-                output_channels=output_channels,
-                embedding_height=embedding_height,
-                embedding_width=embedding_width,
-                kernel_height=kernel_height,
-                kernel_width=kernel_width,
-                input_dropout=input_dropout,
-                output_dropout=output_dropout,
-                feature_map_dropout=feature_map_dropout,
-                embedding_dim=embedding_dim,
-                apply_batch_normalization=apply_batch_normalization,
-            ),
+            interaction_kwargs={
+                "input_channels": input_channels,
+                "output_channels": output_channels,
+                "embedding_height": embedding_height,
+                "embedding_width": embedding_width,
+                "kernel_height": kernel_height,
+                "kernel_width": kernel_width,
+                "input_dropout": input_dropout,
+                "output_dropout": output_dropout,
+                "feature_map_dropout": feature_map_dropout,
+                "embedding_dim": embedding_dim,
+                "apply_batch_normalization": apply_batch_normalization,
+            },
             entity_representations_kwargs=[
                 # entity embedding
-                dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": entity_initializer,
+                },
                 # ConvE uses one bias for each entity
-                dict(
-                    shape=tuple(),
-                    initializer=nn.init.zeros_,
-                ),
+                {
+                    "shape": (),
+                    "initializer": nn.init.zeros_,
+                },
             ],
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-            ),
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
+            },
             **kwargs,
         )

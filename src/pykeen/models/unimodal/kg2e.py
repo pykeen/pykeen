@@ -39,14 +39,14 @@ class KG2E(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        c_min=dict(type=float, low=0.01, high=0.1, scale="log"),
-        c_max=dict(type=float, low=1.0, high=10.0),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "c_min": {"type": float, "low": 0.01, "high": 0.1, "scale": "log"},
+        "c_max": {"type": float, "low": 1.0, "high": 10.0},
+    }
 
     #: The default settings for the entity constrainer
-    constrainer_default_kwargs = dict(maxnorm=1.0, p=2, dim=-1)
+    constrainer_default_kwargs = {"maxnorm": 1.0, "p": 2, "dim": -1}
 
     @update_docstring_with_resolver_keys(
         ResolverKey(name="dist_similarity", resolver="pykeen.nn.sim.kg2e_similarity_resolver")
@@ -60,10 +60,10 @@ class KG2E(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
         c_min: float = 0.05,
         c_max: float = 5.0,
         entity_initializer: Hint[Initializer] = uniform_,
-        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        entity_constrainer: Hint[Constrainer] = clamp_norm,
         entity_constrainer_kwargs: Mapping[str, Any] | None = None,
         relation_initializer: Hint[Initializer] = uniform_,
-        relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        relation_constrainer: Hint[Constrainer] = clamp_norm,
         relation_constrainer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
@@ -78,50 +78,50 @@ class KG2E(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
         :param c_min: covariance clamp minimum bound
         :param c_max: covariance clamp maximum bound
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
-        :param entity_constrainer: Entity constrainer function. Defaults to :func:`pykeen.utils.clamp_norm`
+        :param entity_constrainer: Entity constrainer function. Defaults to :func:`~pykeen.utils.clamp_norm`
         :param entity_constrainer_kwargs: Keyword arguments to be used when calling the entity constrainer
         :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
-        :param relation_constrainer: Relation constrainer function. Defaults to :func:`pykeen.utils.clamp_norm`
+        :param relation_constrainer: Relation constrainer function. Defaults to :func:`~pykeen.utils.clamp_norm`
         :param relation_constrainer_kwargs: Keyword arguments to be used when calling the relation constrainer
-        :param kwargs: Remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
+        :param kwargs: Remaining keyword arguments to forward to :class:`~pykeen.models.ERModel`
         """
         super().__init__(
             interaction=KG2EInteraction,
-            interaction_kwargs=dict(
-                similarity=dist_similarity,
-                similarity_kwargs=dist_similarity_kwargs,
-            ),
+            interaction_kwargs={
+                "similarity": dist_similarity,
+                "similarity_kwargs": dist_similarity_kwargs,
+            },
             entity_representations_kwargs=[
                 # mean
-                dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                    constrainer=entity_constrainer,
-                    constrainer_kwargs=entity_constrainer_kwargs or self.constrainer_default_kwargs,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": entity_initializer,
+                    "constrainer": entity_constrainer,
+                    "constrainer_kwargs": entity_constrainer_kwargs or self.constrainer_default_kwargs,
+                },
                 # diagonal covariance
-                dict(
-                    shape=embedding_dim,
+                {
+                    "shape": embedding_dim,
                     # Ensure positive definite covariances matrices and appropriate size by clamping
-                    constrainer=torch.clamp,
-                    constrainer_kwargs=dict(min=c_min, max=c_max),
-                ),
+                    "constrainer": torch.clamp,
+                    "constrainer_kwargs": {"min": c_min, "max": c_max},
+                },
             ],
             relation_representations_kwargs=[
                 # mean
-                dict(
-                    shape=embedding_dim,
-                    initializer=relation_initializer,
-                    constrainer=relation_constrainer,
-                    constrainer_kwargs=relation_constrainer_kwargs or self.constrainer_default_kwargs,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": relation_initializer,
+                    "constrainer": relation_constrainer,
+                    "constrainer_kwargs": relation_constrainer_kwargs or self.constrainer_default_kwargs,
+                },
                 # diagonal covariance
-                dict(
-                    shape=embedding_dim,
+                {
+                    "shape": embedding_dim,
                     # Ensure positive definite covariances matrices and appropriate size by clamping
-                    constrainer=torch.clamp,
-                    constrainer_kwargs=dict(min=c_min, max=c_max),
-                ),
+                    "constrainer": torch.clamp,
+                    "constrainer_kwargs": {"min": c_min, "max": c_max},
+                },
             ],
             **kwargs,
         )

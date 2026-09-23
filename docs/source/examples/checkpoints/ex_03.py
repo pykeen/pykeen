@@ -5,13 +5,13 @@ from pykeen.pipeline import pipeline
 result = pipeline(
     dataset="nations",
     model="mure",
-    training_kwargs=dict(
-        num_epochs=10,
-        callbacks="checkpoint",
-        callbacks_kwargs=dict(
-            schedule="union",
+    training_kwargs={
+        "num_epochs": 10,
+        "callbacks": "checkpoint",
+        "callbacks_kwargs": {
+            "schedule": "union",
             # create checkpoints every 5 epochs, and at epoch 7
-            schedule_kwargs=dict(bases=["every", "explicit"], bases_kwargs=[dict(frequency=5), dict(steps=[7])]),
-        ),
-    ),
+            "schedule_kwargs": {"bases": ["every", "explicit"], "bases_kwargs": [{"frequency": 5}, {"steps": [7]}]},
+        },
+    },
 )

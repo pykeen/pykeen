@@ -42,7 +42,6 @@ class GalkinPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
         https://github.com/migalkin/NodePiece/blob/9adc57efe302919d017d74fc648f853308cf75fd/ogb/download.sh
     """
 
-    # docstr-coverage: inherited
     def __call__(self, path: pathlib.Path) -> tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
         with path.open(mode="rb") as pickle_file:
             # contains: anchor_ids, entity_ids, mapping {entity_id -> {"ancs": anchors, "dists": distances}}
@@ -80,7 +79,6 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
             path,
         )
 
-    # docstr-coverage: inherited
     def __call__(self, path: pathlib.Path) -> tuple[Mapping[int, Collection[int]], int]:  # noqa: D102
         c = torch.load(path, weights_only=False)
         order = c["order"]
@@ -88,11 +86,11 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
         num_anchors = c["anchors"].shape[0]
         # TODO: since we save a contiguous array of (num_entities, num_anchors),
         # it would be more efficient to not convert to a mapping, but directly select from the tensor
-        return {i: anchor_ids.tolist() for i, anchor_ids in enumerate(order)}, num_anchors  # type: ignore
+        return {i: anchor_ids.tolist() for i, anchor_ids in enumerate(order)}, num_anchors
 
 
 #: A resolver for NodePiece precomputed tokenizer loaders
 precomputed_tokenizer_loader_resolver: ClassResolver[PrecomputedTokenizerLoader] = ClassResolver.from_subclasses(
-    base=PrecomputedTokenizerLoader,
+    base=PrecomputedTokenizerLoader,  # type: ignore[type-abstract]
     default=GalkinPrecomputedTokenizerLoader,
 )

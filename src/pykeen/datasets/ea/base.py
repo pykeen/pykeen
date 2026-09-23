@@ -90,7 +90,6 @@ class EADataset(EagerDataset):
         """Load the entity alignment."""
         raise NotImplementedError
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"self.side={self.side}"

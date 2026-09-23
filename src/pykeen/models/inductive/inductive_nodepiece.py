@@ -32,8 +32,8 @@ logger = logging.getLogger(__name__)
 class InductiveNodePiece(InductiveERModel):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
-    This model uses the :class:`pykeen.nn.NodePieceRepresentation` instead of a typical
-    :class:`pykeen.nn.Embedding` to more efficiently store representations.
+    This model uses the :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation` instead of a typical
+    :class:`~pykeen.nn.representation.Embedding` to more efficiently store representations.
     ---
     citation:
         author: Galkin
@@ -42,9 +42,9 @@ class InductiveNodePiece(InductiveERModel):
         github: https://github.com/migalkin/NodePiece
     """
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
 
     def __init__(
         self,
@@ -73,7 +73,7 @@ class InductiveNodePiece(InductiveERModel):
             the triples factory of testing triples. Must have create_inverse_triples set to True.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
-            :class:`pykeen.nn.NodePieceRepresentation`.
+            :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation`.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
         :param relation_representations_kwargs:
@@ -120,13 +120,13 @@ class InductiveNodePiece(InductiveERModel):
             triples_factory=triples_factory,
             interaction=interaction,
             entity_representations=NodePieceRepresentation,
-            entity_representations_kwargs=dict(
-                triples_factory=triples_factory,
-                tokenizers=RelationTokenizer,
-                token_representations=relation_representations,
-                aggregation=aggregation,
-                num_tokens=num_tokens,
-            ),
+            entity_representations_kwargs={
+                "triples_factory": triples_factory,
+                "tokenizers": RelationTokenizer,
+                "token_representations": relation_representations,
+                "aggregation": aggregation,
+                "num_tokens": num_tokens,
+            },
             relation_representations=SubsetRepresentation(  # hide padding relation
                 max_id=triples_factory.num_relations,
                 base=relation_representations,

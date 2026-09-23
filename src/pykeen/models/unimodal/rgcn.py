@@ -27,13 +27,13 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
     The Relational Graph Convolutional Network (R-GCN) comprises three parts:
 
     1. A GCN-based entity encoder that computes enriched representations for entities, cf.
-       :class:`pykeen.nn.message_passing.RGCNRepresentations`. The representation for entity $i$ at level
+       :class:`~pykeen.nn.message_passing.RGCNRepresentation`. The representation for entity $i$ at level
        $l \in (1,\dots,L)$ is denoted as $\textbf{e}_i^l$.
        The GCN is modified to use different weights depending on the type of the relation.
     2. Relation representations $\textbf{R}_{r} \in \mathbb{R}^{d \times d}$ is a diagonal matrix that are learned
        independently from the GCN-based encoder.
     3. An arbitrary interaction model which computes the plausibility of facts given the enriched representations,
-       cf. :class:`pykeen.nn.modules.Interaction`.
+       cf. :class:`~pykeen.nn.modules.Interaction`.
 
     Scores for each triple $(h,r,t) \in \mathcal{K}$ are calculated by using the representations in the final level
     of the GCN-based encoder $\textbf{e}_h^L$ and $\textbf{e}_t^L$ along with relation representation $\textbf{R}_{r}$.
@@ -60,20 +60,22 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        num_layers=dict(type=int, low=1, high=5, q=1),
-        use_bias=dict(type="bool"),
-        activation=dict(type="categorical", choices=[nn.ReLU, nn.LeakyReLU]),
-        interaction=dict(type="categorical", choices=["distmult", "complex", "ermlp"]),
-        edge_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-        self_loop_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-        edge_weighting=dict(type="categorical", choices=["inverse_in_degree", "inverse_out_degree", "symmetric"]),
-        decomposition=dict(type="categorical", choices=["bases", "block"]),
+    hpo_default = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "num_layers": {"type": int, "low": 1, "high": 5, "q": 1},
+        "use_bias": {"type": "bool"},
+        "activation": {"type": "categorical", "choices": [nn.ReLU, nn.LeakyReLU]},
+        # ERMLP requires interaction_kwargs["embedding_dim"] to match the sampled embedding_dim.
+        # The default HPO search does not provide this dependent parameter (see #1568).
+        "interaction": {"type": "categorical", "choices": ["distmult", "complex"]},
+        "edge_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+        "self_loop_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+        "edge_weighting": {"type": "categorical", "choices": ["inverse_in_degree", "inverse_out_degree", "symmetric"]},
+        "decomposition": {"type": "categorical", "choices": ["bases", "block"]},
         # TODO: Decomposition kwargs
         # num_bases=dict(type=int, low=2, high=100, q=1),
         # num_blocks=dict(type=int, low=2, high=20, q=1),
-    )
+    }
 
     def __init__(
         self,
@@ -157,35 +159,35 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
         """
         super().__init__(
             entity_representations=RGCNRepresentation,
-            entity_representations_kwargs=dict(
-                triples_factory=triples_factory,
-                entity_representations_kwargs=dict(
-                    shape=embedding_dim,
-                    initializer=base_entity_initializer,
-                    initializer_kwargs=base_entity_initializer_kwargs,
-                ),
-                num_layers=num_layers,
-                use_bias=use_bias,
-                activation=activation,
-                activation_kwargs=activation_kwargs,
-                edge_dropout=edge_dropout,
-                self_loop_dropout=self_loop_dropout,
-                edge_weighting=edge_weighting,
-                decomposition=decomposition,
-                decomposition_kwargs=decomposition_kwargs,
+            entity_representations_kwargs={
+                "triples_factory": triples_factory,
+                "entity_representations_kwargs": {
+                    "shape": embedding_dim,
+                    "initializer": base_entity_initializer,
+                    "initializer_kwargs": base_entity_initializer_kwargs,
+                },
+                "num_layers": num_layers,
+                "use_bias": use_bias,
+                "activation": activation,
+                "activation_kwargs": activation_kwargs,
+                "edge_dropout": edge_dropout,
+                "self_loop_dropout": self_loop_dropout,
+                "edge_weighting": edge_weighting,
+                "decomposition": decomposition,
+                "decomposition_kwargs": decomposition_kwargs,
                 # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501
-                regularizer=regularizer,
-                regularizer_kwargs=regularizer_kwargs,
-            ),
+                "regularizer": regularizer,
+                "regularizer_kwargs": regularizer_kwargs,
+            },
             relation_representations=relation_representations,
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-                initializer_kwargs=relation_initializer_kwargs,
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
+                "initializer_kwargs": relation_initializer_kwargs,
                 # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501
-                regularizer=regularizer,
-                regularizer_kwargs=regularizer_kwargs,
-            ),
+                "regularizer": regularizer,
+                "regularizer_kwargs": regularizer_kwargs,
+            },
             triples_factory=triples_factory,
             interaction=interaction,
             interaction_kwargs=interaction_kwargs,

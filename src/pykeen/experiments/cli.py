@@ -1,7 +1,6 @@
 """Run landmark experiments."""
 
 import logging
-import os
 import pathlib
 import shutil
 import sys
@@ -25,7 +24,7 @@ HERE = pathlib.Path(__file__).parent.resolve()
 
 
 def _make_dir(_ctx, _param, value):
-    os.makedirs(value, exist_ok=True)
+    pathlib.Path(value).mkdir(parents=True, exist_ok=True)
     return value
 
 
@@ -34,7 +33,7 @@ directory_option = click.option(
     "--directory",
     type=click.Path(dir_okay=True, file_okay=False),
     callback=_make_dir,
-    default=os.getcwd(),
+    default=pathlib.Path.cwd(),
 )
 replicates_option = click.option(
     "-r",
@@ -75,13 +74,13 @@ def experiments() -> None:
 @click.argument("model")
 @click.argument("reference")
 @click.argument("dataset")
-@replicates_option  # type:ignore
-@move_to_cpu_option  # type:ignore
-@discard_replicates_option  # type:ignore
-@directory_option  # type:ignore
-@verbose_option  # type:ignore
-@extra_config_option  # type:ignore
-@keep_seed_option  # type:ignore
+@replicates_option
+@move_to_cpu_option
+@discard_replicates_option
+@directory_option
+@verbose_option
+@extra_config_option
+@keep_seed_option
 def reproduce(
     model: str,
     reference: str,
@@ -105,7 +104,7 @@ def reproduce(
     paths = {full_path for full_path in map(path.with_suffix, CONFIGURATION_FILE_FORMATS) if full_path.is_file()}
     if len(paths) == 0:
         raise FileNotFoundError("Could not find a configuration file.")
-    elif len(paths) > 1:
+    if len(paths) > 1:
         raise ValueError(f"Found multiple configuration files: {paths}")
     path = next(iter(paths))
     _help_reproduce(
@@ -122,13 +121,13 @@ def reproduce(
 
 @experiments.command()
 @click.argument("path")
-@replicates_option  # type:ignore
-@move_to_cpu_option  # type:ignore
-@discard_replicates_option  # type:ignore
-@directory_option  # type:ignore
-@extra_config_option  # type:ignore
-@keep_seed_option  # type:ignore
-@verbose_option  # type:ignore
+@replicates_option
+@move_to_cpu_option
+@discard_replicates_option
+@directory_option
+@extra_config_option
+@keep_seed_option
+@verbose_option
 def run(
     path: str,
     replicates: int,
@@ -205,7 +204,7 @@ def _help_reproduce(
 
 @experiments.command()
 @click.argument("path")
-@verbose_option  # type:ignore
+@verbose_option
 @click.option("-d", "--directory", type=click.Path(file_okay=False, dir_okay=True))
 def optimize(path: str, directory: str) -> None:
     """Run a single HPO experiment."""
@@ -217,11 +216,11 @@ def optimize(path: str, directory: str) -> None:
 
 @experiments.command()
 @click.argument("path", type=click.Path(file_okay=True, dir_okay=False, exists=True))
-@directory_option  # type:ignore
+@directory_option
 @click.option("--dry-run", is_flag=True)
 @click.option("-r", "--best-replicates", type=int, help="Number of times to retrain the best model.")
-@move_to_cpu_option  # type:ignore
-@discard_replicates_option  # type:ignore
+@move_to_cpu_option
+@discard_replicates_option
 @click.option("-s", "--save-artifacts", is_flag=True)
 @verbose_option
 def ablation(
@@ -275,8 +274,8 @@ def _iter_configurations() -> Iterable[pathlib.Path]:
         yield from HERE.rglob(f"*{ext}")
 
 
-@experiments.command()
-def list() -> None:
+@experiments.command(name="list")
+def cmd_list() -> None:
     """List experiment configurations."""
     data = set()
     for path in tqdm(_iter_configurations(), unit="configuration", unit_scale=True, leave=False):

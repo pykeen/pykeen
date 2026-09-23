@@ -46,17 +46,17 @@ class PharMeBINet(TarFileSingleDataset):
         """Initialize the PharMeBINet dataset from [koenigs2022]_.
 
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileSingleDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileSingleDataset`.
         """
         super().__init__(
             url=RAW_URL,
             relative_path="edges.tsv",
             random_state=random_state,
-            read_csv_kwargs=dict(
-                usecols=["start_id", "type", "end_id"],
-                sep="\t",
-                dtype={"start_id": str, "end_id": str},
-            ),
+            read_csv_kwargs={
+                "usecols": ["start_id", "type", "end_id"],
+                "sep": "\t",
+                "dtype": {"start_id": str, "end_id": str},
+            },
             **kwargs,
         )
 

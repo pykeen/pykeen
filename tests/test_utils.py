@@ -10,6 +10,7 @@ import timeit
 import unittest
 from collections.abc import Iterable
 from typing import Any
+from unittest import mock
 
 import numpy
 import pytest
@@ -28,9 +29,9 @@ from pykeen.utils import (
     get_optimal_sequence,
     get_until_first_blank,
     iter_weisfeiler_lehman,
-    logcumsumexp,
     merge_kwargs,
     project_entity,
+    resolve_device,
     set_random_seed,
     split_complex,
     tensor_product,
@@ -53,8 +54,8 @@ class TestCompose(unittest.TestCase):
         fog = compose(_f, _g, name="fog")
         for i in range(5):
             with self.subTest(i=i):
-                self.assertEqual(_g(_f(i)), fog(i))
-                self.assertEqual(_g(_f(i**2)), fog(i**2))
+                assert _g(_f(i)) == fog(i)
+                assert _g(_f(i**2)) == fog(i**2)
 
 
 class FlattenDictionaryTest(unittest.TestCase):
@@ -129,7 +130,7 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         """Test the trivial string."""
         s = ""
         r = get_until_first_blank(s)
-        self.assertEqual("", r)
+        assert r == ""
 
     def test_regular(self):
         """Test a regulat case."""
@@ -139,7 +140,7 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         Now I continue.
         """
         r = get_until_first_blank(s)
-        self.assertEqual("Broken line.", r)
+        assert r == "Broken line."
 
 
 def _generate_shapes(
@@ -175,9 +176,9 @@ class TestUtils(unittest.TestCase):
         compacted_mapping, id_remapping = compact_mapping(mapping=mapping)
 
         # check correct value range
-        self.assertEqual(set(compacted_mapping.values()), set(range(len(mapping))))
-        self.assertEqual(set(id_remapping.keys()), set(mapping.values()))
-        self.assertEqual(set(id_remapping.values()), set(compacted_mapping.values()))
+        assert set(compacted_mapping.values()) == set(range(len(mapping)))
+        assert set(id_remapping.keys()) == set(mapping.values())
+        assert set(id_remapping.values()) == set(compacted_mapping.values())
 
     def test_clamp_norm(self):
         """Test clamp_norm() ."""
@@ -271,7 +272,7 @@ class TestUtils(unittest.TestCase):
         for shapes in _generate_shapes(generator=generator):
             arrays = [torch.empty(*shape) for shape in shapes]
             cost = estimate_cost_of_sequence(*(a.shape for a in arrays))
-            n_samples, time = timeit.Timer(stmt="sum(arrays)", globals=dict(arrays=arrays)).autorange()
+            n_samples, time = timeit.Timer(stmt="sum(arrays)", globals={"arrays": arrays}).autorange()
             consumption = time / n_samples
             data.append((cost, consumption))
         a = numpy.asarray(data)
@@ -292,10 +293,10 @@ class TestUtils(unittest.TestCase):
             # check caching
             samples, second_time = timeit.Timer(
                 stmt="get_optimal_sequence(*shapes)",
-                globals=dict(
-                    get_optimal_sequence=get_optimal_sequence,
-                    shapes=shapes,
-                ),
+                globals={
+                    "get_optimal_sequence": get_optimal_sequence,
+                    "shapes": shapes,
+                },
             ).autorange()
             second_time /= samples
 
@@ -336,14 +337,6 @@ class TestUtils(unittest.TestCase):
 
             # compare result to sequential addition
             assert torch.allclose(result, functools.reduce(operator.mul, tensors[1:], tensors[0]))
-
-    def test_logcumsumexp(self):
-        """Verify that our numpy implementation gives the same results as the torch variant."""
-        generator = numpy.random.default_rng(seed=42)
-        a = generator.random(size=(21,))
-        r1 = logcumsumexp(a)
-        r2 = torch.logcumsumexp(torch.as_tensor(a), dim=0).numpy()
-        numpy.testing.assert_allclose(r1, r2)
 
     def test_weisfeiler_lehman(self):
         """Test Weisfeiler Lehman."""
@@ -410,3 +403,31 @@ def test_merge_kwargs(
     with pytest.raises(error) if error else contextlib.nullcontext():
         merged_kwargs = merge_kwargs(kwargs=kwargs, **extra)
         assert merged_kwargs == expected
+
+
+@pytest.mark.parametrize(
+    ("device", "cuda_available", "mps_available", "expected"),
+    [
+        (None, False, False, "cpu"),
+        (None, False, True, "mps"),
+        (None, True, False, "cuda"),
+        (None, True, True, "cuda"),
+        ("gpu", False, False, "cpu"),
+        ("gpu", False, True, "mps"),
+        ("gpu", True, False, "cuda"),
+        ("cuda", False, False, "cpu"),
+        ("cuda", False, True, "mps"),
+        ("cuda", True, False, "cuda"),
+        ("mps", False, False, "cpu"),
+        ("mps", False, True, "mps"),
+        ("cpu", False, False, "cpu"),
+        ("cpu", True, True, "cpu"),
+    ],
+)
+def test_resolve_device(device: str | None, cuda_available: bool, mps_available: bool, expected: str) -> None:
+    """Test device resolution with (un)available accelerators."""
+    with (
+        mock.patch("torch.cuda.is_available", return_value=cuda_available),
+        mock.patch("torch.backends.mps.is_available", return_value=mps_available),
+    ):
+        assert resolve_device(device).type == expected

@@ -1,5 +1,6 @@
 """Test cases for sampling."""
 
+import unittest
 from collections.abc import MutableMapping
 from typing import Any
 
@@ -7,8 +8,9 @@ import numpy
 import torch
 import unittest_templates
 
+from pykeen.constants import COLUMN_LABELS, TARGET_TO_INDEX
 from pykeen.datasets import Nations
-from pykeen.sampling import NegativeSampler
+from pykeen.sampling import NegativeSampler, expand_corruption
 from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
 from pykeen.triples import Instances, TriplesFactory
 from pykeen.triples.instances import BatchedSLCWAInstances
@@ -122,3 +124,67 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
     def test_small_batch(self):
         """Test on a small batch."""
         self.instance.sample(positive_batch=self.positive_batch[:1])
+
+    def check_sample_grouped(self, instance: NegativeSampler) -> None:
+        """Test generating a grouped negative sample."""
+        grouped_negatives, filter_masks = instance.sample_grouped(positive_batch=self.positive_batch)
+
+        # check keys
+        assert set(grouped_negatives.keys()).issubset(COLUMN_LABELS)
+
+        # check that the total number of negatives per positive matches num_negs_per_pos
+        assert sum(replacements.shape[-1] for replacements in grouped_negatives.values()) == instance.num_negs_per_pos
+
+        for target, replacements in grouped_negatives.items():
+            # check shape
+            assert replacements.shape[0] == self.positive_batch.shape[0]
+
+            # check bounds
+            max_index = instance.num_relations if target == "relation" else instance.num_entities
+            assert _array_check_bounds(replacements, low=0, high=max_index)
+
+            # check that the replacement never equals the true value
+            index = COLUMN_LABELS.index(target)
+            true_ids = self.positive_batch[:, index].unsqueeze(dim=-1)
+            assert (replacements != true_ids).all()
+
+        if instance.filterer is not None:
+            assert filter_masks is not None
+            assert set(filter_masks.keys()) == set(grouped_negatives.keys())
+            for target, mask in filter_masks.items():
+                assert mask.shape == grouped_negatives[target].shape
+                assert mask.dtype == torch.bool
+        else:
+            assert filter_masks is None
+
+    def test_sample_grouped(self) -> None:
+        """Test generating a grouped negative sample, if supported."""
+        if not self.cls.supports_grouped_corruption:
+            raise unittest.SkipTest(f"{self.cls} does not support grouped corruption.")
+        self.check_sample_grouped(self.instance)
+
+    def test_sample_grouped_filtered(self) -> None:
+        """Test generating a grouped negative sample with filtering, if supported."""
+        if not self.cls.supports_grouped_corruption:
+            raise unittest.SkipTest(f"{self.cls} does not support grouped corruption.")
+        instance = self.cls(**self.instance_kwargs, filterer=PythonSetFilterer)
+        self.check_sample_grouped(instance)
+
+    def test_expand_corruption(self) -> None:
+        """Test that expand_corruption of a grouped sample yields valid, correctly corrupted triples."""
+        if not self.cls.supports_grouped_corruption:
+            raise unittest.SkipTest(f"{self.cls} does not support grouped corruption.")
+        grouped_negatives, _ = self.instance.sample_grouped(positive_batch=self.positive_batch)
+        for target, replacements in grouped_negatives.items():
+            negative_triples = expand_corruption(
+                positive_batch=self.positive_batch, target=target, replacements=replacements
+            )
+            index = TARGET_TO_INDEX[target]
+            expanded_positives = self.positive_batch.unsqueeze(dim=1).expand(-1, replacements.shape[-1], -1)
+            # the corrupted column matches the replacement
+            assert torch.equal(negative_triples[..., index], replacements)
+            # the other columns are unchanged
+            for other_index in {0, 1, 2} - {index}:
+                assert torch.equal(negative_triples[..., other_index], expanded_positives[..., other_index])
+            # the corrupted triples differ from the positive in exactly the corrupted column
+            assert (negative_triples != expanded_positives).sum(dim=-1).eq(1).all()

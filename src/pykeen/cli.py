@@ -15,7 +15,6 @@ later, but that will cause problems - the code will get executed twice:
 
 import importlib
 import inspect
-import os
 import sys
 from collections.abc import Iterable, Mapping
 from operator import itemgetter
@@ -84,7 +83,7 @@ def ls() -> None:
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def models(tablefmt: str) -> None:
     """List models."""
     click.echo(_help_models(tablefmt=tablefmt)[0])
@@ -194,15 +193,15 @@ def _help_interactions(tablefmt: str = "github", *, link_fmt: str | None = None)
 
 
 def _help_representations(tablefmt: str = "github", *, link_fmt: str | None = None) -> tuple[str, int]:
-    lines = list(
+    lines = [
         line[:2]
         for line in _get_resolver_lines2(
             resolver=representation_resolver,
             link_fmt=link_fmt,
             # cf. https://github.com/python/mypy/issues/5374
-            skip={MessagePassingRepresentation},  # type: ignore
+            skip={MessagePassingRepresentation},  # type: ignore[type-abstract]
         )
-    )
+    ]
     headers = ["Name", "Reference"]
     return (
         tabulate(
@@ -231,7 +230,7 @@ def _get_module_name(f: Any) -> str:
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 @click.option("--sort-size", is_flag=True)
 def datasets(tablefmt: str, sort_size: bool) -> None:
     """List datasets."""
@@ -259,7 +258,7 @@ def _help_inductive_datasets(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def training_loops(tablefmt: str) -> None:
     """List training approaches."""
     click.echo(_help_training(tablefmt))
@@ -275,7 +274,7 @@ def _help_training(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def negative_samplers(tablefmt: str) -> None:
     """List negative samplers."""
     click.echo(_help_negative_samplers(tablefmt))
@@ -291,7 +290,7 @@ def _help_negative_samplers(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def stoppers(tablefmt: str) -> None:
     """List stoppers."""
     click.echo(_help_stoppers(tablefmt))
@@ -307,7 +306,7 @@ def _help_stoppers(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def evaluators(tablefmt: str) -> None:
     """List evaluators."""
     click.echo(_help_evaluators(tablefmt))
@@ -323,7 +322,7 @@ def _help_evaluators(tablefmt, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def losses(tablefmt: str) -> None:
     """List losses."""
     click.echo(_help_losses(tablefmt))
@@ -339,7 +338,7 @@ def _help_losses(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def optimizers(tablefmt: str) -> None:
     """List optimizers."""
     click.echo(_help_optimizers(tablefmt))
@@ -361,7 +360,7 @@ def _help_optimizers(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def lr_schedulers(tablefmt: str) -> None:
     """List optimizers."""
     click.echo(_help_lr_schedulers(tablefmt))
@@ -383,7 +382,7 @@ def _help_lr_schedulers(tablefmt: str, link_fmt: str | None = None):
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def regularizers(tablefmt: str) -> None:
     """List regularizers."""
     click.echo(_help_regularizers(tablefmt))
@@ -413,10 +412,7 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: s
             yield name, f":class:`{path}`"
         elif tablefmt == "github":
             doc = cls.__doc__
-            if link_fmt:
-                reference = f"[`{path}`]({link_fmt.format(path)})"
-            else:
-                reference = f"`{path}`"
+            reference = f"[`{path}`]({link_fmt.format(path)})" if link_fmt else f"`{path}`"
 
             yield name, reference, get_until_first_blank(doc)
         else:
@@ -425,7 +421,7 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: s
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def metrics(tablefmt: str) -> None:
     """List metrics."""
     click.echo(_help_metrics(tablefmt))
@@ -445,14 +441,14 @@ def _help_metrics(tablefmt: str) -> str:
         headers.append("Reference")
         headers[0] = "Metric"
     return tabulate(
-        sorted(_get_metrics_lines(tablefmt), key=itemgetter(4, 0)),  # type:ignore
+        sorted(_get_metrics_lines(tablefmt), key=itemgetter(4, 0)),  # type: ignore[arg-type]
         headers=headers,
         tablefmt=tablefmt,
     )
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def trackers(tablefmt: str) -> None:
     """List trackers."""
     click.echo(_help_trackers(tablefmt))
@@ -468,7 +464,7 @@ def _help_trackers(tablefmt: str, link_fmt: str | None = None) -> str:
 
 
 @ls.command()
-@tablefmt_option  # type:ignore
+@tablefmt_option
 def hpo_samplers(tablefmt: str) -> None:
     """List HPO samplers."""
     click.echo(_help_hpo_samplers(tablefmt))
@@ -531,16 +527,13 @@ def _get_resolver_lines(
         elif tablefmt == "github":
             try:
                 ref = value.__name__
-                doc = value.__doc__.splitlines()[0]  # type: ignore
+                doc = value.__doc__.splitlines()[0]  # type: ignore[union-attr]
             except AttributeError:
                 ref = name
                 doc = value.__class__.__doc__
 
             reference = f"pykeen.{submodule}.{ref}"
-            if link_fmt:
-                reference = f"[`{reference}`]({link_fmt.format(reference)})"
-            else:
-                reference = f"`{reference}`"
+            reference = f"[`{reference}`]({link_fmt.format(reference)})" if link_fmt else f"`{reference}`"
 
             yield name, reference, doc
         else:
@@ -621,8 +614,7 @@ def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Itera
 def _link(text: str, link: str, fmt: str) -> str:
     if fmt == "rst":
         return f"`{text} <{link}>`_"
-    else:
-        return f"[{text}]({link})"
+    return f"[{text}]({link})"
 
 
 def get_metric_list() -> list[tuple[str, type[Metric], type[MetricResults]]]:
@@ -638,12 +630,11 @@ def get_metric_list() -> list[tuple[str, type[Metric], type[MetricResults]]]:
 @click.option("--check", is_flag=True)
 def readme(check: bool) -> None:
     """Generate the GitHub readme's ## Implementation section."""
-    readme_path = os.path.abspath(os.path.join(HERE, os.pardir, os.pardir, "README.md"))
+    readme_path = HERE.parents[1].joinpath("README.md").resolve()
     new_readme = get_readme()
 
     if check:
-        with open(readme_path, encoding="utf8") as file:
-            old_readme = file.read()
+        old_readme = readme_path.read_text(encoding="utf8")
         if new_readme.strip() != old_readme.strip():
             click.secho(
                 "Readme has not been updated properly! Make sure all changes are made in the template first,"
@@ -657,8 +648,7 @@ def readme(check: bool) -> None:
 
             sys.exit(-1)
 
-    with open(readme_path, "w", encoding="utf8") as file:
-        print(new_readme, file=file)  # noqa:T201
+    readme_path.write_text(new_readme, encoding="utf8", newline="\n")
 
 
 def get_readme() -> str:
@@ -710,14 +700,14 @@ def get_readme() -> str:
         evaluators=_help_evaluators(tablefmt, link_fmt=api_link_fmt),
         n_evaluators=len(evaluator_resolver.lookup_dict),
         metrics=_help_metrics(tablefmt),
-        n_metrics=len(get_metric_list()),
+        n_metrics=sum(1 for _ in _get_metrics_lines(tablefmt)),
         trackers=_help_trackers(tablefmt, link_fmt=api_link_fmt),
         n_trackers=len(tracker_resolver.lookup_dict),
     )
 
 
-@main.group()  # type:ignore
-@click.pass_context  # type:ignore
+@main.group()
+@click.pass_context
 def train(ctx: click.Context) -> None:
     """Train a KGE model."""
 

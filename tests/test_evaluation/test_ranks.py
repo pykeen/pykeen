@@ -9,7 +9,7 @@ import pykeen.evaluation.ranks
 
 
 @pytest.mark.parametrize(
-    ("batch_shape", "num_batches", "partial_num_choices"), [(tuple(), 4, 3), ((2,), 3, 7), ((2, 3), 2, 12)]
+    ("batch_shape", "num_batches", "partial_num_choices"), [((), 4, 3), ((2,), 3, 7), ((2, 3), 2, 12)]
 )
 def test_rank_builder(batch_shape: Sequence[int], num_batches: int, partial_num_choices: int):
     """Test for rank builder."""

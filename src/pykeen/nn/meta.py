@@ -79,10 +79,10 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
             pretrained embeddings.
         :param shape: an explicit shape for the learned embedding. If None, it is inferred from the provided feature
             tensor.
-        :param kwargs: Keyword arguments passed to :meth:`pykeen.nn.CombinedRepresentation.__init__`.
+        :param kwargs: Keyword arguments passed to :meth:`~pykeen.nn.CombinedRepresentation.__init__`.
 
             For example, if you want to make sure that the dimensions of the output are the same as the input, set
-            ``combination="ConcatProjection"``. to use :class:`pykeen.nn.ConcatProjectionCombination`.
+            ``combination="ConcatProjection"``. to use :class:`~pykeen.nn.combination.ConcatProjectionCombination`.
         """
         static_embedding = Embedding.from_pretrained(tensor, trainable=False)
         if shape is None:

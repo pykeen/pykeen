@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from itertools import chain
 from textwrap import dedent
-from typing import Any, Literal, cast
+from typing import Any, ClassVar, Literal, cast
 
 import more_itertools
 import requests
@@ -51,12 +51,11 @@ class IdentityCache(TextCache):
     Mostly used for testing.
     """
 
-    # docstr-coverage: inherited
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str | None]:  # noqa: D102
         return identifiers
 
 
-PYOBO_PREFIXES_WARNED = set()
+PYOBO_PREFIXES_WARNED: set[str] = set()
 
 
 class PyOBOTextCache(TextCache):
@@ -117,9 +116,9 @@ class WikidataTextCache(TextCache):
     """A cache for requests against Wikidata's SPARQL endpoint."""
 
     #: Wikidata SPARQL endpoint. See https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service#Interfacing
-    WIKIDATA_ENDPOINT = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
+    WIKIDATA_ENDPOINT: ClassVar[str] = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
 
-    HEADERS: dict[str, str] = {
+    HEADERS: ClassVar[dict[str, str | bytes | None]] = {
         # cf. https://meta.wikimedia.org/wiki/User-Agent_policy
         "User-Agent": (
             f"PyKEEN-Bot/{get_version()} (https://pykeen.github.io; pykeen2019@gmail.com) "
@@ -227,7 +226,7 @@ class WikidataTextCache(TextCache):
             assert isinstance(label, str)  # for mypy
             description = nested_get(entry, "itemDescription", "value", default="")
             assert isinstance(description, str)  # for mypy
-            result[wikidata_id] = dict(label=label, description=description)
+            result[wikidata_id] = {"label": label, "description": description}
         return result
 
     def _load(self, wikidata_id: str, component: str) -> str | None:
@@ -313,4 +312,4 @@ class WikidataTextCache(TextCache):
 
 
 #: A resolver for text caches
-text_cache_resolver: ClassResolver[TextCache] = ClassResolver.from_subclasses(base=TextCache)
+text_cache_resolver: ClassResolver[TextCache] = ClassResolver.from_subclasses(base=TextCache)  # type: ignore[type-abstract]

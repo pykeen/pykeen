@@ -28,7 +28,7 @@ entity_representation = CombinedRepresentation(
     max_id=n_entities,
     base=[embedding, features],
     combination=ConcatProjectionCombination,
-    combination_kwargs=dict(output_dim=post_combination_embedding_dim),
+    combination_kwargs={"output_dim": post_combination_embedding_dim},
 )
 
 # we're going to use DistMult as the interaction, so we need a relation

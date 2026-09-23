@@ -24,14 +24,15 @@ class TestUtils(unittest.TestCase):
     def test_skyline(self):
         """Test the skyline function."""
         n = 500
+        rng = np.random.default_rng(seed=42)
         pairs = list(
             zip(
-                np.random.randint(low=0, high=200, size=n, dtype=int),
-                np.random.uniform(0, 6, size=n),
+                rng.integers(low=0, high=200, size=n, dtype=int),
+                rng.uniform(0, 6, size=n),
                 strict=False,
             )
         )
-        self.assertEqual(set(_old_skyline(pairs)), set(triple_analysis._get_skyline(pairs)))
+        assert set(_old_skyline(pairs)) == set(triple_analysis._get_skyline(pairs))
 
 
 def _test_count_dataframe(
@@ -184,13 +185,13 @@ class DatasetAnalysisTests(unittest.TestCase):
         assert df[triple_analysis.PATTERN_TYPE_COLUMN_NAME].isin(triple_analysis.RELATION_PATTERN_TYPES).all()
 
         # check confidence value range
-        x = df[triple_analysis.CONFIDENCE_COLUMN_NAME].values
-        assert (0 <= x).all()
+        x = df[triple_analysis.CONFIDENCE_COLUMN_NAME].to_numpy()
+        assert (x >= 0).all()
         assert (x <= 1).all()
 
         # check support value range
-        x = df[triple_analysis.SUPPORT_COLUMN_NAME].values
-        assert (1 <= x).all()
+        x = df[triple_analysis.SUPPORT_COLUMN_NAME].to_numpy()
+        assert (x >= 1).all()
 
     def test_relation_cardinality_types(self):
         """Tests for relation cardinality type classification."""

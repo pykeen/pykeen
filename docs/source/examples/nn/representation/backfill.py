@@ -15,7 +15,7 @@ embedding_dim = 32
 result = pipeline(
     dataset=dataset,
     interaction="distmult",
-    dimensions=dict(d=embedding_dim),
+    dimensions={"d": embedding_dim},
 )
 
 # We want to re-use the entity representations for known entities, without further training them.
@@ -45,6 +45,6 @@ print(entity_repr)
 result = pipeline(
     dataset=dataset_large,
     interaction="distmult",
-    dimensions=dict(d=embedding_dim),
-    model_kwargs=dict(entity_representations=entity_repr),
+    dimensions={"d": embedding_dim},
+    model_kwargs={"entity_representations": entity_repr},
 )

@@ -15,7 +15,7 @@ class TestGenerate(unittest.TestCase):
 
     def assert_consecutive(self, x: set[int], msg=None):
         """Assert that all of the things in the collection are consecutive integers."""
-        self.assertEqual(set(range(len(x))), x, msg=msg)
+        assert set(range(len(x))) == x, msg
 
     def test_compacted(self):
         """Test that the results are compacted."""
@@ -26,7 +26,7 @@ class TestGenerate(unittest.TestCase):
                 num_triples=self.num_triples,
                 random_state=random_state,
             )
-            self.assertEqual(self.num_triples, x.shape[0])
+            assert self.num_triples == x.shape[0]
             self.assert_consecutive(get_entities(x))
             self.assert_consecutive(get_relations(x))
 
@@ -39,6 +39,6 @@ class TestGenerate(unittest.TestCase):
                 num_triples=self.num_triples,
                 random_state=random_state,
             )
-            self.assertEqual(self.num_triples, tf.mapped_triples.shape[0])
+            assert self.num_triples == tf.mapped_triples.shape[0]
             self.assert_consecutive(get_entities(tf.mapped_triples))
             self.assert_consecutive(get_relations(tf.mapped_triples))

@@ -22,21 +22,20 @@ class NoRegularizerTest(cases.RegularizerTestCase):
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         return torch.zeros(1, device=x.device, dtype=x.dtype)
 
-    # docstr-coverage: inherited
     def test_apply_only_once(self):  # noqa: D102
-        raise unittest.SkipTest()
+        raise unittest.SkipTest
 
 
 class L1RegularizerTest(cases.LpRegularizerTest):
     """Test an L_1 normed regularizer."""
 
-    kwargs = dict(p=1)
+    kwargs = {"p": 1}
 
 
 class NormedL2RegularizerTest(cases.LpRegularizerTest):
     """Test an L_2 normed regularizer."""
 
-    kwargs = dict(p=2, normalize=True)
+    kwargs = {"p": 2, "normalize": True}
 
     @pytest.mark.slow
     def test_expected_norm(self):
@@ -60,12 +59,12 @@ class CombinedRegularizerTest(cases.RegularizerTestCase):
     """Test the combined regularizer."""
 
     cls = pykeen.regularizers.CombinedRegularizer
-    kwargs = dict(
-        regularizers=[
+    kwargs = {
+        "regularizers": [
             pykeen.regularizers.LpRegularizer(weight=0.1, p=1),
             pykeen.regularizers.LpRegularizer(weight=0.7, p=2),
         ]
-    )
+    }
 
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         assert isinstance(self.instance, pykeen.regularizers.CombinedRegularizer)
@@ -77,9 +76,9 @@ class PowerSumRegularizerTest(cases.RegularizerTestCase):
     """Test the power sum regularizer."""
 
     cls = pykeen.regularizers.PowerSumRegularizer
-    kwargs = dict(
-        apply_only_once=True,
-    )
+    kwargs = {
+        "apply_only_once": True,
+    }
 
     def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
         kwargs = self.instance_kwargs
@@ -99,10 +98,7 @@ class NormLimitRegularizerTest(cases.RegularizerTestCase):
         kwargs = self.instance_kwargs
         p = kwargs.get("p", 2.0)
         power_norm = kwargs.get("power_norm", True)
-        if power_norm:
-            value = x.pow(p).sum(dim=-1)
-        else:
-            value = x.norm(p=p, dim=-1)
+        value = x.pow(p).sum(dim=-1) if power_norm else x.norm(p=p, dim=-1)
         max_norm = kwargs.get("max_norm", 1.0)
         return (value - max_norm).relu().sum()
 
@@ -111,14 +107,13 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
     """Test the orthogonaliy regularizer."""
 
     cls = pykeen.regularizers.OrthogonalityRegularizer
-    kwargs = dict(
-        weight=0.5,
-        epsilon=1.0e-05,
+    kwargs = {
+        "weight": 0.5,
+        "epsilon": 1.0e-05,
         # there is an extra test for this case
-        apply_only_once=False,
-    )
+        "apply_only_once": False,
+    }
 
-    # docstr-coverage: inherited
     def _generate_update_input(self, requires_grad: bool = False) -> Sequence[torch.FloatTensor]:  # noqa: D102
         # same size tensors
         return (
@@ -126,16 +121,13 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
             rand(self.batch_size, 12, generator=self.generator, device=self.device).requires_grad_(requires_grad),
         )
 
-    # docstr-coverage: inherited
     def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
         assert len(inputs) == 2
         return functional.cosine_similarity(*inputs).pow(2).subtract(self.instance_kwargs["epsilon"]).relu().sum()
 
-    # docstr-coverage: inherited
     def test_forward(self) -> None:  # noqa: D102
         raise unittest.SkipTest(f"{self.cls.__name__} cannot be applied to a single tensor.")
 
-    # docstr-coverage: inherited
     def test_model(self) -> None:  # noqa: D102
         raise unittest.SkipTest(f"{self.cls.__name__} is not supported by all models.")
 
@@ -143,11 +135,10 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
         """Test update function of TransHRegularizer."""
         # Tests that exception will be thrown when more than or less than two tensors are passed
         for num in (1, 3):
-            with self.assertRaises(ValueError) as context:
+            with pytest.raises(ValueError, match="Expects exactly two tensors"):
                 self.instance.update(
                     *(rand(self.batch_size, 10, generator=self.generator, device=self.device) for _ in range(num)),
                 )
-                self.assertTrue("Expects exactly two tensors" in context.exception)
 
 
 class TestRegularizerTests(unittest_templates.MetaTestCase[pykeen.regularizers.Regularizer]):

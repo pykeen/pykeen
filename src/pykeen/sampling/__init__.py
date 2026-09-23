@@ -46,7 +46,7 @@ defined as:
 Uniform Negative Sampling
 -------------------------
 
-The default negative sampler :class:`pykeen.sampling.BasicNegativeSampler` generates corrupted triples from a known
+The default negative sampler :class:`~pykeen.sampling.BasicNegativeSampler` generates corrupted triples from a known
 positive triple $(h,r,t) \in \mathcal{K}$ by uniformly randomly either using the corrupt heads operation or the corrupt
 tails operation. The default negative sampler is automatically used in the following code:
 
@@ -73,7 +73,7 @@ It can be set explicitly with:
         negative_sampler="basic",
     )
 
-In general, the behavior of the negative sampler can be modified when using the :func:`pykeen.pipeline.pipeline` by
+In general, the behavior of the negative sampler can be modified when using the :func:`~pykeen.pipeline.pipeline` by
 passing the ``negative_sampler_kwargs`` argument. In order to explicitly specifiy which of the head, relation, and tail
 corruption methods are used, the ``corruption_schema`` argument can be used. For example, to use all three, the
 collection ``('h', 'r', 't')`` can be passed as in the following:
@@ -95,7 +95,7 @@ collection ``('h', 'r', 't')`` can be passed as in the following:
 Bernoulli Negative Sampling
 ---------------------------
 
-The Bernoulli negative sampler :class:`pykeen.sampling.BernoulliNegativeSampler` generates corrupted triples from a
+The Bernoulli negative sampler :class:`~pykeen.sampling.BernoulliNegativeSampler` generates corrupted triples from a
 known positive triple $(h,r,t) \in \mathcal{K}$ similarly to the uniform negative sampler, but it pre-computes a
 probability $p_r$ for each relation $r$ to weight whether the head corruption is used with probability $p_r$ or if tail
 corruption is used with probability $1 - p_r$.
@@ -110,13 +110,28 @@ corruption is used with probability $1 - p_r$.
         training_loop="sLCWA",
         negative_sampler="bernoulli",
     )
-"""  # noqa
+
+Grouped Corruption
+-------------------
+
+By default, negative samplers materialise negatives as dense triples via :meth:`NegativeSampler.corrupt_batch`,
+discarding which position was corrupted. Some samplers can additionally provide the corruptions *grouped* by the
+corrupted target via :meth:`NegativeSampler.corrupt_batch_grouped`, which allows the sLCWA training loop
+(:class:`pykeen.training.SLCWATrainingLoop` with ``grouped=True``) to score each group with a single broadcasted call
+instead of scoring each negative independently, cf. :ref:`grouped_slcwa`.
+
+Whether a sampler supports this is indicated by its :data:`NegativeSampler.supports_grouped_corruption` class
+variable. Currently, :class:`~pykeen.sampling.BasicNegativeSampler` supports grouped corruption.
+:class:`~pykeen.sampling.BernoulliNegativeSampler` and :class:`~pykeen.sampling.PseudoTypedNegativeSampler` do not,
+since both choose the corrupted position per negative sample from data-dependent probabilities, so the groups would
+be ragged and could not be laid out rectangularly without padding.
+"""
 
 from class_resolver import ClassResolver
 
 from .basic_negative_sampler import BasicNegativeSampler
 from .bernoulli_negative_sampler import BernoulliNegativeSampler
-from .negative_sampler import NegativeSampler
+from .negative_sampler import GroupedNegatives, NegativeSampler, expand_corruption
 from .pseudo_type import PseudoTypedNegativeSampler
 
 __all__ = [
@@ -126,10 +141,12 @@ __all__ = [
     "PseudoTypedNegativeSampler",
     # Utils
     "negative_sampler_resolver",
+    "GroupedNegatives",
+    "expand_corruption",
 ]
 
 #: A resolver for negative samplers
 negative_sampler_resolver: ClassResolver[NegativeSampler] = ClassResolver.from_subclasses(
-    NegativeSampler,
+    NegativeSampler,  # type: ignore[type-abstract]
     default=BasicNegativeSampler,
 )

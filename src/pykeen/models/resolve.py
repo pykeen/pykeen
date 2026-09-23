@@ -1,14 +1,14 @@
-"""A :class:`pykeen.models.ERModel` can be constructed from :class:`pykeen.nn.modules.Interaction`.
+"""A :class:`~pykeen.models.ERModel` can be constructed from :class:`~pykeen.nn.modules.Interaction`.
 
-The new style-class, :class:`pykeen.models.ERModel` abstracts the interaction away from the representations
+The new style-class, :class:`~pykeen.models.ERModel` abstracts the interaction away from the representations
 such that different interactions can be used interchangably. A new model can be constructed directly from the
-interaction module, given a ``dimensions`` mapping. In each :class:`pykeen.nn.modules.Interaction`, there
+interaction module, given a ``dimensions`` mapping. In each :class:`~pykeen.nn.modules.Interaction`, there
 is a field called ``entity_shape`` and ``relation_shape`` that allows for using eigen-notation for defining
 the different dimensions of the model. Most models share the ``d`` dimensionality for both the entity and relation
 vectors. Some (but not all) exceptions are:
 
-- :class:`pykeen.nn.modules.RESCALInteraction`, which uses a square matrix for relations written as ``dd``
-- :class:`pykeen.nn.modules.TransDInteraction`, which uses ``d`` for entity shape and ``e`` for a different
+- :class:`~pykeen.nn.modules.RESCALInteraction`, which uses a square matrix for relations written as ``dd``
+- :class:`~pykeen.nn.modules.TransDInteraction`, which uses ``d`` for entity shape and ``e`` for a different
   relation shape.
 
 With this in mind, you'll have to investigate the dimensions of the vectors through the PyKEEN documentation.
@@ -52,7 +52,7 @@ Make a model class from an instantiated interaction module:
 >>> model_cls = make_model_cls({"d": embedding_dim}, TransEInteraction(p=2))
 
 All of these model classes can be passed directly into the ``model``
-argument of :func:`pykeen.pipeline.pipeline`.
+argument of :func:`~pykeen.pipeline.pipeline`.
 """
 
 import logging
@@ -130,7 +130,7 @@ def make_model_cls(
 
     entity_representations_kwargs, relation_representations_kwargs = _normalize_representation_kwargs(
         dimensions=dimensions,
-        interaction=interaction_instance,  # type: ignore
+        interaction=interaction_instance,  # type: ignore[arg-type]
         entity_representations_kwargs=entity_representations_kwargs,
         relation_representations_kwargs=relation_representations_kwargs,
     )
@@ -169,13 +169,13 @@ def _normalize_representation_kwargs(
         raise DimensionError(set(dimensions), interaction.dimensions)
     if entity_representations_kwargs is None:
         entity_representations_kwargs = [
-            dict(shape=tuple(dimensions[d] for d in shape)) for shape in interaction.entity_shape
+            {"shape": tuple(dimensions[d] for d in shape)} for shape in interaction.entity_shape
         ]
     elif not isinstance(entity_representations_kwargs, Sequence):
         entity_representations_kwargs = [entity_representations_kwargs]
     if relation_representations_kwargs is None:
         relation_representations_kwargs = [
-            dict(shape=tuple(dimensions[d] for d in shape)) for shape in interaction.relation_shape
+            {"shape": tuple(dimensions[d] for d in shape)} for shape in interaction.relation_shape
         ]
     elif not isinstance(relation_representations_kwargs, Sequence):
         relation_representations_kwargs = [relation_representations_kwargs]

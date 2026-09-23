@@ -37,7 +37,6 @@ logger = logging.getLogger(__name__)
 class OGBEvaluator(SampledRankBasedEvaluator):
     """A sampled, rank-based evaluator that applies a custom OGB evaluation."""
 
-    # docstr-coverage: inherited
     def __init__(self, filtered: bool = False, **kwargs):  # noqa:D107
         if filtered:
             raise ValueError(
@@ -63,7 +62,7 @@ class OGBEvaluator(SampledRankBasedEvaluator):
         pre_filtered_triples: bool = True,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
     ) -> MetricResults:
-        """Run :func:`evaluate_ogb` with this evaluator."""
+        """Run :func:`~pykeen.evaluation.evaluate_ogb` with this evaluator."""
         if (
             {restrict_relations_to, restrict_entities_to, additional_filter_triples} != {None}
             or do_time_consuming_checks is False
@@ -160,6 +159,9 @@ def evaluate_ogb(
     y_pred_pos: dict[Target, torch.Tensor] = {}
     y_pred_neg: dict[Target, torch.Tensor] = {}
 
+    # a single batch, if no batch size is given; `Tensor.split` requires an integer
+    batch_size = batch_size or mapped_triples.shape[0]
+
     # move tensor to device
     device = device or model.device
     model = model.to(device)
@@ -198,7 +200,7 @@ def evaluate_ogb(
     rank_type = RANK_REALISTIC
     for ext_target, y_pred_pos_side, y_pred_neg_side in iter_preds():
         # combine to input dictionary
-        input_dict = dict(y_pred_pos=y_pred_pos_side, y_pred_neg=y_pred_neg_side)
+        input_dict = {"y_pred_pos": y_pred_pos_side, "y_pred_neg": y_pred_neg_side}
         # delegate to OGB evaluator
         ogb_result = ogb_evaluator.eval(input_dict=input_dict)
         # post-processing
@@ -218,7 +220,7 @@ def _hasher(kwargs: Mapping[str, Any]) -> int:
 @maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
 def _evaluate_ogb(
     *,
-    evaluator: OGBEvaluator,
+    evaluator: SampledRankBasedEvaluator,
     batch_size: int,
     slice_size: int,
     mapped_triples: MappedTriples,

@@ -1,3 +1,4 @@
+# cf. https://github.com/actions/first-interaction
 name: Welcome
 
 on:
@@ -7,13 +8,15 @@ on:
     branches:
       - master
 
+permissions:
+  pull-requests: write
+
 jobs:
   welcome:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/first-interaction@v1
+      - uses: actions/first-interaction@v2
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
           pr-message: |-
             Congrats on making your first Pull Request and thanks for taking the time to improve PyKEEN! ❤️! 🎉
   

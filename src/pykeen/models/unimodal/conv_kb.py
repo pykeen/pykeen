@@ -38,20 +38,20 @@ class ConvKB(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        hidden_dropout_rate=DEFAULT_DROPOUT_HPO_RANGE,
-        num_filters=dict(type=int, low=7, high=9, scale="power_two"),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "hidden_dropout_rate": DEFAULT_DROPOUT_HPO_RANGE,
+        "num_filters": {"type": int, "low": 7, "high": 9, "scale": "power_two"},
+    }
     #: The regularizer used by [nguyen2018]_ for ConvKB.
     regularizer_default: ClassVar[type[Regularizer]] = LpRegularizer
     #: The LP settings used by [nguyen2018]_ for ConvKB.
-    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.001 / 2,
-        p=2.0,
-        normalize=True,
-        apply_only_once=True,
-    )
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = {
+        "weight": 0.001 / 2,
+        "p": 2.0,
+        "normalize": True,
+        "apply_only_once": True,
+    }
 
     def __init__(
         self,
@@ -73,25 +73,25 @@ class ConvKB(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param entity_initializer: Entity initializer function. Defaults to :func:`torch.nn.init.uniform_`
         :param relation_initializer: Relation initializer function. Defaults to :func:`torch.nn.init.uniform_`
         :param kwargs:
-            Remaining keyword arguments passed through to :class:`pykeen.models.EntityRelationEmbeddingModel`.
+            Remaining keyword arguments passed through to :class:`~pykeen.models.ERModel`.
 
         To be consistent with the paper, pass entity and relation embeddings pre-trained from TransE.
         """
         super().__init__(
             interaction=ConvKBInteraction,
-            interaction_kwargs=dict(
-                hidden_dropout_rate=hidden_dropout_rate,
-                embedding_dim=embedding_dim,
-                num_filters=num_filters,
-            ),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-            ),
+            interaction_kwargs={
+                "hidden_dropout_rate": hidden_dropout_rate,
+                "embedding_dim": embedding_dim,
+                "num_filters": num_filters,
+            },
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+            },
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
+            },
             **kwargs,
         )
         regularizer = self._instantiate_regularizer(regularizer=regularizer)

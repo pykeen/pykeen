@@ -235,10 +235,7 @@ def verify(dataset_regex: str | None, min_triples: int | None, max_triples: int 
     valid = None
     for part, a in itt.product(("validation", "testing"), ("entities", "relations")):
         this_valid = df[f"num_training_{a}"] == df[f"num_{part}_{a}"]
-        if valid is None:
-            valid = this_valid
-        else:
-            valid = valid & this_valid
+        valid = this_valid if valid is None else valid & this_valid
     df["valid"] = valid
     click.echo(df.to_markdown())
 
@@ -280,7 +277,7 @@ def expected_metrics(
         if expected_metrics_path.is_file() and not force:
             expected_metrics_dict = json.loads(expected_metrics_path.read_text())
         else:
-            expected_metrics_dict = dict()
+            expected_metrics_dict = {}
             for key, factory in dataset_instance.factory_dict.items():
                 additional_filter_triples: list[torch.Tensor] | None
                 if key == "training":
@@ -321,9 +318,9 @@ def expected_metrics(
                     MedianRank(),
                     InverseMedianRank(),
                 ]
-                this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = dict()
+                this_metrics: MutableMapping[ExtendedTarget, Mapping[str, float]] = {}
                 for label, sides in SIDE_MAPPING.items():
-                    num_candidates = df[[f"{side}_candidates" for side in sides]].values.ravel()
+                    num_candidates = df[[f"{side}_candidates" for side in sides]].to_numpy().ravel()
                     this_metrics[label] = {
                         metric.key: metric.expected_value(
                             num_candidates=num_candidates,
@@ -444,7 +441,7 @@ def degree(
         value_vars=["mean", "variance", "skewness", "kurtosis"],
         var_name="statistic",
     )
-    grid_1: sns.FacetGrid = sns.relplot(  # type: ignore
+    grid_1: sns.FacetGrid = sns.relplot(  # type: ignore[name-defined]
         data=df,
         hue="dataset",
         x="num_triples",
@@ -452,10 +449,10 @@ def degree(
         col="statistic",
         row="target",
         y="value",
-        facet_kws=dict(
-            margin_titles=True,
-            sharey="col",
-        ),
+        facet_kws={
+            "margin_titles": True,
+            "sharey": "col",
+        },
         height=2.5,
         hue_order=sorted(df["dataset"].unique()),
     )
@@ -477,11 +474,11 @@ def degree(
     logger.info(f"Saved plot to {path}")
 
     # Plot: difference between mean head and tail degree
-    df_2 = df.loc[df["statistic"] == "mean"].pivot(
+    df_2 = df.loc[df["statistic"] == "mean"].pivot_table(
         index=["dataset", "split", "num_triples"], columns="target", values="value"
     )
     df_2["difference"] = df_2["head"] - df_2["tail"]
-    grid_2: sns.FacetGrid = sns.relplot(  # type: ignore
+    grid_2: sns.FacetGrid = sns.relplot(  # type: ignore[name-defined]
         data=df_2,
         hue="dataset",
         x="num_triples",

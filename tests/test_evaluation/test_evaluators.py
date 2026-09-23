@@ -62,7 +62,7 @@ from tests import cases, mocks
 from tests.utils import needs_packages
 
 
-@pytest.mark.parametrize(["estimator", "ci"], [(numpy.mean, 60), ("mean", "std"), (numpy.mean, numpy.var)])
+@pytest.mark.parametrize(("estimator", "ci"), [(numpy.mean, 60), ("mean", "std"), (numpy.mean, numpy.var)])
 def test_summarize_values(estimator, ci):
     """Test value summarization."""
     gen = numpy.random.default_rng(seed=42)
@@ -92,10 +92,10 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         result: RankBasedMetricResults
 
         for (side, rank_type, metric), value in result.data.items():
-            self.assertIn(side, SIDES)
-            self.assertIn(rank_type, RANK_TYPES)
-            self.assertIsInstance(metric, str)
-            self.assertIsInstance(value, (float, int))
+            assert side in SIDES
+            assert rank_type in RANK_TYPES
+            assert isinstance(metric, str)
+            assert isinstance(value, (float, int))
 
     def test_finalize_multi(self) -> None:
         """Test multi finalize."""
@@ -105,7 +105,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         result = self.instance.finalize_multi(n_boot=n_boot)
         # check type
         assert isinstance(result, dict)
-        assert all(isinstance(k, str) for k in result.keys())
+        assert all(isinstance(k, str) for k in result)
         assert all(isinstance(v, list) for v in result.values())
         # check length
         assert all(len(v) == n_boot for v in result.values())
@@ -117,7 +117,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         result = self.instance.finalize_with_confidence(n_boot=3)
         # check type
         assert isinstance(result, dict)
-        assert all(isinstance(k, str) for k in result.keys())
+        assert all(isinstance(k, str) for k in result)
         assert all(isinstance(v, tuple) for v in result.values())
         # check length
         assert all(len(v) == 2 for v in result.values())
@@ -129,7 +129,7 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the SampledRankBasedEvaluator."""
 
     cls = SampledRankBasedEvaluator
-    kwargs = dict(num_negatives=3)
+    kwargs = {"num_negatives": 3}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -143,7 +143,7 @@ class OGBEvaluatorTests(RankBasedEvaluatorTests):
     """Unit test for OGB evaluator."""
 
     cls = OGBEvaluator
-    kwargs = dict(num_negatives=3)
+    kwargs = {"num_negatives": 3}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -180,9 +180,9 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
         result: ClassificationMetricResults
 
         for (side, metric_name), value in result.data.items():
-            self.assertIn(side, SIDES)
-            self.assertIsInstance(metric_name, str)
-            self.assertIsInstance(value, (float, int))
+            assert side in SIDES
+            assert isinstance(metric_name, str)
+            assert isinstance(value, (float, int))
 
 
 class EvaluatorUtilsTests(unittest.TestCase):
@@ -377,7 +377,6 @@ class EvaluatorUtilsTests(unittest.TestCase):
 class DummyMetricResults(MetricResults[Target]):
     """Dummy metric results."""
 
-    # docstr-coverage: inherited
     @classmethod
     def key_from_string(cls, s: str | None) -> Target:  # noqa: D102
         return normalize_target(s)
@@ -391,7 +390,6 @@ class DummyEvaluator(Evaluator[Target]):
         super().__init__(*args, **kwargs)
         self.counter: Counter[Target] = Counter()
 
-    # docstr-coverage: inherited
     def process_scores_(
         self,
         hrt_batch: MappedTriples,
@@ -402,11 +400,9 @@ class DummyEvaluator(Evaluator[Target]):
     ) -> None:  # noqa: D102
         self.counter.update((target,))
 
-    # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
         self.counter.clear()
 
-    # docstr-coverage: inherited
     def finalize(self) -> MetricResults[Target]:  # noqa: D102
         return DummyMetricResults(data={target: float(count) for target, count in self.counter.items()})
 
@@ -429,7 +425,7 @@ class TestEvaluationStructure(unittest.TestCase):
             batch_size=1,
             use_tqdm=False,
         )
-        self.assertIsInstance(eval_results, DummyMetricResults)
+        assert isinstance(eval_results, DummyMetricResults)
         assert eval_results.get_metric(name=LABEL_HEAD) == eval_results.get_metric(name=LABEL_TAIL), (
             "Should be evaluated on the same number of batches per side"
         )
@@ -494,9 +490,24 @@ class TestEvaluationFiltering(unittest.TestCase):
         )
         assert eval_results.get_metric(name="mr") == 1, "The rank should equal 1"
 
+    def test_evaluation_unfiltered(self):
+        """Test that the raw (unfiltered) ranking protocol is supported.
+
+        Filtering only decides whether the *other* positives are masked out; the true score - and thus a rank - is
+        available either way.
+        """
+        eval_results = RankBasedEvaluator(filtered=False).evaluate(
+            model=self.model,
+            mapped_triples=self.test_triples,
+            batch_size=1,
+            use_tqdm=False,
+        )
+        # the true entity receives the third-highest score on both sides, and nothing is filtered out
+        assert eval_results.get_metric(name="mr") == 3, "The raw mean rank should equal 3"
+
 
 @pytest.mark.parametrize(
-    "string,expected",
+    ("string", "expected"),
     [
         (None, RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=InverseHarmonicMeanRank().key)),
         ("mrr", RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=InverseHarmonicMeanRank().key)),
@@ -694,7 +705,7 @@ class ExpectedMetricsTests(unittest.TestCase):
         generator: numpy.random.Generator = numpy.random.default_rng(seed=42)
         # test different shapes
         for shape, total in (
-            (tuple(), 20),
+            ((), 20),
             ((10, 2), 275),
             ((10_000,), 1237),
         ):
@@ -722,12 +733,12 @@ class ExpectedMetricsTests(unittest.TestCase):
             assert ehk >= 0
             assert ehk <= 1.0
             if total <= k:
-                self.assertAlmostEqual(ehk, 1.0)
+                assert ehk == pytest.approx(1.0)
 
     def test_expected_hits_at_k_manual(self):
         """Test expected Hits@k, where some candidate set sizes are smaller than k, but not all."""
         metric = HitsAtK(k=10)
-        self.assertAlmostEqual(metric.expected_value(num_candidates=[5, 20]), (1 + 0.5) / 2)
+        assert metric.expected_value(num_candidates=[5, 20]) == pytest.approx((1 + 0.5) / 2)
 
 
 def test_prepare_filter_triples():
@@ -767,7 +778,7 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
             metric_name = metric.key
-            self.assertTrue(any(metric_name in key for key in flat_dict.keys()), metric_name)
+            assert any(metric_name in key for key in flat_dict), metric_name
 
     def test_monotonicity_in_rank_type(self):
         """Test monotonicity for different rank-types."""
@@ -777,8 +788,8 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
             "adjusted_hits_at_",
         ]
         self.instance: RankBasedMetricResults
-        targets = {key.side for key in self.instance.data.keys()}
-        for metric_name in {key.metric for key in self.instance.data.keys()}:
+        targets = {key.side for key in self.instance.data}
+        for metric_name in {key.metric for key in self.instance.data}:
             if metric_name in {"variance", "standard_deviation", "median_absolute_deviation"}:
                 continue
             norm_metric_name = metric_name

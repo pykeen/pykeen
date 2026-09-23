@@ -33,9 +33,10 @@ class CP(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE, rank=dict(type=int, low=2, high=2048, log=True)
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "rank": {"type": int, "low": 2, "high": 2048, "log": True},
+    }
 
     def __init__(
         self,
@@ -65,26 +66,26 @@ class CP(ERModel[FloatTensor, FloatTensor, FloatTensor]):
             interaction=CPInteraction,
             entity_representations_kwargs=[
                 # head representation
-                dict(
-                    shape=(rank, embedding_dim),
-                    initializer=entity_initializer,
-                    initializer_kwargs=entity_initializer_kwargs,
-                    normalizer=entity_normalizer,
-                    normalizer_kwargs=entity_normalizer_kwargs,
-                ),
+                {
+                    "shape": (rank, embedding_dim),
+                    "initializer": entity_initializer,
+                    "initializer_kwargs": entity_initializer_kwargs,
+                    "normalizer": entity_normalizer,
+                    "normalizer_kwargs": entity_normalizer_kwargs,
+                },
                 # tail representation
-                dict(
-                    shape=(rank, embedding_dim),
-                    initializer=entity_initializer,
-                    initializer_kwargs=entity_initializer_kwargs,
-                    normalizer=entity_normalizer,
-                    normalizer_kwargs=entity_normalizer_kwargs,
-                ),
+                {
+                    "shape": (rank, embedding_dim),
+                    "initializer": entity_initializer,
+                    "initializer_kwargs": entity_initializer_kwargs,
+                    "normalizer": entity_normalizer,
+                    "normalizer_kwargs": entity_normalizer_kwargs,
+                },
             ],
-            relation_representations_kwargs=dict(
-                shape=(rank, embedding_dim),
-                initializer=relation_initializer,
-                initializer_kwargs=relation_initializer_kwargs,
-            ),
+            relation_representations_kwargs={
+                "shape": (rank, embedding_dim),
+                "initializer": relation_initializer,
+                "initializer_kwargs": relation_initializer_kwargs,
+            },
             **kwargs,
         )

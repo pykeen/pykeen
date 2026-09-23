@@ -359,12 +359,12 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         with tqdm(
             **ChainMap(
                 dict(tqdm_kwargs),
-                dict(
-                    desc=f"Evaluating on {model.device}",
-                    total=num_triples,
-                    unit="triple",
-                    unit_scale=True,
-                ),
+                {
+                    "desc": f"Evaluating on {model.device}",
+                    "total": num_triples,
+                    "unit": "triple",
+                    "unit_scale": True,
+                },
             )
         ) as progress_bar:
             return evaluate(
@@ -380,36 +380,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
                 model=model,
                 mode=self.mode,
                 **kwargs,
-            )
-
-    @staticmethod
-    def _check_slicing_availability(model: Model, batch_size: int, entities: bool, relations: bool) -> None:
-        """Raise an error if the necessary slicing operations are not supported.
-
-        :param model: the model
-        :param batch_size: the batch-size; only used for creating the error message
-        :param entities: whether entities need to be scored
-        :param relations: whether relations need to be scored
-
-        :raises MemoryError: if the necessary slicing operations are not supported by the model
-        """
-        reasons = []
-        if entities:
-            # if inverse triples are used, we only do score_t (TODO: by default; can this be changed?)
-            if not model.can_slice_t:
-                reasons.append("score_t")
-            # otherwise, i.e., without inverse triples, we also need score_h
-            if not model.use_inverse_triples and not model.can_slice_t:
-                reasons.append("score_h")
-        # if relations are to be predicted, we need to slice score_r
-        if relations and not model.can_slice_r:
-            reasons.append("score_r")
-        # raise an error, if any of the required methods cannot slice
-        if reasons:
-            raise MemoryError(
-                f"The current model can't be evaluated on this hardware with these parameters, as "
-                f"evaluation batch_size={batch_size} is too big and slicing is not implemented for this "
-                f"model yet (missing support for: {reasons})"
             )
 
 
@@ -613,9 +583,14 @@ def _evaluate_batch(
         masks).
     """
     scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size, mode=mode)
+    column = TARGET_TO_INDEX[target]
+
+    # the true score is required for ranking, independent of whether the filtered protocol is used;
+    # filtering only decides whether the *other* positives are masked out beforehand.
+    # shape: (batch_size, 1)
+    true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, column]].unsqueeze(dim=-1)
 
     if evaluator.filtered or evaluator.requires_positive_mask:
-        column = TARGET_TO_INDEX[target]
         if all_pos_triples is None:
             raise ValueError(
                 "If filtering_necessary of positive_masks_required is True, all_pos_triples has to be "
@@ -634,16 +609,10 @@ def _evaluate_batch(
 
     if evaluator.filtered:
         assert positive_filter is not None
-        # Select scores of true
-        true_scores = scores[torch.arange(0, batch.shape[0]), batch[:, column]]
         # overwrite filtered scores
         scores = filter_scores_(scores=scores, filter_batch=positive_filter)
         # The scores for the true triples have to be rewritten to the scores tensor
-        scores[torch.arange(0, batch.shape[0]), batch[:, column]] = true_scores
-        # the rank-based evaluators needs the true scores with trailing 1-dim
-        true_scores = true_scores.unsqueeze(dim=-1)
-    else:
-        true_scores = None
+        scores[torch.arange(0, batch.shape[0]), batch[:, column]] = true_scores[:, 0]
 
     # Create a positive mask with the size of the scores from the positive filter
     if evaluator.requires_positive_mask:

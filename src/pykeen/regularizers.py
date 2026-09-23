@@ -28,9 +28,9 @@ __all__ = [
     # Utils
     "regularizer_resolver",
 ]
-DEFAULT_REGULARIZER_WEIGHT_HPO_RANGE = dict(
-    weight=dict(type=float, low=0.01, high=1.0, scale="log"),
-)
+DEFAULT_REGULARIZER_WEIGHT_HPO_RANGE = {
+    "weight": {"type": float, "low": 0.01, "high": 1.0, "scale": "log"},
+}
 
 _REGULARIZER_SUFFIX = "Regularizer"
 
@@ -137,12 +137,10 @@ class NoRegularizer(Regularizer):
     #: The default strategy for optimizing the no-op regularizer's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    # docstr-coverage: inherited
     def update(self, *tensors: FloatTensor) -> None:  # noqa: D102
         # no need to compute anything
         pass
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         # always return zero
         return torch.zeros(1, dtype=x.dtype, device=x.device)
@@ -178,11 +176,11 @@ class LpRegularizer(Regularizer):
         :param apply_only_once:
             Should the regularization be applied more than once after reset?
         :param dim:
-            the dimension along which to calculate the Lp norm, cf. :func:`lp_norm`
+            the dimension along which to calculate the Lp norm, cf. :func:`~pykeen.utils.lp_norm`
         :param normalize:
-            whether to normalize the norm by the dimension, cf. :func:`lp_norm`
+            whether to normalize the norm by the dimension, cf. :func:`~pykeen.utils.lp_norm`
         :param p:
-            the parameter $p$ of the Lp norm, cf. :func:`lp_norm`
+            the parameter $p$ of the Lp norm, cf. :func:`~pykeen.utils.lp_norm`
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Regularizer.__init__`
         """
@@ -191,7 +189,6 @@ class LpRegularizer(Regularizer):
         self.normalize = normalize
         self.p = p
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         return lp_norm(x=x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
@@ -222,11 +219,11 @@ class PowerSumRegularizer(Regularizer):
         :param apply_only_once:
             Should the regularization be applied more than once after reset?
         :param dim:
-            the dimension along which to calculate the Lp norm, cf. :func:`powersum_norm`
+            the dimension along which to calculate the Lp norm, cf. :func:`~pykeen.utils.powersum_norm`
         :param normalize:
-            whether to normalize the norm by the dimension, cf. :func:`powersum_norm`
+            whether to normalize the norm by the dimension, cf. :func:`~pykeen.utils.powersum_norm`
         :param p:
-            the parameter $p$ of the Lp norm, cf. :func:`powersum_norm`
+            the parameter $p$ of the Lp norm, cf. :func:`~pykeen.utils.powersum_norm`
         :param kwargs:
             additional keyword-based parameters passed to :meth:`Regularizer.__init__`
         """
@@ -235,7 +232,6 @@ class PowerSumRegularizer(Regularizer):
         self.normalize = normalize
         self.p = p
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         return powersum_norm(x, p=self.p, dim=self.dim, normalize=self.normalize).mean()
 
@@ -265,9 +261,9 @@ class NormLimitRegularizer(Regularizer):
         :param apply_only_once:
             Should the regularization be applied more than once after reset?
         :param dim:
-            the dimension along which to calculate the Lp norm, cf. :func:`powersum_norm`
+            the dimension along which to calculate the Lp norm, cf. :func:`~pykeen.utils.powersum_norm`
         :param p:
-            the parameter $p$ of the Lp norm, cf. :func:`powersum_norm`
+            the parameter $p$ of the Lp norm, cf. :func:`~pykeen.utils.powersum_norm`
         :param power_norm:
             whether to use the $p$ power of the norm instead
         :param max_norm:
@@ -281,7 +277,6 @@ class NormLimitRegularizer(Regularizer):
         self.max_norm = max_norm
         self.power_norm = power_norm
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         if self.power_norm:
             norm = powersum_norm(x, p=self.p, dim=self.dim, normalize=False)
@@ -318,11 +313,9 @@ class OrthogonalityRegularizer(Regularizer):
         super().__init__(weight=weight, **kwargs, apply_only_once=apply_only_once)
         self.epsilon = epsilon
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         raise NotImplementedError(f"{self.__class__.__name__} regularizer is order-sensitive!")
 
-    # docstr-coverage: inherited
     def update(self, *tensors: FloatTensor) -> None:  # noqa: D102
         if len(tensors) != 2:
             raise ValueError("Expects exactly two tensors")
@@ -341,7 +334,7 @@ class CombinedRegularizer(Regularizer):
     # The normalization factor to balance individual regularizers' contribution.
     normalization_factor: FloatTensor
 
-    hpo_default = dict(total_weight=dict(type=float, low=0.01, high=1.0, scale="log"), regularizers=tuple())
+    hpo_default = {"total_weight": {"type": float, "low": 0.01, "high": 1.0, "scale": "log"}, "regularizers": ()}
 
     def __init__(
         self,
@@ -373,17 +366,17 @@ class CombinedRegularizer(Regularizer):
             ).reciprocal(),
         )
 
-    # docstr-coverage: inherited
     @property
     def normalize(self):  # noqa: D102
         return any(r.normalize for r in self.regularizers)
 
-    # docstr-coverage: inherited
     def forward(self, x: FloatTensor) -> FloatTensor:  # noqa: D102
         return self.normalization_factor * sum(r.weight * r.forward(x) for r in self.regularizers)
 
 
 #: A resolver for regularizers
 regularizer_resolver: ClassResolver[Regularizer] = ClassResolver.from_subclasses(
-    base=Regularizer, default=NoRegularizer, location="pykeen.regularizers.regularizer_resolver"
+    base=Regularizer,  # type: ignore[type-abstract]
+    default=NoRegularizer,
+    location="pykeen.regularizers.regularizer_resolver",
 )

@@ -94,7 +94,7 @@ def ablation_pipeline(
     :param create_inverse_triples: Either a boolean for a single entry or a list of booleans.
     :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
     :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler is
-        desired. Negative sampling is used only in combination with :class:`pykeen.training.SLCWATrainingLoop`.
+        desired. Negative sampling is used only in combination with :class:`~pykeen.training.SLCWATrainingLoop`.
     :param evaluator: The name of the evaluator to be used. Defaults to rank-based evaluator.
     :param stopper: The name of the stopper to be used. Defaults to NopStopper which doesn't define a stopping
         criterion.
@@ -104,7 +104,7 @@ def ablation_pipeline(
         model to be used in HPO.
     :param model_to_loss_to_loss_kwargs: A mapping from model name to a mapping of loss name to a mapping of default
         keyword arguments for the instantiation of that loss function. This is useful because for some losses, have
-        hyper-parameters such as :class:`pykeen.losses.MarginRankingLoss`.
+        hyper-parameters such as :class:`~pykeen.losses.MarginRankingLoss`.
     :param model_to_loss_to_loss_kwargs_ranges: A mapping from model name to a mapping of loss name to a mapping of
         keyword argument ranges for that loss to be used in HPO.
     :param model_to_optimizer_to_optimizer_kwargs: A mapping from model name to a mapping of optimizer name to a mapping
@@ -293,7 +293,7 @@ def prepare_ablation_from_path(
     :returns: pairs of output directories and HPO config paths inside those directories
     """
     directory = normalize_path(directory, *iter_unique_ids())
-    with open(path) as file:
+    with directory.open() as file:
         config = json.load(file)
     return prepare_ablation_from_config(config=config, directory=directory, save_artifacts=save_artifacts)
 
@@ -466,7 +466,7 @@ def prepare_ablation(  # noqa:C901
             str,
         ]
     ]
-    it = itt.product(  # type: ignore
+    it = itt.product(
         datasets,
         create_inverse_triples,
         models,
@@ -511,7 +511,7 @@ def prepare_ablation(  # noqa:C901
             save_model_directory.mkdir(exist_ok=True, parents=True)
             _experiment_optuna_config["save_model_directory"] = save_model_directory.as_posix()
 
-        hpo_config: dict[str, Any] = dict()
+        hpo_config: dict[str, Any] = {}
         hpo_config["stopper"] = stopper
 
         if stopper_kwargs is not None:
@@ -543,7 +543,7 @@ def prepare_ablation(  # noqa:C901
                 "the paths to the training, testing, and validation data.",
             )
         logger.info(f"Dataset: {dataset}")
-        hpo_config["dataset_kwargs"] = dict(create_inverse_triples=this_create_inverse_triples)
+        hpo_config["dataset_kwargs"] = {"create_inverse_triples": this_create_inverse_triples}
         logger.info(f"Add inverse triples: {this_create_inverse_triples}")
 
         hpo_config["model"] = model
@@ -621,12 +621,12 @@ def prepare_ablation(  # noqa:C901
         if epochs is not None:
             hpo_config.setdefault("training_kwargs", {}).setdefault("num_epochs", epochs)
 
-        rv_config = dict(
-            type="hpo",
-            metadata=metadata or {},
-            pipeline=hpo_config,
-            optuna=_experiment_optuna_config,
-        )
+        rv_config = {
+            "type": "hpo",
+            "metadata": metadata or {},
+            "pipeline": hpo_config,
+            "optuna": _experiment_optuna_config,
+        }
 
         rv_config_path = output_directory.joinpath("hpo_config.json")
         with rv_config_path.open("w") as file:

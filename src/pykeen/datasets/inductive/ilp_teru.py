@@ -91,7 +91,7 @@ class InductiveFB15k237(UnpackedRemoteDisjointInductiveDataset):
         """Initialize a particular version of a dataset (out of 4) from [teru2020]_.
 
         :param version: v1 / v2 / v3 / v4 , differ in the sizes of train and inductive inference graphs
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             transductive_training_url=FB_TRAIN_URL.format(base_url=BASE_URL, version=version),
@@ -157,7 +157,7 @@ class InductiveWN18RR(UnpackedRemoteDisjointInductiveDataset):
         """Initialize a particular version of a dataset (out of 4) from [teru2020]_.
 
         :param version: v1 / v2 / v3 / v4 , differ in the sizes of train and inductive inference graphs
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             transductive_training_url=WN_TRAIN_URL.format(base_url=BASE_URL, version=version),
@@ -223,7 +223,7 @@ class InductiveNELL(UnpackedRemoteDisjointInductiveDataset):
         """Initialize a particular version of a dataset (out of 4) from [teru2020]_.
 
         :param version: v1 / v2 / v3 / v4 , differ in the sizes of train and inductive inference graphs
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             transductive_training_url=NELL_TRAIN_URL.format(base_url=BASE_URL, version=version),

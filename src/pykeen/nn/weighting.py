@@ -102,56 +102,50 @@ def _inverse_frequency_weighting(idx: LongTensor) -> FloatTensor:
 class InverseInDegreeEdgeWeighting(EdgeWeighting):
     """Normalize messages by inverse in-degree."""
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         source: LongTensor,
         target: LongTensor,
         message: FloatTensor | None = None,
         x_e: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         weight = _inverse_frequency_weighting(idx=target)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
-        else:
-            return weight
+        return weight
 
 
 class InverseOutDegreeEdgeWeighting(EdgeWeighting):
     """Normalize messages by inverse out-degree."""
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         source: LongTensor,
         target: LongTensor,
         message: FloatTensor | None = None,
         x_e: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         weight = _inverse_frequency_weighting(idx=source)
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
-        else:
-            return weight
+        return weight
 
 
 class SymmetricEdgeWeighting(EdgeWeighting):
     """Normalize messages by product of inverse sqrt of in-degree and out-degree."""
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         source: LongTensor,
         target: LongTensor,
         message: FloatTensor | None = None,
         x_e: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         weight = (_inverse_frequency_weighting(idx=source) * _inverse_frequency_weighting(idx=target)).sqrt()
         if message is not None:
             return message * weight.unsqueeze(dim=-1)
-        else:
-            # backward compatibility with RGCN
-            return weight
+        # backward compatibility with RGCN
+        return weight
 
 
 class AttentionEdgeWeighting(EdgeWeighting):
@@ -175,7 +169,7 @@ class AttentionEdgeWeighting(EdgeWeighting):
         :raises ValueError: If ``message_dim`` is not divisible by ``num_heads``
         """
         super().__init__()
-        if 0 != message_dim % num_heads:
+        if message_dim % num_heads != 0:
             raise ValueError(f"output_dim={message_dim} must be divisible by num_heads={num_heads}!")
         self.num_heads = num_heads
         self.weight = nn.Parameter(data=nn.init.xavier_uniform_(torch.empty(num_heads, 2 * message_dim // num_heads)))
@@ -183,14 +177,13 @@ class AttentionEdgeWeighting(EdgeWeighting):
         self.attention_dim = message_dim // num_heads
         self.dropout = nn.Dropout(dropout)
 
-    # docstr-coverage: inherited
-    def forward(
+    def forward(  # noqa: D102
         self,
         source: LongTensor,
         target: LongTensor,
         message: FloatTensor | None = None,
         x_e: FloatTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         if message is None or x_e is None:
             raise ValueError(f"{self.__class__.__name__} requires message and x_e.")
 
@@ -218,7 +211,7 @@ class AttentionEdgeWeighting(EdgeWeighting):
 
 #: A resolver for R-GCN edge weighting implementations
 edge_weight_resolver: ClassResolver[EdgeWeighting] = ClassResolver.from_subclasses(
-    base=EdgeWeighting,
+    base=EdgeWeighting,  # type: ignore[type-abstract]
     default=SymmetricEdgeWeighting,
     location="pykeen.nn.weighting.edge_weight_resolver",
 )

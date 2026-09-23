@@ -51,10 +51,10 @@ PYKEEN_LOGS: Path = PYKEEN_MODULE.join("logs")
 
 PYKEEN_DEFAULT_CHECKPOINT = "PyKEEN_just_saved_my_day.pt"
 
-DEFAULT_DROPOUT_HPO_RANGE = dict(type=float, low=0.0, high=0.5, q=0.1)
+DEFAULT_DROPOUT_HPO_RANGE = {"type": float, "low": 0.0, "high": 0.5, "q": 0.1}
 #: We define the embedding dimensions as a multiple of 16 because it is computational beneficial (on a GPU)
 #: see: https://docs.nvidia.com/deeplearning/performance/index.html#optimizing-performance
-DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE = dict(type=int, low=16, high=256, q=16)
+DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE = {"type": int, "low": 16, "high": 256, "q": 16}
 
 USER_DEFINED_CODE = "<user defined>"
 
@@ -70,7 +70,13 @@ TARGET_TO_INDEX: Mapping[Target, TargetColumn] = {
 
 COLUMN_LABELS: tuple[Target, Target, Target] = (LABEL_HEAD, LABEL_RELATION, LABEL_TAIL)
 TARGET_TO_KEY_LABELS = {target: [c for c in COLUMN_LABELS if c != target] for target in COLUMN_LABELS}
-TARGET_TO_KEYS = {target: [TARGET_TO_INDEX[c] for c in cs] for target, cs in TARGET_TO_KEY_LABELS.items()}
+#: the (non-target) key columns for each target, as slices rather than index lists so that indexing a tensor with
+#: them (e.g., ``hrt_batch[:, TARGET_TO_KEYS[target]]``) returns a view instead of a copy
+TARGET_TO_KEYS: Mapping[Target, slice] = {
+    LABEL_HEAD: slice(1, 3),  # relation, tail
+    LABEL_RELATION: slice(0, None, 2),  # head, tail
+    LABEL_TAIL: slice(0, 2),  # head, relation
+}
 
 
 def get_target_column(target: TargetHint = None) -> TargetColumn:

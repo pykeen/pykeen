@@ -29,7 +29,7 @@ training_loop = SLCWATrainingLoop(
     triples_factory=dataset.transductive_training,  # training triples
     model=model,
     optimizer=optimizer,
-    negative_sampler_kwargs=dict(num_negs_per_pos=32),
+    negative_sampler_kwargs={"num_negs_per_pos": 32},
     mode="training",  # necessary to specify for the inductive mode - training has its own set of nodes
 )
 

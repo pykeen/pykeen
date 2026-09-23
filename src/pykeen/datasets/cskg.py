@@ -45,14 +45,14 @@ class CSKG(SingleTabbedDataset):
         """Initialize the `CSKG <https://github.com/usc-isi-i2/cskg>`_ dataset from [ilievski2020]_.
 
         :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.SingleTabbedDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.SingleTabbedDataset`.
         """
         super().__init__(
             url=URL,
             random_state=random_state,
-            read_csv_kwargs=dict(
-                usecols=["node1", "relation", "node2"],
-            ),
+            read_csv_kwargs={
+                "usecols": ["node1", "relation", "node2"],
+            },
             **kwargs,
         )
 

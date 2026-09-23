@@ -165,6 +165,9 @@ class EarlyStopper(Stopper):
     use_tqdm: bool = False
     #: Keyword arguments for the tqdm progress bar
     tqdm_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
+    #: Additional keyword arguments passed to :meth:`~pykeen.evaluation.Evaluator.evaluate`.
+    #: Do not include ``batch_size`` or ``slice_size`` here; use the dedicated fields instead.
+    evaluation_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
 
     _stopper: EarlyStoppingLogic = dataclasses.field(init=False, repr=False)
 
@@ -225,6 +228,7 @@ class EarlyStopper(Stopper):
             slice_size=self.evaluation_slice_size,
             # Only perform time-consuming checks for the first call.
             do_time_consuming_checks=self.evaluation_batch_size is None,
+            **self.evaluation_kwargs,
         )
         # After the first evaluation pass the optimal batch and slice size is obtained and saved for re-use
         self.evaluation_batch_size = self.evaluator.batch_size
@@ -271,18 +275,18 @@ class EarlyStopper(Stopper):
 
     def get_summary_dict(self) -> Mapping[str, Any]:
         """Get a summary dict."""
-        return dict(
-            frequency=self.frequency,
-            patience=self.patience,
-            remaining_patience=self.remaining_patience,
-            relative_delta=self.relative_delta,
-            metric=self.metric,
-            larger_is_better=self.larger_is_better,
-            results=self.results,
-            stopped=self.stopped,
-            best_epoch=self.best_epoch,
-            best_metric=self.best_metric,
-        )
+        return {
+            "frequency": self.frequency,
+            "patience": self.patience,
+            "remaining_patience": self.remaining_patience,
+            "relative_delta": self.relative_delta,
+            "metric": self.metric,
+            "larger_is_better": self.larger_is_better,
+            "results": self.results,
+            "stopped": self.stopped,
+            "best_epoch": self.best_epoch,
+            "best_metric": self.best_metric,
+        }
 
     def _write_from_summary_dict(
         self,

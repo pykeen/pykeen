@@ -42,16 +42,12 @@ class LCWALossCalculator(LossCalculator):
 
     weighted: bool = False
 
-    # docstr-coverage: inherited
     def __call__(self, instance: Loss, generator: torch.Generator) -> torch.Tensor:
         predictions = torch.rand(self.batch_size, self.num_entities, generator=generator)
         labels = (
             torch.rand(self.batch_size, self.num_entities, generator=generator).less(0.5).to(dtype=predictions.dtype)
         )
-        if self.weighted:
-            weights = torch.rand(self.batch_size, self.num_entities, generator=generator)
-        else:
-            weights = None
+        weights = torch.rand(self.batch_size, self.num_entities, generator=generator) if self.weighted else None
         return instance.process_lcwa_scores(
             predictions=predictions,
             labels=labels,
@@ -74,7 +70,6 @@ class SLCWALossCalculator(LossCalculator):
 
     weighted: bool = False
 
-    # docstr-coverage: inherited
     def __call__(self, instance: Loss, generator: torch.Generator) -> torch.Tensor:
         positive_scores = torch.rand(self.batch_size, 1, generator=generator)
         negative_scores = torch.rand(self.batch_size, self.num_negatives, generator=generator)
@@ -174,15 +169,13 @@ def update(path: pathlib.Path, digits: int) -> None:
 
     # determine unique settings (using JSON-representation)
     unique_cases_jsons: set[str] = set()
-    total = 0
     keys = {"seed", "type", "kwargs"}
     for record in iter_records(path):
-        total += 1
         unique_cases_jsons.add(json.dumps({key: record[key] for key in keys}, sort_keys=True))
     logger.info(f"Found {len(unique_cases_jsons):_} unique settings at {path!s}")
 
     # create case for full cartesian product between cases & losses
-    records: list[Record] = list()
+    records: list[Record] = []
     for unique_case_json in unique_cases_jsons:
         data = json.loads(unique_case_json)
         data["loss_name_to_value"] = loss_name_to_value = {}

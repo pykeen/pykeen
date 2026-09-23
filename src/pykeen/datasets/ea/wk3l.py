@@ -59,7 +59,7 @@ class MTransEDataset(EADataset, ABC):
         Initialize the dataset.
 
         :param graph_pair:
-            the graph-pair within the dataset family (cf. :data:`GRAPH_PAIRS`)
+            the graph-pair within the dataset family (cf. ``GRAPH_PAIRS``)
         :param kwargs:
             additional keyword-based parameters passed to :meth:`EABase.__init__`
 
@@ -73,7 +73,7 @@ class MTransEDataset(EADataset, ABC):
         self.graph_pair = graph_pair
         # ensure zip file is present
         self.zip_path = WK3L_MODULE.ensure_from_google(
-            name="data.zip", file_id=GOOGLE_DRIVE_ID, download_kwargs=dict(hexdigests=dict(sha512=self.SHA512))
+            name="data.zip", file_id=GOOGLE_DRIVE_ID, download_kwargs={"hexdigests": {"sha512": self.SHA512}}
         )
         super().__init__(**kwargs)
 
@@ -104,16 +104,14 @@ class MTransEDataset(EADataset, ABC):
             **kwargs,
         )
 
-    # docstr-coverage: inherited
     def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
         logger.info(f"Loading graph for side: {side}")
         df = self._load_df(key=side, names=COLUMN_LABELS)
         # create triples factory
         return TriplesFactory.from_labeled_triples(
-            triples=df.values, metadata=dict(graph_pair=self.graph_pair, side=side)
+            triples=df.values, metadata={"graph_pair": self.graph_pair, "side": side}
         )
 
-    # docstr-coverage: inherited
     def _load_alignment(self) -> pandas.DataFrame:  # noqa: D102
         """Load entity alignment information for the given graph pair."""
         logger.info("Loading alignment information")

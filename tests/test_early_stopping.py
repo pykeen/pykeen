@@ -1,6 +1,7 @@
 """Tests of early stopping."""
 
 import unittest
+from unittest.mock import patch
 
 import numpy
 import pytest
@@ -10,14 +11,16 @@ from torch.optim import Adam
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import RankBasedEvaluator
+from pykeen.evaluation.evaluator import Evaluator
 from pykeen.models import Model, TransE
+from pykeen.pipeline import pipeline
 from pykeen.stoppers.early_stopping import EarlyStopper, EarlyStoppingLogic, is_improvement
 from pykeen.training import SLCWATrainingLoop
 from tests import cases
 
 
 @pytest.mark.parametrize(
-    "best,current,larger_is_better,relative_delta,is_better",
+    ("best", "current", "larger_is_better", "relative_delta", "is_better"),
     [
         # equal value; larger is better
         (1.0, 1.0, True, 0.0, False),
@@ -45,11 +48,11 @@ class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLog
     """Tests for early stopping logic."""
 
     cls = EarlyStoppingLogic
-    kwargs = dict(
-        patience=2,
-        relative_delta=0.1,
-        larger_is_better=False,
-    )
+    kwargs = {
+        "patience": 2,
+        "relative_delta": 0.1,
+        "larger_is_better": False,
+    }
 
     def test_report_result(self):
         """Test report_result API."""
@@ -59,14 +62,14 @@ class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLog
         assert isinstance(stop, bool)
 
         # assert that reporting another metric for this epoch raises an error
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError, match="Cannot report more than one metric for one epoch"):
             self.instance.report_result(metric=..., epoch=epoch)
 
     def test_early_stopping(self):
         """Test early stopping."""
         for epoch, value in enumerate([10.0, 9.0, 8.0, 7.99, 7.98, 7.97]):
             stop = self.instance.report_result(metric=value, epoch=epoch)
-            self.assertEqual(stop, epoch >= 4)
+            assert stop == (epoch >= 4)
 
 
 class TestEarlyStopper(cases.EarlyStopperTestCase):
@@ -110,7 +113,7 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
         """Set up the real world early stopping test."""
         # Fix seed for reproducibility
         torch.manual_seed(seed=self.seed)
-        numpy.random.seed(seed=self.seed)
+        numpy.random.seed(seed=self.seed)  # noqa: NPY002
 
     @pytest.mark.slow
     def test_early_stopping(self):
@@ -141,6 +144,37 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
             stopper=stopper,
             use_tqdm=False,
         )
-        self.assertEqual(stopper.number_results, len(losses) // stopper.frequency)
-        self.assertEqual(stopper.best_epoch, self.stop_epoch - self.patience * stopper.frequency)
-        self.assertEqual(self.stop_epoch, len(losses), msg="Did not stop early like it should have")
+        assert stopper.number_results == len(losses) // stopper.frequency
+        assert stopper.best_epoch == self.stop_epoch - self.patience * stopper.frequency
+        assert self.stop_epoch == len(losses), "Did not stop early like it should have"
+
+
+@pytest.mark.slow
+def test_pipeline_forwards_evaluation_kwargs_to_stopper():
+    """Verify that evaluation_kwargs passed to pipeline() reach every evaluator.evaluate() call.
+
+    Regression test for https://github.com/pykeen/pykeen/issues/1587.
+    """
+    targets = ("tail",)
+    observed_targets: list = []
+    _original_evaluate = Evaluator.evaluate
+
+    def spy_evaluate(self, *args, **kwargs):
+        observed_targets.append(kwargs.get("targets"))
+        return _original_evaluate(self, *args, **kwargs)
+
+    with patch.object(Evaluator, "evaluate", spy_evaluate):
+        pipeline(
+            dataset="nations",
+            model="TransE",
+            training_kwargs={"num_epochs": 2},
+            evaluation_kwargs={"targets": targets},
+            stopper="early",
+            stopper_kwargs={"frequency": 1, "patience": 100},
+            use_testing_data=False,
+        )
+
+    assert observed_targets, "evaluator.evaluate() was never called"
+    assert all(t == targets for t in observed_targets), (
+        f"Expected all evaluate() calls to use targets={targets!r}, got {observed_targets!r}"
+    )

@@ -3,7 +3,6 @@
 import gc
 import inspect
 import logging
-import os
 import pathlib
 import pickle
 import random
@@ -100,10 +99,9 @@ class SubBatchingNotSupportedError(NotImplementedError):
 
 def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
     optimizer_kwargs = optimizer.state_dict()
-    optimizer_kwargs = {
+    return {
         key: value for key, value in optimizer_kwargs["param_groups"][0].items() if key not in ["params", "initial_lr"]
     }
-    return optimizer_kwargs
 
 
 def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
@@ -125,10 +123,10 @@ class TrainingLoop(Generic[BatchType], ABC):
 
     losses_per_epochs: list[float]
 
-    hpo_default = dict(
-        num_epochs=dict(type=int, low=100, high=1000, q=100),
-        batch_size=dict(type=int, low=4, high=12, scale="power_two"),  # [16, 4096]
-    )
+    hpo_default = {
+        "num_epochs": {"type": int, "low": 100, "high": 1000, "q": 100},
+        "batch_size": {"type": int, "low": 4, "high": 12, "scale": "power_two"},  # [16, 4096]
+    }
 
     supports_slicing: ClassVar[bool] = False
 
@@ -266,8 +264,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         :param use_tqdm: Should a progress bar be shown for epochs?
         :param use_tqdm_batch: Should a progress bar be shown for batching (inside the epoch progress bar)?
         :param tqdm_kwargs: Keyword arguments passed to :mod:`tqdm` managing the progress bar.
-        :param stopper: An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking if training
-            should stop early
+        :param stopper: An instance of :class:`~pykeen.stoppers.early_stopping.EarlyStopper` with settings for
+            checking if training should stop early
         :param sub_batch_size: If provided split each batch into sub-batches to avoid memory issues for large models /
             small GPUs.
         :param num_workers: The number of child CPU workers used for loading data. If None, data are loaded in the main
@@ -275,7 +273,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         :param clear_optimizer: Whether to delete the optimizer instance after training (as the optimizer might have
             additional memory consumption due to e.g. moments in Adam).
         :param checkpoint_directory: An optional directory to store the checkpoint files. If None, a subdirectory named
-            ``checkpoints`` in the directory defined by :data:`pykeen.constants.PYKEEN_HOME` is used. Unless the
+            ``checkpoints`` in the directory defined by :data:`~pykeen.constants.PYKEEN_HOME` is used. Unless the
             environment variable ``PYKEEN_HOME`` is overridden, this will be ``~/.pykeen/checkpoints``.
         :param checkpoint_name: The filename for saving checkpoints. If the given filename exists already, that file
             will be loaded and used to continue training.
@@ -289,8 +287,8 @@ class TrainingLoop(Generic[BatchType], ABC):
             be ``PyKEEN_just_saved_my_day_{datetime}.pt`` in the given checkpoint_root.
         :param drop_last: Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False,
             except if the model contains batch normalization layers. Can be provided explicitly to override.
-        :param callbacks: An optional :class:`pykeen.training.TrainingCallback` or collection of callback instances that
-            define one of several functionalities. Their interface was inspired by Keras.
+        :param callbacks: An optional :class:`~pykeen.training.TrainingCallback` or collection of callback
+            instances that define one of several functionalities. Their interface was inspired by Keras.
         :param callbacks_kwargs: additional keyword-based parameter to instantiate the training callback.
         :param gradient_clipping_max_norm: The maximum gradient norm for use with gradient clipping. If None, no
             gradient norm clipping is used.
@@ -635,7 +633,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         # When size probing, we don't want progress bars
         if _use_outer_tqdm:
             # Create progress bar
-            _tqdm_kwargs = dict(desc=f"Training epochs on {self.device}", unit="epoch")
+            _tqdm_kwargs = {"desc": f"Training epochs on {self.device}", "unit": "epoch"}
             if tqdm_kwargs is not None:
                 _tqdm_kwargs.update(tqdm_kwargs)
             epochs = trange(self._epoch + 1, 1 + num_epochs, **_tqdm_kwargs, initial=self._epoch, total=num_epochs)
@@ -656,7 +654,7 @@ class TrainingLoop(Generic[BatchType], ABC):
             sampler=sampler,
         )
         if len(train_data_loader) == 0:
-            raise NoTrainingBatchError()
+            raise NoTrainingBatchError
         if drop_last and not only_size_probing:
             logger.info(
                 "Dropping last (incomplete) batch each epoch (%s batches).",
@@ -757,8 +755,8 @@ class TrainingLoop(Generic[BatchType], ABC):
                         f"used as 'checkpoint_file' argument.",
                     )
                 # Delete temporary best epoch model
-                if best_epoch_model_file_path is not None and best_epoch_model_file_path.is_file():
-                    os.remove(best_epoch_model_file_path)
+                if best_epoch_model_file_path:
+                    best_epoch_model_file_path.unlink(missing_ok=True)
                 raise e
 
             # Includes a call to result_tracker.log_metrics
@@ -766,13 +764,10 @@ class TrainingLoop(Generic[BatchType], ABC):
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints and checkpoint_path is not None:
+                assert checkpoint_frequency is not None
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 # MyPy overrides are because you should
-                if (
-                    minutes_since_last_checkpoint >= checkpoint_frequency  # type: ignore
-                    or self._should_stop
-                    or epoch == num_epochs
-                ):
+                if minutes_since_last_checkpoint >= checkpoint_frequency or self._should_stop or epoch == num_epochs:
                     # When there wasn't a best epoch the checkpoint path should be None
                     if last_best_epoch is not None and best_epoch_model_file_path is not None:
                         best_epoch_model_checkpoint_file_path = best_epoch_model_file_path
@@ -781,15 +776,14 @@ class TrainingLoop(Generic[BatchType], ABC):
                         stopper=stopper,
                         best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
                         triples_factory=triples_factory,
-                    )  # type: ignore
+                    )
                     last_checkpoint = time.time()
 
             if self._should_stop:
                 if last_best_epoch is not None and best_epoch_model_file_path is not None:
                     self._load_state(path=best_epoch_model_file_path)
                     # Delete temporary best epoch model
-                    if pathlib.Path.is_file(best_epoch_model_file_path):
-                        os.remove(best_epoch_model_file_path)
+                    best_epoch_model_file_path.unlink(missing_ok=True)
                 return self.losses_per_epochs
 
         callback.post_train(losses=self.losses_per_epochs)
@@ -799,8 +793,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         if stopper is not None and last_best_epoch is not None and best_epoch_model_file_path is not None:
             self._load_state(path=best_epoch_model_file_path)
             # Delete temporary best epoch model
-            if pathlib.Path.is_file(best_epoch_model_file_path):
-                os.remove(best_epoch_model_file_path)
+            best_epoch_model_file_path.unlink(missing_ok=True)
 
         return self.losses_per_epochs
 
@@ -1103,8 +1096,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         """Save the state of the training loop.
 
         :param path: Path of the file where to store the state in.
-        :param stopper: An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking if training
-            should stop early
+        :param stopper: An instance of :class:`~pykeen.stoppers.early_stopping.EarlyStopper` with settings for
+            checking if training should stop early
         :param best_epoch_model_checkpoint_file_path: The file path for the checkpoint of the best epoch model when
             using early stopping.
         :param triples_factory: The triples factory being used in the current training loop.
@@ -1117,25 +1110,19 @@ class TrainingLoop(Generic[BatchType], ABC):
         logger.debug("=> Saving checkpoint.")
 
         if stopper is None:
-            stopper_dict: Mapping[str, Any] = dict()
+            stopper_dict: Mapping[str, Any] = {}
         else:
             stopper_dict = stopper.get_summary_dict()
 
         # Only if a cuda device is available, the random state is accessed
-        if torch.cuda.is_available():
-            torch_cuda_random_state = torch.cuda.get_rng_state()
-        else:
-            torch_cuda_random_state = None
+        torch_cuda_random_state = torch.cuda.get_rng_state() if torch.cuda.is_available() else None
 
         if best_epoch_model_checkpoint_file_path is not None:
             best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_file_path, weights_only=False)
         else:
             best_epoch_model_checkpoint = None
 
-        if self.lr_scheduler is None:
-            lr_scheduler_state_dict = None
-        else:
-            lr_scheduler_state_dict = self.lr_scheduler.state_dict()
+        lr_scheduler_state_dict = None if self.lr_scheduler is None else self.lr_scheduler.state_dict()
 
         relation_to_id_dict = None
         entity_to_id_dict = None
@@ -1154,7 +1141,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                 "random_seed": self.model._random_seed,
                 "stopper_dict": stopper_dict,
                 "random_state": random.getstate(),
-                "np_random_state": np.random.get_state(),
+                "np_random_state": np.random.get_state(),  # noqa: NPY002
                 "torch_random_state": torch.random.get_rng_state(),
                 "torch_cuda_random_state": torch_cuda_random_state,
                 # This is an entire checkpoint for the optional best model when using early stopping
@@ -1218,7 +1205,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         best_epoch_model_file_path = None
         best_epoch = None
         if checkpoint.get("best_epoch_model_checkpoint"):
-            best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
+            with NamedTemporaryFile(delete=False) as ntf:
+                best_epoch_model_file_path = pathlib.Path(ntf.name)
             best_epoch = checkpoint["best_epoch_model_checkpoint"]["epoch"]
             torch.save(
                 checkpoint["best_epoch_model_checkpoint"],
@@ -1257,7 +1245,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         if self.lr_scheduler is not None:
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
         random.setstate(checkpoint["random_state"])
-        np.random.set_state(checkpoint["np_random_state"])
+        np.random.set_state(checkpoint["np_random_state"])  # noqa: NPY002
         torch.random.set_rng_state(checkpoint["torch_random_state"])
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
 

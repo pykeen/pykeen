@@ -64,6 +64,15 @@ class BloomFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
     loss_cls = MarginRankingLoss
 
 
+class GroupedSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
+    """Test sLCWA with grouped negative sampling."""
+
+    cls = SLCWATrainingLoop
+    filterer_cls = None
+    loss_cls = MarginRankingLoss
+    kwargs = {"grouped": True}
+
+
 class MRLossLCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
     """Test LCWA with margin ranking loss."""
 

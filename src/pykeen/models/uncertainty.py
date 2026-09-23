@@ -193,7 +193,7 @@ def predict_hrt_uncertain(
         correspond to less certain predictions.
 
         This function delegates to :func:`predict_uncertain_helper` by using
-        :func:`pykeen.models.Model.score_hrt` as the ``score_method``.
+        :func:`~pykeen.models.Model.score_hrt` as the ``score_method``.
 
     .. warning::
         This function sets the model to evaluation mode and all dropout layers
@@ -212,7 +212,7 @@ def predict_hrt_uncertain(
     """
     return predict_uncertain_helper(
         model=model,
-        batch=hrt_batch,
+        batch=model._prepare_batch(batch=hrt_batch, index_relation=1),
         score_method=model.score_hrt,
         num_samples=num_samples,
         mode=mode,
@@ -254,7 +254,7 @@ def predict_h_uncertain(
         For each r-t pair, the scores for all possible heads.
 
         This function delegates to :func:`predict_uncertain_helper` by using
-        :func:`pykeen.models.Model.score_h` (or :func:`pykeen.models.Model.score_h_inverse`
+        :func:`~pykeen.models.Model.score_h` (or :func:`~pykeen.models.Model.score_h_inverse`
         if the model uses inverse triples) as the ``score_method``.
 
     .. warning::
@@ -263,7 +263,7 @@ def predict_h_uncertain(
     """
     return predict_uncertain_helper(
         model=model,
-        batch=rt_batch,
+        batch=model._prepare_batch(batch=rt_batch, index_relation=0),
         score_method=model.score_h_inverse if model.use_inverse_triples else model.score_h,
         num_samples=num_samples,
         slice_size=slice_size,
@@ -300,7 +300,7 @@ def predict_r_uncertain(
         For each h-t pair, the scores for all possible relations.
 
         This function delegates to :func:`predict_uncertain_helper` by using
-        :func:`pykeen.models.Model.score_r` as the ``score_method``.
+        :func:`~pykeen.models.Model.score_r` as the ``score_method``.
 
     .. warning::
         This function sets the model to evaluation mode and all dropout layers
@@ -354,7 +354,7 @@ def predict_t_uncertain(
         For each h-r pair, the scores for all possible tails.
 
         This function delegates to :func:`predict_uncertain_helper` by using
-        :func:`pykeen.models.Model.score_t` as the ``score_method``.
+        :func:`~pykeen.models.Model.score_t` as the ``score_method``.
 
     .. warning::
         This function sets the model to evaluation mode and all dropout layers
@@ -362,7 +362,7 @@ def predict_t_uncertain(
     """
     return predict_uncertain_helper(
         model=model,
-        batch=hr_batch,
+        batch=model._prepare_batch(batch=hr_batch, index_relation=1),
         score_method=model.score_t,
         num_samples=num_samples,
         slice_size=slice_size,

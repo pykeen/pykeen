@@ -12,14 +12,14 @@ dataset = get_dataset(dataset="nations")
 relations = Embedding(max_id=dataset.num_relations, embedding_dim=embedding_dim)
 entities = FeaturizedMessagePassingRepresentation(
     triples_factory=dataset.training,
-    base_kwargs=dict(shape=embedding_dim),
+    base_kwargs={"shape": embedding_dim},
     relation_representation=relations,  # re-use relation representation here
     layers="gat",
-    layers_kwargs=dict(
-        in_channels=embedding_dim,
-        out_channels=embedding_dim,
-        edge_dim=embedding_dim,  # should match relation dim
-    ),
+    layers_kwargs={
+        "in_channels": embedding_dim,
+        "out_channels": embedding_dim,
+        "edge_dim": embedding_dim,  # should match relation dim
+    },
 )
 result = pipeline(
     dataset=dataset,

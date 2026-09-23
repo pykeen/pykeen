@@ -56,7 +56,7 @@ class LitModule(pytorch_lightning.LightningModule, ABC):
 
     .. seealso::
 
-        :class:`pykeen.training.training_loop.TrainingLoop`
+        :class:`~pykeen.training.training_loop.TrainingLoop`
     """
 
     def __init__(
@@ -102,7 +102,7 @@ class LitModule(pytorch_lightning.LightningModule, ABC):
         self.label_smoothing = label_smoothing
 
     def forward(self, hr_batch: LongTensor) -> FloatTensor:
-        """Perform the prediction or inference step by wrapping :meth:`pykeen.models.ERModel.predict_t`.
+        """Perform the prediction or inference step by wrapping :meth:`~pykeen.models.Model.predict_t`.
 
         :param hr_batch: shape: (batch_size, 2), dtype: long The indices of (head, relation) pairs.
 
@@ -149,7 +149,6 @@ class LitModule(pytorch_lightning.LightningModule, ABC):
             self.optimizer, self.optimizer_kwargs, params=self.parameters(), lr=self.learning_rate
         )
 
-    # docstr-coverage: inherited
     def on_before_zero_grad(self, optimizer: torch.optim.Optimizer) -> None:  # noqa: D102
         # call post_parameter_update
         self.model.post_parameter_update()
@@ -163,21 +162,23 @@ class SLCWALitModule(LitModule):
         *,
         negative_sampler: HintOrType[NegativeSampler] = None,
         negative_sampler_kwargs: OptionalKwargs = None,
+        grouped: bool = False,
         **kwargs,
     ):
         """Initialize the lightning module.
 
-        :param negative_sampler: the negative sampler, cf.
-            :meth:`pykeen.triples.CoreTriplesFactory.create_slcwa_instances`
+        :param negative_sampler: the negative sampler, cf. :class:`~pykeen.training.SLCWATrainingLoop`
         :param negative_sampler_kwargs: keyword-based parameters passed to the negative sampler, cf.
-            :meth:`pykeen.triples.CoreTriplesFactory.create_slcwa_instances`
+            :class:`~pykeen.training.SLCWATrainingLoop`
+        :param grouped: whether to keep negatives grouped by corrupted position, cf.
+            :attr:`~pykeen.training.SLCWATrainingLoop.grouped`
         :param kwargs: additional keyword-based parameters passed to :meth:`LitModule.__init__`
         """
         super().__init__(**kwargs)
         self.negative_sampler = negative_sampler
         self.negative_sampler_kwargs = negative_sampler_kwargs
+        self.grouped = grouped
 
-    # docstr-coverage: inherited
     def _step(self, batch, prefix: str):  # noqa: D102
         loss = SLCWATrainingLoop._process_batch_static(
             model=self.model,
@@ -193,7 +194,6 @@ class SLCWALitModule(LitModule):
         self.log(f"{prefix}_loss", loss)
         return loss
 
-    # docstr-coverage: inherited
     def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:  # noqa: D102
         return torch.utils.data.DataLoader(
             dataset=BatchedSLCWAInstances.from_triples_factory(
@@ -205,6 +205,7 @@ class SLCWALitModule(LitModule):
                 negative_sampler=self.negative_sampler,
                 negative_sampler_kwargs=self.negative_sampler_kwargs,
                 # sampler=sampler,
+                grouped=self.grouped,
             ),
             # shuffle=shuffle,
             # disable automatic batching in data loader
@@ -221,7 +222,6 @@ class LCWALitModule(LitModule):
         https://github.com/pykeen/pykeen/pull/905
     """
 
-    # docstr-coverage: inherited
     def _step(self, batch, prefix: str):  # noqa: D102
         loss = LCWATrainingLoop._process_batch_static(
             model=self.model,
@@ -239,7 +239,6 @@ class LCWALitModule(LitModule):
         self.log(f"{prefix}_loss", loss)
         return loss
 
-    # docstr-coverage: inherited
     def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:  # noqa: D102
         return torch.utils.data.DataLoader(
             dataset=LCWAInstances.from_triples_factory(triples_factory),
@@ -250,7 +249,7 @@ class LCWALitModule(LitModule):
 
 #: A resolver for PyTorch Lightning training modules
 lit_module_resolver: ClassResolver[LitModule] = ClassResolver.from_subclasses(
-    base=LitModule,
+    base=LitModule,  # type: ignore[type-abstract]
     default=SLCWALitModule,
     # note: since this file is executed via __main__, its module name is replaced by __name__
     #       hence, the two classes' fully qualified names start with "_" and are considered private
@@ -286,11 +285,11 @@ def lit_pipeline(
 @options.inverse_triples_option
 @model_resolver.get_option("-m", "--model", default="mure")
 @loss_resolver.get_option("-l", "--loss", default="bcewithlogits")
-@options.batch_size_option  # type:ignore
+@options.batch_size_option
 @click.option("--embedding-dim", type=int, default=128)
 @click.option("-b", "--batch-size", type=int, default=128)
 @click.option("--mixed-precision", is_flag=True)
-@options.number_epochs_option  # type:ignore
+@options.number_epochs_option
 def _main(
     training_loop: HintOrType[LitModule],
     dataset: HintOrType[Dataset],
@@ -305,24 +304,24 @@ def _main(
     """Run PyTorch lightning model."""
     lit_pipeline(
         training_loop=training_loop,
-        training_loop_kwargs=dict(
-            dataset=dataset,
-            dataset_kwargs=dict(create_inverse_triples=create_inverse_triples),
-            model=model,
-            model_kwargs=dict(embedding_dim=embedding_dim, loss=loss),
-            batch_size=batch_size,
-        ),
-        trainer_kwargs=dict(
+        training_loop_kwargs={
+            "dataset": dataset,
+            "dataset_kwargs": {"create_inverse_triples": create_inverse_triples},
+            "model": model,
+            "model_kwargs": {"embedding_dim": embedding_dim, "loss": loss},
+            "batch_size": batch_size,
+        },
+        trainer_kwargs={
             # automatically choose accelerator
-            accelerator="auto",
+            "accelerator": "auto",
             # defaults to TensorBoard; explicitly disabled here
-            logger=False,
+            "logger": False,
             # disable checkpointing
-            enable_checkpointing=False,
+            "enable_checkpointing": False,
             # mixed precision training
-            precision=16 if mixed_precision else 32,
-            max_epochs=number_epochs,
-        ),
+            "precision": 16 if mixed_precision else 32,
+            "max_epochs": number_epochs,
+        },
     )
 
 

@@ -85,4 +85,4 @@ class NopStopper(Stopper):
 
     def get_summary_dict(self) -> Mapping[str, Any]:
         """Return empty mapping, doesn't have any attributes."""
-        return dict()
+        return {}
