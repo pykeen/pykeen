@@ -49,7 +49,6 @@ class Source(ABC):
 
         :returns: A mapping from logical file key, e.g., ``"training"``, to a local path.
         """
-        raise NotImplementedError
 
     def materialize(self) -> None:
         """Ensure the files are present locally, downloading and extracting them if necessary.
@@ -219,7 +218,6 @@ class ArchiveSource(Source):
 
         :param archive_path: The local path of the archive.
         """
-        raise NotImplementedError
 
     # docstr-coverage: inherited
     def expected_paths(self) -> Mapping[str, pathlib.Path]:  # noqa: D102

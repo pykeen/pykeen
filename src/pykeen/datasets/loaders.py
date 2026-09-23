@@ -19,7 +19,7 @@ import pathlib
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, TypeAlias, cast
 
 import pandas
 
@@ -31,6 +31,7 @@ __all__ = [
     "SplitSpec",
     "TRANSDUCTIVE_PLAN",
     "INDUCTIVE_PLAN",
+    "Plan",
     "Loader",
     "PreSplitLoader",
     "AutoSplitLoader",
@@ -55,8 +56,12 @@ class SplitSpec:
     create_inverse_triples: bool = False
 
 
+#: A plan based on the training mode
+Plan: TypeAlias = Mapping[str, SplitSpec]
+
+
 #: The plan for an ordinary transductive dataset: the evaluation splits share the training index.
-TRANSDUCTIVE_PLAN: Mapping[str, SplitSpec] = {
+TRANSDUCTIVE_PLAN: Plan = {
     "training": SplitSpec(create_inverse_triples=True),
     "testing": SplitSpec(entity_index_from="training", relation_index_from="training"),
     "validation": SplitSpec(entity_index_from="training", relation_index_from="training"),
@@ -64,7 +69,7 @@ TRANSDUCTIVE_PLAN: Mapping[str, SplitSpec] = {
 
 #: The plan for a fully inductive dataset: the inference graph shares only the *relations* of the transductive
 #: training graph -- its entities are new -- and the evaluation splits share the inference index.
-INDUCTIVE_PLAN: Mapping[str, SplitSpec] = {
+INDUCTIVE_PLAN: Plan = {
     "transductive_training": SplitSpec(create_inverse_triples=True),
     "inductive_inference": SplitSpec(
         relation_index_from="transductive_training",
@@ -91,7 +96,6 @@ class Loader(ABC):
         :returns: A mapping from split name, e.g., ``"training"``, to the corresponding factory. Splits which the
             dataset does not provide are omitted.
         """
-        raise NotImplementedError
 
     def __repr__(self) -> str:  # noqa: D105
         return f"{self.__class__.__name__}()"
@@ -104,7 +108,7 @@ class PreSplitLoader(Loader):
         self,
         source: Source,
         *,
-        plan: Mapping[str, SplitSpec] | None = None,
+        plan: Plan | None = None,
         create_inverse_triples: bool = False,
         factory_cls: type[TriplesFactory] = TriplesFactory,
         load_triples_kwargs: Mapping[str, Any] | None = None,
