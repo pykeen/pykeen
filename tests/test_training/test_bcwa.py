@@ -7,7 +7,7 @@ from pykeen.training import bcwa
 from pykeen.typing import LongTensor
 
 
-@pytest.fixture()
+@pytest.fixture
 def generator() -> torch.Generator:
     """Build a generator with fixed seed for reproducible tests."""
     return torch.manual_seed(seed=42)

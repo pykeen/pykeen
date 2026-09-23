@@ -98,7 +98,7 @@ class BatchCWACollator:
         """
         self.mapped_triples = mapped_triples
 
-    def __call__(self, batch: list[BatchCWABatch]) -> BatchCWABatch:
+    def __call__(self, batch: list[BatchCWABatch]) -> BatchCWABatch:  # noqa:D102
         # collect indices
         hs = torch.stack([b.hs for b in batch])
         rs = torch.stack([b.rs for b in batch])
