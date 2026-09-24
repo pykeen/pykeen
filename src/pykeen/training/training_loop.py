@@ -99,39 +99,38 @@ class SubBatchingNotSupportedError(NotImplementedError):
         )
 
 
-def _copy_to_cpu(state: Any) -> Any:
-    """Recursively copy all tensors of a (nested) state dictionary to CPU."""
-    if isinstance(state, torch.Tensor):
-        return state.to("cpu", copy=True)
-    if isinstance(state, Mapping):
-        return {key: _copy_to_cpu(value) for key, value in state.items()}
-    if isinstance(state, list | tuple):
-        return type(state)(_copy_to_cpu(value) for value in state)
-    return state
-
-
 def _restore_state_after_probing(
     func: "Callable[Concatenate[TrainingLoop, P], R]",
 ) -> "Callable[Concatenate[TrainingLoop, P], R]":
     """Decorate a size probing method to restore the model, optimizer, and LR scheduler state afterwards.
 
     Size probing runs actual training steps, including parameter updates, to also account for the memory required by
-    the optimizer step, e.g., for Adam's moment estimates. The state is kept on CPU to not distort the memory estimates.
+    the optimizer step, e.g., for Adam's moment estimates. The state is stored in a temporary directory on disk, since
+    a copy in GPU memory would distort the memory estimates, and a copy in host memory may exhaust it, e.g., when GPU
+    memory spills over into host memory.
     """
 
     @functools.wraps(func)
     def wrapped(self: "TrainingLoop", *args: P.args, **kwargs: P.kwargs) -> R:
-        model_state = _copy_to_cpu(self.model.state_dict())
-        optimizer_state = None if self.optimizer is None else _copy_to_cpu(self.optimizer.state_dict())
-        lr_scheduler_state = None if self.lr_scheduler is None else _copy_to_cpu(self.lr_scheduler.state_dict())
-        try:
-            return func(self, *args, **kwargs)
-        finally:
-            self.model.load_state_dict(model_state)
-            if self.optimizer is not None and optimizer_state is not None:
-                self.optimizer.load_state_dict(optimizer_state)
-            if self.lr_scheduler is not None and lr_scheduler_state is not None:
-                self.lr_scheduler.load_state_dict(lr_scheduler_state)
+        with TemporaryDirectory() as directory:
+            path = pathlib.Path(directory).joinpath("state.pt")
+            torch.save(
+                {
+                    "model": self.model.state_dict(),
+                    "optimizer": None if self.optimizer is None else self.optimizer.state_dict(),
+                    "lr_scheduler": None if self.lr_scheduler is None else self.lr_scheduler.state_dict(),
+                },
+                path,
+            )
+            try:
+                return func(self, *args, **kwargs)
+            finally:
+                state = torch.load(path, map_location="cpu", weights_only=False)  # noqa: S614
+                self.model.load_state_dict(state["model"])
+                if self.optimizer is not None and state["optimizer"] is not None:
+                    self.optimizer.load_state_dict(state["optimizer"])
+                if self.lr_scheduler is not None and state["lr_scheduler"] is not None:
+                    self.lr_scheduler.load_state_dict(state["lr_scheduler"])
 
     return wrapped
 
