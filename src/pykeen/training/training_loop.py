@@ -51,6 +51,8 @@ __all__ = [
     "TrainingLoop",
     "NonFiniteLossError",
     "SubBatchingNotSupportedError",
+    "OptimizerNotRecreatableError",
+    "OptimizerClearedError",
 ]
 
 logger = logging.getLogger(__name__)
@@ -101,6 +103,14 @@ class SubBatchingNotSupportedError(NotImplementedError):
             f"No sub-batching support for {self.model.__class__.__name__} due to modules "
             f"{get_batchnorm_modules(self.model)}."
         )
+
+
+class OptimizerNotRecreatableError(ValueError):
+    """An exception raised when a pre-instantiated optimizer or LR scheduler would need to be re-created."""
+
+
+class OptimizerClearedError(ValueError):
+    """An exception raised when the optimizer is required, but has been cleared."""
 
 
 def _make_optimizer_and_lr_scheduler(
@@ -275,10 +285,11 @@ class TrainingLoop(Generic[BatchType], ABC):
     def _reset_optimizer(self) -> None:
         """Create a fresh optimizer and LR scheduler for the model's current parameters.
 
-        :raises ValueError: if the optimizer or LR scheduler were passed pre-instantiated, and thus cannot be re-created
+        :raises OptimizerNotRecreatableError: if the optimizer or LR scheduler were passed pre-instantiated, and thus
+            cannot be re-created
         """
         if self._optimizer_factory is None:
-            raise ValueError(
+            raise OptimizerNotRecreatableError(
                 "Cannot create a fresh optimizer, since the optimizer or LR scheduler were passed pre-instantiated, "
                 "and have already been used or cleared. Pass them as class and kwargs instead, to allow re-creating "
                 "them for fresh training runs.",
@@ -381,6 +392,10 @@ class TrainingLoop(Generic[BatchType], ABC):
             https://pytorch.org/docs/stable/notes/cuda.html#cuda-memory-pinning
 
         :returns: The losses per epoch.
+
+        :raises OptimizerClearedError: if training should be continued, but the optimizer has been cleared
+        :raises OptimizerNotRecreatableError: if a fresh training run would need to re-create a pre-instantiated
+            optimizer or LR scheduler
         """
         self._should_stop = False
 
@@ -447,7 +462,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                 if self.optimizer is None or self._optimizer_used:
                     self._reset_optimizer()
             elif self.optimizer is None:
-                raise ValueError("Cannot continue training after the optimizer has been cleared.")
+                raise OptimizerClearedError("Cannot continue training after the optimizer has been cleared.")
             self._optimizer_used = True
 
             # send model to device before going into the internal training loop
@@ -580,7 +595,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         del batches
         gc.collect()
         if self.optimizer is None:
-            raise ValueError("The optimizer has been cleared.")
+            raise OptimizerClearedError("The optimizer has been cleared.")
         self.optimizer.zero_grad()
         self._free_graph_and_cache()
 
@@ -1315,7 +1330,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         self.losses_per_epochs = checkpoint["loss"]
         self.model.load_state_dict(checkpoint["model_state_dict"])
         if self.optimizer is None:
-            raise ValueError("The optimizer has been cleared.")
+            raise OptimizerClearedError("The optimizer has been cleared.")
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if self.lr_scheduler is not None:
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])

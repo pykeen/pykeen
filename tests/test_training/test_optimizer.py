@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import StepLR
 from pykeen.datasets import Nations
 from pykeen.models import TransE
 from pykeen.pipeline import pipeline
-from pykeen.training import SLCWATrainingLoop, TrainingLoop
+from pykeen.training import OptimizerClearedError, OptimizerNotRecreatableError, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples import CoreTriplesFactory
 
 
@@ -91,7 +91,7 @@ def test_fresh_run_pre_instantiated(triples_factory: CoreTriplesFactory) -> None
     _train(training_loop, triples_factory, continue_training=True)
     assert training_loop.optimizer is optimizer
 
-    with pytest.raises(ValueError, match="pre-instantiated"):
+    with pytest.raises(OptimizerNotRecreatableError):
         _train(training_loop, triples_factory)
 
 
@@ -125,11 +125,11 @@ def test_clear_optimizer(triples_factory: CoreTriplesFactory) -> None:
     gc.collect()
     assert reference() is None
 
-    with pytest.raises(ValueError, match="optimizer has been cleared"):
+    with pytest.raises(OptimizerClearedError):
         _train(training_loop, triples_factory, continue_training=True)
 
     # a pre-instantiated optimizer cannot be re-created
-    with pytest.raises(ValueError, match="pre-instantiated"):
+    with pytest.raises(OptimizerNotRecreatableError):
         _train(training_loop, triples_factory)
 
 
