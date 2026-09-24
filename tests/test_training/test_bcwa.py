@@ -206,3 +206,22 @@ def test_requires_er_model() -> None:
     triples_factory = Nations().training
     with pytest.raises(TypeError):
         bcwa.BatchCWATrainingLoop(model=FixedModel(triples_factory=triples_factory), triples_factory=triples_factory)
+
+
+def test_unknown_batch_triples() -> None:
+    """Test that the collator rejects batches with triples it does not know."""
+    mapped_triples = Nations().training.mapped_triples
+    collator = bcwa.BatchCWACollator(mapped_triples=mapped_triples[:10])
+    dataset = bcwa.BatchCWADataset(mapped_triples=mapped_triples)
+    with pytest.raises(bcwa.UnknownBatchTriplesError):
+        collator([dataset[i] for i in range(10, 20)])
+
+
+def test_missing_batch_targets() -> None:
+    """Test that the training loop rejects batches without targets."""
+    triples_factory = Nations().training
+    loop = bcwa.BatchCWATrainingLoop(model=TransE(triples_factory=triples_factory), triples_factory=triples_factory)
+    h, r, t = triples_factory.mapped_triples[:3].unbind(dim=-1)
+    batch = bcwa.BatchCWABatch(hs=h, rs=r, ts=t, targets=None)
+    with pytest.raises(bcwa.MissingBatchTargetsError):
+        loop._process_batch(batch, start=0, stop=3)

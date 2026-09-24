@@ -17,7 +17,17 @@ from ..typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, FloatTensor, Lon
 
 __all__ = [
     "BatchCWATrainingLoop",
+    "MissingBatchTargetsError",
+    "UnknownBatchTriplesError",
 ]
+
+
+class MissingBatchTargetsError(ValueError):
+    """Raised if a BCWA batch does not contain the positive targets, i.e., was not created by the BCWA collator."""
+
+
+class UnknownBatchTriplesError(ValueError):
+    """Raised if a batch contains triples which are not part of the triples the BCWA collator was created for."""
 
 
 class BatchCWADataset(Dataset[BatchCWABatch]):
@@ -67,6 +77,8 @@ class _HeadIndex:
         :return: shape: (num_found_triples, 3)
             The triples.
         """
+        # heads beyond the indexed ones do not have any triples
+        hs = hs[hs < len(self.offsets) - 1]
         # gather all triples with a matching head; the cost is proportional to the total degree of the heads
         starts = self.offsets[hs]
         counts = self.offsets[hs + 1] - starts
@@ -120,15 +132,27 @@ class BatchCWACollator:
         self.index = _HeadIndex(mapped_triples=mapped_triples)
         self.loss_weighter = loss_weighter
 
-    def __call__(self, batch: list[BatchCWABatch]) -> BatchCWABatch:  # noqa:D102
+    def __call__(self, batch: list[BatchCWABatch]) -> BatchCWABatch:
+        """Collate a batch of single triples.
+
+        :param batch: The single triples.
+
+        :returns: The collated batch, with the unique IDs per position, the positive targets, and optional weights.
+
+        :raises UnknownBatchTriplesError: If the batch contains triples which the collator does not know.
+        """
         # collect indices
         hs = torch.stack([b.hs for b in batch]).unique()
         rs = torch.stack([b.rs for b in batch]).unique()
         ts = torch.stack([b.ts for b in batch]).unique()
 
         other_triples = self.index.find(hs=hs, rs=rs, ts=ts)
-        # batch contains training triples -> we need to find at least those
-        assert other_triples.shape[0] >= len(batch)
+        # the batch consists of training triples -> we need to find at least those
+        if other_triples.shape[0] < len(batch):
+            raise UnknownBatchTriplesError(
+                f"Found only {other_triples.shape[0]} triples for a batch of {len(batch)} triples. The batch has to be "
+                f"drawn from the same triples the collator was created for."
+            )
 
         # convert to batch local indices
         (hs_uniq, rs_uniq, ts_uniq), targets = _convert_to_batch_local(xs=other_triples)
@@ -257,7 +281,9 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
         slice_size: int | None = None,
     ) -> FloatTensor:  # noqa: D102
         if batch.targets is None:
-            raise AssertionError(f"{self} requires a custom collator to fill batch.targets")
+            raise MissingBatchTargetsError(
+                f"{self.__class__.__name__} requires batches with targets, as created by {BatchCWACollator.__name__}."
+            )
 
         # select the sub-batch, and the positive triples within it
         dim = self.sub_batch_dim

@@ -151,39 +151,6 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
             slice_size=slice_size,
         )
 
-    def _slice_size_search(
-        self,
-        *,
-        triples_factory: CoreTriplesFactory,
-        batch_size: int,
-        sub_batch_size: int,
-        supports_sub_batching: bool,
-    ) -> int:  # noqa: D102
-        self._check_slicing_availability(supports_sub_batching)
-        return super()._slice_size_search(
-            triples_factory=triples_factory,
-            batch_size=batch_size,
-            sub_batch_size=sub_batch_size,
-            supports_sub_batching=supports_sub_batching,
-        )
-
-    def _check_slicing_availability(self, supports_sub_batching: bool):
-        if self.target == 0:
-            return
-        if self.target == 1:
-            return
-        if self.target == 2:
-            return
-        if supports_sub_batching:
-            report = (
-                "This model supports sub-batching, but it also requires slicing,"
-                " which is not implemented for this model yet."
-            )
-        else:
-            report = "This model doesn't support sub-batching and slicing is not implemented for this model yet."
-        logger.warning(report)
-        raise MemoryError("The current model can't be trained on this hardware with these parameters.")
-
 
 # note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one
 class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
