@@ -400,30 +400,30 @@ class Loss(_Loss):
         """
         Process scores from the BCWA training loop.
 
-        The scores are reshaped to ``(num_heads * num_relations, num_tails)``, i.e., each (head, relation)-pair of the
-        batch becomes one row which scores all tails of the batch, and passed to :meth:`process_lcwa_scores`.
-        Unless :attr:`bcwa_keep_rows_without_positives` is set, rows without any positive tail are dropped before.
+        The last dimension is the target, e.g., the tails for tail prediction. The scores are reshaped to
+        ``(n_1 * n_2, num_targets)``, i.e., each combination of the two other positions becomes one row which scores all
+        target candidates of the batch, and passed to :meth:`process_lcwa_scores`. Unless
+        :attr:`bcwa_keep_rows_without_positives` is set, rows without any positive target are dropped before.
 
-        :param predictions: shape: (num_heads, num_relations, num_tails)
+        :param predictions: shape: (n_1, n_2, num_targets)
             The scores.
         :param targets: shape: (num_positive_triples, 3)
-            The positive triples in batch-local indices.
+            The positive triples in batch-local indices, in the same order of positions as the predictions' dimensions.
         :param label_smoothing:
             An optional label smoothing parameter.
-        :param weights: shape: (num_heads, num_relations, num_tails)
+        :param weights: shape: (n_1, n_2, num_targets)
             Sample weights.
 
         :return:
             A scalar loss value.
         """
         labels = torch.zeros_like(predictions)
-        hs, rs, ts = targets.unbind(dim=-1)
-        labels[hs, rs, ts] = 1.0
-        num_tails = predictions.shape[-1]
-        predictions = predictions.reshape(-1, num_tails)
-        labels = labels.reshape(-1, num_tails)
+        labels[targets.unbind(dim=-1)] = 1.0
+        num_targets = predictions.shape[-1]
+        predictions = predictions.reshape(-1, num_targets)
+        labels = labels.reshape(-1, num_targets)
         if weights is not None:
-            weights = weights.reshape(-1, num_tails)
+            weights = weights.reshape(-1, num_targets)
         if not self.bcwa_keep_rows_without_positives:
             mask = labels.any(dim=-1)
             predictions = predictions[mask]
@@ -434,7 +434,7 @@ class Loss(_Loss):
             predictions=predictions,
             labels=labels,
             label_smoothing=label_smoothing,
-            num_entities=num_tails,
+            num_entities=num_targets,
             weights=weights,
         )
 

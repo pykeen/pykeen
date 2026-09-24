@@ -143,13 +143,14 @@ def _batch_gradients(loop: bcwa.BatchCWATrainingLoop, batch: bcwa.BatchCWABatch,
     return {name: p.grad.clone() for name, p in loop.model.named_parameters() if p.grad is not None}
 
 
+@pytest.mark.parametrize("target", ["head", "relation", "tail"])
 @pytest.mark.parametrize(("sub_batch_size", "slice_size"), [(3, None), (None, 4)])
-def test_sub_batching_and_slicing(sub_batch_size: int | None, slice_size: int | None) -> None:
+def test_sub_batching_and_slicing(target: str, sub_batch_size: int | None, slice_size: int | None) -> None:
     """Test that sub-batching and slicing do not change the gradients."""
     triples_factory = Nations().training
     # note: TransE does not use a regularizer, whose term would depend on the sub-batch division
     model = TransE(triples_factory=triples_factory, loss=BCEWithLogitsLoss(), random_seed=0)
-    loop = bcwa.BatchCWATrainingLoop(model=model, triples_factory=triples_factory)
+    loop = bcwa.BatchCWATrainingLoop(model=model, triples_factory=triples_factory, target=target)
     loader = loop._create_training_data_loader(triples_factory, sampler=None, batch_size=32, drop_last=False)
     batch = next(iter(loader))
     expected = _batch_gradients(loop, batch, slice_size=None)
@@ -157,6 +158,38 @@ def test_sub_batching_and_slicing(sub_batch_size: int | None, slice_size: int | 
     assert expected.keys() == actual.keys()
     for key, value in expected.items():
         assert torch.allclose(value, actual[key], atol=1.0e-06), key
+
+
+@pytest.mark.parametrize("target", [0, 1, 2])
+def test_target(target: int) -> None:
+    """Test the loss for each target against a reference which scores each triple individually."""
+    triples_factory = Nations().training
+    model = TransE(triples_factory=triples_factory, loss=CrossEntropyLoss(), random_seed=0)
+    loop = bcwa.BatchCWATrainingLoop(model=model, triples_factory=triples_factory, target=target)
+    loader = loop._create_training_data_loader(triples_factory, sampler=None, batch_size=8, drop_last=False)
+    batch = next(iter(loader))
+    assert batch.targets is not None
+    ids = (batch.hs, batch.rs, batch.ts)
+    positives = {tuple(row) for row in batch.targets.tolist()}
+    # rows are all combinations of the non-target positions, columns the target candidates
+    first, second = (dim for dim in range(3) if dim != target)
+    row_losses = []
+    for i in range(len(ids[first])):
+        for j in range(len(ids[second])):
+            local = []
+            for k in range(len(ids[target])):
+                triple = [0, 0, 0]
+                triple[first], triple[second], triple[target] = i, j, k
+                local.append(triple)
+            labels = torch.as_tensor([float(tuple(triple) in positives) for triple in local])
+            if not labels.any():
+                continue
+            hrt = torch.as_tensor([[ids[dim][x[dim]] for dim in range(3)] for x in local])
+            scores = model.score_hrt(hrt).view(-1)
+            row_losses.append(torch.nn.functional.cross_entropy(scores, labels / labels.sum()))
+    expected = torch.stack(row_losses).mean()
+    actual = loop._process_batch(batch, start=0, stop=loop._get_batch_size(batch))
+    assert torch.allclose(actual, expected, atol=1.0e-06)
 
 
 def test_schlichtkrull_sampler() -> None:

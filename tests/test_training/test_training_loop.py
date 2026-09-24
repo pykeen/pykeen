@@ -127,3 +127,19 @@ class NSSALossBatchCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
 
     cls = BatchCWATrainingLoop
     loss_cls = NSSALoss
+
+
+class CrossEntropyLossHeadBatchCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
+    """Test batch-local CWA with cross entropy loss and head prediction."""
+
+    cls = BatchCWATrainingLoop
+    loss_cls = CrossEntropyLoss
+    kwargs = {"target": "head"}
+
+
+class CrossEntropyLossRelationBatchCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
+    """Test batch-local CWA with cross entropy loss and relation prediction."""
+
+    cls = BatchCWATrainingLoop
+    loss_cls = CrossEntropyLoss
+    kwargs = {"target": "relation"}

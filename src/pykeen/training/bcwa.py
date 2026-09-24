@@ -8,11 +8,12 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 from .training_loop import TrainingLoop
+from ..constants import get_target_column
 from ..models import ERModel
 from ..triples import CoreTriplesFactory
 from ..triples.instances import SubGraphSLCWAInstances
 from ..triples.weights import LossWeighter, loss_weighter_resolver
-from ..typing import COLUMN_HEAD, COLUMN_TAIL, FloatTensor, LongTensor, MappedTriples
+from ..typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, FloatTensor, LongTensor, MappedTriples, TargetHint
 
 __all__ = [
     "BatchCWATrainingLoop",
@@ -187,14 +188,15 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
     as negative. This makes better use of the calculated representations, similar to the in-batch negatives commonly
     used in contrastive learning (e.g., [zhai2023]_).
 
-    The loss is computed by :meth:`pykeen.losses.Loss.process_bcwa_scores`, which treats each (head, relation)-pair of
-    the batch as a row of 1:n scores over the batch's tails.
+    The loss is computed by :meth:`~pykeen.losses.Loss.process_bcwa_scores`, which treats each combination of the two
+    non-target positions as a row of 1:n scores over the batch's candidates for the target position. Like for
+    :class:`~pykeen.training.LCWATrainingLoop`, the target defaults to the tail.
 
     The ``batch_size`` refers to the number of sampled training triples. Sub-batching splits along the batch's unique
-    heads, and slicing along its unique tails.
+    heads (or tails, if the heads are the target), and slicing along the target position.
 
     .. note::
-        This training loop requires an :class:`pykeen.models.ERModel`.
+        This training loop requires an :class:`~pykeen.models.ERModel`.
 
     Example
     -------
@@ -203,19 +205,26 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
 
     supports_slicing: ClassVar[bool] = True
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, *, target: TargetHint = None, **kwargs: Any) -> None:
         """
         Initialize the training loop.
 
+        :param target:
+            The target column. Defaults to tail prediction.
         :param kwargs:
             Keyword-based parameters passed to :meth:`TrainingLoop.__init__`
 
         :raises TypeError:
-            If the model is not an :class:`pykeen.models.ERModel`.
+            If the model is not an :class:`~pykeen.models.ERModel`.
         """
         super().__init__(**kwargs)
         if not isinstance(self.model, ERModel):
             raise TypeError(f"{self.__class__.__name__} requires an ERModel, but got {self.model.__class__.__name__}")
+        self.target = get_target_column(target)
+        # the dimension along which to sub-batch
+        self.sub_batch_dim = COLUMN_TAIL if self.target == COLUMN_HEAD else COLUMN_HEAD
+        # the order of dimensions which moves the target dimension last
+        self._order = [dim for dim in range(3) if dim != self.target] + [self.target]
 
     def _create_training_data_loader(
         self,
@@ -258,10 +267,8 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
             case _:
                 raise ValueError(f"Invalid {sampler=}")
 
-    @staticmethod
-    def _get_batch_size(batch: BatchCWABatch) -> int:  # noqa: D102
-        # sub-batching splits along the unique heads
-        return batch.hs.shape[0]
+    def _get_batch_size(self, batch: BatchCWABatch) -> int:  # type: ignore[override] # noqa: D102
+        return batch[self.sub_batch_dim].shape[0]
 
     def _process_batch(
         self,
@@ -274,24 +281,36 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
         if batch.targets is None:
             raise AssertionError(f"{self} requires a custom collator to fill batch.targets")
 
-        # select the sub-batch's heads, and the positive triples with these heads
+        # select the sub-batch, and the positive triples within it
+        dim = self.sub_batch_dim
+        ids = [batch.hs, batch.rs, batch.ts]
+        ids[dim] = ids[dim][start:stop]
         targets = batch.targets
-        targets = targets[(targets[:, COLUMN_HEAD] >= start) & (targets[:, COLUMN_HEAD] < stop)]
-        targets[:, COLUMN_HEAD] -= start
+        targets = targets[(targets[:, dim] >= start) & (targets[:, dim] < stop)]
+        targets[:, dim] -= start
         weights = batch.weights
         if weights is not None:
-            weights = weights[start:stop].to(device=self.model.device)
+            weights = weights.narrow(dim, start, stop - start)
 
         # calculate scores, shape: (num_heads, num_relations, num_tails)
         device = self.model.device
+        h_indices, r_indices, t_indices = (
+            x.to(device=device).view(*(-1 if i == j else 1 for j in range(3))) for i, x in enumerate(ids)
+        )
         scores: FloatTensor = self.model(
-            h_indices=batch.hs[start:stop].to(device=device).view(-1, 1, 1),
-            r_indices=batch.rs.to(device=device).view(1, -1, 1),
-            t_indices=batch.ts.to(device=device).view(1, 1, -1),
+            h_indices=h_indices,
+            r_indices=r_indices,
+            t_indices=t_indices,
             slice_size=slice_size,
-            slice_dim=COLUMN_TAIL,
+            slice_dim=self.target,
             mode=self.mode,
         )
+
+        # move the target dimension last
+        scores = scores.permute(*self._order)
+        targets = targets[:, self._order]
+        if weights is not None:
+            weights = weights.permute(*self._order).to(device=device)
 
         return (
             # loss
@@ -308,10 +327,11 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
     def _slice_size_search(
         self, *, triples_factory: CoreTriplesFactory, batch_size: int, sub_batch_size: int, supports_sub_batching: bool
     ) -> int:  # noqa: D102
-        # slicing is along the batch's unique tails, of which there are at most batch_size
+        # slicing is along the batch's unique targets, of which there are at most batch_size
+        num_targets = self.model.num_relations if self.target == COLUMN_RELATION else self.model.num_entities
         return self._search_slice_size(
             triples_factory=triples_factory,
             batch_size=batch_size,
             sub_batch_size=sub_batch_size,
-            initial_slice_size=ceil(min(batch_size, self.model.num_entities) / 2),
+            initial_slice_size=ceil(min(batch_size, num_targets) / 2),
         )
