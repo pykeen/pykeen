@@ -2,7 +2,6 @@
 
 import logging
 from collections.abc import Callable
-from math import ceil
 from typing import ClassVar
 
 from torch.nn import functional
@@ -161,13 +160,11 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         supports_sub_batching: bool,
     ) -> int:  # noqa: D102
         self._check_slicing_availability(supports_sub_batching)
-        # Since the batch_size search with size 1, i.e. one tuple ((h, r) or (r, t)) scored on all entities,
-        # must have failed to start slice_size search, we start with trying half the entities.
-        return self._search_slice_size(
+        return super()._slice_size_search(
             triples_factory=triples_factory,
             batch_size=batch_size,
             sub_batch_size=sub_batch_size,
-            initial_slice_size=ceil(self.model.num_entities / 2),
+            supports_sub_batching=supports_sub_batching,
         )
 
     def _check_slicing_availability(self, supports_sub_batching: bool):

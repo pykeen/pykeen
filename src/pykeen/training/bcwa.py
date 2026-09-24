@@ -2,7 +2,7 @@
 
 from collections.abc import Iterator, Sequence
 from math import ceil
-from typing import Any, ClassVar, Literal, NamedTuple
+from typing import Any, ClassVar, Literal
 
 import torch
 from torch.utils.data import DataLoader, Dataset
@@ -11,35 +11,13 @@ from .training_loop import TrainingLoop
 from ..constants import get_target_column
 from ..models import ERModel
 from ..triples import CoreTriplesFactory
-from ..triples.instances import SubGraphSLCWAInstances
+from ..triples.instances import BatchCWABatch, SubGraphSLCWAInstances
 from ..triples.weights import LossWeighter, loss_weighter_resolver
 from ..typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, FloatTensor, LongTensor, MappedTriples, TargetHint
 
 __all__ = [
     "BatchCWATrainingLoop",
 ]
-
-
-class BatchCWABatch(NamedTuple):
-    """A batch for BCWA training."""
-
-    hs: LongTensor
-    """The unique head entity indices, shape: (num_unique_heads,)."""
-
-    rs: LongTensor
-    """The unique relation indices, shape: (num_unique_relations,)."""
-
-    ts: LongTensor
-    """The unique tail entity indices, shape: (num_unique_tails,)."""
-
-    targets: LongTensor | None
-    """The indices of positive targets, in batch-local indices, shape: (num_positive_triples, 3)
-
-    Only filled during collation.
-    """
-
-    weights: FloatTensor | None = None
-    """Sample weights, shape: (num_unique_heads, num_unique_relations, num_unique_tails)."""
 
 
 class BatchCWADataset(Dataset[BatchCWABatch]):
@@ -324,14 +302,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
             + self.model.collect_regularization_term()
         )
 
-    def _slice_size_search(
-        self, *, triples_factory: CoreTriplesFactory, batch_size: int, sub_batch_size: int, supports_sub_batching: bool
-    ) -> int:  # noqa: D102
+    def _get_initial_slice_size(self, batch_size: int) -> int:  # noqa: D102
         # slicing is along the batch's unique targets, of which there are at most batch_size
         num_targets = self.model.num_relations if self.target == COLUMN_RELATION else self.model.num_entities
-        return self._search_slice_size(
-            triples_factory=triples_factory,
-            batch_size=batch_size,
-            sub_batch_size=sub_batch_size,
-            initial_slice_size=ceil(min(batch_size, num_targets) / 2),
-        )
+        return ceil(min(batch_size, num_targets) / 2)

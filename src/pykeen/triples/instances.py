@@ -5,7 +5,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from typing import Generic, NotRequired, Self, TypedDict, TypeVar
+from typing import Generic, NamedTuple, NotRequired, Self, TypedDict, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -37,11 +37,34 @@ __all__ = [
     "BatchedSLCWAInstances",
     "SubGraphSLCWAInstances",
     "LCWABatch",
+    "BatchCWABatch",
     "SLCWABatch",
     "GroupedSLCWABatch",
 ]
 
 BatchType = TypeVar("BatchType")
+
+
+class BatchCWABatch(NamedTuple):
+    """A batch for BCWA training."""
+
+    hs: LongTensor
+    """The unique head entity indices, shape: (num_unique_heads,)."""
+
+    rs: LongTensor
+    """The unique relation indices, shape: (num_unique_relations,)."""
+
+    ts: LongTensor
+    """The unique tail entity indices, shape: (num_unique_tails,)."""
+
+    targets: LongTensor | None
+    """The indices of positive targets, in batch-local indices, shape: (num_positive_triples, 3)
+
+    Only filled during collation.
+    """
+
+    weights: FloatTensor | None = None
+    """Sample weights, shape: (num_unique_heads, num_unique_relations, num_unique_tails)."""
 
 
 class LCWABatch(TypedDict):
