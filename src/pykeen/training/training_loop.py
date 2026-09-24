@@ -2,6 +2,7 @@
 
 import functools
 import gc
+import inspect
 import logging
 import pathlib
 import pickle
@@ -58,6 +59,9 @@ BatchType = TypeVar("BatchType")
 P = ParamSpec("P")
 R = TypeVar("R")
 
+#: whether :func:`torch.load` supports memory-mapping, which was added in torch 2.1
+_TORCH_LOAD_SUPPORTS_MMAP = "mmap" in inspect.signature(torch.load).parameters
+
 
 class NonFiniteLossError(RuntimeError):
     """An exception raised for non-finite loss values."""
@@ -112,25 +116,31 @@ def _restore_state_after_probing(
 
     @functools.wraps(func)
     def wrapped(self: "TrainingLoop", *args: P.args, **kwargs: P.kwargs) -> R:
-        with TemporaryDirectory() as directory:
-            path = pathlib.Path(directory).joinpath("state.pt")
-            torch.save(
-                {
-                    "model": self.model.state_dict(),
-                    "optimizer": None if self.optimizer is None else self.optimizer.state_dict(),
-                    "lr_scheduler": None if self.lr_scheduler is None else self.lr_scheduler.state_dict(),
-                },
-                path,
+        components = {
+            name: component
+            for name, component in (
+                ("model", self.model),
+                ("optimizer", self.optimizer),
+                ("lr_scheduler", self.lr_scheduler),
             )
+            if component is not None
+        }
+        device = self.device
+        load_kwargs: dict[str, Any] = {"map_location": device, "weights_only": False}
+        # memory-map the snapshot to avoid a full copy in host memory; we only do this when loading to an accelerator,
+        # since tensors loaded to CPU would keep referencing the (temporary) file, e.g., as part of the optimizer state
+        if _TORCH_LOAD_SUPPORTS_MMAP and device.type != "cpu":
+            load_kwargs["mmap"] = True
+        with TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            paths = {name: pathlib.Path(directory).joinpath(f"{name}.pt") for name in components}
+            for name, component in components.items():
+                torch.save(component.state_dict(), paths[name])
             try:
                 return func(self, *args, **kwargs)
             finally:
-                state = torch.load(path, map_location="cpu", weights_only=False)  # noqa: S614
-                self.model.load_state_dict(state["model"])
-                if self.optimizer is not None and state["optimizer"] is not None:
-                    self.optimizer.load_state_dict(state["optimizer"])
-                if self.lr_scheduler is not None and state["lr_scheduler"] is not None:
-                    self.lr_scheduler.load_state_dict(state["lr_scheduler"])
+                # restore one component at a time to limit the peak memory usage
+                for name, component in components.items():
+                    component.load_state_dict(torch.load(paths[name], **load_kwargs))  # noqa: S614
 
     return wrapped
 
