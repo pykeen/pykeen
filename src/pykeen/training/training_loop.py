@@ -996,6 +996,67 @@ class TrainingLoop(Generic[BatchType], ABC):
         """
         raise NotImplementedError
 
+    def _search_slice_size(
+        self,
+        *,
+        triples_factory: CoreTriplesFactory,
+        batch_size: int,
+        sub_batch_size: int,
+        initial_slice_size: int,
+    ) -> int:
+        """Search the largest feasible slice size by halving (and doubling) from an initial slice size.
+
+        :param triples_factory: A triples factory
+        :param batch_size: The batch size to use.
+        :param sub_batch_size: The sub-batch size to use.
+        :param initial_slice_size: The slice size to start the search with.
+
+        :returns: The slice_size that allows training the model with the given parameters on this hardware.
+
+        :raises MemoryError: If even a slice size of 1 does not fit into memory.
+        :raises RuntimeError: If a runtime error other than an out-of-memory error is raised during training.
+        """
+        reached_max = False
+        evaluated_once = False
+        logger.info("Trying slicing now.")
+        slice_size = initial_slice_size
+        while True:
+            try:
+                logger.debug(f"Trying {slice_size=:_} now.")
+                self._train(
+                    triples_factory=triples_factory,
+                    num_epochs=1,
+                    batch_size=batch_size,
+                    sub_batch_size=sub_batch_size,
+                    slice_size=slice_size,
+                    only_size_probing=True,
+                )
+            except RuntimeError as runtime_error:  # noqa: PERF203
+                self._free_graph_and_cache()
+                if not is_oom_error(runtime_error):
+                    raise runtime_error
+                if evaluated_once:
+                    slice_size //= 2
+                    logger.info(f"Concluded search with {slice_size=:_}.")
+                    break
+                if slice_size == 1:
+                    raise MemoryError(
+                        f"Even {slice_size=:_} doesn't fit into your memory with these parameters."
+                    ) from runtime_error
+
+                logger.debug(f"The {slice_size=:_} was too big, trying less now.")
+                slice_size //= 2
+                reached_max = True
+            else:
+                self._free_graph_and_cache()
+                if reached_max:
+                    logger.info(f"Concluded search with {slice_size=:_}.")
+                    break
+                slice_size *= 2
+                evaluated_once = True
+
+        return slice_size
+
     def _sub_batch_size_search(
         self,
         *,

@@ -1,8 +1,8 @@
-"""Test for sLCWA and LCWA."""
+"""Tests for training loops."""
 
-from pykeen.losses import CrossEntropyLoss, MarginRankingLoss, NSSALoss, SoftplusLoss
+from pykeen.losses import BCEWithLogitsLoss, CrossEntropyLoss, MarginRankingLoss, NSSALoss, SoftplusLoss
 from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
-from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, SymmetricLCWATrainingLoop
+from pykeen.training import BatchCWATrainingLoop, LCWATrainingLoop, SLCWATrainingLoop, SymmetricLCWATrainingLoop
 from tests.test_training import cases
 
 
@@ -99,3 +99,31 @@ class SymmetricLCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
 
     cls = SymmetricLCWATrainingLoop
     loss_cls = CrossEntropyLoss
+
+
+class BCELossBatchCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
+    """Test batch-local CWA with binary cross entropy loss."""
+
+    cls = BatchCWATrainingLoop
+    loss_cls = BCEWithLogitsLoss
+
+
+class CrossEntropyLossBatchCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
+    """Test batch-local CWA with cross entropy loss."""
+
+    cls = BatchCWATrainingLoop
+    loss_cls = CrossEntropyLoss
+
+
+class MRLossBatchCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
+    """Test batch-local CWA with margin ranking loss."""
+
+    cls = BatchCWATrainingLoop
+    loss_cls = MarginRankingLoss
+
+
+class NSSALossBatchCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
+    """Test batch-local CWA with NSSA loss."""
+
+    cls = BatchCWATrainingLoop
+    loss_cls = NSSALoss

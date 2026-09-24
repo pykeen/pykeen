@@ -71,10 +71,17 @@ triples considered in LCWA vs. sLCWA based on the given true triples (in red):
 
 .. image:: ../img/training_approaches.png
   :alt: Troubleshooting Image 2
+
+Batch-Local Closed World Assumption
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+When training under the batch-local closed world assumption (BCWA), all combinations of heads, relations, and tails
+occurring in a batch of training triples are scored, and those which are not training triples are considered as
+negative. See :class:`~pykeen.training.BatchCWATrainingLoop` for details.
 """  # noqa:E501
 
 from class_resolver import ClassResolver
 
+from .bcwa import BatchCWATrainingLoop  # noqa: F401
 from .callbacks import TrainingCallback, callback_resolver  # noqa: F401
 from .lcwa import LCWATrainingLoop, SymmetricLCWATrainingLoop  # noqa: F401
 from .slcwa import SLCWATrainingLoop  # noqa: F401
@@ -85,6 +92,7 @@ __all__ = [
     "SLCWATrainingLoop",
     "LCWATrainingLoop",
     "SymmetricLCWATrainingLoop",
+    "BatchCWATrainingLoop",
     "NonFiniteLossError",
     "training_loop_resolver",
     #
