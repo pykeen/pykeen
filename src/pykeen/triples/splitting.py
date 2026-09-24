@@ -8,7 +8,7 @@ from collections.abc import Collection, Sequence
 import numpy
 import pandas
 import torch
-from class_resolver.api import ClassResolver, HintOrType
+from class_resolver import ClassResolver, HintOrType
 
 from ..constants import COLUMN_LABELS
 from ..typing import (

@@ -75,7 +75,7 @@ dependencies = [
     "more_itertools",
     "pystow>=0.8.4",
     "docdata>=0.0.5",
-    "class_resolver>=0.6.0",
+    "class_resolver>=0.8.1",
     "pyyaml",
     "torch_max_mem>=0.1.5",
     "torch-ppr>=0.0.7",
@@ -133,6 +133,24 @@ skip = ["**/__init__.py", "tests/*"]
 # MyPy, see https://mypy.readthedocs.io/en/stable/config_file.html
 [tool.mypy]
 plugins = []
+ignore_missing_imports = true
+
+# Libraries whose types are not checked yet. `follow_imports = "skip"` makes their
+# symbols `Any`, which is what happened implicitly while the mypy tox environment
+# installed a hand-picked subset of the dependencies instead of the package itself.
+# Removing an entry here is how type coverage gets widened, one library at a time.
+[[tool.mypy.overrides]]
+# ~150 errors, cf. https://github.com/pykeen/pykeen/pull/1623
+module = ["torch.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
+
+[[tool.mypy.overrides]]
+# ~90 errors beyond the `type-abstract` ones already suppressed at the call sites,
+# cf. https://github.com/pykeen/pykeen/pull/1623
+module = ["class_resolver.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
 
 # Doc8, see https://doc8.readthedocs.io/en/stable/readme.html#ini-file-usage
 [tool.doc8]
