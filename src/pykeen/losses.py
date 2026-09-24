@@ -393,7 +393,7 @@ class Loss(_Loss):
     def process_bcwa_scores(
         self,
         predictions: FloatTensor,
-        targets: LongTensor,
+        positives: LongTensor,
         label_smoothing: float | None = None,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
@@ -407,7 +407,7 @@ class Loss(_Loss):
 
         :param predictions: shape: (n_1, n_2, num_targets)
             The scores.
-        :param targets: shape: (num_positive_triples, 3)
+        :param positives: shape: (num_positive_triples, 3)
             The positive triples in batch-local indices, in the same order of positions as the predictions' dimensions.
         :param label_smoothing:
             An optional label smoothing parameter.
@@ -418,7 +418,7 @@ class Loss(_Loss):
             A scalar loss value.
         """
         labels = torch.zeros_like(predictions)
-        labels[targets.unbind(dim=-1)] = 1.0
+        labels[positives.unbind(dim=-1)] = 1.0
         num_targets = predictions.shape[-1]
         predictions = predictions.reshape(-1, num_targets)
         labels = labels.reshape(-1, num_targets)

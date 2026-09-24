@@ -1,5 +1,7 @@
 """Tests for training with batch-local closed world assumption."""
 
+from typing import cast
+
 import pytest
 import torch
 
@@ -8,6 +10,7 @@ from pykeen.losses import BCEWithLogitsLoss, CrossEntropyLoss, Loss
 from pykeen.models import DistMult, TransE
 from pykeen.models.mocks import FixedModel
 from pykeen.training import bcwa
+from pykeen.triples.instances import BatchCWABatch
 from pykeen.triples.weights import RelationLossWeighter
 from pykeen.typing import LongTensor
 
@@ -93,13 +96,19 @@ def test_collator_weights() -> None:
     collator = bcwa.BatchCWACollator(mapped_triples=mapped_triples, loss_weighter=weighter)
     dataset = bcwa.BatchCWADataset(mapped_triples=mapped_triples)
     batch = collator([dataset[i] for i in range(16)])
-    assert batch.targets is not None
-    assert batch.weights is not None
-    assert batch.weights.shape == (len(batch.hs), len(batch.rs), len(batch.ts))
-    assert torch.allclose(batch.weights, weighter.weights[batch.rs].view(1, -1, 1).expand_as(batch.weights))
+    assert "weights" in batch
+    assert batch["weights"].shape == (len(batch["heads"]), len(batch["relations"]), len(batch["tails"]))
+    assert torch.allclose(
+        batch["weights"], weighter.weights[batch["relations"]].view(1, -1, 1).expand_as(batch["weights"])
+    )
     # the positive targets are training triples
     positives = torch.stack(
-        [batch.hs[batch.targets[:, 0]], batch.rs[batch.targets[:, 1]], batch.ts[batch.targets[:, 2]]], dim=-1
+        [
+            batch["heads"][batch["positives"][:, 0]],
+            batch["relations"][batch["positives"][:, 1]],
+            batch["tails"][batch["positives"][:, 2]],
+        ],
+        dim=-1,
     )
     assert (positives[:, None, :] == mapped_triples[None, :, :]).all(dim=-1).any(dim=-1).all()
 
@@ -114,7 +123,7 @@ def test_inverse_triples() -> None:
     )
     (batch,) = list(loader)
     # full batch -> all (internal) relations occur, i.e., both, the forward and the inverse ones
-    assert torch.equal(batch.rs, torch.arange(model.num_relations))
+    assert torch.equal(batch["relations"], torch.arange(model.num_relations))
 
 
 @pytest.mark.parametrize("loss_cls", [BCEWithLogitsLoss, CrossEntropyLoss])
@@ -130,10 +139,10 @@ def test_process_bcwa_scores(loss_cls: type[Loss], generator: torch.Generator) -
         mask = labels_2d.any(dim=-1)
         predictions_2d, labels_2d = predictions_2d[mask], labels_2d[mask]
     expected = loss.process_lcwa_scores(predictions=predictions_2d, labels=labels_2d)
-    assert torch.allclose(loss.process_bcwa_scores(predictions=predictions, targets=targets), expected)
+    assert torch.allclose(loss.process_bcwa_scores(predictions=predictions, positives=targets), expected)
 
 
-def _batch_gradients(loop: bcwa.BatchCWATrainingLoop, batch: bcwa.BatchCWABatch, **kwargs) -> dict[str, torch.Tensor]:
+def _batch_gradients(loop: bcwa.BatchCWATrainingLoop, batch: BatchCWABatch, **kwargs) -> dict[str, torch.Tensor]:
     loop.model.zero_grad()
     batch_size = loop._get_batch_size(batch)
     sub_batch_size = kwargs.pop("sub_batch_size", None) or batch_size
@@ -168,9 +177,8 @@ def test_target(target: int) -> None:
     loop = bcwa.BatchCWATrainingLoop(model=model, triples_factory=triples_factory, target=target)
     loader = loop._create_training_data_loader(triples_factory, sampler=None, batch_size=8, drop_last=False)
     batch = next(iter(loader))
-    assert batch.targets is not None
-    ids = (batch.hs, batch.rs, batch.ts)
-    positives = {tuple(row) for row in batch.targets.tolist()}
+    ids = (batch["heads"], batch["relations"], batch["tails"])
+    positives = {tuple(row) for row in batch["positives"].tolist()}
     # rows are all combinations of the non-target positions, columns the target candidates
     first, second = (dim for dim in range(3) if dim != target)
     row_losses = []
@@ -222,6 +230,7 @@ def test_missing_batch_targets() -> None:
     triples_factory = Nations().training
     loop = bcwa.BatchCWATrainingLoop(model=TransE(triples_factory=triples_factory), triples_factory=triples_factory)
     h, r, t = triples_factory.mapped_triples[:3].unbind(dim=-1)
-    batch = bcwa.BatchCWABatch(hs=h, rs=r, ts=t, targets=None)
+    # a batch without the positives, which are filled by the collator
+    batch = cast(BatchCWABatch, {"heads": h, "relations": r, "tails": t})
     with pytest.raises(bcwa.MissingBatchTargetsError):
         loop._process_batch(batch, start=0, stop=3)

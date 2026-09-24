@@ -22,16 +22,21 @@ __all__ = [
 ]
 
 
+def _get_ids(batch: BatchCWABatch) -> list[LongTensor]:
+    """Get the batch's unique IDs, in the order of the columns."""
+    return [batch["heads"], batch["relations"], batch["tails"]]
+
+
 class MissingBatchTargetsError(ValueError):
-    """Raised if a BCWA batch does not contain the positive targets, i.e., was not created by the BCWA collator."""
+    """Raised if a BCWA batch does not contain the positive triples, i.e., was not created by the BCWA collator."""
 
 
 class UnknownBatchTriplesError(ValueError):
     """Raised if a batch contains triples which are not part of the triples the BCWA collator was created for."""
 
 
-class BatchCWADataset(Dataset[BatchCWABatch]):
-    """A map-style dataset for BCWA training."""
+class BatchCWADataset(Dataset[LongTensor]):
+    """A map-style dataset of single triples for BCWA training, which are collated by :class:`BatchCWACollator`."""
 
     def __init__(self, mapped_triples: MappedTriples) -> None:
         """Initialize the dataset.
@@ -42,9 +47,8 @@ class BatchCWADataset(Dataset[BatchCWABatch]):
         super().__init__()
         self.mapped_triples = mapped_triples
 
-    def __getitem__(self, item: int) -> BatchCWABatch:
-        h, r, t = self.mapped_triples[item]
-        return BatchCWABatch(hs=h, rs=r, ts=t, targets=None)
+    def __getitem__(self, item: int) -> LongTensor:
+        return self.mapped_triples[item]
 
     def __len__(self) -> int:
         return self.mapped_triples.shape[0]
@@ -132,7 +136,7 @@ class BatchCWACollator:
         self.index = _HeadIndex(mapped_triples=mapped_triples)
         self.loss_weighter = loss_weighter
 
-    def __call__(self, batch: list[BatchCWABatch]) -> BatchCWABatch:
+    def __call__(self, batch: list[LongTensor]) -> BatchCWABatch:
         """Collate a batch of single triples.
 
         :param batch: The single triples.
@@ -142,9 +146,7 @@ class BatchCWACollator:
         :raises UnknownBatchTriplesError: If the batch contains triples which the collator does not know.
         """
         # collect indices
-        hs = torch.stack([b.hs for b in batch]).unique()
-        rs = torch.stack([b.rs for b in batch]).unique()
-        ts = torch.stack([b.ts for b in batch]).unique()
+        hs, rs, ts = (column.unique() for column in torch.stack(batch).unbind(dim=-1))
 
         other_triples = self.index.find(hs=hs, rs=rs, ts=ts)
         # the batch consists of training triples -> we need to find at least those
@@ -155,17 +157,17 @@ class BatchCWACollator:
             )
 
         # convert to batch local indices
-        (hs_uniq, rs_uniq, ts_uniq), targets = _convert_to_batch_local(xs=other_triples)
+        (hs_uniq, rs_uniq, ts_uniq), positives = _convert_to_batch_local(xs=other_triples)
+        result = BatchCWABatch(heads=hs_uniq, relations=rs_uniq, tails=ts_uniq, positives=positives)
 
-        weights = None
         if self.loss_weighter is not None:
             shape = (len(hs_uniq), len(rs_uniq), len(ts_uniq))
             weights = self.loss_weighter(h=hs_uniq.view(-1, 1, 1), r=rs_uniq.view(1, -1, 1), t=ts_uniq.view(1, 1, -1))
             # loss weighters may only depend on a subset of h/r/t (e.g. RelationLossWeighter ignores h/t);
             # clone() since broadcast_to returns a non-writable expanded view (e.g. incompatible with pin_memory).
-            weights = weights.broadcast_to(shape).clone()
+            result["weights"] = weights.broadcast_to(shape).clone()
 
-        return BatchCWABatch(hs=hs_uniq, rs=rs_uniq, ts=ts_uniq, targets=targets, weights=weights)
+        return result
 
 
 class _SubGraphBatchSampler:
@@ -270,7 +272,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
                 raise ValueError(f"Invalid {sampler=}")
 
     def _get_batch_size(self, batch: BatchCWABatch) -> int:  # type: ignore[override] # noqa: D102
-        return batch[self.sub_batch_dim].shape[0]
+        return _get_ids(batch)[self.sub_batch_dim].shape[0]
 
     def _process_batch(
         self,
@@ -280,19 +282,19 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
         label_smoothing: float = 0.0,
         slice_size: int | None = None,
     ) -> FloatTensor:  # noqa: D102
-        if batch.targets is None:
+        if "positives" not in batch:
             raise MissingBatchTargetsError(
-                f"{self.__class__.__name__} requires batches with targets, as created by {BatchCWACollator.__name__}."
+                f"{self.__class__.__name__} requires batches with positives, as created by {BatchCWACollator.__name__}."
             )
 
         # select the sub-batch, and the positive triples within it
         dim = self.sub_batch_dim
-        ids = [batch.hs, batch.rs, batch.ts]
+        ids = _get_ids(batch)
         ids[dim] = ids[dim][start:stop]
-        targets = batch.targets
-        targets = targets[(targets[:, dim] >= start) & (targets[:, dim] < stop)]
-        targets[:, dim] -= start
-        weights = batch.weights
+        positives = batch["positives"]
+        positives = positives[(positives[:, dim] >= start) & (positives[:, dim] < stop)]
+        positives[:, dim] -= start
+        weights = batch.get("weights")
         if weights is not None:
             weights = weights.narrow(dim, start, stop - start)
 
@@ -312,7 +314,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
 
         # move the target dimension last
         scores = scores.permute(*self._order)
-        targets = targets[:, self._order]
+        positives = positives[:, self._order]
         if weights is not None:
             weights = weights.permute(*self._order).to(device=device)
 
@@ -320,7 +322,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
             # loss
             self.loss.process_bcwa_scores(
                 predictions=scores,
-                targets=targets.to(device=device),
+                positives=positives.to(device=device),
                 label_smoothing=label_smoothing,
                 weights=weights,
             )
