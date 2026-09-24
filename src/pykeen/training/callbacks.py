@@ -412,7 +412,7 @@ class OptimizerTrainingCallback(TrainingCallback):
         for cb in self.pre_step_callbacks:
             cb.pre_step(epoch=epoch, **kwargs)
 
-        # when called by batch_size_search(), the parameter update should not be applied.
+        # e.g., when probing sizes without updating the parameters, the parameter update should not be applied.
         if not self.only_size_probing:
             # update parameters according to optimizer
             self.optimizer.step()

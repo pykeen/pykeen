@@ -1,5 +1,6 @@
 """Training loops for KGE models using multi-modal information."""
 
+import functools
 import gc
 import logging
 import pathlib
@@ -7,12 +8,12 @@ import pickle
 import random
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import IO, Any, ClassVar, Generic, Literal, TypeVar
+from typing import IO, Any, ClassVar, Concatenate, Generic, Literal, ParamSpec, TypeVar
 
 import numpy as np
 import torch
@@ -54,6 +55,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 BatchType = TypeVar("BatchType")
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 class NonFiniteLossError(RuntimeError):
@@ -94,6 +97,43 @@ class SubBatchingNotSupportedError(NotImplementedError):
             f"No sub-batching support for {self.model.__class__.__name__} due to modules "
             f"{get_batchnorm_modules(self.model)}."
         )
+
+
+def _copy_to_cpu(state: Any) -> Any:
+    """Recursively copy all tensors of a (nested) state dictionary to CPU."""
+    if isinstance(state, torch.Tensor):
+        return state.to("cpu", copy=True)
+    if isinstance(state, Mapping):
+        return {key: _copy_to_cpu(value) for key, value in state.items()}
+    if isinstance(state, list | tuple):
+        return type(state)(_copy_to_cpu(value) for value in state)
+    return state
+
+
+def _restore_state_after_probing(
+    func: "Callable[Concatenate[TrainingLoop, P], R]",
+) -> "Callable[Concatenate[TrainingLoop, P], R]":
+    """Decorate a size probing method to restore the model, optimizer, and LR scheduler state afterwards.
+
+    Size probing runs actual training steps, including parameter updates, to also account for the memory required by
+    the optimizer step, e.g., for Adam's moment estimates. The state is kept on CPU to not distort the memory estimates.
+    """
+
+    @functools.wraps(func)
+    def wrapped(self: "TrainingLoop", *args: P.args, **kwargs: P.kwargs) -> R:
+        model_state = _copy_to_cpu(self.model.state_dict())
+        optimizer_state = None if self.optimizer is None else _copy_to_cpu(self.optimizer.state_dict())
+        lr_scheduler_state = None if self.lr_scheduler is None else _copy_to_cpu(self.lr_scheduler.state_dict())
+        try:
+            return func(self, *args, **kwargs)
+        finally:
+            self.model.load_state_dict(model_state)
+            if self.optimizer is not None and optimizer_state is not None:
+                self.optimizer.load_state_dict(optimizer_state)
+            if self.lr_scheduler is not None and lr_scheduler_state is not None:
+                self.lr_scheduler.load_state_dict(lr_scheduler_state)
+
+    return wrapped
 
 
 class TrainingLoop(Generic[BatchType], ABC):
@@ -687,7 +727,9 @@ class TrainingLoop(Generic[BatchType], ABC):
         if gradient_clipping_max_abs_value is not None:
             pre_step_callbacks.append(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
         callback.register_callback(
-            OptimizerTrainingCallback(only_size_probing=only_size_probing, pre_step_callbacks=pre_step_callbacks)
+            # note: we also apply parameter updates during size probing to account for the optimizer's memory
+            # requirements; the size probing methods restore the state afterwards
+            OptimizerTrainingCallback(pre_step_callbacks=pre_step_callbacks)
         )
         if self.lr_scheduler is not None:
             callback.register_callback(LearningRateSchedulerTrainingCallback())
@@ -889,6 +931,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         """Process a single batch and returns the loss."""
         raise NotImplementedError
 
+    @_restore_state_after_probing
     def batch_size_search(
         self,
         *,
@@ -958,6 +1001,7 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         return batch_size, evaluated_once
 
+    @_restore_state_after_probing
     def sub_batch_and_slice(
         self,
         *,
