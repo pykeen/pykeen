@@ -1,5 +1,6 @@
 """Training loops for KGE models using multi-modal information."""
 
+import functools
 import gc
 import logging
 import pathlib
@@ -7,7 +8,7 @@ import pickle
 import random
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
@@ -96,6 +97,22 @@ class SubBatchingNotSupportedError(NotImplementedError):
         )
 
 
+def _make_optimizer_and_lr_scheduler(
+    model: Model,
+    *,
+    optimizer: HintOrType[Optimizer],
+    optimizer_kwargs: OptionalKwargs,
+    lr_scheduler: HintOrType[LRScheduler],
+    lr_scheduler_kwargs: OptionalKwargs,
+) -> tuple[Optimizer, LRScheduler | None]:
+    """Create an optimizer for the model's parameters, and optionally an LR scheduler for this optimizer."""
+    optimizer_instance = optimizer_resolver.make(optimizer, optimizer_kwargs, params=model.get_grad_params())
+    if lr_scheduler is None:
+        return optimizer_instance, None
+    lr_scheduler_instance = lr_scheduler_resolver.make(lr_scheduler, lr_scheduler_kwargs, optimizer=optimizer_instance)
+    return optimizer_instance, lr_scheduler_instance
+
+
 class TrainingLoop(Generic[BatchType], ABC):
     """A training loop."""
 
@@ -104,14 +121,8 @@ class TrainingLoop(Generic[BatchType], ABC):
     optimizer: Optimizer | None
     lr_scheduler: LRScheduler | None
 
-    #: how to re-create the optimizer and LR scheduler for a fresh training run
-    _optimizer_hint: HintOrType[Optimizer]
-    _optimizer_kwargs: OptionalKwargs
-    _lr_scheduler_hint: HintOrType[LRScheduler]
-    _lr_scheduler_kwargs: OptionalKwargs
-
-    #: whether the optimizer and LR scheduler can be re-created, i.e., whether they were not passed pre-instantiated
-    _recreatable: bool
+    #: creates a fresh optimizer and LR scheduler for a given model; None if they cannot be re-created
+    _optimizer_factory: Callable[[Model], tuple[Optimizer, LRScheduler | None]] | None
 
     #: whether the current optimizer has already been used for training
     _optimizer_used: bool
@@ -168,18 +179,20 @@ class TrainingLoop(Generic[BatchType], ABC):
         :param loss_weighter_kwargs: Parameters for the method to determine loss weights.
         """
         self.model = model
-        self._optimizer_hint = optimizer
-        self._optimizer_kwargs = optimizer_kwargs
-        self._lr_scheduler_hint = lr_scheduler
-        self._lr_scheduler_kwargs = lr_scheduler_kwargs
-        self._recreatable = True
-        self._reset_optimizer()
+        factory = functools.partial(
+            _make_optimizer_and_lr_scheduler,
+            optimizer=optimizer,
+            optimizer_kwargs=optimizer_kwargs,
+            lr_scheduler=lr_scheduler,
+            lr_scheduler_kwargs=lr_scheduler_kwargs,
+        )
+        self.optimizer, self.lr_scheduler = factory(model)
+        self._optimizer_used = False
         # pre-instantiated optimizers and LR schedulers are used as-is, but cannot be re-created, since their
-        # constructor parameters cannot be reliably recovered from the instance
-        if isinstance(optimizer, Optimizer) or isinstance(lr_scheduler, LRScheduler):
-            self._recreatable = False
-            # do not keep references to the instances, such that clearing the optimizer releases them
-            self._optimizer_hint = self._lr_scheduler_hint = None
+        # constructor parameters cannot be reliably recovered from the instance. Not keeping the factory also ensures
+        # that clearing the optimizer releases the instances.
+        pre_instantiated = isinstance(optimizer, Optimizer) or isinstance(lr_scheduler, LRScheduler)
+        self._optimizer_factory = None if pre_instantiated else factory
         self.losses_per_epochs = []
         self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
@@ -216,20 +229,13 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         :raises ValueError: if the optimizer or LR scheduler were passed pre-instantiated, and thus cannot be re-created
         """
-        if not self._recreatable:
+        if self._optimizer_factory is None:
             raise ValueError(
                 "Cannot create a fresh optimizer, since the optimizer or LR scheduler were passed pre-instantiated, "
                 "and have already been used or cleared. Pass them as class and kwargs instead, to allow re-creating "
                 "them for fresh training runs.",
             )
-        self.optimizer = optimizer_resolver.make(
-            self._optimizer_hint, self._optimizer_kwargs, params=self.model.get_grad_params()
-        )
-        self.lr_scheduler = None
-        if self._lr_scheduler_hint is not None:
-            self.lr_scheduler = lr_scheduler_resolver.make(
-                self._lr_scheduler_hint, self._lr_scheduler_kwargs, optimizer=self.optimizer
-            )
+        self.optimizer, self.lr_scheduler = self._optimizer_factory(self.model)
         self._optimizer_used = False
 
     @property
@@ -525,7 +531,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         del batch
         del batches
         gc.collect()
-        assert self.optimizer is not None
+        if self.optimizer is None:
+            raise ValueError("The optimizer has been cleared.")
         self.optimizer.zero_grad()
         self._free_graph_and_cache()
 
@@ -1255,7 +1262,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         self._epoch = checkpoint["epoch"]
         self.losses_per_epochs = checkpoint["loss"]
         self.model.load_state_dict(checkpoint["model_state_dict"])
-        assert self.optimizer is not None
+        if self.optimizer is None:
+            raise ValueError("The optimizer has been cleared.")
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if self.lr_scheduler is not None:
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
