@@ -48,7 +48,7 @@ fits:
   :class:`~pykeen.datasets.sources.RemoteSource` for one URL per split, given as
   :class:`~pykeen.datasets.sources.RemoteFile` objects, and :class:`~pykeen.datasets.sources.TarArchiveSource` /
   :class:`~pykeen.datasets.sources.ZipArchiveSource` for members of a single archive. For local files,
-  :meth:`~pykeen.datasets.base.PathDataset.from_paths` creates the :class:`~pykeen.datasets.sources.LocalSource` for you.
+  :meth:`~pykeen.datasets.base.PathDataset.from_paths` creates the :class:`~pykeen.datasets.sources.LocalSource`.
 - A :class:`~pykeen.datasets.loaders.Loader` says *how the files become triples factories*.
   :class:`~pykeen.datasets.loaders.PreSplitLoader` reads one file per split and makes the evaluation splits share the
   training split's entity and relation index, while :class:`~pykeen.datasets.loaders.AutoSplitLoader` reads a single
