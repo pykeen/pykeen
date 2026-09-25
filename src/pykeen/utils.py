@@ -157,11 +157,10 @@ def resolve_device(device: DeviceHint = None) -> torch.device:
     if device is None or device == "gpu":
         if cuda_available:
             return torch.device("cuda")
-        elif mps_available:
+        if mps_available:
             return torch.device("mps")
-        else:
-            return torch.device("cpu")
-    elif isinstance(device, str):
+        return torch.device("cpu")
+    if isinstance(device, str):
         device = torch.device(device)
     if device.type == "cuda" and not cuda_available:
         device = torch.device("mps") if mps_available else torch.device("cpu")
