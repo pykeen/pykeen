@@ -325,10 +325,11 @@ The following 6 regularizers are implemented by PyKEEN.
 
 ### Training Loops
 
-The following 3 training loops are implemented in PyKEEN.
+The following 4 training loops are implemented in PyKEEN.
 
 | Name          | Reference                                                                                                                                                | Description                                                                               |
 |---------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| batchcwa      | [`pykeen.training.BatchCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.BatchCWATrainingLoop)           | A training loop that is based upon the batch-local closed world assumption (BCWA).        |
 | lcwa          | [`pykeen.training.LCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.LCWATrainingLoop)                   | A training loop that is based upon the local closed world assumption (LCWA).              |
 | slcwa         | [`pykeen.training.SLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SLCWATrainingLoop)                 | A training loop that uses the stochastic local closed world assumption training approach. |
 | symmetriclcwa | [`pykeen.training.SymmetricLCWATrainingLoop`](https://pykeen.readthedocs.io/en/latest/reference/training.html#pykeen.training.SymmetricLCWATrainingLoop) | A &#34;symmetric&#34; LCWA scoring heads *and* tails at once.                                     |

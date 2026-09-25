@@ -37,11 +37,31 @@ __all__ = [
     "BatchedSLCWAInstances",
     "SubGraphSLCWAInstances",
     "LCWABatch",
+    "BatchCWABatch",
     "SLCWABatch",
     "GroupedSLCWABatch",
 ]
 
 BatchType = TypeVar("BatchType")
+
+
+class BatchCWABatch(TypedDict):
+    """A batch for BCWA training."""
+
+    heads: LongTensor
+    """The unique head entity indices, shape: (num_unique_heads,)."""
+
+    relations: LongTensor
+    """The unique relation indices, shape: (num_unique_relations,)."""
+
+    tails: LongTensor
+    """The unique tail entity indices, shape: (num_unique_tails,)."""
+
+    positives: LongTensor
+    """The positive triples, in batch-local indices, shape: (num_positive_triples, 3)."""
+
+    weights: NotRequired[FloatTensor]
+    """Sample weights, shape: (num_unique_heads, num_unique_relations, num_unique_tails)."""
 
 
 class LCWABatch(TypedDict):
