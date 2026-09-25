@@ -56,16 +56,21 @@ class CKG(TabbedDataset):
             random_state=random_state,
             **kwargs,
         )
-        self.preloaded_path = self.cache_root.joinpath("preloaded.tsv.gz")
+
+    @property
+    def preloaded_path(self) -> Path:
+        """The path of the concatenated dataframe, which is cached across runs."""
+        return self.cache_root.joinpath("preloaded.tsv.gz")
 
     def _get_path(self) -> Path | None:
         return self.preloaded_path
 
     def _get_df(self) -> pd.DataFrame:
-        if self.preloaded_path.exists():
-            return pd.read_csv(self.preloaded_path, sep="\t", dtype=str)
+        path = self.preloaded_path
+        if path.exists():
+            return pd.read_csv(path, sep="\t", dtype=str)
         df = pd.concat(self._iterate_dataframes())
-        df.to_csv(self.preloaded_path, sep="\t", index=False)
+        df.to_csv(path, sep="\t", index=False)
         return df
 
     def _iterate_dataframes(self) -> Iterable[pd.DataFrame]:

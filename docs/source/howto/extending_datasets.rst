@@ -37,6 +37,57 @@ that the default separator for Pandas is a comma, but PyKEEN overrides it to be 
 it if you want a comma. Since there's a random aspect to this process, you can also set the seed used for splitting with
 the ``random_state`` keyword argument.
 
+Combining a Source and a Loader
+-------------------------------
+
+The classes above are thin wrappers around two independent pieces, which you can also combine yourself when none of them
+fits:
+
+- A :class:`~pykeen.datasets.sources.Source` says *where the files are*. It resolves a set of logical file keys, e.g.,
+  ``"training"``, to local paths, downloading and unpacking as needed: :class:`~pykeen.datasets.sources.LocalSource`,
+  :class:`~pykeen.datasets.sources.RemoteSource` for one URL per split, and
+  :class:`~pykeen.datasets.sources.TarArchiveSource` / :class:`~pykeen.datasets.sources.ZipArchiveSource` for members of
+  a single archive.
+- A :class:`~pykeen.datasets.loaders.Loader` says *how the files become triples factories*.
+  :class:`~pykeen.datasets.loaders.PreSplitLoader` reads one file per split and makes the evaluation splits share the
+  training split's entity and relation index, while :class:`~pykeen.datasets.loaders.AutoSplitLoader` reads a single
+  table and splits it.
+
+For example, a dataset whose three splits sit next to each other inside a zip archive, using a comma as the separator,
+can be written as:
+
+.. code-block:: python
+
+    import pathlib
+
+    from pykeen.datasets.base import PathDataset
+    from pykeen.datasets.sources import ZipArchiveSource
+
+
+    class MyDataset(PathDataset):
+        """A dataset packed into a zip archive."""
+
+        def __init__(self, cache_root: str | None = None, **kwargs):
+            """Initialize the dataset."""
+            self.cache_root = self._help_cache(cache_root)
+            super().__init__(
+                source=ZipArchiveSource(
+                    members={
+                        "training": pathlib.PurePath("my-data", "train.csv"),
+                        "testing": pathlib.PurePath("my-data", "test.csv"),
+                        "validation": pathlib.PurePath("my-data", "valid.csv"),
+                    },
+                    cache_root=self.cache_root,
+                    url="https://example.org/my-data.zip",
+                ),
+                load_triples_kwargs={"delimiter": ","},
+                **kwargs,
+            )
+
+If neither loader fits, e.g., because the data does not come from files at all, subclass
+:class:`~pykeen.datasets.base.LazyDataset` and override its ``_load_factories`` method to return the mapping of splits
+to triples factories directly. It is called at most once, on first access.
+
 Updating the ``setup.cfg``
 --------------------------
 

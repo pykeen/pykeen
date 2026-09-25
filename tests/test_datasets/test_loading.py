@@ -2,8 +2,6 @@
 
 import pathlib
 import unittest
-from io import BytesIO
-from urllib.request import urlopen
 
 from pykeen.datasets import Kinships, Nations, dataset_resolver
 from pykeen.datasets.base import (
@@ -12,6 +10,7 @@ from pykeen.datasets.base import (
     TarFileRemoteDataset,
     TarFileSingleDataset,
     UnpackedRemoteDataset,
+    ZipSingleDataset,
 )
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
 from tests import cases, constants
@@ -73,6 +72,21 @@ class MockTarFileSingleDataset(TarFileSingleDataset):
         return constants.RESOURCES.joinpath("nations.tar.gz")
 
 
+class MockZipFileSingleDataset(ZipSingleDataset):
+    """Mock downloading a zip archive with a single file."""
+
+    def __init__(self, cache_root: str):  # noqa:D107
+        super().__init__(
+            url=...,
+            name=...,
+            relative_path="nations/train.txt",
+            cache_root=cache_root,
+        )
+
+    def _get_path(self) -> pathlib.Path:
+        return constants.RESOURCES.joinpath("nations.zip")
+
+
 class MockTarFileRemoteDataset(TarFileRemoteDataset):
     """Mock downloading a tar.gz archive with three pre-stratified files."""
 
@@ -84,9 +98,6 @@ class MockTarFileRemoteDataset(TarFileRemoteDataset):
             relative_training_path=pathlib.PurePath("nations", "train.txt"),
             relative_validation_path=pathlib.PurePath("nations", "valid.txt"),
         )
-
-    def _get_bytes(self) -> BytesIO:
-        return BytesIO(urlopen(self.url).read())  # noqa:S310
 
 
 class MockUnpackedRemoteDataset(UnpackedRemoteDataset):
@@ -125,7 +136,6 @@ class TestSingle(cases.CachedDatasetCase):
     exp_num_relations = 55
     exp_num_triples = 1592  # because only loading training set from Nations
     exp_num_triples_tolerance = 5
-    autoloaded_validation = True
     dataset_cls = MockSingleTabbedDataset
 
 
@@ -141,8 +151,22 @@ class TestTarFileSingle(cases.CachedDatasetCase):
     exp_num_relations = 55
     exp_num_triples = 1592  # because only loading training set from Nations
     exp_num_triples_tolerance = 5
-    autoloaded_validation = True
     dataset_cls = MockTarFileSingleDataset
+
+
+class TestZipFileSingle(cases.CachedDatasetCase):
+    """Test the base classes.
+
+    .. note::
+
+        This uses the nations training dataset
+    """
+
+    exp_num_entities = 14
+    exp_num_relations = 55
+    exp_num_triples = 1592  # because only loading training set from Nations
+    exp_num_triples_tolerance = 5
+    dataset_cls = MockZipFileSingleDataset
 
 
 class TestTarRemote(cases.CachedDatasetCase):
