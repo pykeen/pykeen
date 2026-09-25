@@ -2,8 +2,6 @@
 
 import pathlib
 import unittest
-from io import BytesIO
-from urllib.request import urlopen
 
 from pykeen.datasets import EagerDataset, Kinships, Nations, dataset_resolver
 from pykeen.datasets.base import (
@@ -100,9 +98,6 @@ class MockTarFileRemoteDataset(TarFileRemoteDataset):
             relative_training_path=pathlib.PurePath("nations", "train.txt"),
             relative_validation_path=pathlib.PurePath("nations", "valid.txt"),
         )
-
-    def _get_bytes(self) -> BytesIO:
-        return BytesIO(urlopen(self.url).read())  # noqa:S310
 
 
 class MockUnpackedRemoteDataset(UnpackedRemoteDataset):

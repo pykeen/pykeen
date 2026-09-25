@@ -4,22 +4,19 @@ from __future__ import annotations
 
 import logging
 import pathlib
-import tarfile
 import zipfile
-from abc import abstractmethod
 from collections.abc import Collection, Iterable, Mapping, Sequence
-from io import BytesIO
 from typing import Any, ClassVar, Self, cast
 
 import click
 import docdata
 import pandas as pd
-import requests
 import torch
 from more_click import verbose_option
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
 
+from .sources import ArchiveSource, LocalSource, RemoteSource, Source, TarArchiveSource, ZipArchiveSource
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
@@ -599,16 +596,22 @@ class LazyDataset(Dataset):
 
 
 class PathDataset(LazyDataset):
-    """Contains a lazy reference to a training, testing, and validation dataset."""
+    """A dataset which stores each split in its own file.
+
+    The files may be local, downloaded one-by-one, or extracted from an archive; that choice is made by the
+    :class:`~pykeen.datasets.sources.Source` and does not affect the loading itself.
+    """
 
     def __init__(
         self,
-        training_path: str | pathlib.Path,
-        testing_path: str | pathlib.Path,
-        validation_path: None | str | pathlib.Path,
+        training_path: None | str | pathlib.Path = None,
+        testing_path: None | str | pathlib.Path = None,
+        validation_path: None | str | pathlib.Path = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
+        *,
+        source: Source | None = None,
     ) -> None:
         """Initialize the dataset.
 
@@ -619,10 +622,16 @@ class PathDataset(LazyDataset):
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
             and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
+        :param source: An explicit source for the files, as an alternative to the three path parameters. Used by
+            the subclasses which download their files.
+
+        :raises ValueError: If neither a source nor a training and testing path are given.
         """
-        self.training_path = pathlib.Path(training_path)
-        self.testing_path = pathlib.Path(testing_path)
-        self.validation_path = pathlib.Path(validation_path) if validation_path else None
+        if source is None:
+            if training_path is None or testing_path is None:
+                raise ValueError("must give either a source, or both a training_path and a testing_path")
+            source = LocalSource(training=training_path, testing=testing_path, validation=validation_path)
+        self.source = source
 
         self._create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
@@ -631,14 +640,30 @@ class PathDataset(LazyDataset):
             self._load()
             self._load_validation()
 
+    @property
+    def training_path(self) -> pathlib.Path | None:
+        """The path of the training triples file."""
+        return self.source.expected_paths().get("training")
+
+    @property
+    def testing_path(self) -> pathlib.Path | None:
+        """The path of the testing triples file."""
+        return self.source.expected_paths().get("testing")
+
+    @property
+    def validation_path(self) -> pathlib.Path | None:
+        """The path of the validation triples file, if any."""
+        return self.source.expected_paths().get("validation")
+
     def _load(self) -> None:
+        paths = self.source.paths()
         self._training = TriplesFactory.from_path(
-            path=self.training_path,
+            path=paths["training"],
             create_inverse_triples=self._create_inverse_triples,
             load_triples_kwargs=self.load_triples_kwargs,
         )
         self._testing = TriplesFactory.from_path(
-            path=self.testing_path,
+            path=paths["testing"],
             entity_to_id=self._training.entity_to_id,  # share entity index with training
             relation_to_id=self._training.relation_to_id,  # share relation index with training
             # do not explicitly create inverse triples for testing; this is handled by the evaluation code
@@ -705,25 +730,13 @@ class UnpackedRemoteDataset(PathDataset):
         self.testing_url = testing_url
         self.validation_url = validation_url
 
-        training_path = self.cache_root.joinpath(name_from_url(self.training_url))
-        testing_path = self.cache_root.joinpath(name_from_url(self.testing_url))
-        validation_path = self.cache_root.joinpath(name_from_url(self.validation_url))
-
-        download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
-        download_kwargs.setdefault("backend", "urllib")
-
-        for url, path in [
-            (self.training_url, training_path),
-            (self.testing_url, testing_path),
-            (self.validation_url, validation_path),
-        ]:
-            if force or not path.is_file():
-                download(url, path, **download_kwargs)
-
         super().__init__(
-            training_path=training_path,
-            testing_path=testing_path,
-            validation_path=validation_path,
+            source=RemoteSource(
+                urls={"training": training_url, "testing": testing_url, "validation": validation_url},
+                cache_root=self.cache_root,
+                force=force,
+                download_kwargs=download_kwargs,
+            ),
             eager=eager,
             create_inverse_triples=create_inverse_triples,
             load_triples_kwargs=load_triples_kwargs,
@@ -731,7 +744,12 @@ class UnpackedRemoteDataset(PathDataset):
 
 
 class RemoteDataset(PathDataset):
-    """Contains a lazy reference to a remote dataset that is loaded if needed."""
+    """A dataset whose splits are packed into a single remote archive."""
+
+    #: The source class used to unpack the archive
+    source_cls: ClassVar[type[ArchiveSource]]
+    #: Whether the whole archive is unpacked, rather than only the requested members
+    extract_all: ClassVar[bool] = True
 
     def __init__(
         self,
@@ -765,51 +783,38 @@ class RemoteDataset(PathDataset):
         self._relative_testing_path = pathlib.PurePath(relative_testing_path)
         self._relative_validation_path = pathlib.PurePath(relative_validation_path)
 
-        training_path, testing_path, validation_path = self._get_paths()
+        # note: requests cannot handle file:// URLs, which are convenient for testing
+        download_kwargs: Mapping[str, Any] = (
+            {"backend": "requests", "timeout": self.timeout}
+            if url.startswith(("http://", "https://"))
+            else {"backend": "urllib"}
+        )
         super().__init__(
-            training_path=training_path,
-            testing_path=testing_path,
-            validation_path=validation_path,
+            source=self.source_cls(
+                members={
+                    "training": self._relative_training_path,
+                    "testing": self._relative_testing_path,
+                    "validation": self._relative_validation_path,
+                },
+                cache_root=self.cache_root,
+                url=url,
+                extract_all=self.extract_all,
+                download_kwargs=download_kwargs,
+            ),
             eager=eager,
             create_inverse_triples=create_inverse_triples,
         )
 
     def _get_paths(self) -> tuple[pathlib.Path, pathlib.Path, pathlib.Path]:  # noqa: D401
         """Get the paths where the extracted files can be found."""
-        return (
-            self.cache_root.joinpath(self._relative_training_path),
-            self.cache_root.joinpath(self._relative_testing_path),
-            self.cache_root.joinpath(self._relative_validation_path),
-        )
-
-    @abstractmethod
-    def _extract(self, archive_file: BytesIO) -> None:
-        """Extract from the downloaded file."""
-        raise NotImplementedError
-
-    def _get_bytes(self) -> BytesIO:
-        logger.info(f"Requesting dataset from {self.url}")
-        res = requests.get(url=self.url, timeout=self.timeout)
-        res.raise_for_status()
-        return BytesIO(res.content)
-
-    def _load(self) -> None:  # noqa: D102
-        all_unpacked = all(path.is_file() for path in self._get_paths())
-
-        if not all_unpacked:
-            archive_file = self._get_bytes()
-            self._extract(archive_file=archive_file)
-            logger.info(f"Extracted to {self.cache_root}.")
-
-        super()._load()
+        paths = self.source.expected_paths()
+        return paths["training"], paths["testing"], paths["validation"]
 
 
 class TarFileRemoteDataset(RemoteDataset):
     """A remote dataset stored as a tar file."""
 
-    def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
-        with tarfile.open(fileobj=archive_file) as tf:
-            tf.extractall(path=self.cache_root)  # noqa:S202
+    source_cls = TarArchiveSource
 
 
 class PackedZipRemoteDataset(LazyDataset):
@@ -919,6 +924,9 @@ class PackedZipRemoteDataset(LazyDataset):
 class CompressedSingleDataset(LazyDataset):
     """Loads a dataset that's a single file inside an archive."""
 
+    #: The source class used to unpack the archive
+    source_cls: ClassVar[type[ArchiveSource]]
+
     ratios = (0.8, 0.1, 0.1)
 
     def __init__(
@@ -962,7 +970,18 @@ class CompressedSingleDataset(LazyDataset):
             self._load()
 
     def _get_path(self) -> pathlib.Path:
+        """Get the path of the *archive*, which is also used as the dataset's metadata path."""
         return self.cache_root.joinpath(self.name)
+
+    def _get_source(self) -> ArchiveSource:
+        """Build the source for the single member of the archive."""
+        return self.source_cls(
+            members={"data": self._relative_path},
+            cache_root=self.cache_root,
+            url=self.url,
+            # note: goes through `_get_path` so that subclasses can point at a pre-existing archive
+            archive_path=self._get_path(),
+        )
 
     def _load(self) -> None:
         df = self._get_df()
@@ -982,7 +1001,9 @@ class CompressedSingleDataset(LazyDataset):
         logger.info("[%s] done splitting data from %s", self.__class__.__name__, tf_path)
 
     def _get_df(self) -> pd.DataFrame:
-        raise NotImplementedError
+        path = self._get_source().paths()["data"]
+        df = pd.read_csv(path, **self.read_csv_kwargs)
+        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
 
     def _load_validation(self) -> None:
         pass  # already loaded by _load()
@@ -991,38 +1012,13 @@ class CompressedSingleDataset(LazyDataset):
 class ZipSingleDataset(CompressedSingleDataset):
     """Loads a dataset that's a single file inside a zip archive."""
 
-    def _get_df(self) -> pd.DataFrame:
-        path = self._get_path()
-        if not path.is_file():
-            download(self.url, self._get_path())  # noqa:S310
-
-        with zipfile.ZipFile(path) as zip_file, zip_file.open(self._relative_path.as_posix()) as file:
-            df = pd.read_csv(file, **self.read_csv_kwargs)
-        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
+    source_cls = ZipArchiveSource
 
 
 class TarFileSingleDataset(CompressedSingleDataset):
     """Loads a dataset that's a single file inside a tar.gz archive."""
 
-    def _get_df(self) -> pd.DataFrame:
-        if not self._get_path().is_file():
-            download(self.url, self._get_path())  # noqa:S310
-
-        _actual_path = self.cache_root.joinpath(self._relative_path)
-        if not _actual_path.is_file():
-            logger.error(
-                "[%s] untaring from %s (%s) to %s",
-                self.__class__.__name__,
-                self._get_path(),
-                self._relative_path,
-                _actual_path,
-            )
-            with tarfile.open(self._get_path()) as tar_file:
-                # tarfile does not like pathlib
-                tar_file.extract(str(self._relative_path), self.cache_root)
-
-        df = pd.read_csv(_actual_path, **self.read_csv_kwargs)
-        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
+    source_cls = TarArchiveSource
 
 
 class TabbedDataset(LazyDataset):
