@@ -1,4 +1,9 @@
-"""Utility classes for constructing inductive datasets."""
+"""Utility classes for constructing inductive datasets.
+
+These share the machinery of :mod:`pykeen.datasets.base` -- lazy loading, caching, summaries, and binary
+(de)serialization -- and only differ in *which* splits they have and in how those splits share their entity and
+relation indices, cf. ``pykeen.datasets.loaders.INDUCTIVE_PLAN``.
+"""
 
 from __future__ import annotations
 
@@ -6,12 +11,11 @@ import logging
 import pathlib
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, Self, cast
+from typing import Any, ClassVar, Self, cast
 
 from pystow.utils.download import DownloadKwargs
-from tabulate import tabulate
 
-from ..base import LazyFactoryMixin
+from ..base import DatasetBase, LazyFactoryMixin
 from ..loaders import INDUCTIVE_PLAN, PreSplitLoader
 from ..sources import LocalSource, RemoteFile, RemoteSource, Source
 from ...triples import CoreTriplesFactory, TriplesFactory
@@ -29,8 +33,15 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class InductiveDataset:
+class InductiveDataset(DatasetBase):
     """Contains transductive train and inductive inference/validation/test datasets."""
+
+    _factory_keys: ClassVar[tuple[str, ...]] = (
+        "transductive_training",
+        "inductive_inference",
+        "inductive_testing",
+        "inductive_validation",
+    )
 
     #: A factory wrapping the training triples
     transductive_training: CoreTriplesFactory
@@ -41,46 +52,14 @@ class InductiveDataset:
     inductive_testing: CoreTriplesFactory
     #: A factory wrapping the validation triples, that share indices with the INDUCTIVE INFERENCE triples
     inductive_validation: CoreTriplesFactory | None = None
-    #: All datasets should take care of inverse triple creation
+    #: All datasets should take care of inverse triple creation.
+    #: note: unlike :class:`~pykeen.datasets.base.Dataset`, this is a plain attribute rather than being derived
+    #: from the reference factory, since it is declared up-front by the dataset rather than by its files.
     create_inverse_triples: bool = True
 
-    def _summary_rows(self):
-        return [
-            (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
-            for label, triples_factory in zip(
-                ("Transductive Training", "Inductive Inference", "Inductive Testing", "Inductive Validation"),
-                (
-                    self.transductive_training,
-                    self.inductive_inference,
-                    self.inductive_testing,
-                    self.inductive_validation,
-                ),
-                strict=True,
-            )
-            # note: the validation factory is optional
-            if triples_factory is not None
-        ]
-
-    def summary_str(self, title: str | None = None, show_examples: int | None = 5, end="\n") -> str:
-        """Make a summary string of all of the factories."""
-        rows = self._summary_rows()
-        n_triples = sum(count for *_, count in rows)
-        rows.append(("Total", "-", "-", n_triples))
-        t = tabulate(rows, headers=["Name", "Entities", "Relations", "Triples"])
-        rv = f"{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}"
-        if show_examples:
-            if not isinstance(self.transductive_training, TriplesFactory):
-                raise AttributeError(f"{self.transductive_training.__class__} does not have labeling information.")
-            examples = tabulate(
-                self.transductive_training.label_triples(self.transductive_training.mapped_triples[:show_examples]),
-                headers=["Head", "Relation", "tail"],
-            )
-            rv += "\n" + examples
-        return rv + end
-
-    def summarize(self, title: str | None = None, show_examples: int | None = 5, file=None) -> None:
-        """Print a summary of the dataset."""
-        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T201
+    @classmethod
+    def _eager_cls(cls) -> type[DatasetBase]:  # noqa: D102
+        return EagerInductiveDataset
 
     def __str__(self) -> str:  # noqa: D105
         return (
@@ -98,6 +77,7 @@ class EagerInductiveDataset(InductiveDataset):
     inductive_testing: CoreTriplesFactory
     inductive_validation: CoreTriplesFactory | None = None
     create_inverse_triples: bool = True
+    metadata: Mapping[str, Any] | None = None
 
 
 class LazyInductiveDataset(LazyFactoryMixin, InductiveDataset):
@@ -157,7 +137,7 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
                 source=source,
                 plan=INDUCTIVE_PLAN,
                 create_inverse_triples=create_inverse_triples,
-                factory_cls=TriplesFactory,
+                factory_cls=cast(type[TriplesFactory], self.triples_factory_cls),
                 load_triples_kwargs=load_triples_kwargs,
             ),
             eager=eager,
