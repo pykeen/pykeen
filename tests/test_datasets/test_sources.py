@@ -10,6 +10,7 @@ from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIO
 from pykeen.datasets.sources import (
     ArchiveSource,
     LocalSource,
+    RemoteFile,
     RemoteSource,
     TarArchiveSource,
     ZipArchiveSource,
@@ -43,21 +44,24 @@ class TestRemoteSource(unittest.TestCase):
         """Clean up the temporary cache directory."""
         self.directory.cleanup()
 
-    def _make(self, **kwargs) -> RemoteSource:
+    def _make(self, sub_directories: dict[str, str] | None = None) -> RemoteSource:
+        sub_directories = sub_directories or {}
         return RemoteSource(
-            urls={
-                "training": NATIONS_TRAIN_PATH.as_uri(),
-                "testing": NATIONS_TEST_PATH.as_uri(),
-                "validation": NATIONS_VALIDATE_PATH.as_uri(),
-            },
+            files=[
+                RemoteFile(key=key, url=path.as_uri(), sub_directory=sub_directories.get(key))
+                for key, path in (
+                    ("training", NATIONS_TRAIN_PATH),
+                    ("testing", NATIONS_TEST_PATH),
+                    ("validation", NATIONS_VALIDATE_PATH),
+                )
+            ],
             cache_root=self.cache_root,
-            **kwargs,
         )
 
-    def test_expected_paths_do_not_download(self):
+    def test_manifest_does_not_download(self):
         """Test that asking where the files will be does not download them."""
         source = self._make()
-        paths = source.expected_paths()
+        paths = source.get_manifest()
         assert set(paths) == {"training", "testing", "validation"}
         assert not any(path.is_file() for path in paths.values())
 
@@ -68,8 +72,14 @@ class TestRemoteSource(unittest.TestCase):
         assert all(path.is_file() for path in paths.values())
         assert paths["training"] == self.cache_root.joinpath("train.txt")
 
+    def test_duplicate_keys(self):
+        """Test that two files with the same key are rejected."""
+        files = [RemoteFile(key="training", url="https://example.org/a"), RemoteFile(key="training", url="b")]
+        with pytest.raises(ValueError, match="duplicate"):
+            RemoteSource(files=files, cache_root=self.cache_root)
+
     def test_sub_directories(self):
-        """Test that the per-key sub-directories are used."""
+        """Test that the per-file sub-directories are used."""
         source = self._make(sub_directories={"training": "a", "testing": "b", "validation": "b"})
         paths = source.paths()
         assert paths["training"] == self.cache_root.joinpath("a", "train.txt")

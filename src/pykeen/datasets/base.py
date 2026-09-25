@@ -14,9 +14,18 @@ import pandas as pd
 import torch
 from more_click import verbose_option
 from pystow.utils import download, name_from_url
+from pystow.utils.download import DownloadKwargs
 from tabulate import tabulate
 
-from .sources import ArchiveSource, LocalSource, RemoteSource, Source, TarArchiveSource, ZipArchiveSource
+from .sources import (
+    ArchiveSource,
+    LocalSource,
+    RemoteFile,
+    RemoteSource,
+    Source,
+    TarArchiveSource,
+    ZipArchiveSource,
+)
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
@@ -604,33 +613,21 @@ class PathDataset(LazyDataset):
 
     def __init__(
         self,
-        training_path: None | str | pathlib.Path = None,
-        testing_path: None | str | pathlib.Path = None,
-        validation_path: None | str | pathlib.Path = None,
+        source: Source,
+        *,
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
-        *,
-        source: Source | None = None,
     ) -> None:
         """Initialize the dataset.
 
-        :param training_path: Path to the training triples file or training triples file.
-        :param testing_path: Path to the testing triples file or testing triples file.
-        :param validation_path: Path to the validation triples file or validation triples file.
+        :param source: The source of the files, which provides the keys ``"training"``, ``"testing"``, and
+            optionally ``"validation"``. For local files, use :meth:`from_paths`.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
             and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
-        :param source: An explicit source for the files, as an alternative to the three path parameters. Used by
-            the subclasses which download their files.
-
-        :raises ValueError: If neither a source nor a training and testing path are given.
         """
-        if source is None:
-            if training_path is None or testing_path is None:
-                raise ValueError("must give either a source, or both a training_path and a testing_path")
-            source = LocalSource(training=training_path, testing=testing_path, validation=validation_path)
         self.source = source
 
         self._create_inverse_triples = create_inverse_triples
@@ -640,20 +637,45 @@ class PathDataset(LazyDataset):
             self._load()
             self._load_validation()
 
+    @classmethod
+    def from_paths(
+        cls,
+        training_path: str | pathlib.Path,
+        testing_path: str | pathlib.Path,
+        validation_path: None | str | pathlib.Path = None,
+        **kwargs: Any,
+    ) -> Self:
+        """Create a dataset from local files, one per split.
+
+        .. note::
+
+            This only works for subclasses which keep the base class' ``__init__`` signature.
+
+        :param training_path: Path to the training triples file.
+        :param testing_path: Path to the testing triples file.
+        :param validation_path: Path to the validation triples file, if any.
+        :param kwargs: Additional keyword-based parameters passed to ``__init__``.
+
+        :returns: The dataset.
+        """
+        return cls(
+            source=LocalSource(training=training_path, testing=testing_path, validation=validation_path), **kwargs
+        )
+
     @property
     def training_path(self) -> pathlib.Path | None:
         """The path of the training triples file."""
-        return self.source.expected_paths().get("training")
+        return self.source.get_manifest().get("training")
 
     @property
     def testing_path(self) -> pathlib.Path | None:
         """The path of the testing triples file."""
-        return self.source.expected_paths().get("testing")
+        return self.source.get_manifest().get("testing")
 
     @property
     def validation_path(self) -> pathlib.Path | None:
         """The path of the validation triples file, if any."""
-        return self.source.expected_paths().get("validation")
+        return self.source.get_manifest().get("validation")
 
     def _load(self) -> None:
         paths = self.source.paths()
@@ -707,7 +729,7 @@ class UnpackedRemoteDataset(PathDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
-        download_kwargs: Mapping[str, Any] | None = None,
+        download_kwargs: DownloadKwargs | None = None,
     ) -> None:
         """Initialize dataset.
 
@@ -732,7 +754,11 @@ class UnpackedRemoteDataset(PathDataset):
 
         super().__init__(
             source=RemoteSource(
-                urls={"training": training_url, "testing": testing_url, "validation": validation_url},
+                files=[
+                    RemoteFile(key="training", url=training_url),
+                    RemoteFile(key="testing", url=testing_url),
+                    RemoteFile(key="validation", url=validation_url),
+                ],
                 cache_root=self.cache_root,
                 force=force,
                 download_kwargs=download_kwargs,
@@ -784,7 +810,7 @@ class RemoteDataset(PathDataset):
         self._relative_validation_path = pathlib.PurePath(relative_validation_path)
 
         # note: requests cannot handle file:// URLs, which are convenient for testing
-        download_kwargs: Mapping[str, Any] = (
+        download_kwargs: DownloadKwargs = (
             {"backend": "requests", "timeout": self.timeout}
             if url.startswith(("http://", "https://"))
             else {"backend": "urllib"}
@@ -807,7 +833,7 @@ class RemoteDataset(PathDataset):
 
     def _get_paths(self) -> tuple[pathlib.Path, pathlib.Path, pathlib.Path]:  # noqa: D401
         """Get the paths where the extracted files can be found."""
-        paths = self.source.expected_paths()
+        paths = self.source.get_manifest()
         return paths["training"], paths["testing"], paths["validation"]
 
 

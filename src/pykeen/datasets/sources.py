@@ -6,7 +6,7 @@ remote archive -- and is deliberately ignorant of how those files are turned int
 Keeping the two apart means that a new location, e.g., a new archive format, does not require re-implementing the
 loading logic, and vice versa.
 
-Every source distinguishes the paths it *will* have, cf. :meth:`Source.expected_paths`, from the paths it *does*
+Every source distinguishes the paths it *will* have, cf. :meth:`Source.get_manifest`, from the paths it *does*
 have, cf. :meth:`Source.paths`. Only the latter triggers a download, which keeps lazy datasets lazy while still
 allowing them to report where their data lives.
 """
@@ -18,14 +18,16 @@ import pathlib
 import tarfile
 import zipfile
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
-from typing import Any
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 
 from pystow.utils import download, name_from_url
+from pystow.utils.download import DownloadKwargs
 
 __all__ = [
     "Source",
     "LocalSource",
+    "RemoteFile",
     "RemoteSource",
     "ArchiveSource",
     "TarArchiveSource",
@@ -39,7 +41,7 @@ class Source(ABC):
     """A resolver from logical file keys to local paths."""
 
     @abstractmethod
-    def expected_paths(self) -> Mapping[str, pathlib.Path]:
+    def get_manifest(self) -> Mapping[str, pathlib.Path]:
         """Return where the files are (or will be), *without* downloading anything.
 
         Keys which the source cannot provide are omitted rather than mapped to ``None``. This is how an absent
@@ -61,7 +63,7 @@ class Source(ABC):
         :returns: A mapping from logical file key, e.g., ``"training"``, to an existing local path.
         """
         self.materialize()
-        return self.expected_paths()
+        return self.get_manifest()
 
     def __repr__(self) -> str:  # noqa: D105
         return f"{self.__class__.__name__}()"
@@ -77,7 +79,7 @@ class LocalSource(Source):
         """
         self._paths = {key: pathlib.Path(path) for key, path in paths.items() if path is not None}
 
-    def expected_paths(self) -> Mapping[str, pathlib.Path]:  # noqa: D102
+    def get_manifest(self) -> Mapping[str, pathlib.Path]:  # noqa: D102
         return self._paths
 
     def __repr__(self) -> str:  # noqa: D105
@@ -85,54 +87,74 @@ class LocalSource(Source):
         return f"{self.__class__.__name__}({inner})"
 
 
+def _default_download_kwargs(download_kwargs: DownloadKwargs | None) -> DownloadKwargs:
+    """Fill in the default download backend."""
+    rv: DownloadKwargs = {"backend": "urllib"}
+    if download_kwargs is not None:
+        rv.update(download_kwargs)
+    return rv
+
+
+@dataclass(frozen=True)
+class RemoteFile:
+    """A single file of a :class:`RemoteSource`."""
+
+    #: The logical file key, e.g., ``"training"``
+    key: str
+    #: The URL from which the file is downloaded
+    url: str
+    #: An optional sub-directory of the source's cache root to download the file into. Used by datasets which keep,
+    #: e.g., the training and the inference part in separate directories.
+    sub_directory: str | None = None
+
+
 class RemoteSource(Source):
     """One separately downloaded file per key."""
 
     def __init__(
         self,
-        urls: Mapping[str, str],
+        files: Iterable[RemoteFile],
         cache_root: pathlib.Path,
         *,
-        sub_directories: Mapping[str, str] | None = None,
         force: bool = False,
-        download_kwargs: Mapping[str, Any] | None = None,
+        download_kwargs: DownloadKwargs | None = None,
     ) -> None:
         """Initialize the source.
 
-        :param urls: The URL for each logical file key.
+        :param files: The files to download, each with its logical key.
         :param cache_root: The directory into which the files are downloaded.
-        :param sub_directories: An optional sub-directory of ``cache_root`` per key. Used by datasets which keep,
-            e.g., the training and the inference part in separate directories.
         :param force: Whether to re-download files which are already present.
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`.
-        """
-        self.urls = dict(urls)
-        self.cache_root = cache_root
-        self.sub_directories = dict(sub_directories or {})
-        self.force = force
-        download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
-        download_kwargs.setdefault("backend", "urllib")
-        self.download_kwargs = download_kwargs
 
-    def expected_paths(self) -> Mapping[str, pathlib.Path]:  # noqa: D102
-        result = {}
-        for key, url in self.urls.items():
-            directory = self.cache_root
-            sub_directory = self.sub_directories.get(key)
-            if sub_directory is not None:
-                directory = directory.joinpath(sub_directory)
-            result[key] = directory.joinpath(name_from_url(url))
-        return result
+        :raises ValueError: If two files share the same key.
+        """
+        self.files = tuple(files)
+        keys = [file.key for file in self.files]
+        if len(set(keys)) != len(keys):
+            raise ValueError(f"duplicate keys: {keys}")
+        self.cache_root = cache_root
+        self.force = force
+        self.download_kwargs = _default_download_kwargs(download_kwargs)
+
+    def _get_path(self, file: RemoteFile) -> pathlib.Path:
+        directory = self.cache_root
+        if file.sub_directory is not None:
+            directory = directory.joinpath(file.sub_directory)
+        return directory.joinpath(name_from_url(file.url))
+
+    def get_manifest(self) -> Mapping[str, pathlib.Path]:  # noqa: D102
+        return {file.key: self._get_path(file) for file in self.files}
 
     def materialize(self) -> None:  # noqa: D102
-        for key, path in self.expected_paths().items():
+        for file in self.files:
+            path = self._get_path(file)
             if not self.force and path.is_file():
                 continue
             path.parent.mkdir(parents=True, exist_ok=True)
-            download(url=self.urls[key], path=path, force=self.force, **self.download_kwargs)
+            download(url=file.url, path=path, force=self.force, **self.download_kwargs)
 
     def __repr__(self) -> str:  # noqa: D105
-        inner = ", ".join(f'{key}="{url}"' for key, url in self.urls.items())
+        inner = ", ".join(f'{file.key}="{file.url}"' for file in self.files)
         return f"{self.__class__.__name__}({inner})"
 
 
@@ -149,7 +171,7 @@ class ArchiveSource(Source):
         archive_path: pathlib.Path | None = None,
         extract_all: bool = False,
         force: bool = False,
-        download_kwargs: Mapping[str, Any] | None = None,
+        download_kwargs: DownloadKwargs | None = None,
     ) -> None:
         """Initialize the source.
 
@@ -178,9 +200,7 @@ class ArchiveSource(Source):
         self._archive_path = archive_path
         self.extract_all = extract_all
         self.force = force
-        download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
-        download_kwargs.setdefault("backend", "urllib")
-        self.download_kwargs = download_kwargs
+        self.download_kwargs = _default_download_kwargs(download_kwargs)
 
     @property
     def archive_path(self) -> pathlib.Path:
@@ -214,11 +234,11 @@ class ArchiveSource(Source):
         :param archive_path: The local path of the archive.
         """
 
-    def expected_paths(self) -> Mapping[str, pathlib.Path]:  # noqa: D102
+    def get_manifest(self) -> Mapping[str, pathlib.Path]:  # noqa: D102
         return {key: self.cache_root.joinpath(member) for key, member in self.members.items()}
 
     def materialize(self) -> None:  # noqa: D102
-        if not self.force and all(path.is_file() for path in self.expected_paths().values()):
+        if not self.force and all(path.is_file() for path in self.get_manifest().values()):
             return
         self.cache_root.mkdir(parents=True, exist_ok=True)
         self._extract(archive_path=self._ensure_archive())

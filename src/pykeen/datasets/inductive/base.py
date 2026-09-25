@@ -6,11 +6,12 @@ import logging
 import pathlib
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Self
 
+from pystow.utils.download import DownloadKwargs
 from tabulate import tabulate
 
-from ..sources import LocalSource, RemoteSource
+from ..sources import LocalSource, RemoteFile, RemoteSource, Source
 from ...constants import PYKEEN_DATASETS
 from ...triples import CoreTriplesFactory, TriplesFactory
 from ...utils import normalize_path
@@ -199,41 +200,22 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
 
     def __init__(
         self,
-        transductive_training_path: None | str | pathlib.Path = None,
-        inductive_inference_path: None | str | pathlib.Path = None,
-        inductive_testing_path: None | str | pathlib.Path = None,
-        inductive_validation_path: None | str | pathlib.Path = None,
+        source: Source,
+        *,
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
-        *,
-        source: LocalSource | RemoteSource | None = None,
     ) -> None:
         """Initialize the dataset.
 
-        :param transductive_training_path: Path to the training triples file or training triples file.
-        :param inductive_inference_path: Path to the inductive inference triples file or training triples file.
-        :param inductive_testing_path: Path to the testing triples file or testing triples file.
-        :param inductive_validation_path: Path to the validation triples file or validation triples file.
+        :param source: The source of the files, which provides the keys ``"transductive_training"``,
+            ``"inductive_inference"``, ``"inductive_testing"``, and ``"inductive_validation"``. For local files, use
+            :meth:`from_paths`.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
             and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
-        :param source: An explicit source for the files, as an alternative to the four path parameters. Used by
-            the subclasses which download their files.
-
-        :raises ValueError: If neither a source nor the four paths are given.
         """
-        if source is None:
-            paths = {
-                "transductive_training": transductive_training_path,
-                "inductive_inference": inductive_inference_path,
-                "inductive_testing": inductive_testing_path,
-                "inductive_validation": inductive_validation_path,
-            }
-            if any(path is None for path in paths.values()):
-                raise ValueError("must give either a source, or all four paths")
-            source = LocalSource(**paths)
         self.source = source
 
         self.create_inverse_triples = create_inverse_triples
@@ -242,8 +224,41 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
         if eager:
             self._load()
 
+    @classmethod
+    def from_paths(
+        cls,
+        transductive_training_path: str | pathlib.Path,
+        inductive_inference_path: str | pathlib.Path,
+        inductive_testing_path: str | pathlib.Path,
+        inductive_validation_path: str | pathlib.Path,
+        **kwargs: Any,
+    ) -> Self:
+        """Create a dataset from local files, one per split.
+
+        .. note::
+
+            This only works for subclasses which keep the base class' ``__init__`` signature.
+
+        :param transductive_training_path: Path to the transductive training triples file.
+        :param inductive_inference_path: Path to the inductive inference triples file.
+        :param inductive_testing_path: Path to the inductive testing triples file.
+        :param inductive_validation_path: Path to the inductive validation triples file.
+        :param kwargs: Additional keyword-based parameters passed to ``__init__``.
+
+        :returns: The dataset.
+        """
+        return cls(
+            source=LocalSource(
+                transductive_training=transductive_training_path,
+                inductive_inference=inductive_inference_path,
+                inductive_testing=inductive_testing_path,
+                inductive_validation=inductive_validation_path,
+            ),
+            **kwargs,
+        )
+
     def _path(self, key: str) -> pathlib.Path | None:
-        return self.source.expected_paths().get(key)
+        return self.source.get_manifest().get(key)
 
     @property
     def transductive_training_path(self) -> pathlib.Path | None:
@@ -324,7 +339,7 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
-        download_kwargs: Mapping[str, Any] | None = None,
+        download_kwargs: DownloadKwargs | None = None,
         version: str | None = None,
     ):
         """Initialize dataset.
@@ -353,20 +368,14 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
 
         super().__init__(
             source=RemoteSource(
-                urls={
-                    "transductive_training": transductive_training_url,
-                    "inductive_inference": inductive_inference_url,
-                    "inductive_testing": inductive_testing_url,
-                    "inductive_validation": inductive_validation_url,
-                },
+                # note: the transductive training graph and the inductive part are kept in separate directories
+                files=[
+                    RemoteFile(key="transductive_training", url=transductive_training_url, sub_directory="training"),
+                    RemoteFile(key="inductive_inference", url=inductive_inference_url, sub_directory="inference"),
+                    RemoteFile(key="inductive_testing", url=inductive_testing_url, sub_directory="inference"),
+                    RemoteFile(key="inductive_validation", url=inductive_validation_url, sub_directory="inference"),
+                ],
                 cache_root=self.cache_root,
-                # the transductive training graph and the inductive part are kept apart
-                sub_directories={
-                    "transductive_training": "training",
-                    "inductive_inference": "inference",
-                    "inductive_testing": "inference",
-                    "inductive_validation": "inference",
-                },
                 force=force,
                 download_kwargs=download_kwargs,
             ),

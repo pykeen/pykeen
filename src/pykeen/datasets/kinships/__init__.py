@@ -5,6 +5,7 @@ import pathlib
 from docdata import parse_docdata
 
 from ..base import PathDataset
+from ..sources import LocalSource
 
 __all__ = [
     "KINSHIPS_TRAIN_PATH",
@@ -45,9 +46,11 @@ class Kinships(PathDataset):
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PathDataset`.
         """
         super().__init__(
-            training_path=KINSHIPS_TRAIN_PATH,
-            testing_path=KINSHIPS_TEST_PATH,
-            validation_path=KINSHIPS_VALIDATE_PATH,
+            source=LocalSource(
+                training=KINSHIPS_TRAIN_PATH,
+                testing=KINSHIPS_TEST_PATH,
+                validation=KINSHIPS_VALIDATE_PATH,
+            ),
             **kwargs,
         )
 
