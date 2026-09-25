@@ -1330,7 +1330,7 @@ def _handle_evaluation(
         logger.warning(
             f"Found {evaluation_factory.create_inverse_triples=} which is ignored for evaluation factories. "
             f"The model itself determines whether inverse relations are used in head prediction. "
-            f"Here, the model was created with {training.create_inverse_triples=}",
+            f"Here, the model was created with {model_instance.use_inverse_triples=}",
         )
     mapped_triples = evaluation_factory.mapped_triples
 

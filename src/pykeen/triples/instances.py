@@ -227,8 +227,16 @@ class BaseBatchedSLCWAInstances(
         return num_batches
 
     @classmethod
-    def from_triples_factory(cls, tf: CoreTriplesFactory, **kwargs) -> Self:
-        """Create sLCWA instances for triples factory."""
+    def from_triples_factory(cls, tf: CoreTriplesFactory, create_inverse_triples: bool | None = None, **kwargs) -> Self:
+        """Create sLCWA instances for triples factory.
+
+        :param tf: The triples factory.
+        :param create_inverse_triples:
+            Whether to add inverse triples. If None, defaults to the triples factory's ``create_inverse_triples``.
+        :param kwargs: Additional keyword-based parameters passed to :meth:`__init__`
+
+        :returns: The instances.
+        """
         # TODO: can we better type `kwargs`?
         if "shuffle" in kwargs:
             if kwargs.pop("shuffle"):
@@ -237,11 +245,15 @@ class BaseBatchedSLCWAInstances(
                 raise AssertionError("If shuffle is provided, it must be True.")
         if kwargs.pop("sampler", None):
             raise AssertionError("sampler is not handled in sLCWA instances")
+        if create_inverse_triples is None:
+            create_inverse_triples = tf.create_inverse_triples
 
         return cls(
-            mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
+            mapped_triples=tf._add_inverse_triples_if_necessary(
+                mapped_triples=tf.mapped_triples, create_inverse_triples=create_inverse_triples
+            ),
             num_entities=tf.num_entities,
-            num_relations=tf.num_relations,
+            num_relations=2 * tf.real_num_relations if create_inverse_triples else tf.real_num_relations,
             **kwargs,
         )
 
@@ -389,18 +401,24 @@ class LCWAInstances(Instances[LCWABatch]):
         return cls(pairs=unique_pairs, compressed=compressed, target=target, **kwargs)
 
     @classmethod
-    def from_triples_factory(cls, tf: CoreTriplesFactory, **kwargs) -> Self:
+    def from_triples_factory(cls, tf: CoreTriplesFactory, create_inverse_triples: bool | None = None, **kwargs) -> Self:
         """Create LCWA instances for triples factory.
 
         :param tf: The triples factory.
+        :param create_inverse_triples:
+            Whether to add inverse triples. If None, defaults to the triples factory's ``create_inverse_triples``.
         :param kwargs: Additional keyword-based parameters passed to :meth:`from_triples`
 
         :returns: The instances.
         """
+        if create_inverse_triples is None:
+            create_inverse_triples = tf.create_inverse_triples
         return cls.from_triples(
-            mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
+            mapped_triples=tf._add_inverse_triples_if_necessary(
+                mapped_triples=tf.mapped_triples, create_inverse_triples=create_inverse_triples
+            ),
             num_entities=tf.num_entities,
-            num_relations=tf.num_relations,
+            num_relations=2 * tf.real_num_relations if create_inverse_triples else tf.real_num_relations,
             **kwargs,
         )
 

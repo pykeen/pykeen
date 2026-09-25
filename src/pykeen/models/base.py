@@ -100,6 +100,7 @@ class Model(nn.Module, ABC):
         loss_kwargs: Mapping[str, Any] | None = None,
         predict_with_sigmoid: bool = False,
         random_seed: int | None = None,
+        use_inverse_triples: bool | None = None,
     ) -> None:
         """Initialize the module.
 
@@ -115,6 +116,9 @@ class Model(nn.Module, ABC):
             applying sigmoid (or using BCEWithLogitsLoss), the scores are not calibrated to perform well with sigmoid.
         :param random_seed:
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
+        :param use_inverse_triples:
+            Whether to model inverse relations, i.e., to add an artificial inverse relation for each relation, and
+            train on the inverse triples, too. If None, defaults to the triples factory's ``create_inverse_triples``.
         """
         super().__init__()
 
@@ -132,9 +136,14 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss_resolver.make(loss, pos_kwargs=loss_kwargs)
 
-        self.use_inverse_triples = triples_factory.create_inverse_triples
+        if use_inverse_triples is None:
+            use_inverse_triples = triples_factory.create_inverse_triples
+        self.use_inverse_triples = use_inverse_triples
         self.num_entities = triples_factory.num_entities
-        self.num_relations = triples_factory.num_relations
+        # note: the factory's num_relations may differ, if its create_inverse_triples does not match
+        self.num_relations = (
+            2 * triples_factory.real_num_relations if use_inverse_triples else triples_factory.real_num_relations
+        )
         self.relation_inverter = relation_inverter_resolver.make(query=None)
 
         self.predict_with_sigmoid = predict_with_sigmoid
@@ -590,8 +599,7 @@ class Model(nn.Module, ABC):
         if not self.use_inverse_triples:
             raise ValueError(
                 "Your model is not configured to predict with inverse relations."
-                " Set ``create_inverse_triples=True`` when creating the dataset/triples factory"
-                " or using the pipeline().",
+                " Set ``use_inverse_triples=True`` when creating the model.",
             )
         return self.relation_inverter.invert_internal_batch(batch=batch, index=index_relation).flip(1)
 

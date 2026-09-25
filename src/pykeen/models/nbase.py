@@ -380,11 +380,12 @@ class ERModel(
     ) -> Sequence[Representation]:
         """Build representations for the given factory."""
         # note, triples_factory is required instead of just using self.num_entities
-        # and self.num_relations for the inductive case when this is different
+        # for the inductive case when this is different. Relations are always shared, and their number
+        # depends on the model's use of inverse relations rather than the factory's.
         return _prepare_representation_module_list(
             representations=representations,
             representations_kwargs=representations_kwargs,
-            max_id=triples_factory.num_entities if label == "entity" else triples_factory.num_relations,
+            max_id=triples_factory.num_entities if label == "entity" else self.num_relations,
             shapes=self.interaction.entity_shape if label == "entity" else self.interaction.relation_shape,
             label=label,
             **kwargs,
