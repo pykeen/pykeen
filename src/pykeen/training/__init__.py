@@ -77,6 +77,27 @@ Batch-Local Closed World Assumption
 When training under the batch-local closed world assumption (BCWA), all combinations of heads, relations, and tails
 occurring in a batch of training triples are scored, and those which are not training triples are considered as
 negative. See :class:`~pykeen.training.BatchCWATrainingLoop` for details.
+
+For example, consider a knowledge graph with the training triples (Alice, knows, Bob), (Bob, likes, Carol),
+(Alice, likes, Carol), and (Carol, knows, Dave), and a batch with the first two triples. The batch contains the heads
+{Alice, Bob}, the relations {knows, likes}, and the tails {Bob, Carol}, and BCWA scores all $2 \cdot 2 \cdot 2 = 8$
+combinations of them. Three of them are training triples and thus positive: the two batch triples, and
+(Alice, likes, Carol), which is not part of the batch. The remaining five are negative. For tail prediction, each
+(head, relation)-pair is one row, and the batch's tails are the candidates:
+
+================  ===  =====
+(head, relation)  Bob  Carol
+================  ===  =====
+(Alice, knows)    1    0
+(Alice, likes)    0    1
+(Bob, knows)      0    0
+(Bob, likes)      0    1
+================  ===  =====
+
+In comparison, the CWA would score all $4 \cdot 2 \cdot 4 = 32$ possible triples, and the LCWA would score each
+(head, relation)-pair of the batch with all four entities as tails. Under the BCWA, Dave is never scored, since he
+does not occur in the batch. Hence, it only requires the representations of the batch's entities and relations, which
+are needed to score the batch triples anyway.
 """  # noqa:E501
 
 from class_resolver import ClassResolver
