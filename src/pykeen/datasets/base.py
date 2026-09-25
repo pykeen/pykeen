@@ -17,6 +17,7 @@ from pystow.utils import download, name_from_url
 from pystow.utils.download import DownloadKwargs
 from tabulate import tabulate
 
+from .loaders import DEFAULT_RATIOS, AutoSplitLoader, Loader, PreSplitLoader, SplitSpec
 from .sources import (
     ArchiveSource,
     LocalSource,
@@ -163,18 +164,24 @@ class LazyFactoryMixin:
     _factories: MutableMapping[str, CoreTriplesFactory] | None = None
     #: The directory in which the cached data is stored
     cache_root: pathlib.Path
+    #: The loader used to materialize the factories
+    loader: Loader | None = None
 
     def __init__(
         self,
+        loader: Loader | None = None,
         *,
         eager: bool = False,
         metadata: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize the lazy dataset.
 
+        :param loader: The loader producing the triples factories. May be ``None`` for subclasses which override
+            ``_load_factories`` instead.
         :param eager: Whether to load the data immediately rather than on first access.
         :param metadata: Additional metadata to store inside the dataset.
         """
+        self.loader = loader
         self.metadata = metadata
         if eager:
             _ = self.factory_dict
@@ -184,9 +191,13 @@ class LazyFactoryMixin:
 
         :returns: A mapping from split name to factory, omitting splits the dataset does not provide.
 
-        :raises NotImplementedError: If a subclass does not implement this method.
+        :raises NotImplementedError: If there is neither a loader nor an override of this method.
         """
-        raise NotImplementedError(f"{self.__class__.__name__} does not implement `_load_factories`.")
+        if self.loader is None:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} has neither a loader nor an implementation of `_load_factories`."
+            )
+        return self.loader.load()
 
     @property
     def _loaded(self) -> bool:
@@ -605,7 +616,8 @@ class EagerDataset(Dataset):
 class LazyDataset(LazyFactoryMixin, Dataset):
     """A dataset whose training, testing, and optional validation factories are lazily loaded.
 
-    Subclasses implement ``_load_factories``, which loads all splits at once.
+    The loading itself is delegated to a :class:`~pykeen.datasets.loaders.Loader`. Subclasses which cannot express
+    their loading that way may instead override ``_load_factories``.
     """
 
     @property
@@ -638,6 +650,9 @@ class PathDataset(LazyDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
+        plan: Mapping[str, SplitSpec] | None = None,
+        factory_cls: type[TriplesFactory] | None = None,
+        factory_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize the dataset.
 
@@ -647,12 +662,24 @@ class PathDataset(LazyDataset):
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
             and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
+        :param plan: The index-sharing plan, cf. ``pykeen.datasets.loaders.TRANSDUCTIVE_PLAN``, which is also the
+            default.
+        :param factory_cls: The triples factory class. Defaults to ``triples_factory_cls``.
+        :param factory_kwargs: Additional keyword-based arguments for every triples factory.
         """
         self.source = source
-
-        self._create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
-        super().__init__(eager=eager)
+        super().__init__(
+            loader=PreSplitLoader(
+                source=source,
+                plan=plan,
+                create_inverse_triples=create_inverse_triples,
+                factory_cls=factory_cls or cast(type[TriplesFactory], self.triples_factory_cls),
+                load_triples_kwargs=load_triples_kwargs,
+                factory_kwargs=factory_kwargs,
+            ),
+            eager=eager,
+        )
 
     @classmethod
     def from_paths(
@@ -693,28 +720,6 @@ class PathDataset(LazyDataset):
     def validation_path(self) -> pathlib.Path | None:
         """The path of the validation triples file, if any."""
         return self.source.get_manifest().get("validation")
-
-    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
-        paths = self.source.paths()
-        training = TriplesFactory.from_path(
-            path=paths["training"],
-            create_inverse_triples=self._create_inverse_triples,
-            load_triples_kwargs=self.load_triples_kwargs,
-        )
-        factories: dict[str, CoreTriplesFactory] = {"training": training}
-        for key in ("testing", "validation"):
-            path = paths.get(key)
-            if path is None:
-                continue
-            factories[key] = TriplesFactory.from_path(
-                path=path,
-                entity_to_id=training.entity_to_id,  # share entity index with training
-                relation_to_id=training.relation_to_id,  # share relation index with training
-                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                create_inverse_triples=False,
-                load_triples_kwargs=self.load_triples_kwargs,
-            )
-        return factories
 
     def __repr__(self) -> str:  # noqa: D105
         return (
@@ -953,100 +958,10 @@ class PackedZipRemoteDataset(LazyDataset):
             )
 
 
-class CompressedSingleDataset(LazyDataset):
-    """Loads a dataset that's a single file inside an archive."""
-
-    #: The source class used to unpack the archive
-    source_cls: ClassVar[type[ArchiveSource]]
-
-    ratios = (0.8, 0.1, 0.1)
-
-    def __init__(
-        self,
-        url: str,
-        relative_path: str | pathlib.PurePosixPath,
-        name: str | None = None,
-        cache_root: str | None = None,
-        eager: bool = False,
-        create_inverse_triples: bool = False,
-        delimiter: str | None = None,
-        random_state: TorchRandomHint = None,
-        read_csv_kwargs: dict[str, Any] | None = None,
-    ):
-        """Initialize dataset.
-
-        :param url: The url where to download the dataset from
-        :param relative_path: The path inside the archive to the contained dataset.
-        :param name: The name of the file. If not given, tries to get the name from the end of the URL
-        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
-            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
-            ``~/.pykeen``.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param random_state: An optional random state to make the training/testing/validation split reproducible.
-        :param delimiter: The delimiter for the contained dataset.
-        :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
-        """
-        self.cache_root = self._help_cache(cache_root)
-
-        self.name = name or name_from_url(url)
-        self.random_state = random_state
-        self.delimiter = delimiter or "\t"
-        self.url = url
-        self._create_inverse_triples = create_inverse_triples
-        self._relative_path = pathlib.PurePosixPath(relative_path)
-        self.read_csv_kwargs = read_csv_kwargs or {}
-        self.read_csv_kwargs.setdefault("sep", self.delimiter)
-        super().__init__(eager=eager)
-
-    def _get_path(self) -> pathlib.Path:
-        """Get the path of the *archive*, which is also used as the dataset's metadata path."""
-        return self.cache_root.joinpath(self.name)
-
-    def _get_source(self) -> ArchiveSource:
-        """Build the source for the single member of the archive."""
-        return self.source_cls(
-            members={"data": self._relative_path},
-            cache_root=self.cache_root,
-            url=self.url,
-            # note: goes through `_get_path` so that subclasses can point at a pre-existing archive
-            archive_path=self._get_path(),
-        )
-
-    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
-        df = self._get_df()
-        tf_path = self._get_path()
-        tf = TriplesFactory.from_labeled_triples(
-            triples=df.values,
-            create_inverse_triples=self._create_inverse_triples,
-            metadata={"path": tf_path},
-        )
-        training, testing, validation = tf.split(ratios=self.ratios, random_state=self.random_state)
-        logger.info("[%s] done splitting data from %s", self.__class__.__name__, tf_path)
-        return {"training": training, "testing": testing, "validation": validation}
-
-    def _get_df(self) -> pd.DataFrame:
-        path = self._get_source().paths()["data"]
-        df = pd.read_csv(path, **self.read_csv_kwargs)
-        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
-
-
-class ZipSingleDataset(CompressedSingleDataset):
-    """Loads a dataset that's a single file inside a zip archive."""
-
-    source_cls = ZipArchiveSource
-
-
-class TarFileSingleDataset(CompressedSingleDataset):
-    """Loads a dataset that's a single file inside a tar.gz archive."""
-
-    source_cls = TarArchiveSource
-
-
 class TabbedDataset(LazyDataset):
-    """This class is for when you've got a single TSV of edges and want them to get auto-split."""
+    """A dataset which ships a single table of triples and gets split automatically."""
 
-    ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
+    ratios: ClassVar[Sequence[float]] = DEFAULT_RATIOS
 
     def __init__(
         self,
@@ -1054,6 +969,8 @@ class TabbedDataset(LazyDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = None,
+        *,
+        factory_cls: type[TriplesFactory] | None = None,
     ):
         """Initialize dataset.
 
@@ -1063,32 +980,35 @@ class TabbedDataset(LazyDataset):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
+        :param factory_cls: The triples factory class. Defaults to ``triples_factory_cls``.
         """
         self.cache_root = self._help_cache(cache_root)
         self.random_state = random_state
-        self._create_inverse_triples = create_inverse_triples
-        super().__init__(eager=eager)
+
+        super().__init__(
+            loader=AutoSplitLoader(
+                # note: bound methods, so that subclasses overriding the hooks still take effect
+                read_df=self._get_df,
+                get_path=self._get_path,
+                ratios=self.ratios,
+                random_state=random_state,
+                create_inverse_triples=create_inverse_triples,
+                factory_cls=factory_cls or cast(type[TriplesFactory], self.triples_factory_cls),
+            ),
+            eager=eager,
+        )
 
     def _get_path(self) -> pathlib.Path | None:
         """Get the path of the data if there's a single file."""
+        return None
 
     def _get_df(self) -> pd.DataFrame:
+        """Get the dataframe of labeled triples."""
         raise NotImplementedError
-
-    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
-        df = self._get_df()
-        path = self._get_path()
-        tf = TriplesFactory.from_labeled_triples(
-            triples=df.values,
-            create_inverse_triples=self._create_inverse_triples,
-            metadata={"path": path} if path else None,
-        )
-        training, testing, validation = tf.split(ratios=self.ratios, random_state=self.random_state)
-        return {"training": training, "testing": testing, "validation": validation}
 
 
 class SingleTabbedDataset(TabbedDataset):
-    """This class is for when you've got a single TSV of edges and want them to get auto-split."""
+    """A dataset which ships a single, downloaded table of triples and gets split automatically."""
 
     #: URL to the data to download
     url: str
@@ -1116,7 +1036,6 @@ class SingleTabbedDataset(TabbedDataset):
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         :param download_kwargs: Keyword arguments to pass through to :func:`pystow.utils.download`.
         :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
-
         """
         # note: these are set before `super().__init__`, since an eager load reads them
         self.url = url
@@ -1144,3 +1063,82 @@ class SingleTabbedDataset(TabbedDataset):
             download(url=self.url, path=path, **self.download_kwargs)  # noqa:S310
         df = pd.read_csv(path, **self.read_csv_kwargs)
         return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
+
+
+class CompressedSingleDataset(TabbedDataset):
+    """A dataset which ships a single table of triples inside an archive and gets split automatically."""
+
+    #: The source class used to unpack the archive
+    source_cls: ClassVar[type[ArchiveSource]]
+
+    def __init__(
+        self,
+        url: str,
+        relative_path: str | pathlib.PurePosixPath,
+        name: str | None = None,
+        cache_root: str | None = None,
+        eager: bool = False,
+        create_inverse_triples: bool = False,
+        delimiter: str | None = None,
+        random_state: TorchRandomHint = None,
+        read_csv_kwargs: dict[str, Any] | None = None,
+    ):
+        """Initialize dataset.
+
+        :param url: The url where to download the dataset from
+        :param relative_path: The path inside the archive to the contained dataset.
+        :param name: The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param random_state: An optional random state to make the training/testing/validation split reproducible.
+        :param delimiter: The delimiter for the contained dataset.
+        :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
+        """
+        # note: these are set before `super().__init__`, since an eager load reads them
+        self.url = url
+        self.name = name or name_from_url(url)
+        self.delimiter = delimiter or "\t"
+        self._relative_path = pathlib.PurePosixPath(relative_path)
+        self.read_csv_kwargs = read_csv_kwargs or {}
+        self.read_csv_kwargs.setdefault("sep", self.delimiter)
+
+        super().__init__(
+            cache_root=cache_root,
+            create_inverse_triples=create_inverse_triples,
+            random_state=random_state,
+            eager=eager,
+        )
+
+    def _get_path(self) -> pathlib.Path:  # noqa: D102
+        """Get the path of the *archive*, which is also used as the dataset's metadata path."""
+        return self.cache_root.joinpath(self.name)
+
+    def _get_source(self) -> ArchiveSource:
+        """Build the source for the single member of the archive."""
+        return self.source_cls(
+            members={"data": self._relative_path},
+            cache_root=self.cache_root,
+            url=self.url,
+            # note: goes through `_get_path` so that subclasses can point at a pre-existing archive
+            archive_path=self._get_path(),
+        )
+
+    def _get_df(self) -> pd.DataFrame:  # noqa: D102
+        path = self._get_source().paths()["data"]
+        df = pd.read_csv(path, **self.read_csv_kwargs)
+        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
+
+
+class ZipSingleDataset(CompressedSingleDataset):
+    """Loads a dataset that's a single file inside a zip archive."""
+
+    source_cls = ZipArchiveSource
+
+
+class TarFileSingleDataset(CompressedSingleDataset):
+    """Loads a dataset that's a single file inside a tar.gz archive."""
+
+    source_cls = TarArchiveSource
