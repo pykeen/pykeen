@@ -5,13 +5,14 @@ import unittest
 from io import BytesIO
 from urllib.request import urlopen
 
-from pykeen.datasets import Kinships, Nations, dataset_resolver
+from pykeen.datasets import EagerDataset, Kinships, Nations, dataset_resolver
 from pykeen.datasets.base import (
     PackedZipRemoteDataset,
     SingleTabbedDataset,
     TarFileRemoteDataset,
     TarFileSingleDataset,
     UnpackedRemoteDataset,
+    ZipSingleDataset,
 )
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
 from tests import cases, constants
@@ -71,6 +72,21 @@ class MockTarFileSingleDataset(TarFileSingleDataset):
 
     def _get_path(self) -> str:
         return constants.RESOURCES.joinpath("nations.tar.gz")
+
+
+class MockZipFileSingleDataset(ZipSingleDataset):
+    """Mock downloading a zip archive with a single file."""
+
+    def __init__(self, cache_root: str):  # noqa:D107
+        super().__init__(
+            url=...,
+            name=...,
+            relative_path="nations/train.txt",
+            cache_root=cache_root,
+        )
+
+    def _get_path(self) -> pathlib.Path:
+        return constants.RESOURCES.joinpath("nations.zip")
 
 
 class MockTarFileRemoteDataset(TarFileRemoteDataset):
@@ -145,6 +161,22 @@ class TestTarFileSingle(cases.CachedDatasetCase):
     dataset_cls = MockTarFileSingleDataset
 
 
+class TestZipFileSingle(cases.CachedDatasetCase):
+    """Test the base classes.
+
+    .. note::
+
+        This uses the nations training dataset
+    """
+
+    exp_num_entities = 14
+    exp_num_relations = 55
+    exp_num_triples = 1592  # because only loading training set from Nations
+    exp_num_triples_tolerance = 5
+    autoloaded_validation = True
+    dataset_cls = MockZipFileSingleDataset
+
+
 class TestTarRemote(cases.CachedDatasetCase):
     """Test the :class:`pykeen.datasets.base.TarFileRemoteDataset` class."""
 
@@ -195,3 +227,15 @@ class TestZipFileRemote(cases.CachedDatasetCase):
     exp_num_relations = 55
     exp_num_triples = 1992
     dataset_cls = MockZipFileRemoteDataset
+
+
+class TestSummary(unittest.TestCase):
+    """Test the dataset summary."""
+
+    def test_summary_without_validation(self):
+        """Test that a dataset without a validation split can be summarized."""
+        nations = Nations()
+        dataset = EagerDataset(training=nations.training, testing=nations.testing, validation=None)
+        summary = dataset.summary_str()
+        assert "Training" in summary
+        assert "Validation" not in summary
