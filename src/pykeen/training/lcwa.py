@@ -7,9 +7,8 @@ from typing import ClassVar
 
 from torch.nn import functional
 from torch.utils.data import DataLoader, TensorDataset
-from torch_max_mem.api import is_oom_error
 
-from .training_loop import TrainingLoop
+from .training_loop import TrainingLoop, _get_num_targets
 from ..constants import get_target_column
 from ..losses import Loss
 from ..models import Model
@@ -72,7 +71,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
 
         # Explicit mentioning of num_transductive_entities since in the evaluation there will be a different number
         # of total entities from another inductive inference factory
-        self.num_targets = self.model.num_relations if self.target == 1 else self.model._get_entity_len(mode=self.mode)
+        self.num_targets = _get_num_targets(model=self.model, target=self.target, mode=self.mode)
 
     def _create_training_data_loader(
         self, triples_factory: CoreTriplesFactory, sampler: str | None, **kwargs
@@ -153,74 +152,9 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
             slice_size=slice_size,
         )
 
-    def _slice_size_search(
-        self,
-        *,
-        triples_factory: CoreTriplesFactory,
-        batch_size: int,
-        sub_batch_size: int,
-        supports_sub_batching: bool,
-    ) -> int:  # noqa: D102
-        self._check_slicing_availability(supports_sub_batching)
-        reached_max = False
-        evaluated_once = False
-        logger.info("Trying slicing now.")
-        # Since the batch_size search with size 1, i.e. one tuple ((h, r) or (r, t)) scored on all entities,
-        # must have failed to start slice_size search, we start with trying half the entities.
-        slice_size = ceil(self.model.num_entities / 2)
-        while True:
-            try:
-                logger.debug(f"Trying {slice_size=:_} now.")
-                self._train(
-                    triples_factory=triples_factory,
-                    num_epochs=1,
-                    batch_size=batch_size,
-                    sub_batch_size=sub_batch_size,
-                    slice_size=slice_size,
-                    only_size_probing=True,
-                )
-            except RuntimeError as runtime_error:  # noqa: PERF203
-                self._free_graph_and_cache()
-                if not is_oom_error(runtime_error):
-                    raise runtime_error
-                if evaluated_once:
-                    slice_size //= 2
-                    logger.info(f"Concluded search with {slice_size=:_}.")
-                    break
-                if slice_size == 1:
-                    raise MemoryError(
-                        f"Even {slice_size=:_} doesn't fit into your memory with these parameters."
-                    ) from runtime_error
-
-                logger.debug(f"The {slice_size=:_} was too big, trying less now.")
-                slice_size //= 2
-                reached_max = True
-            else:
-                self._free_graph_and_cache()
-                if reached_max:
-                    logger.info(f"Concluded search with {slice_size=:_}.")
-                    break
-                slice_size *= 2
-                evaluated_once = True
-
-        return slice_size
-
-    def _check_slicing_availability(self, supports_sub_batching: bool):
-        if self.target == 0:
-            return
-        if self.target == 1:
-            return
-        if self.target == 2:
-            return
-        if supports_sub_batching:
-            report = (
-                "This model supports sub-batching, but it also requires slicing,"
-                " which is not implemented for this model yet."
-            )
-        else:
-            report = "This model doesn't support sub-batching and slicing is not implemented for this model yet."
-        logger.warning(report)
-        raise MemoryError("The current model can't be trained on this hardware with these parameters.")
+    def _get_initial_slice_size(self, batch_size: int) -> int:  # noqa: D102
+        # slicing is along the target
+        return ceil(self.num_targets / 2)
 
 
 # note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one
