@@ -1,66 +1,48 @@
 """Base classes for literal datasets."""
 
 import pathlib
-from collections.abc import Mapping
-from typing import TextIO
 
-from .base import LazyDataset
-from ..triples import CoreTriplesFactory, TriplesNumericLiteralsFactory
+from .base import PathDataset
+from .sources import Source
+from ..triples import TriplesNumericLiteralsFactory
 
 __all__ = [
     "NumericPathDataset",
 ]
 
 
-class NumericPathDataset(LazyDataset):
-    """Contains a lazy reference to a training, testing, and validation dataset."""
+class NumericPathDataset(PathDataset):
+    """A path dataset which additionally loads numeric literals for its entities.
+
+    This is an ordinary :class:`~pykeen.datasets.base.PathDataset` with a different triples factory class; the
+    literals file is passed to every factory.
+    """
 
     triples_factory_cls = TriplesNumericLiteralsFactory
 
     def __init__(
         self,
-        training_path: str | pathlib.Path | TextIO,
-        testing_path: str | pathlib.Path | TextIO,
-        validation_path: str | pathlib.Path | TextIO,
-        literals_path: str | pathlib.Path | TextIO,
+        source: Source,
+        literals_path: str | pathlib.Path,
+        *,
         eager: bool = False,
         create_inverse_triples: bool = False,
     ) -> None:
         """Initialize the dataset.
 
-        :param training_path: Path to the training triples file or training triples file.
-        :param testing_path: Path to the testing triples file or testing triples file.
-        :param validation_path: Path to the validation triples file or validation triples file.
-        :param literals_path: Path to the literals triples file or literal triples file
+        :param source: The source of the triples files, cf. :class:`~pykeen.datasets.base.PathDataset`. For local
+            files, use :meth:`~pykeen.datasets.base.PathDataset.from_paths` with an additional ``literals_path``.
+        :param literals_path: Path to the literals triples file.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
-        self.training_path = training_path
-        self.testing_path = testing_path
-        self.validation_path = validation_path
-        self.literals_path = literals_path
-
-        self._create_inverse_triples = create_inverse_triples
-        super().__init__(eager=eager)
-
-    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
-        training = self.triples_factory_cls.from_path(
-            path=self.training_path,
-            path_to_numeric_triples=self.literals_path,
-            create_inverse_triples=self._create_inverse_triples,
+        self.literals_path = pathlib.Path(literals_path)
+        super().__init__(
+            source=source,
+            eager=eager,
+            create_inverse_triples=create_inverse_triples,
+            factory_kwargs={"path_to_numeric_triples": self.literals_path},
         )
-        return {
-            "training": training,
-            **{
-                key: self.triples_factory_cls.from_path(
-                    path=path,
-                    path_to_numeric_triples=self.literals_path,
-                    entity_to_id=training.entity_to_id,  # share entity index with training
-                    relation_to_id=training.relation_to_id,  # share relation index with training
-                )
-                for key, path in (("testing", self.testing_path), ("validation", self.validation_path))
-            },
-        }
 
     def __repr__(self) -> str:  # noqa: D105
         return (

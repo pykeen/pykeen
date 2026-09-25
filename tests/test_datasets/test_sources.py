@@ -1,4 +1,4 @@
-"""Tests for the dataset sources."""
+"""Tests for the dataset sources and loaders."""
 
 import pathlib
 import tempfile
@@ -6,6 +6,7 @@ import unittest
 
 import pytest
 
+from pykeen.datasets.loaders import INDUCTIVE_PLAN, TRANSDUCTIVE_PLAN, PreSplitLoader
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
 from pykeen.datasets.sources import (
     ArchiveSource,
@@ -164,3 +165,62 @@ class TestArchiveSourceValidation(unittest.TestCase):
         """Test that a source without any way to locate its archive is rejected."""
         with pytest.raises(ValueError, match="at least one of"):
             TarArchiveSource(members={}, cache_root=pathlib.Path())
+
+
+class TestPreSplitLoader(unittest.TestCase):
+    """Tests for :class:`pykeen.datasets.loaders.PreSplitLoader`."""
+
+    def test_transductive_plan(self):
+        """Test that the evaluation splits share the training index."""
+        loader = PreSplitLoader(
+            source=LocalSource(
+                training=NATIONS_TRAIN_PATH, testing=NATIONS_TEST_PATH, validation=NATIONS_VALIDATE_PATH
+            ),
+            create_inverse_triples=True,
+        )
+        factories = loader.load()
+        assert set(factories) == {"training", "testing", "validation"}
+        training = factories["training"]
+        # inverse triples are only created for training; evaluation handles them itself
+        assert training.create_inverse_triples
+        for key in ("testing", "validation"):
+            assert not factories[key].create_inverse_triples
+            assert factories[key].entity_to_id == training.entity_to_id
+            assert factories[key].relation_to_id == training.relation_to_id
+
+    def test_missing_optional_split(self):
+        """Test that an absent validation split is simply omitted."""
+        loader = PreSplitLoader(source=LocalSource(training=NATIONS_TRAIN_PATH, testing=NATIONS_TEST_PATH))
+        assert set(loader.load()) == {"training", "testing"}
+
+    def test_inductive_plan(self):
+        """Test that the inductive plan shares relations with training, but entities with the inference graph."""
+        # note: the actual triples do not matter here, only which index each factory inherits
+        loader = PreSplitLoader(
+            source=LocalSource(
+                transductive_training=NATIONS_TRAIN_PATH,
+                inductive_inference=NATIONS_TRAIN_PATH,
+                inductive_testing=NATIONS_TEST_PATH,
+                inductive_validation=NATIONS_VALIDATE_PATH,
+            ),
+            plan=INDUCTIVE_PLAN,
+            create_inverse_triples=True,
+        )
+        factories = loader.load()
+        transductive_training = factories["transductive_training"]
+        inference = factories["inductive_inference"]
+        assert inference.relation_to_id == transductive_training.relation_to_id
+        assert inference.create_inverse_triples
+        for key in ("inductive_testing", "inductive_validation"):
+            assert not factories[key].create_inverse_triples
+            assert factories[key].entity_to_id == inference.entity_to_id
+            assert factories[key].relation_to_id == inference.relation_to_id
+
+    def test_plans_are_topologically_ordered(self):
+        """Test that a split never inherits an index from a split which is built later."""
+        for plan in (TRANSDUCTIVE_PLAN, INDUCTIVE_PLAN):
+            seen: set[str] = set()
+            for key, spec in plan.items():
+                for source_key in (spec.entity_index_from, spec.relation_index_from):
+                    assert source_key is None or source_key in seen, f"{key} inherits from a later split"
+                seen.add(key)

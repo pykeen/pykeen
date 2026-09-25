@@ -12,6 +12,7 @@ from pystow.utils.download import DownloadKwargs
 from tabulate import tabulate
 
 from ..base import LazyFactoryMixin
+from ..loaders import INDUCTIVE_PLAN, PreSplitLoader
 from ..sources import LocalSource, RemoteFile, RemoteSource, Source
 from ...triples import CoreTriplesFactory, TriplesFactory
 
@@ -149,10 +150,18 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
             and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
         """
         self.source = source
-
         self.create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
-        super().__init__(eager=eager)
+        super().__init__(
+            loader=PreSplitLoader(
+                source=source,
+                plan=INDUCTIVE_PLAN,
+                create_inverse_triples=create_inverse_triples,
+                factory_cls=TriplesFactory,
+                load_triples_kwargs=load_triples_kwargs,
+            ),
+            eager=eager,
+        )
 
     @classmethod
     def from_paths(
@@ -209,41 +218,6 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
     def inductive_validation_path(self) -> pathlib.Path | None:
         """The path of the inductive validation triples file."""
         return self._path("inductive_validation")
-
-    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
-        paths = self.source.paths()
-        transductive_training = TriplesFactory.from_path(
-            path=paths["transductive_training"],
-            create_inverse_triples=self.create_inverse_triples,
-            load_triples_kwargs=self.load_triples_kwargs,
-        )
-
-        # important: inductive_inference shares the same RELATIONS with the transductive training graph
-        inductive_inference = TriplesFactory.from_path(
-            path=paths["inductive_inference"],
-            create_inverse_triples=self.create_inverse_triples,
-            relation_to_id=transductive_training.relation_to_id,
-            load_triples_kwargs=self.load_triples_kwargs,
-        )
-
-        factories: dict[str, CoreTriplesFactory] = {
-            "transductive_training": transductive_training,
-            "inductive_inference": inductive_inference,
-        }
-        # inductive testing and validation share both ENTITIES and RELATIONS with the inductive inference graph
-        for key in ("inductive_testing", "inductive_validation"):
-            path = paths.get(key)
-            if path is None:
-                continue
-            factories[key] = TriplesFactory.from_path(
-                path=path,
-                entity_to_id=inductive_inference.entity_to_id,
-                relation_to_id=inductive_inference.relation_to_id,
-                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                create_inverse_triples=False,
-                load_triples_kwargs=self.load_triples_kwargs,
-            )
-        return factories
 
     def __repr__(self) -> str:  # noqa: D105
         return (

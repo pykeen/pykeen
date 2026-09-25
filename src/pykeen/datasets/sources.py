@@ -1,10 +1,12 @@
 """Sources resolve the files backing a dataset to local paths.
 
 A :class:`Source` encapsulates *where the data lives* -- a local directory, one URL per split, or members of a
-remote archive -- and is deliberately ignorant of how those files are turned into triples factories.
+remote archive -- and is deliberately ignorant of how those files are turned into triples factories. Turning files
+into factories is the job of a :class:`~pykeen.datasets.loaders.Loader`.
 
 Keeping the two apart means that a new location, e.g., a new archive format, does not require re-implementing the
-loading logic, and vice versa.
+loading logic, and vice versa. The dataset classes in :mod:`pykeen.datasets.base` are thin wrappers which pick a
+source and a loader.
 
 Every source distinguishes the paths it *will* have, cf. :meth:`Source.get_manifest`, from the paths it *does*
 have, cf. :meth:`Source.paths`. Only the latter triggers a download, which keeps lazy datasets lazy while still

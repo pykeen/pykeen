@@ -89,9 +89,11 @@ class NationsLiteral(NumericPathDataset):
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PathDataset`.
         """
         super().__init__(
-            training_path=NATIONS_TRAIN_PATH,
-            testing_path=NATIONS_TEST_PATH,
-            validation_path=NATIONS_VALIDATE_PATH,
+            source=LocalSource(
+                training=NATIONS_TRAIN_PATH,
+                testing=NATIONS_TEST_PATH,
+                validation=NATIONS_VALIDATE_PATH,
+            ),
             literals_path=NATIONS_LITERALS_PATH,
             **kwargs,
         )
