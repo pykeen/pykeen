@@ -54,8 +54,10 @@ class InductiveDataset:
                     self.inductive_testing,
                     self.inductive_validation,
                 ),
-                strict=False,
+                strict=True,
             )
+            # note: the validation factory is optional
+            if triples_factory is not None
         ]
 
     def summary_str(self, title: str | None = None, show_examples: int | None = 5, end="\n") -> str:
@@ -141,7 +143,6 @@ class LazyInductiveDataset(InductiveDataset):
         """The validation triples factory that shares indices with the INDUCTIVE INFERENCE triples factory."""
         if not self._loaded:
             self._load()
-        assert self._inductive_validation is not None
         return self._inductive_validation
 
     @property

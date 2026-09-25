@@ -137,6 +137,14 @@ def _restrict_mapping(id_to_label: Mapping[int, str], kept_ids: Sequence[int]) -
     return {id_to_label[old_id]: new_id for new_id, old_id in enumerate(kept_ids)}
 
 
+def _reorder_columns(df: pd.DataFrame, usecols: Sequence[Any] | None) -> pd.DataFrame:
+    """Restore the column order requested via ``usecols``, which :func:`pandas.read_csv` does not honor."""
+    if usecols is None:
+        return df
+    logger.info("reordering columns: %s", usecols)
+    return df[usecols]
+
+
 class Dataset(ExtraReprMixin):
     """The base dataset class."""
 
@@ -223,8 +231,10 @@ class Dataset(ExtraReprMixin):
         return [
             (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
             for label, triples_factory in zip(
-                ("Training", "Testing", "Validation"), (self.training, self.testing, self.validation), strict=False
+                ("Training", "Testing", "Validation"), (self.training, self.testing, self.validation), strict=True
             )
+            # note: the validation factory is optional
+            if triples_factory is not None
         ]
 
     def summary_str(self, title: str | None = None, show_examples: int | None = 5, end="\n") -> str:
@@ -987,7 +997,8 @@ class ZipSingleDataset(CompressedSingleDataset):
             download(self.url, self._get_path())  # noqa:S310
 
         with zipfile.ZipFile(path) as zip_file, zip_file.open(self._relative_path.as_posix()) as file:
-            return pd.read_csv(file, sep=self.delimiter)
+            df = pd.read_csv(file, **self.read_csv_kwargs)
+        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
 
 
 class TarFileSingleDataset(CompressedSingleDataset):
@@ -1011,13 +1022,7 @@ class TarFileSingleDataset(CompressedSingleDataset):
                 tar_file.extract(str(self._relative_path), self.cache_root)
 
         df = pd.read_csv(_actual_path, **self.read_csv_kwargs)
-
-        usecols = self.read_csv_kwargs.get("usecols")
-        if usecols is not None:
-            logger.info("reordering columns: %s", usecols)
-            df = df[usecols]
-
-        return df
+        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
 
 
 class TabbedDataset(LazyDataset):
@@ -1143,10 +1148,4 @@ class SingleTabbedDataset(TabbedDataset):
             logger.info("downloading data from %s to %s", self.url, self._get_path())
             download(url=self.url, path=self._get_path(), **self.download_kwargs)  # noqa:S310
         df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
-
-        usecols = self.read_csv_kwargs.get("usecols")
-        if usecols is not None:
-            logger.info("reordering columns: %s", usecols)
-            df = df[usecols]
-
-        return df
+        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
