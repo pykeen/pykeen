@@ -6,15 +6,14 @@ import logging
 import pathlib
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, Self
+from typing import Any, Self, cast
 
 from pystow.utils.download import DownloadKwargs
 from tabulate import tabulate
 
+from ..base import LazyFactoryMixin
 from ..sources import LocalSource, RemoteFile, RemoteSource, Source
-from ...constants import PYKEEN_DATASETS
 from ...triples import CoreTriplesFactory, TriplesFactory
-from ...utils import normalize_path
 
 __all__ = [
     # Base class
@@ -100,95 +99,28 @@ class EagerInductiveDataset(InductiveDataset):
     create_inverse_triples: bool = True
 
 
-class LazyInductiveDataset(InductiveDataset):
+class LazyInductiveDataset(LazyFactoryMixin, InductiveDataset):
     """An inductive dataset that has lazy loading."""
-
-    #: The actual instance of the training factory, which is exposed to the user through `transductive_training`
-    _transductive_training: TriplesFactory | None = None
-    #: The actual instance of the inductive inference factory,
-    #: which is exposed to the user through `inductive_inference`
-    _inductive_inference: TriplesFactory | None = None
-    #: The actual instance of the testing factory, which is exposed to the user through `inductive_testing`
-    _inductive_testing: TriplesFactory | None = None
-    #: The actual instance of the validation factory, which is exposed to the user through `inductive_validation`
-    _inductive_validation: TriplesFactory | None = None
-    #: The directory in which the cached data is stored
-    cache_root: pathlib.Path
 
     @property
     def transductive_training(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The training triples factory."""
-        if not self._loaded:
-            self._load()
-        assert self._transductive_training is not None
-        return self._transductive_training
+        return cast(TriplesFactory, self.factory_dict["transductive_training"])
 
     @property
     def inductive_inference(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The inductive inference triples factory. MIGHT or MIGHT NOT share indices with the transductive train."""
-        if not self._loaded:
-            self._load()
-        assert self._inductive_inference is not None
-        return self._inductive_inference
+        return cast(TriplesFactory, self.factory_dict["inductive_inference"])
 
     @property
     def inductive_testing(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The testing triples factory that share indices with the INDUCTIVE INFERENCE triples factory."""
-        if not self._loaded:
-            self._load()
-        assert self._inductive_testing is not None
-        return self._inductive_testing
+        return cast(TriplesFactory, self.factory_dict["inductive_testing"])
 
     @property
     def inductive_validation(self) -> TriplesFactory | None:  # type: ignore[override]  # noqa: D401
         """The validation triples factory that shares indices with the INDUCTIVE INFERENCE triples factory."""
-        if not self._loaded:
-            self._load()
-        return self._inductive_validation
-
-    @property
-    def _loaded(self) -> bool:
-        return self._transductive_training is not None and self._inductive_inference is not None
-
-    def _load(self) -> None:
-        raise NotImplementedError
-
-    def _load_validation(self) -> None:
-        raise NotImplementedError
-
-    def _help_cache(
-        self,
-        cache_root: None | str | pathlib.Path,
-        version: str | None = None,
-        sep_train_inference: bool = False,
-    ) -> pathlib.Path:
-        """Get the appropriate cache root directory.
-
-        :param cache_root: If none is passed, defaults to a subfolder of the PyKEEN home directory defined in
-            :data:`~pykeen.constants.PYKEEN_HOME`. The subfolder is named based on the class inheriting from
-            :class:`~pykeen.datasets.base.Dataset`.
-        :param version: accepts a string "v1" to "v4" to select among Teru et al inductive datasets
-        :param sep_train_inference: a flag to store training and inference splits in different folders
-
-        :returns: A path object for the calculated cache root directory
-        """
-        cache_root = normalize_path(
-            cache_root, *self._cache_sub_directories(version=version), default=PYKEEN_DATASETS, mkdir=True
-        )
-        if sep_train_inference:
-            # generate subfolders 'training' and  'inference'
-            for name in ("training", "inference"):
-                cache_root.joinpath(name).mkdir(parents=True, exist_ok=True)
-        logger.debug("using cache root at %s", cache_root.as_uri())
-        return cache_root
-
-    def _cache_sub_directories(self, version: str | None) -> Iterable[str]:
-        """Iterate over appropriate cache sub-directory."""
-        # TODO: use class-resolver normalize?
-        yield self.__class__.__name__.lower()
-        # add v1 / v2 / v3 / v4 for inductive splits if available
-        if version:
-            yield version
+        return cast("TriplesFactory | None", self.factory_dict.get("inductive_validation"))
 
 
 class DisjointInductivePathDataset(LazyInductiveDataset):
@@ -220,9 +152,7 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
 
         self.create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
-
-        if eager:
-            self._load()
+        super().__init__(eager=eager)
 
     @classmethod
     def from_paths(
@@ -280,41 +210,40 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
         """The path of the inductive validation triples file."""
         return self._path("inductive_validation")
 
-    def _load(self) -> None:
+    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
         paths = self.source.paths()
-        self._transductive_training = TriplesFactory.from_path(
+        transductive_training = TriplesFactory.from_path(
             path=paths["transductive_training"],
             create_inverse_triples=self.create_inverse_triples,
             load_triples_kwargs=self.load_triples_kwargs,
         )
 
         # important: inductive_inference shares the same RELATIONS with the transductive training graph
-        self._inductive_inference = TriplesFactory.from_path(
+        inductive_inference = TriplesFactory.from_path(
             path=paths["inductive_inference"],
             create_inverse_triples=self.create_inverse_triples,
-            relation_to_id=self._transductive_training.relation_to_id,
+            relation_to_id=transductive_training.relation_to_id,
             load_triples_kwargs=self.load_triples_kwargs,
         )
 
-        # inductive validation shares both ENTITIES and RELATIONS with the inductive inference graph
-        self._inductive_validation = TriplesFactory.from_path(
-            path=paths["inductive_validation"],
-            entity_to_id=self._inductive_inference.entity_to_id,  # shares entity index with inductive inference
-            relation_to_id=self._inductive_inference.relation_to_id,  # shares relation index with inductive inference
-            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-            create_inverse_triples=False,
-            load_triples_kwargs=self.load_triples_kwargs,
-        )
-
-        # inductive testing shares both ENTITIES and RELATIONS with the inductive inference graph
-        self._inductive_testing = TriplesFactory.from_path(
-            path=paths["inductive_testing"],
-            entity_to_id=self._inductive_inference.entity_to_id,  # share entity index with inductive inference
-            relation_to_id=self._inductive_inference.relation_to_id,  # share relation index with inductive inference
-            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-            create_inverse_triples=False,
-            load_triples_kwargs=self.load_triples_kwargs,
-        )
+        factories: dict[str, CoreTriplesFactory] = {
+            "transductive_training": transductive_training,
+            "inductive_inference": inductive_inference,
+        }
+        # inductive testing and validation share both ENTITIES and RELATIONS with the inductive inference graph
+        for key in ("inductive_testing", "inductive_validation"):
+            path = paths.get(key)
+            if path is None:
+                continue
+            factories[key] = TriplesFactory.from_path(
+                path=path,
+                entity_to_id=inductive_inference.entity_to_id,
+                relation_to_id=inductive_inference.relation_to_id,
+                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+                create_inverse_triples=False,
+                load_triples_kwargs=self.load_triples_kwargs,
+            )
+        return factories
 
     def __repr__(self) -> str:  # noqa: D105
         return (
@@ -359,7 +288,8 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
         :param version: accepts a string "v1" to "v4" to select among Teru et al inductive datasets
         """
-        self.cache_root = self._help_cache(cache_root, version)
+        self.version = version
+        self.cache_root = self._help_cache(cache_root)
 
         self.transductive_training_url = transductive_training_url
         self.inductive_inference_url = inductive_inference_url
@@ -383,3 +313,9 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
             create_inverse_triples=create_inverse_triples,
             load_triples_kwargs=load_triples_kwargs,
         )
+
+    def _cache_sub_directories(self) -> Iterable[str]:  # noqa: D102
+        yield from super()._cache_sub_directories()
+        # add v1 / v2 / v3 / v4 for inductive splits if available
+        if self.version:
+            yield self.version
