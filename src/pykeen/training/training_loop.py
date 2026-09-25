@@ -2,6 +2,7 @@
 
 import functools
 import gc
+import inspect
 import logging
 import pathlib
 import pickle
@@ -14,7 +15,7 @@ from datetime import datetime
 from hashlib import md5
 from math import ceil
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import IO, Any, ClassVar, Generic, Literal, TypeVar
+from typing import IO, Any, ClassVar, Concatenate, Generic, Literal, ParamSpec, TypeVar
 
 import numpy as np
 import torch
@@ -58,6 +59,11 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 BatchType = TypeVar("BatchType")
+P = ParamSpec("P")
+R = TypeVar("R")
+
+#: whether :func:`torch.load` supports memory-mapping, which was added in torch 2.1
+_TORCH_LOAD_SUPPORTS_MMAP = "mmap" in inspect.signature(torch.load).parameters
 
 
 class NonFiniteLossError(RuntimeError):
@@ -136,6 +142,48 @@ def _make_optimizer_and_lr_scheduler(
         return optimizer_instance, None
     lr_scheduler_instance = lr_scheduler_resolver.make(lr_scheduler, lr_scheduler_kwargs, optimizer=optimizer_instance)
     return optimizer_instance, lr_scheduler_instance
+
+
+def _restore_state_after_probing(
+    func: "Callable[Concatenate[TrainingLoop, P], R]",
+) -> "Callable[Concatenate[TrainingLoop, P], R]":
+    """Decorate a size probing method to restore the model, optimizer, and LR scheduler state afterwards.
+
+    Size probing runs actual training steps, including parameter updates, to also account for the memory required by
+    the optimizer step, e.g., for Adam's moment estimates. The state is stored in a temporary directory on disk, since
+    a copy in GPU memory would distort the memory estimates, and a copy in host memory may exhaust it, e.g., when GPU
+    memory spills over into host memory.
+    """
+
+    @functools.wraps(func)
+    def wrapped(self: "TrainingLoop", *args: P.args, **kwargs: P.kwargs) -> R:
+        components = {
+            name: component
+            for name, component in (
+                ("model", self.model),
+                ("optimizer", self.optimizer),
+                ("lr_scheduler", self.lr_scheduler),
+            )
+            if component is not None
+        }
+        device = self.device
+        load_kwargs: dict[str, Any] = {"map_location": device, "weights_only": False}
+        # memory-map the snapshot to avoid a full copy in host memory; we only do this when loading to an accelerator,
+        # since tensors loaded to CPU would keep referencing the (temporary) file, e.g., as part of the optimizer state
+        if _TORCH_LOAD_SUPPORTS_MMAP and device.type != "cpu":
+            load_kwargs["mmap"] = True
+        with TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            paths = {name: pathlib.Path(directory).joinpath(f"{name}.pt") for name in components}
+            for name, component in components.items():
+                torch.save(component.state_dict(), paths[name])
+            try:
+                return func(self, *args, **kwargs)
+            finally:
+                # restore one component at a time to limit the peak memory usage
+                for name, component in components.items():
+                    component.load_state_dict(torch.load(paths[name], **load_kwargs))  # noqa: S614
+
+    return wrapped
 
 
 class TrainingLoop(Generic[BatchType], ABC):
@@ -728,7 +776,9 @@ class TrainingLoop(Generic[BatchType], ABC):
         if gradient_clipping_max_abs_value is not None:
             pre_step_callbacks.append(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
         callback.register_callback(
-            OptimizerTrainingCallback(only_size_probing=only_size_probing, pre_step_callbacks=pre_step_callbacks)
+            # note: we also apply parameter updates during size probing to account for the optimizer's memory
+            # requirements; the size probing methods restore the state afterwards
+            OptimizerTrainingCallback(pre_step_callbacks=pre_step_callbacks)
         )
         if self.lr_scheduler is not None:
             callback.register_callback(LearningRateSchedulerTrainingCallback())
@@ -930,6 +980,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         """Process a single batch and returns the loss."""
         raise NotImplementedError
 
+    @_restore_state_after_probing
     def batch_size_search(
         self,
         *,
@@ -999,6 +1050,7 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         return batch_size, evaluated_once
 
+    @_restore_state_after_probing
     def sub_batch_and_slice(
         self,
         *,
