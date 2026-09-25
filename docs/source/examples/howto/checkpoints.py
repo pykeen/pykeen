@@ -175,8 +175,7 @@ model = TransE(
     triples_factory=triples_factory,
     random_seed=123,
 )
-optimizer = Adam(params=model.get_grad_params())
-training_loop = SLCWATrainingLoop(model=model, optimizer=optimizer)
+training_loop = SLCWATrainingLoop(model=model, optimizer=Adam)
 
 # %%
 losses = training_loop.train(
