@@ -4,6 +4,7 @@ import pytest
 
 from pykeen.datasets import Nations
 from pykeen.losses import BCEWithLogitsLoss, CrossEntropyLoss, MarginRankingLoss, NSSALoss, SoftplusLoss
+from pykeen.losses import CrossEntropyLoss, MarginRankingLoss, NSSALoss, SoftplusLoss
 from pykeen.models import TransE
 from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
 from pykeen.training import BatchCWATrainingLoop, LCWATrainingLoop, SLCWATrainingLoop, SymmetricLCWATrainingLoop
