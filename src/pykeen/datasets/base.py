@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import pathlib
-import zipfile
 from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from typing import Any, ClassVar, Self, cast
 
@@ -855,8 +854,8 @@ class TarFileRemoteDataset(RemoteDataset):
     source_cls = TarArchiveSource
 
 
-class PackedZipRemoteDataset(LazyDataset):
-    """Contains a lazy reference to a remote dataset that is loaded if needed."""
+class PackedZipRemoteDataset(PathDataset):
+    """A dataset whose splits are packed into a single remote zip archive."""
 
     head_column: int = 0
     relation_column: int = 1
@@ -888,74 +887,45 @@ class PackedZipRemoteDataset(LazyDataset):
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
 
-        :raises ValueError: if there's no URL specified and there is no data already at the calculated path
+        :raises ValueError: if the ``header`` class attribute was overridden, or if there's no URL specified and
+            there is no data already at the calculated path
         """
+        if self.header is not None:
+            raise ValueError(f"{self.__class__.__name__} does not support a header row; got header={self.header}")
+
         self.cache_root = self._help_cache(cache_root)
-
-        if name:
-            self.name = name
-        elif url:
-            self.name = name_from_url(url)
-        else:
-            raise ValueError("must give at least one of name or URL")
-        self.path = self.cache_root.joinpath(self.name)
-        logger.debug("file path at %s", self.path)
-
-        self.url = url
-        if not self.path.is_file() and not self.url:
-            raise ValueError(f"must specify url to download from since path does not exist: {self.path}")
 
         self.relative_training_path = pathlib.PurePath(relative_training_path)
         self.relative_testing_path = pathlib.PurePath(relative_testing_path)
         self.relative_validation_path = pathlib.PurePath(relative_validation_path)
-        self._create_inverse_triples = create_inverse_triples
-        super().__init__(eager=eager)
 
-    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
-        training = self._load_helper(self.relative_training_path)
-        return {
-            "training": training,
-            **{
-                key: self._load_helper(
-                    relative_path,
-                    entity_to_id=training.entity_to_id,
-                    relation_to_id=training.relation_to_id,
-                )
-                for key, relative_path in (
-                    ("testing", self.relative_testing_path),
-                    ("validation", self.relative_validation_path),
-                )
+        self.url = url
+        self.name = name or (name_from_url(url) if url else None)
+        if self.name is None:
+            raise ValueError("must give at least one of name or URL")
+        self.path = self.cache_root.joinpath(self.name)
+        logger.debug("file path at %s", self.path)
+        if not self.path.is_file() and not self.url:
+            raise ValueError(f"must specify url to download from since path does not exist: {self.path}")
+
+        super().__init__(
+            source=ZipArchiveSource(
+                members={
+                    "training": self.relative_training_path,
+                    "testing": self.relative_testing_path,
+                    "validation": self.relative_validation_path,
+                },
+                cache_root=self.cache_root,
+                url=url,
+                name=self.name,
+            ),
+            eager=eager,
+            create_inverse_triples=create_inverse_triples,
+            load_triples_kwargs={
+                "delimiter": self.sep,
+                "column_remapping": (self.head_column, self.relation_column, self.tail_column),
             },
-        }
-
-    def _load_helper(
-        self,
-        relative_path: pathlib.PurePath,
-        entity_to_id: Mapping[str, int] | None = None,
-        relation_to_id: Mapping[str, int] | None = None,
-    ) -> TriplesFactory:
-        if not self.path.is_file():
-            if self.url is None:
-                raise ValueError("url should be set")
-            logger.info("downloading data from %s to %s", self.url, self.path)
-            download(url=self.url, path=self.path)
-
-        # relative paths within zip file's always follow Posix path, even on Windows
-        with zipfile.ZipFile(file=self.path) as zf, zf.open(relative_path.as_posix()) as file:
-            logger.debug("loading %s", relative_path)
-            df = pd.read_csv(
-                file,
-                usecols=[self.head_column, self.relation_column, self.tail_column],
-                header=self.header,
-                sep=self.sep,
-            )
-            return TriplesFactory.from_labeled_triples(
-                triples=df.values,
-                create_inverse_triples=self._create_inverse_triples,
-                metadata={"path": relative_path},
-                entity_to_id=entity_to_id,
-                relation_to_id=relation_to_id,
-            )
+        )
 
 
 class TabbedDataset(LazyDataset):
