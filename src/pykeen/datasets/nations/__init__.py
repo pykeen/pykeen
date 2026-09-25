@@ -6,6 +6,7 @@ from docdata import parse_docdata
 
 from ..base import PathDataset
 from ..literal_base import NumericPathDataset
+from ..sources import LocalSource
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -50,9 +51,11 @@ class Nations(PathDataset):
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PathDataset`.
         """
         super().__init__(
-            training_path=NATIONS_TRAIN_PATH,
-            testing_path=NATIONS_TEST_PATH,
-            validation_path=NATIONS_VALIDATE_PATH,
+            source=LocalSource(
+                training=NATIONS_TRAIN_PATH,
+                testing=NATIONS_TEST_PATH,
+                validation=NATIONS_VALIDATE_PATH,
+            ),
             **kwargs,
         )
 

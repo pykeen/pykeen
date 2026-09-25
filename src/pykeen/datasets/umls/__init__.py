@@ -5,6 +5,7 @@ import pathlib
 from docdata import parse_docdata
 
 from ..base import PathDataset
+from ..sources import LocalSource
 
 __all__ = [
     "UMLS_TRAIN_PATH",
@@ -45,9 +46,11 @@ class UMLS(PathDataset):
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PathDataset`.
         """
         super().__init__(
-            training_path=UMLS_TRAIN_PATH,
-            testing_path=UMLS_TEST_PATH,
-            validation_path=UMLS_VALIDATE_PATH,
+            source=LocalSource(
+                training=UMLS_TRAIN_PATH,
+                testing=UMLS_TEST_PATH,
+                validation=UMLS_VALIDATE_PATH,
+            ),
             **kwargs,
         )
 

@@ -144,7 +144,7 @@ def get_dataset(
 
     if isinstance(training, str | pathlib.Path) and isinstance(testing, str | pathlib.Path):
         if validation is None or isinstance(validation, str | pathlib.Path):
-            return PathDataset(
+            return PathDataset.from_paths(
                 training_path=training,
                 testing_path=testing,
                 validation_path=validation,

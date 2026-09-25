@@ -2,12 +2,11 @@
 
 import pathlib
 import unittest
-from io import BytesIO
-from urllib.request import urlopen
 
 from pykeen.datasets import EagerDataset, Kinships, Nations, dataset_resolver
 from pykeen.datasets.base import (
     PackedZipRemoteDataset,
+    PathDataset,
     SingleTabbedDataset,
     TarFileRemoteDataset,
     TarFileSingleDataset,
@@ -100,9 +99,6 @@ class MockTarFileRemoteDataset(TarFileRemoteDataset):
             relative_training_path=pathlib.PurePath("nations", "train.txt"),
             relative_validation_path=pathlib.PurePath("nations", "valid.txt"),
         )
-
-    def _get_bytes(self) -> BytesIO:
-        return BytesIO(urlopen(self.url).read())  # noqa:S310
 
 
 class MockUnpackedRemoteDataset(UnpackedRemoteDataset):
@@ -239,3 +235,20 @@ class TestSummary(unittest.TestCase):
         summary = dataset.summary_str()
         assert "Training" in summary
         assert "Validation" not in summary
+
+
+class TestFromPaths(unittest.TestCase):
+    """Test creating a path dataset from local files."""
+
+    def test_from_paths(self):
+        """Test that :meth:`PathDataset.from_paths` loads the same data as the path-based leaf dataset."""
+        dataset = PathDataset.from_paths(
+            training_path=NATIONS_TRAIN_PATH, testing_path=NATIONS_TEST_PATH, validation_path=NATIONS_VALIDATE_PATH
+        )
+        assert dataset.training_path == NATIONS_TRAIN_PATH
+        assert dataset.num_entities == Nations().num_entities
+
+    def test_from_paths_without_validation(self):
+        """Test that the validation file is optional."""
+        dataset = PathDataset.from_paths(training_path=NATIONS_TRAIN_PATH, testing_path=NATIONS_TEST_PATH)
+        assert dataset.validation is None
