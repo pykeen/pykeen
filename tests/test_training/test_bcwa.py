@@ -142,28 +142,33 @@ def test_process_bcwa_scores(loss_cls: type[Loss], generator: torch.Generator) -
     assert torch.allclose(loss.process_bcwa_scores(predictions=predictions, positives=targets), expected)
 
 
-def _batch_gradients(loop: bcwa.BatchCWATrainingLoop, batch: BatchCWABatch, **kwargs) -> dict[str, torch.Tensor]:
+def _batch_gradients(
+    loop: bcwa.BatchCWATrainingLoop, batch: BatchCWABatch, slice_size: int | None
+) -> dict[str, torch.Tensor]:
     loop.model.zero_grad()
-    batch_size = loop._get_batch_size(batch)
-    sub_batch_size = kwargs.pop("sub_batch_size", None) or batch_size
-    for start in range(0, batch_size, sub_batch_size):
-        stop = min(start + sub_batch_size, batch_size)
-        loop._forward_pass(batch, start, stop, batch_size, label_smoothing=0.0, **kwargs)
+    loop._forward_pass(batch, 0, 1, 1, label_smoothing=0.0, slice_size=slice_size)
     return {name: p.grad.clone() for name, p in loop.model.named_parameters() if p.grad is not None}
 
 
+@pytest.mark.parametrize("loss_cls", [BCEWithLogitsLoss, CrossEntropyLoss])
 @pytest.mark.parametrize("target", ["head", "relation", "tail"])
-@pytest.mark.parametrize(("sub_batch_size", "slice_size"), [(3, None), (None, 4)])
-def test_sub_batching_and_slicing(target: str, sub_batch_size: int | None, slice_size: int | None) -> None:
-    """Test that sub-batching and slicing do not change the gradients."""
+def test_slicing(target: str, loss_cls: type[Loss]) -> None:
+    """Test that slicing does not change the gradients."""
     triples_factory = Nations().training
-    # note: TransE does not use a regularizer, whose term would depend on the sub-batch division
-    model = TransE(triples_factory=triples_factory, loss=BCEWithLogitsLoss(), random_seed=0)
+    model = TransE(triples_factory=triples_factory, loss=loss_cls(), random_seed=0)
     loop = bcwa.BatchCWATrainingLoop(model=model, triples_factory=triples_factory, target=target)
-    loader = loop._create_training_data_loader(triples_factory, sampler=None, batch_size=32, drop_last=False)
+    # note: shuffle, since the triples are sorted by head, i.e., the first batch would only contain a single head
+    loader = loop._create_training_data_loader(
+        triples_factory,
+        sampler=None,
+        batch_size=32,
+        drop_last=False,
+        shuffle=True,
+        generator=torch.manual_seed(0),
+    )
     batch = next(iter(loader))
     expected = _batch_gradients(loop, batch, slice_size=None)
-    actual = _batch_gradients(loop, batch, sub_batch_size=sub_batch_size, slice_size=slice_size)
+    actual = _batch_gradients(loop, batch, slice_size=4)
     assert expected.keys() == actual.keys()
     for key, value in expected.items():
         assert torch.allclose(value, actual[key], atol=1.0e-06), key

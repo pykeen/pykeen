@@ -13,7 +13,7 @@ from ..models import ERModel
 from ..triples import CoreTriplesFactory
 from ..triples.instances import BatchCWABatch, SubGraphSLCWAInstances
 from ..triples.weights import LossWeighter, loss_weighter_resolver
-from ..typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, FloatTensor, LongTensor, MappedTriples, TargetHint
+from ..typing import COLUMN_HEAD, COLUMN_RELATION, FloatTensor, LongTensor, MappedTriples, TargetHint
 
 __all__ = [
     "BatchCWATrainingLoop",
@@ -196,8 +196,14 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
     non-target positions as a row of 1:n scores over the batch's candidates for the target position. Like for
     :class:`~pykeen.training.LCWATrainingLoop`, the target defaults to the tail.
 
-    The ``batch_size`` refers to the number of sampled training triples. Sub-batching splits along the batch's unique
-    heads (or tails, if the heads are the target), and slicing along the target position.
+    The ``batch_size`` refers to the number of sampled training triples. Since these are turned into the grid of all
+    combinations, there is no batch dimension left to split, and thus, sub-batching is not supported. To reduce the
+    memory requirements, slicing splits the score computation along the target position.
+
+    .. todo::
+        The loss decomposes over the combinations of the two non-target positions. Thus, the grid could be split along
+        these two positions, as long as each part keeps all target candidates, and the loss is normalized by the number
+        of rows in the full batch.
 
     .. note::
         This training loop requires an :class:`~pykeen.models.ERModel`.
@@ -208,6 +214,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
     """
 
     supports_slicing: ClassVar[bool] = True
+    supports_sub_batching: ClassVar[bool] = False
 
     def __init__(self, *, target: TargetHint = None, **kwargs: Any) -> None:
         """
@@ -225,8 +232,6 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
         if not isinstance(self.model, ERModel):
             raise TypeError(f"{self.__class__.__name__} requires an ERModel, but got {self.model.__class__.__name__}")
         self.target = get_target_column(target)
-        # the dimension along which to sub-batch
-        self.sub_batch_dim = COLUMN_TAIL if self.target == COLUMN_HEAD else COLUMN_HEAD
         # the order of dimensions which moves the target dimension last
         self._order = [dim for dim in range(3) if dim != self.target] + [self.target]
 
@@ -271,8 +276,10 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
             case _:
                 raise ValueError(f"Invalid {sampler=}")
 
-    def _get_batch_size(self, batch: BatchCWABatch) -> int:  # type: ignore[override] # noqa: D102
-        return _get_ids(batch)[self.sub_batch_dim].shape[0]
+    @staticmethod
+    def _get_batch_size(batch: BatchCWABatch) -> int:  # noqa: D102
+        # the batch cannot be split, cf. supports_sub_batching
+        return 1
 
     def _process_batch(
         self,
@@ -287,16 +294,9 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
                 f"{self.__class__.__name__} requires batches with positives, as created by {BatchCWACollator.__name__}."
             )
 
-        # select the sub-batch, and the positive triples within it
-        dim = self.sub_batch_dim
         ids = _get_ids(batch)
-        ids[dim] = ids[dim][start:stop]
         positives = batch["positives"]
-        positives = positives[(positives[:, dim] >= start) & (positives[:, dim] < stop)]
-        positives[:, dim] -= start
         weights = batch.get("weights")
-        if weights is not None:
-            weights = weights.narrow(dim, start, stop - start)
 
         # calculate scores, shape: (num_heads, num_relations, num_tails)
         device = self.model.device

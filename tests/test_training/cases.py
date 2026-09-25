@@ -2,6 +2,7 @@
 
 import tempfile
 from collections.abc import MutableMapping
+from contextlib import ExitStack
 from typing import Any, ClassVar
 
 import pytest
@@ -69,13 +70,16 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
         )
 
     def test_sub_batching(self):
-        """Test if sub-batching works as expected."""
-        self.instance.train(
-            triples_factory=self.triples_factory,
-            num_epochs=1,
-            batch_size=self.batch_size,
-            sub_batch_size=self.sub_batch_size,
-        )
+        """Test if sub-batching works as expected, or raises an error if the training loop does not support it."""
+        with ExitStack() as stack:
+            if not self.cls.supports_sub_batching:
+                stack.enter_context(pytest.raises(NotImplementedError))
+            self.instance.train(
+                triples_factory=self.triples_factory,
+                num_epochs=1,
+                batch_size=self.batch_size,
+                sub_batch_size=self.sub_batch_size,
+            )
 
     def test_sub_batching_support(self):
         """Test if sub-batching works as expected."""

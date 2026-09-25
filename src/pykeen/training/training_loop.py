@@ -130,6 +130,8 @@ class TrainingLoop(Generic[BatchType], ABC):
     }
 
     supports_slicing: ClassVar[bool] = False
+    #: Whether the training loop can split a batch into sub-batches
+    supports_sub_batching: ClassVar[bool] = True
 
     @update_docstring_with_resolver_keys(
         ResolverKey("optimizer", "class_resolver.contrib.torch.optimizer_resolver"),
@@ -591,6 +593,8 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         if sub_batch_size is None or sub_batch_size == batch_size:  # by default do not split batches in sub-batches
             sub_batch_size = batch_size
+        elif not self.supports_sub_batching:
+            raise NotImplementedError(f"{self.__class__.__name__} does not support sub-batching.")
         elif get_batchnorm_modules(self.model):  # if there are any, this is truthy
             raise SubBatchingNotSupportedError(self.model)
 
@@ -1100,7 +1104,11 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         if not finished_search:
             logger.info("Starting sub_batch_size search for training now...")
-            if get_batchnorm_modules(self.model):  # if there are any, this is truthy
+            if not self.supports_sub_batching:
+                logger.info(f"{self.__class__.__name__} does not support sub-batching.")
+                supports_sub_batching = False
+                sub_batch_size = batch_size
+            elif get_batchnorm_modules(self.model):  # if there are any, this is truthy
                 logger.info("This model does not support sub-batching.")
                 supports_sub_batching = False
                 sub_batch_size = batch_size
