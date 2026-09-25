@@ -108,7 +108,7 @@ class PreSplitLoader(Loader):
         self,
         source: Source,
         *,
-        plan: Plan | None = None,
+        plan: Mapping[str, SplitSpec] | None = None,
         create_inverse_triples: bool = False,
         factory_cls: type[TriplesFactory] = TriplesFactory,
         load_triples_kwargs: Mapping[str, Any] | None = None,
