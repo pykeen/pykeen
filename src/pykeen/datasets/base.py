@@ -1,10 +1,17 @@
-"""Utility classes for constructing datasets."""
+"""Utility classes for constructing datasets.
+
+The dataset classes here are deliberately thin: a dataset is a *named set of triples factories*, and everything
+below that is composed rather than inherited. Where the files come from is a
+:class:`~pykeen.datasets.sources.Source`, and how they become factories is a
+:class:`~pykeen.datasets.loaders.Loader`. The classes in this module pick a source and a loader and give the
+combination a name, so that a new dataset is usually a five-line subclass.
+"""
 
 from __future__ import annotations
 
 import logging
 import pathlib
-from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
 from typing import Any, ClassVar, Self, cast
 
 import click
@@ -37,6 +44,7 @@ from ..utils import ExtraReprMixin, format_relative_comparison, normalize_path, 
 __all__ = [
     # Base classes
     "LazyFactoryMixin",
+    "DatasetBase",
     "Dataset",
     "EagerDataset",
     "LazyDataset",
@@ -229,69 +237,82 @@ class LazyFactoryMixin:
         yield self.__class__.__name__.lower()
 
 
-class Dataset(ExtraReprMixin):
-    """The base dataset class."""
+class DatasetBase(ExtraReprMixin):
+    """A named collection of triples factories.
 
-    #: A factory wrapping the training triples
-    training: CoreTriplesFactory
-    #: A factory wrapping the testing triples, that share indices with the training triples
-    testing: CoreTriplesFactory
-    #: A factory wrapping the validation triples, that share indices with the training triples
-    validation: CoreTriplesFactory | None
-    #: the dataset's name
+    This holds everything which does not depend on *which* splits a dataset has, so that the transductive
+    :class:`Dataset` and the fully inductive :class:`~pykeen.datasets.inductive.base.InductiveDataset` can share
+    it instead of maintaining two copies. Subclasses declare their splits via ``_factory_keys``.
+    """
+
+    #: The names of the factories, in canonical order. The first one is the *reference* factory, whose entity and
+    #: relation index the dataset reports and from which examples are shown in the summary.
+    _factory_keys: ClassVar[tuple[str, ...]]
+
+    #: Additional metadata to store inside the dataset
     metadata: Mapping[str, Any] | None = None
 
     metadata_file_name: ClassVar[str] = "metadata.pth"
     triples_factory_cls: ClassVar[type[CoreTriplesFactory]] = TriplesFactory
 
-    def __eq__(self, __o: object) -> bool:  # noqa: D105
-        return (
-            isinstance(__o, Dataset)
-            and (self.training == __o.training)
-            and (self.testing == __o.testing)
-            and ((self.validation is None and __o.validation is None) or (self.validation == __o.validation))
-            and (self.create_inverse_triples == __o.create_inverse_triples)
-        )
+    @classmethod
+    def _eager_cls(cls) -> type[DatasetBase]:
+        """Return the eager counterpart of this dataset family, used when loading from a binary directory."""
+        raise NotImplementedError
 
     @property
     def factory_dict(self) -> Mapping[str, CoreTriplesFactory]:
-        """Return a dictionary of the three factories."""
-        rv = {
-            "training": self.training,
-            "testing": self.testing,
-        }
-        if self.validation:
-            rv["validation"] = self.validation
-        return rv
+        """Return a dictionary of the factories, keyed by split name, omitting absent optional splits.
+
+        .. note::
+
+            Lazy datasets override this to *be* the primitive, cf. :class:`LazyFactoryMixin`, and expose the
+            individual splits as properties reading from it.
+        """
+        return {key: factory for key in self._factory_keys if (factory := getattr(self, key, None)) is not None}
+
+    @property
+    def _reference_factory(self) -> CoreTriplesFactory:
+        return self.factory_dict[self._factory_keys[0]]
+
+    def __eq__(self, other: object) -> bool:  # noqa: D105
+        return (
+            isinstance(other, DatasetBase)
+            and self._factory_keys == other._factory_keys
+            and self.factory_dict == other.factory_dict
+            and self.create_inverse_triples == other.create_inverse_triples
+        )
 
     @property
     def entity_to_id(self):  # noqa: D401
         """The mapping of entity labels to IDs."""
-        if not isinstance(self.training, TriplesFactory):
-            raise AttributeError(f"{self.training.__class__} does not have labeling information.")
-        return self.training.entity_to_id
+        factory = self._reference_factory
+        if not isinstance(factory, TriplesFactory):
+            raise AttributeError(f"{factory.__class__} does not have labeling information.")
+        return factory.entity_to_id
 
     @property
     def relation_to_id(self):  # noqa: D401
         """The mapping of relation labels to IDs."""
-        if not isinstance(self.training, TriplesFactory):
-            raise AttributeError(f"{self.training.__class__} does not have labeling information.")
-        return self.training.relation_to_id
+        factory = self._reference_factory
+        if not isinstance(factory, TriplesFactory):
+            raise AttributeError(f"{factory.__class__} does not have labeling information.")
+        return factory.relation_to_id
 
     @property
     def num_entities(self):  # noqa: D401
         """The number of entities."""
-        return self.training.num_entities
+        return self._reference_factory.num_entities
 
     @property
     def num_relations(self):  # noqa: D401
         """The number of relations."""
-        return self.training.num_relations
+        return self._reference_factory.num_relations
 
     @property
     def create_inverse_triples(self):
-        """Return whether inverse triples are created *for the training factory*."""
-        return self.training.create_inverse_triples
+        """Return whether inverse triples are created *for the reference factory*."""
+        return self._reference_factory.create_inverse_triples
 
     @classmethod
     def docdata(cls, *parts: str) -> Any:
@@ -302,23 +323,19 @@ class Dataset(ExtraReprMixin):
         return rv
 
     @staticmethod
-    def triples_sort_key(cls: type[Dataset]) -> int:
+    def triples_sort_key(cls: type[DatasetBase]) -> int:
         """Get the number of triples for sorting."""
         return cls.docdata("statistics", "triples")
 
     @classmethod
-    def triples_pair_sort_key(cls, pair: tuple[str, type[Dataset]]) -> int:
+    def triples_pair_sort_key(cls, pair: tuple[str, type[DatasetBase]]) -> int:
         """Get the number of triples for sorting in an iterator context."""
         return cls.triples_sort_key(pair[1])
 
     def _summary_rows(self):
         return [
-            (label, triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_triples)
-            for label, triples_factory in zip(
-                ("Training", "Testing", "Validation"), (self.training, self.testing, self.validation), strict=True
-            )
-            # note: the validation factory is optional
-            if triples_factory is not None
+            (key.replace("_", " ").title(), factory.num_entities, factory.num_relations, factory.num_triples)
+            for key, factory in self.factory_dict.items()
         ]
 
     def summary_str(self, title: str | None = None, show_examples: int | None = 5, end="\n") -> str:
@@ -329,10 +346,11 @@ class Dataset(ExtraReprMixin):
         t = tabulate(rows, headers=["Name", "Entities", "Relations", "Triples"])
         rv = f"{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}"
         if show_examples:
-            if not isinstance(self.training, TriplesFactory):
-                raise AttributeError(f"{self.training.__class__} does not have labeling information.")
+            factory = self._reference_factory
+            if not isinstance(factory, TriplesFactory):
+                raise AttributeError(f"{factory.__class__} does not have labeling information.")
             examples = tabulate(
-                self.training.label_triples(self.training.mapped_triples[:show_examples]),
+                factory.label_triples(factory.mapped_triples[:show_examples]),
                 headers=["Head", "Relation", "tail"],
             )
             rv += "\n" + examples
@@ -349,22 +367,23 @@ class Dataset(ExtraReprMixin):
         yield f"create_inverse_triples={self.create_inverse_triples}"
 
     @classmethod
-    def from_path(cls, path: str | pathlib.Path, ratios: list[float] | None = None) -> Dataset:
-        """Create a dataset from a single triples factory by splitting it in 3."""
-        tf = TriplesFactory.from_path(path=path)
-        return cls.from_tf(tf=tf, ratios=ratios)
+    def from_directory_binary(cls, path: str | pathlib.Path) -> DatasetBase:
+        """Load a dataset from a directory.
 
-    @classmethod
-    def from_directory_binary(cls, path: str | pathlib.Path) -> Dataset:
-        """Load a dataset from a directory."""
+        :param path: The directory a dataset was stored to with
+            :meth:`~pykeen.datasets.base.DatasetBase.to_directory_binary`.
+
+        :returns: An eager dataset with the stored factories.
+
+        :raises NotADirectoryError: If the path does not refer to a directory.
+        """
         path = pathlib.Path(path)
 
         if not path.is_dir():
             raise NotADirectoryError(path)
 
         tfs = {}
-        # TODO: Make a constant for the names
-        for key in ("training", "testing", "validation"):
+        for key in cls._factory_keys:
             tf_path = path.joinpath(key)
             if tf_path.is_dir():
                 tfs[key] = cls.triples_factory_cls.from_path_binary(path=tf_path)
@@ -373,7 +392,8 @@ class Dataset(ExtraReprMixin):
         metadata_path = path.joinpath(cls.metadata_file_name)
         # TODO: consider restricting metadata to JSON
         metadata = torch.load(metadata_path, weights_only=False) if metadata_path.is_file() else None
-        return EagerDataset(**tfs, metadata=metadata)
+        eager_cls = cast("Callable[..., DatasetBase]", cls._eager_cls())
+        return eager_cls(**tfs, metadata=metadata)
 
     def to_directory_binary(self, path: str | pathlib.Path) -> None:
         """Store a dataset to a path in binary format."""
@@ -385,15 +405,6 @@ class Dataset(ExtraReprMixin):
         metadata = dict(self.metadata or {})
         metadata.setdefault("name", self.get_normalized_name())
         torch.save(metadata, path.joinpath(self.metadata_file_name))
-
-    @staticmethod
-    def from_tf(tf: TriplesFactory, ratios: list[float] | None = None) -> Dataset:
-        """Create a dataset from a single triples factory by splitting it in 3."""
-        training, testing, validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(ratios or [0.8, 0.1, 0.1]),
-        )
-        return EagerDataset(training=training, testing=testing, validation=validation)
 
     @classmethod
     def cli(cls) -> None:
@@ -411,6 +422,42 @@ class Dataset(ExtraReprMixin):
     def get_normalized_name(self) -> str:
         """Get the normalized name of the dataset."""
         return normalize_string((self.metadata or {}).get("name") or self.__class__.__name__)
+
+
+class Dataset(DatasetBase):
+    """The base dataset class."""
+
+    _factory_keys: ClassVar[tuple[str, ...]] = ("training", "testing", "validation")
+
+    #: A factory wrapping the training triples
+    training: CoreTriplesFactory
+    #: A factory wrapping the testing triples, that share indices with the training triples
+    testing: CoreTriplesFactory
+    #: A factory wrapping the validation triples, that share indices with the training triples
+    validation: CoreTriplesFactory | None
+
+    @classmethod
+    def _eager_cls(cls) -> type[DatasetBase]:  # noqa: D102
+        return EagerDataset
+
+    @classmethod
+    def from_directory_binary(cls, path: str | pathlib.Path) -> Dataset:  # noqa: D102
+        return cast(Dataset, super().from_directory_binary(path))
+
+    @classmethod
+    def from_path(cls, path: str | pathlib.Path, ratios: list[float] | None = None) -> Dataset:
+        """Create a dataset from a single triples factory by splitting it in 3."""
+        tf = TriplesFactory.from_path(path=path)
+        return cls.from_tf(tf=tf, ratios=ratios)
+
+    @staticmethod
+    def from_tf(tf: TriplesFactory, ratios: list[float] | None = None) -> Dataset:
+        """Create a dataset from a single triples factory by splitting it in 3."""
+        training, testing, validation = cast(
+            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            tf.split(ratios or [0.8, 0.1, 0.1]),
+        )
+        return EagerDataset(training=training, testing=testing, validation=validation)
 
     def remix(self, random_state: TorchRandomHint = None, **kwargs) -> Dataset:
         """Remix a dataset using :func:`~pykeen.triples.remix.remix`."""
