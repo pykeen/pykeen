@@ -50,7 +50,13 @@ class BatchCWADataset(Dataset[LongTensor]):
 
 
 class _HeadIndex:
-    """An index of triples by their head entity."""
+    """An index of triples by their head entity.
+
+    It finds all triples whose head, relation, and tail each occur among given sets of IDs. The index only serves as a
+    lookup shortcut: it gathers the triples of the given heads, and then filters them by relation and tail. Since all
+    three columns are filtered, the result does not depend on which column is indexed, and thus neither on the training
+    loop's target. The cost is proportional to the number of triples of the given heads.
+    """
 
     def __init__(self, mapped_triples: MappedTriples) -> None:
         """Initialize the index.
@@ -85,7 +91,7 @@ class _HeadIndex:
             int(counts.sum())
         )
         candidates = self.mapped_triples[index]
-        # filter by relation and tail
+        # filter by the other two columns; together with the head lookup, this checks all three
         mask = torch.isin(candidates[:, 1], rs) & torch.isin(candidates[:, 2], ts)
         return candidates[mask]
 
