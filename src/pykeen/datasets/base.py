@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import pathlib
 from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar, Self, cast
 
 import click
 import docdata
@@ -21,7 +21,6 @@ import torch
 from more_click import verbose_option
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
-from typing_extensions import Self
 
 from .loaders import DEFAULT_RATIOS, AutoSplitLoader, Loader, PreSplitLoader, SplitSpec
 from .sources import ArchiveSource, LocalSource, RemoteSource, Source, TarArchiveSource, ZipArchiveSource
@@ -428,12 +427,10 @@ class Dataset(DatasetBase):
     #: A factory wrapping the validation triples, that share indices with the training triples
     validation: CoreTriplesFactory | None
 
-    # docstr-coverage: inherited
     @classmethod
     def _eager_cls(cls) -> type[DatasetBase]:  # noqa: D102
         return EagerDataset
 
-    # docstr-coverage: inherited
     @classmethod
     def from_directory_binary(cls, path: str | pathlib.Path) -> Dataset:  # noqa: D102
         return cast(Dataset, super().from_directory_binary(path))
@@ -648,7 +645,6 @@ class EagerDataset(Dataset):
         self.validation = validation
         self.metadata = metadata
 
-    # docstr-coverage: inherited
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"metadata={self.metadata}"
@@ -1046,11 +1042,9 @@ class SingleTabbedDataset(TabbedDataset):
             eager=eager,
         )
 
-    # docstr-coverage: inherited
     def _get_path(self) -> pathlib.Path:  # noqa: D102
         return self.cache_root.joinpath(self.name)
 
-    # docstr-coverage: inherited
     def _get_df(self) -> pd.DataFrame:  # noqa: D102
         path = self._get_path()
         if not path.is_file():
@@ -1109,7 +1103,6 @@ class CompressedSingleDataset(TabbedDataset):
             eager=eager,
         )
 
-    # docstr-coverage: inherited
     def _get_path(self) -> pathlib.Path:  # noqa: D102
         """Get the path of the *archive*, which is also used as the dataset's metadata path."""
         return self.cache_root.joinpath(self.name)
@@ -1124,7 +1117,6 @@ class CompressedSingleDataset(TabbedDataset):
             archive_path=self._get_path(),
         )
 
-    # docstr-coverage: inherited
     def _get_df(self) -> pd.DataFrame:  # noqa: D102
         path = self._get_source().paths()["data"]
         df = pd.read_csv(path, **self.read_csv_kwargs)

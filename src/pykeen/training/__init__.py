@@ -78,7 +78,12 @@ from class_resolver import ClassResolver
 from .callbacks import TrainingCallback, callback_resolver  # noqa: F401
 from .lcwa import LCWATrainingLoop, SymmetricLCWATrainingLoop  # noqa: F401
 from .slcwa import SLCWATrainingLoop  # noqa: F401
-from .training_loop import NonFiniteLossError, TrainingLoop  # noqa: F401
+from .training_loop import (  # noqa: F401
+    NonFiniteLossError,
+    OptimizerClearedError,
+    OptimizerNotRecreatableError,
+    TrainingLoop,
+)
 
 __all__ = [
     "TrainingLoop",
@@ -86,6 +91,8 @@ __all__ = [
     "LCWATrainingLoop",
     "SymmetricLCWATrainingLoop",
     "NonFiniteLossError",
+    "OptimizerNotRecreatableError",
+    "OptimizerClearedError",
     "training_loop_resolver",
     #
     "TrainingCallback",
@@ -94,6 +101,6 @@ __all__ = [
 
 #: A resolver for training loops
 training_loop_resolver: ClassResolver[TrainingLoop] = ClassResolver.from_subclasses(
-    base=TrainingLoop,
+    base=TrainingLoop,  # type: ignore[type-abstract]
     default=SLCWATrainingLoop,
 )

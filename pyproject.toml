@@ -1,7 +1,6 @@
-# See https://setuptools.readthedocs.io/en/latest/build_meta.html
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.11.2,<1.0"]
+build-backend = "uv_build"
 
 [project]
 name = "pykeen"
@@ -25,13 +24,11 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Framework :: Pytest",
     "Framework :: tox",
     "Framework :: Sphinx",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -55,9 +52,10 @@ keywords = [
 # License Information. This can be any valid SPDX identifiers that can be resolved
 # with URLs like https://spdx.org/licenses/MIT
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "dataclasses-json",
     "numpy",
@@ -77,7 +75,7 @@ dependencies = [
     "more_itertools",
     "pystow>=0.8.4",
     "docdata>=0.0.5",
-    "class_resolver>=0.6.0",
+    "class_resolver>=0.8.1",
     "pyyaml",
     "torch_max_mem>=0.1.5",
     "torch-ppr>=0.0.7",
@@ -122,18 +120,6 @@ Homepage = "https://github.com/pykeen/pykeen"
 Repository = "https://github.com/pykeen/pykeen.git"
 Documentation = "https://pykeen.readthedocs.io"
 
-[tool.setuptools]
-package-dir = { "" = "src" }
-
-[tool.setuptools.packages.find]
-# this implicitly sets `packages = ":find"`
-where = ["src"] # list of folders that contain the packages (["."] by default)
-
-# See https://setuptools.pypa.io/en/latest/userguide/datafiles.html
-[tool.setuptools.package-data]
-"*" = ["*.*"]
-
-
 [project.scripts]
 pykeen = "pykeen.cli:main"
 
@@ -147,6 +133,24 @@ skip = ["**/__init__.py", "tests/*"]
 # MyPy, see https://mypy.readthedocs.io/en/stable/config_file.html
 [tool.mypy]
 plugins = []
+ignore_missing_imports = true
+
+# Libraries whose types are not checked yet. `follow_imports = "skip"` makes their
+# symbols `Any`, which is what happened implicitly while the mypy tox environment
+# installed a hand-picked subset of the dependencies instead of the package itself.
+# Removing an entry here is how type coverage gets widened, one library at a time.
+[[tool.mypy.overrides]]
+# ~150 errors, cf. https://github.com/pykeen/pykeen/pull/1623
+module = ["torch.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
+
+[[tool.mypy.overrides]]
+# ~90 errors beyond the `type-abstract` ones already suppressed at the call sites,
+# cf. https://github.com/pykeen/pykeen/pull/1623
+module = ["class_resolver.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
 
 # Doc8, see https://doc8.readthedocs.io/en/stable/readme.html#ini-file-usage
 [tool.doc8]
@@ -307,7 +311,6 @@ select = [
 ignore = [
     "D105", # Missing docstring in magic method
     "S101", # Use of assert detected, TODO remove
-    "D102", # Missing docstring in public method, TODO remove
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores
@@ -327,6 +330,7 @@ ignore = [
 "tests/**/*.py" = [
     "INP001", # tests are not a package
     "PIE790", # allow pass in test stubs/abstract methods
+    "D102",   # test methods document intent via their name, not a docstring
 ]
 
 [tool.ruff.lint.pydocstyle]

@@ -136,7 +136,6 @@ class PreSplitLoader(Loader):
         self.load_triples_kwargs = load_triples_kwargs
         self.factory_kwargs = dict(factory_kwargs or {})
 
-    # docstr-coverage: inherited
     def load(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
         paths = self.source.paths()
         factories: dict[str, TriplesFactory] = {}
@@ -195,7 +194,6 @@ class AutoSplitLoader(Loader):
         self.create_inverse_triples = create_inverse_triples
         self.factory_cls = factory_cls
 
-    # docstr-coverage: inherited
     def load(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
         df = self.read_df()
         path = self.get_path()

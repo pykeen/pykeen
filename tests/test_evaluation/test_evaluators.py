@@ -377,7 +377,6 @@ class EvaluatorUtilsTests(unittest.TestCase):
 class DummyMetricResults(MetricResults[Target]):
     """Dummy metric results."""
 
-    # docstr-coverage: inherited
     @classmethod
     def key_from_string(cls, s: str | None) -> Target:  # noqa: D102
         return normalize_target(s)
@@ -391,7 +390,6 @@ class DummyEvaluator(Evaluator[Target]):
         super().__init__(*args, **kwargs)
         self.counter: Counter[Target] = Counter()
 
-    # docstr-coverage: inherited
     def process_scores_(
         self,
         hrt_batch: MappedTriples,
@@ -402,11 +400,9 @@ class DummyEvaluator(Evaluator[Target]):
     ) -> None:  # noqa: D102
         self.counter.update((target,))
 
-    # docstr-coverage: inherited
     def clear(self) -> None:  # noqa: D102
         self.counter.clear()
 
-    # docstr-coverage: inherited
     def finalize(self) -> MetricResults[Target]:  # noqa: D102
         return DummyMetricResults(data={target: float(count) for target, count in self.counter.items()})
 
@@ -493,6 +489,21 @@ class TestEvaluationFiltering(unittest.TestCase):
             use_tqdm=False,
         )
         assert eval_results.get_metric(name="mr") == 1, "The rank should equal 1"
+
+    def test_evaluation_unfiltered(self):
+        """Test that the raw (unfiltered) ranking protocol is supported.
+
+        Filtering only decides whether the *other* positives are masked out; the true score - and thus a rank - is
+        available either way.
+        """
+        eval_results = RankBasedEvaluator(filtered=False).evaluate(
+            model=self.model,
+            mapped_triples=self.test_triples,
+            batch_size=1,
+            use_tqdm=False,
+        )
+        # the true entity receives the third-highest score on both sides, and nothing is filtered out
+        assert eval_results.get_metric(name="mr") == 3, "The raw mean rank should equal 3"
 
 
 @pytest.mark.parametrize(

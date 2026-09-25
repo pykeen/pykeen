@@ -5,14 +5,13 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from typing import Generic, TypedDict, TypeVar
+from typing import Generic, NotRequired, Self, TypedDict, TypeVar
 
 import numpy as np
 import scipy.sparse
 import torch
 from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch.utils import data
-from typing_extensions import NotRequired, Self
 
 from .triples_factory import CoreTriplesFactory
 from .utils import compute_compressed_adjacency_list
@@ -250,7 +249,6 @@ class BaseBatchedSLCWAInstances(
 class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
     """Random pre-batched training instances for the sLCWA training loop."""
 
-    # docstr-coverage: inherited
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
         yield from data.BatchSampler(
             sampler=data.RandomSampler(data_source=split_workload(len(self.mapped_triples))),
@@ -325,7 +323,6 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
             node_weights[other_vertex] -= 1
         return result
 
-    # docstr-coverage: inherited
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
         yield from (self.subgraph_sample() for _ in split_workload(len(self)))
 

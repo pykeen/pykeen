@@ -79,7 +79,6 @@ class LocalSource(Source):
         """
         self._paths = {key: pathlib.Path(path) for key, path in paths.items() if path is not None}
 
-    # docstr-coverage: inherited
     def expected_paths(self) -> Mapping[str, pathlib.Path]:  # noqa: D102
         return self._paths
 
@@ -117,7 +116,6 @@ class RemoteSource(Source):
         download_kwargs.setdefault("backend", "urllib")
         self.download_kwargs = download_kwargs
 
-    # docstr-coverage: inherited
     def expected_paths(self) -> Mapping[str, pathlib.Path]:  # noqa: D102
         result = {}
         for key, url in self.urls.items():
@@ -128,7 +126,6 @@ class RemoteSource(Source):
             result[key] = directory.joinpath(name_from_url(url))
         return result
 
-    # docstr-coverage: inherited
     def materialize(self) -> None:  # noqa: D102
         for key, path in self.expected_paths().items():
             if not self.force and path.is_file():
@@ -219,11 +216,9 @@ class ArchiveSource(Source):
         :param archive_path: The local path of the archive.
         """
 
-    # docstr-coverage: inherited
     def expected_paths(self) -> Mapping[str, pathlib.Path]:  # noqa: D102
         return {key: self.cache_root.joinpath(member) for key, member in self.members.items()}
 
-    # docstr-coverage: inherited
     def materialize(self) -> None:  # noqa: D102
         if not self.force and all(path.is_file() for path in self.expected_paths().values()):
             return
@@ -238,7 +233,6 @@ class ArchiveSource(Source):
 class TarArchiveSource(ArchiveSource):
     """Members of a tar archive."""
 
-    # docstr-coverage: inherited
     def _extract(self, archive_path: pathlib.Path) -> None:  # noqa: D102
         with tarfile.open(archive_path) as tar_file:
             if self.extract_all:
@@ -252,7 +246,6 @@ class TarArchiveSource(ArchiveSource):
 class ZipArchiveSource(ArchiveSource):
     """Members of a zip archive."""
 
-    # docstr-coverage: inherited
     def _extract(self, archive_path: pathlib.Path) -> None:  # noqa: D102
         with zipfile.ZipFile(file=archive_path) as zip_file:
             if self.extract_all:

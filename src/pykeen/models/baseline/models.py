@@ -119,7 +119,6 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         else:
             self.head_per_tail = self.tail_per_head = None
 
-    # docstr-coverage: inherited
     def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return marginal_score(
             entity_relation_batch=hr_batch,
@@ -128,7 +127,6 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
             num_entities=self.num_entities,
         )
 
-    # docstr-coverage: inherited
     def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         return marginal_score(
             entity_relation_batch=rt_batch.flip(1),
@@ -177,14 +175,12 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
             for col_indices in (h, t)
         )
 
-    # docstr-coverage: inherited
     def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         r = hr_batch[:, 1].cpu().numpy()
         scores = self.sim[r, :] @ self.rel_to_tail + self.sim_inv[r, :] @ self.rel_to_head
         scores = numpy.asarray(scores.todense())
         return torch.from_numpy(scores)
 
-    # docstr-coverage: inherited
     def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         r = rt_batch[:, 0].cpu().numpy()
         scores = self.sim[r, :] @ self.rel_to_head + self.sim_inv[r, :] @ self.rel_to_tail

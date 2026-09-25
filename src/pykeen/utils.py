@@ -27,6 +27,7 @@ from typing import (
     Generic,
     TextIO,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -42,7 +43,21 @@ from torch import nn
 from typing_extensions import ParamSpec
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import BoolTensor, DeviceHint, FloatTensor, LongTensor, MappedTriples, TorchRandomHint
+from .typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    BoolTensor,
+    DeviceHint,
+    FloatTensor,
+    HeadRepresentation,
+    LongTensor,
+    MappedTriples,
+    RelationRepresentation,
+    TailRepresentation,
+    Target,
+    TorchRandomHint,
+)
 from .version import get_git_hash
 
 __all__ = [
@@ -50,6 +65,8 @@ __all__ = [
     "broadcast_upgrade_to_sequences",
     "compose",
     "clamp_norm",
+    "parallel_prefix_unsqueeze",
+    "broadcast_index_shapes",
     "compact_mapping",
     "create_relation_to_entity_set_mapping",
     "ensure_complex",
@@ -82,6 +99,7 @@ __all__ = [
     "get_batchnorm_modules",
     "get_dropout_modules",
     "calculate_broadcasted_elementwise_result_shape",
+    "pad_trailing_dims",
     "estimate_cost_of_sequence",
     "get_optimal_sequence",
     "tensor_sum",
@@ -111,6 +129,7 @@ __all__ = [
     "split_workload",
     "batched_dot",
     "merge_kwargs",
+    "prefix_unsqueeze_target",
 ]
 
 logger = logging.getLogger(__name__)
@@ -497,6 +516,30 @@ def calculate_broadcasted_elementwise_result_shape(
 ) -> tuple[int, ...]:
     """Determine the return shape of a broadcasted elementwise operation."""
     return tuple(max(a, b) for a, b in zip(first, second, strict=False))
+
+
+def pad_trailing_dims(x: torch.Tensor, ndim: int) -> torch.Tensor:
+    """Append singleton dimensions until the tensor has the given number of dimensions.
+
+    This is useful for tensors which are aligned from the *left*, e.g., index tensors whose batch dimensions come
+    first, since :mod:`torch` broadcasts from the right.
+
+    :param x:
+        the tensor
+    :param ndim:
+        the desired number of dimensions; must be at least `x.ndim`
+
+    :raises ValueError:
+        if the tensor already has more than the desired number of dimensions
+
+    :return:
+        the tensor with trailing singleton dimensions appended
+    """
+    if ndim < x.ndim:
+        raise ValueError(f"Cannot reduce a tensor of shape {tuple(x.shape)} to {ndim} dimensions.")
+    if ndim == x.ndim:
+        return x
+    return x.view(*x.shape, *(1,) * (ndim - x.ndim))
 
 
 def estimate_cost_of_sequence(
@@ -1594,7 +1637,6 @@ def add_cudnn_error_hint(func: Callable[P, X]) -> Callable[P, X]:
         a decorated function
     """
 
-    # docstr-coverage: excused `wrapped`
     @functools.wraps(func)
     def wrapped(*args: P.args, **kwargs: P.kwargs) -> X:
         try:
@@ -1667,12 +1709,10 @@ def circular_correlation(a: FloatTensor, b: FloatTensor) -> FloatTensor:
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
 
 
-# docstr-coverage:excused `overload`
 @overload
 def merge_kwargs(kwargs: Sequence[OptionalKwargs], **extra_kwargs: Any | None) -> Sequence[OptionalKwargs]: ...
 
 
-# docstr-coverage:excused `overload`
 @overload
 def merge_kwargs(kwargs: OptionalKwargs, **extra_kwargs: Any | None) -> OptionalKwargs: ...
 
@@ -1705,3 +1745,74 @@ def merge_kwargs(kwargs: OneOrManyOptionalKwargs, **extra_kwargs: Any | None) ->
             raise ValueError(f"Found inconsistency for {key=} : {extra_kwargs[key]=} vs. {kwargs[key]=}")
         kwargs[key] = value
     return kwargs
+
+
+def broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...]:
+    """Determine the common shape of the given index shapes.
+
+    :param shapes: the shapes of the index tensors; they must have the same number of
+        dimensions, cf. :func:`~pykeen.utils.pad_trailing_dims`
+
+    :returns: the broadcasted shape
+
+    :raises ValueError: if the shapes are not broadcastable
+    """
+    # note: this is equivalent to torch.broadcast_shapes for equal-ndim shapes, but about an order of magnitude
+    # faster, and scoring constructs one batch per call
+    materialized = list(shapes)
+    result = []
+    for sizes in zip(*materialized, strict=True):
+        if len(set(sizes) - {1}) > 1:
+            raise ValueError(f"Cannot broadcast index shapes {materialized}")
+        result.append(max(sizes))
+    return tuple(result)
+
+
+@overload
+def parallel_prefix_unsqueeze(x: Sequence[FloatTensor], ndim: int) -> Sequence[FloatTensor]: ...
+
+
+@overload
+def parallel_prefix_unsqueeze(x: FloatTensor, ndim: int) -> FloatTensor: ...
+
+
+def parallel_prefix_unsqueeze(x: FloatTensor | Sequence[FloatTensor], ndim: int) -> FloatTensor | Sequence[FloatTensor]:
+    """Prepend the given number of singleton dimensions to all representations."""
+    # note: a single view adds all leading singleton dimensions at once; prepending them is always
+    # stride-expressible, so this works for non-contiguous (e.g., transposed or expanded) inputs, too
+    prefix = (1,) * ndim
+    if not isinstance(x, Sequence):
+        return x.view(prefix + x.shape)
+    return cast(Sequence[FloatTensor], [xx.view(prefix + xx.shape) for xx in x])
+
+
+def prefix_unsqueeze_target(
+    target: Target,
+    ndim: int,
+    h: HeadRepresentation,
+    r: RelationRepresentation,
+    t: TailRepresentation,
+) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
+    """Prepend batch dimensions to the target's representations.
+
+    When the same candidates are scored for each batch element, the target's representations are looked up once,
+    with shape ``(num, *dims)``. They need the batch dimensions prepended to broadcast against the other two
+    positions, which have shape ``(*batch_shape, 1, *dims)``.
+
+    :param target: the target position
+    :param ndim: the number of batch dimensions to prepend
+    :param h: the head representations
+    :param r: the relation representations
+    :param t: the tail representations
+
+    :raises ValueError: if the target is invalid
+
+    :return: the representations, with the target's ones unsqueezed
+    """
+    if target == LABEL_HEAD:
+        return parallel_prefix_unsqueeze(h, ndim=ndim), r, t
+    if target == LABEL_RELATION:
+        return h, parallel_prefix_unsqueeze(r, ndim=ndim), t
+    if target == LABEL_TAIL:
+        return h, r, parallel_prefix_unsqueeze(t, ndim=ndim)
+    raise ValueError(f"Unknown target={target}")

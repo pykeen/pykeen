@@ -165,7 +165,7 @@ __all__ = [
 
 #: A resolver for representations
 representation_resolver: ClassResolver[Representation] = ClassResolver.from_subclasses(
-    base=Representation,
+    base=Representation,  # type: ignore[type-abstract]
     default=Embedding,
     skip={
         CachedTextRepresentation,

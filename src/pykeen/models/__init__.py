@@ -55,6 +55,7 @@ from .mocks import FixedModel
 from .multimodal import ComplExLiteral, DistMultLiteral, DistMultLiteralGated, LiteralModel
 from .nbase import ERModel, _NewAbstractModel
 from .resolve import make_model, make_model_cls
+from .scoring import Indices, OptionalIndices, ScoringBatch, TargetScoringBatch, TripleScoringBatch
 from .unimodal import (
     CP,
     ERMLP,
@@ -98,6 +99,12 @@ __all__ = [
     "InductiveERModel",
     "LiteralModel",
     "EvaluationOnlyModel",
+    # Scoring
+    "ScoringBatch",
+    "TargetScoringBatch",
+    "TripleScoringBatch",
+    "Indices",
+    "OptionalIndices",
     # Concrete Models
     "AutoSF",
     "BoxE",
@@ -152,16 +159,16 @@ __all__ = [
 
 #: A resolver for knowledge graph embedding models
 model_resolver: ClassResolver[Model] = ClassResolver.from_subclasses(
-    base=Model,
+    base=Model,  # type: ignore[type-abstract]
     skip={
         # Abstract Models
-        _NewAbstractModel,
+        _NewAbstractModel,  # type: ignore[type-abstract]
         # We might be able to relax this later
         ERModel,
         InductiveERModel,
         LiteralModel,
         # baseline models behave differently
-        EvaluationOnlyModel,
-        *get_subclasses(EvaluationOnlyModel),
+        EvaluationOnlyModel,  # type: ignore[type-abstract]
+        *get_subclasses(EvaluationOnlyModel),  # type: ignore[type-abstract]
     },
 )

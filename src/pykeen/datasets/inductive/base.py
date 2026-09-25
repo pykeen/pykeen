@@ -55,7 +55,6 @@ class InductiveDataset(DatasetBase):
     #: from the reference factory, since it is declared up-front by the dataset rather than by its files.
     create_inverse_triples: bool = True
 
-    # docstr-coverage: inherited
     @classmethod
     def _eager_cls(cls) -> type[DatasetBase]:  # noqa: D102
         return EagerInductiveDataset
@@ -259,7 +258,6 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
             load_triples_kwargs=load_triples_kwargs,
         )
 
-    # docstr-coverage: inherited
     def _cache_sub_directories(self) -> Iterable[str]:  # noqa: D102
         yield from super()._cache_sub_directories()
         # add v1 / v2 / v3 / v4 for inductive splits if available

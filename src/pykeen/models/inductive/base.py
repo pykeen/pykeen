@@ -105,7 +105,6 @@ class InductiveERModel(ERModel):
         self._mode_to_representations[key] = nn.ModuleList(representation).to(self.device)
         return old
 
-    # docstr-coverage: inherited
     def _get_entity_representations_from_inductive_mode(
         self, *, mode: InductiveMode | None
     ) -> Sequence[Representation]:  # noqa: D102
@@ -118,6 +117,5 @@ class InductiveERModel(ERModel):
             return self._mode_to_representations[key]
         raise ValueError(f"{self.__class__.__name__} does not support mode={mode}")
 
-    # docstr-coverage: inherited
     def _get_entity_len(self, *, mode: InductiveMode | None) -> int:  # noqa: D102
         return self._get_entity_representations_from_inductive_mode(mode=mode)[0].max_id
