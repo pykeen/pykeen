@@ -3,12 +3,12 @@
 import tarfile
 from collections.abc import Iterable
 from pathlib import Path
-from urllib.request import urlretrieve
 
 import click
 import pandas as pd
 from docdata import parse_docdata
 from more_click import verbose_option
+from pystow.utils import download
 
 from .base import TabbedDataset
 from ..typing import TorchRandomHint
@@ -70,8 +70,8 @@ class CKG(TabbedDataset):
 
     def _iterate_dataframes(self) -> Iterable[pd.DataFrame]:
         archive_path = self.cache_root / "data.tar.gz"
-        if not archive_path.exists():
-            urlretrieve(URL, archive_path)  # noqa:S310
+        # note: pystow removes a partially downloaded archive on failure, so an interrupted download is retried
+        download(url=URL, path=archive_path, force=False)
         with tarfile.TarFile.open(archive_path) as tar_file:
             if tar_file is None:
                 raise ValueError
