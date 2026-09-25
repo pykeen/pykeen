@@ -191,3 +191,35 @@ class LabelSmoothingTest(unittest.TestCase):
         np.testing.assert_allclose(smooth_labels[: self.batch_size], exp_true, rtol=self.relative_tolerance)
         exp_false = self.epsilon / (self.num_entities - 1.0)
         np.testing.assert_allclose(smooth_labels[self.batch_size :], exp_false, rtol=self.relative_tolerance)
+
+    def test_epsilon_too_large(self):
+        """Test that epsilon > 1.0 raises ValueError."""
+        labels = torch.zeros(self.batch_size, self.num_entities)
+        for i in range(self.batch_size):
+            labels[i, self.random.randint(self.num_entities)] = 1.0
+        with self.assertRaises(ValueError) as context:
+            apply_label_smoothing(labels=labels, epsilon=1.5, num_classes=self.num_entities)
+        self.assertIn("epsilon must be <= 1.0", str(context.exception))
+
+    def test_num_classes_too_small(self):
+        """Test that num_classes < 2 raises ValueError."""
+        labels = torch.zeros(self.batch_size, 1)
+        labels[0, 0] = 1.0
+        with self.assertRaises(ValueError) as context:
+            apply_label_smoothing(labels=labels, epsilon=0.1, num_classes=1)
+        self.assertIn("num_classes must be at least 2", str(context.exception))
+
+    def test_valid_epsilon_boundary(self):
+        """Test that epsilon=1.0 works correctly (edge case)."""
+        labels = torch.zeros(self.batch_size, self.num_entities)
+        for i in range(self.batch_size):
+            labels[i, self.random.randint(self.num_entities)] = 1.0
+        # epsilon=1.0 is the boundary - all probability goes to non-target classes
+        smooth_labels = apply_label_smoothing(labels=labels, epsilon=1.0, num_classes=self.num_entities)
+        # Each row should sum to 1.0
+        np.testing.assert_allclose(torch.sum(smooth_labels, dim=1).numpy(), 1.0, rtol=self.relative_tolerance)
+        # Original target class should now be 0
+        for i in range(self.batch_size):
+            row = smooth_labels[i]
+            positive_indices = (labels[i] == 1.0).nonzero(as_tuple=True)[0]
+            self.assertEqual(row[positive_indices[0]].item(), 0.0)
