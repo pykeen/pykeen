@@ -192,7 +192,7 @@ same compared to running uninterrupted without checkpoints, also for the evaluat
 To show how to use the checkpoint functionality without the pipeline, we define a KGEM first:
 
 .. literalinclude:: ../examples/howto/checkpoints.py
-    :lines: 168-179
+    :lines: 168-178
 
 At this point we have a model, dataset and optimizer all setup in a training loop and are ready to train the model with
 the ``training_loop``'s method :func:`~pykeen.training.TrainingLoop.train`. To enable checkpoints all you have to do is
@@ -208,7 +208,7 @@ e.g. ``~/.data/pykeen/checkpoints``.
 Here is an example:
 
 .. literalinclude:: ../examples/howto/checkpoints.py
-    :lines: 182-186
+    :lines: 181-185
 
 With this code we have started the training loop with the above defined KGEM. The training loop will save a checkpoint
 in the ``my_checkpoint.pt`` file, which will be saved in the ``~/.data/pykeen/checkpoints/`` directory, since we haven't
@@ -228,7 +228,7 @@ above training loop finished successfully after 1000 epochs, but you would like 
 for 2000 epochs. All you have have to do is to change the argument ``num_epochs`` in the above code to:
 
 .. literalinclude:: ../examples/howto/checkpoints.py
-    :lines: 189-193
+    :lines: 188-192
 
 and now the training loop will resume from the state at 1000 epochs and continue to train until 2000 epochs.
 
@@ -236,7 +236,7 @@ As shown in :ref:`failure_checkpoints_how_to`, you can also save checkpoints onl
 fails. To do this you just have to set the argument `checkpoint_on_failure=True`, like:
 
 .. literalinclude:: ../examples/howto/checkpoints.py
-    :lines: 196-200
+    :lines: 195-199
 
 This code will save a checkpoint in case the training loop fails. Note how we also chose a new checkpoint directory by
 setting the `checkpoint_directory` argument to ``/my/secret/dir``.

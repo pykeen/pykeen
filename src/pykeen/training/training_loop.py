@@ -1,14 +1,14 @@
 """Training loops for KGE models using multi-modal information."""
 
+import functools
 import gc
-import inspect
 import logging
 import pathlib
 import pickle
 import random
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
@@ -51,6 +51,8 @@ __all__ = [
     "TrainingLoop",
     "NonFiniteLossError",
     "SubBatchingNotSupportedError",
+    "OptimizerNotRecreatableError",
+    "OptimizerClearedError",
 ]
 
 logger = logging.getLogger(__name__)
@@ -98,29 +100,43 @@ class SubBatchingNotSupportedError(NotImplementedError):
         )
 
 
-def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
-    optimizer_kwargs = optimizer.state_dict()
-    return {
-        key: value for key, value in optimizer_kwargs["param_groups"][0].items() if key not in ["params", "initial_lr"]
-    }
+class OptimizerNotRecreatableError(ValueError):
+    """An exception raised when a pre-instantiated optimizer or LR scheduler would need to be re-created."""
 
 
-def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
-    # note: this seems to be a pretty unsafe method to derive __init__ kwargs...
-    init_parameters = inspect.signature(lr_scheduler.__init__).parameters
-    return {
-        key: value
-        for key, value in lr_scheduler.state_dict().items()
-        if key not in {"last_epoch", "optimizer"} and key in init_parameters
-    }
+class OptimizerClearedError(ValueError):
+    """An exception raised when the optimizer is required, but has been cleared."""
+
+
+def _make_optimizer_and_lr_scheduler(
+    model: Model,
+    *,
+    optimizer: HintOrType[Optimizer],
+    optimizer_kwargs: OptionalKwargs,
+    lr_scheduler: HintOrType[LRScheduler],
+    lr_scheduler_kwargs: OptionalKwargs,
+) -> tuple[Optimizer, LRScheduler | None]:
+    """Create an optimizer for the model's parameters, and optionally an LR scheduler for this optimizer."""
+    optimizer_instance = optimizer_resolver.make(optimizer, optimizer_kwargs, params=model.get_grad_params())
+    if lr_scheduler is None:
+        return optimizer_instance, None
+    lr_scheduler_instance = lr_scheduler_resolver.make(lr_scheduler, lr_scheduler_kwargs, optimizer=optimizer_instance)
+    return optimizer_instance, lr_scheduler_instance
 
 
 class TrainingLoop(Generic[BatchType], ABC):
     """A training loop."""
 
-    lr_scheduler: LRScheduler | None
     model: Model
-    optimizer: Optimizer
+
+    optimizer: Optimizer | None
+    lr_scheduler: LRScheduler | None
+
+    #: creates a fresh optimizer and LR scheduler for a given model; None if they cannot be re-created
+    _optimizer_factory: Callable[[Model], tuple[Optimizer, LRScheduler | None]] | None
+
+    #: whether the current optimizer has already been used for training
+    _optimizer_used: bool
 
     losses_per_epochs: list[float]
 
@@ -158,10 +174,13 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         :param model: The model to train
         :param triples_factory: The training triples factory
-        :param optimizer: The optimizer to use while training the model
+        :param optimizer: The optimizer to use while training the model. A pre-instantiated optimizer can only be used
+            for a single fresh training run; pass its class and `optimizer_kwargs` instead to allow re-creating it for
+            subsequent fresh runs.
         :param optimizer_kwargs: additional keyword-based parameters to instantiate the optimizer (if necessary).
             `params` will be added automatically based on the `model`.
-        :param lr_scheduler: The learning rate scheduler you want to use while training the model
+        :param lr_scheduler: The learning rate scheduler you want to use while training the model. The same restriction
+            as for pre-instantiated optimizers applies.
         :param lr_scheduler_kwargs: additional keyword-based parameters to instantiate the LR scheduler (if necessary).
             `optimizer` will be added automatically.
         :param automatic_memory_optimization: bool Whether to automatically optimize the sub-batch size during training
@@ -173,10 +192,20 @@ class TrainingLoop(Generic[BatchType], ABC):
         :param loss_weighter_kwargs: Parameters for the method to determine loss weights.
         """
         self.model = model
-        self.optimizer = optimizer_resolver.make(optimizer, pos_kwargs=optimizer_kwargs, params=model.get_grad_params())
-        self.lr_scheduler = lr_scheduler_resolver.make_safe(
-            lr_scheduler, pos_kwargs=lr_scheduler_kwargs, optimizer=self.optimizer
+        factory = functools.partial(
+            _make_optimizer_and_lr_scheduler,
+            optimizer=optimizer,
+            optimizer_kwargs=optimizer_kwargs,
+            lr_scheduler=lr_scheduler,
+            lr_scheduler_kwargs=lr_scheduler_kwargs,
         )
+        self.optimizer, self.lr_scheduler = factory(model)
+        self._optimizer_used = False
+        # pre-instantiated optimizers and LR schedulers are used as-is, but cannot be re-created, since their
+        # constructor parameters cannot be reliably recovered from the instance. Not keeping the factory also ensures
+        # that clearing the optimizer releases the instances.
+        pre_instantiated = isinstance(optimizer, Optimizer) or isinstance(lr_scheduler, LRScheduler)
+        self._optimizer_factory = None if pre_instantiated else factory
         self.losses_per_epochs = []
         self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
@@ -207,6 +236,21 @@ class TrainingLoop(Generic[BatchType], ABC):
     def loss(self):  # noqa: D401
         """The loss used by the model."""
         return self.model.loss
+
+    def _reset_optimizer(self) -> None:
+        """Create a fresh optimizer and LR scheduler for the model's current parameters.
+
+        :raises OptimizerNotRecreatableError: if the optimizer or LR scheduler were passed pre-instantiated, and thus
+            cannot be re-created
+        """
+        if self._optimizer_factory is None:
+            raise OptimizerNotRecreatableError(
+                "Cannot create a fresh optimizer, since the optimizer or LR scheduler were passed pre-instantiated, "
+                "and have already been used or cleared. Pass them as class and kwargs instead, to allow re-creating "
+                "them for fresh training runs.",
+            )
+        self.optimizer, self.lr_scheduler = self._optimizer_factory(self.model)
+        self._optimizer_used = False
 
     @property
     def checksum(self) -> str:  # noqa: D401
@@ -303,6 +347,10 @@ class TrainingLoop(Generic[BatchType], ABC):
             https://pytorch.org/docs/stable/notes/cuda.html#cuda-memory-pinning
 
         :returns: The losses per epoch.
+
+        :raises OptimizerClearedError: if training should be continued, but the optimizer has been cleared
+        :raises OptimizerNotRecreatableError: if a fresh training run would need to re-create a pre-instantiated
+            optimizer or LR scheduler
         """
         self._should_stop = False
 
@@ -363,6 +411,15 @@ class TrainingLoop(Generic[BatchType], ABC):
         if getattr(stopper, "stopped", False):
             result: list[float] | None = self.losses_per_epochs
         else:
+            # Force weight re-initialization and a fresh optimizer if training continuation is not explicitly requested.
+            if not continue_training:
+                self.model.reset_parameters_()
+                if self.optimizer is None or self._optimizer_used:
+                    self._reset_optimizer()
+            elif self.optimizer is None:
+                raise OptimizerClearedError("Cannot continue training after the optimizer has been cleared.")
+            self._optimizer_used = True
+
             # send model to device before going into the internal training loop
             self.model = self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
 
@@ -492,6 +549,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         del batch
         del batches
         gc.collect()
+        if self.optimizer is None:
+            raise OptimizerClearedError("The optimizer has been cleared.")
         self.optimizer.zero_grad()
         self._free_graph_and_cache()
 
@@ -528,8 +587,6 @@ class TrainingLoop(Generic[BatchType], ABC):
         pin_memory: bool = True,
     ) -> list[float] | None:
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
-        if self.optimizer is None:
-            raise ValueError("optimizer must be set before running _train()")
         # When using early stopping models have to be saved separately at the best epoch, since the training loop will
         # due to the patience continue to train after the best epoch and thus alter the model
         # -> the temporay file has to be created outside, which we assert here
@@ -604,27 +661,6 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         if drop_last is None:
             drop_last = model_contains_batch_norm
-
-        # Force weight initialization if training continuation is not explicitly requested.
-        if not continue_training:
-            # Reset the weights
-            self.model.reset_parameters_()
-            # afterwards, some parameters may be on the wrong device
-            self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
-
-            # Create new optimizer
-            optimizer_kwargs = _get_optimizer_kwargs(self.optimizer)
-            self.optimizer = self.optimizer.__class__(
-                params=self.model.get_grad_params(),
-                **optimizer_kwargs,
-            )
-
-            if self.lr_scheduler is not None:
-                # Create a new lr scheduler and add the optimizer
-                lr_scheduler_kwargs = _get_lr_scheduler_kwargs(self.lr_scheduler)
-                self.lr_scheduler = self.lr_scheduler.__class__(optimizer=self.optimizer, **lr_scheduler_kwargs)
-        elif not self.optimizer.state:
-            raise ValueError("Cannot continue_training without being trained once.")
 
         # Ensure the model is on the correct device
         self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
@@ -1232,12 +1268,12 @@ class TrainingLoop(Generic[BatchType], ABC):
         :returns: Temporary file path of the best epoch model and the best epoch when using early stoppers, None
             otherwise.
 
-        :raises ValueError: If the internal optimizer is none
         :raises CheckpointMismatchError: If the given checkpoint file has a non-matching checksum, i.e. it was saved
             with a different configuration.
         """
+        # the optimizer may have been cleared after a previous run; its state is restored from the checkpoint
         if self.optimizer is None:
-            raise ValueError
+            self._reset_optimizer()
 
         logger.info(f"=> loading checkpoint '{path}'")
         checkpoint = torch.load(path, weights_only=False)
@@ -1303,6 +1339,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         self._epoch = checkpoint["epoch"]
         self.losses_per_epochs = checkpoint["loss"]
         self.model.load_state_dict(checkpoint["model_state_dict"])
+        if self.optimizer is None:
+            raise OptimizerClearedError("The optimizer has been cleared.")
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if self.lr_scheduler is not None:
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
