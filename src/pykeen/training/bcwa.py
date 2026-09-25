@@ -22,11 +22,6 @@ __all__ = [
 ]
 
 
-def _get_ids(batch: BatchCWABatch) -> list[LongTensor]:
-    """Get the batch's unique IDs, in the order of the columns."""
-    return [batch["heads"], batch["relations"], batch["tails"]]
-
-
 class MissingBatchTargetsError(ValueError):
     """Raised if a BCWA batch does not contain the positive triples, i.e., was not created by the BCWA collator."""
 
@@ -294,19 +289,15 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
                 f"{self.__class__.__name__} requires batches with positives, as created by {BatchCWACollator.__name__}."
             )
 
-        ids = _get_ids(batch)
         positives = batch["positives"]
         weights = batch.get("weights")
 
-        # calculate scores, shape: (num_heads, num_relations, num_tails)
+        # calculate scores for all combinations, shape: (num_heads, num_relations, num_tails)
         device = self.model.device
-        h_indices, r_indices, t_indices = (
-            x.to(device=device).view(*(-1 if i == j else 1 for j in range(3))) for i, x in enumerate(ids)
-        )
         scores: FloatTensor = self.model(
-            h_indices=h_indices,
-            r_indices=r_indices,
-            t_indices=t_indices,
+            h_indices=batch["heads"].to(device=device).view(-1, 1, 1),
+            r_indices=batch["relations"].to(device=device).view(1, -1, 1),
+            t_indices=batch["tails"].to(device=device).view(1, 1, -1),
             slice_size=slice_size,
             slice_dim=self.target,
             mode=self.mode,
