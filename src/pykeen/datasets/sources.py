@@ -237,8 +237,8 @@ class TarArchiveSource(ArchiveSource):
                 tar_file.extractall(path=self.cache_root)  # noqa:S202
                 return
             for member in self.members.values():
-                # tarfile does not like pathlib
-                tar_file.extract(str(member), self.cache_root)
+                # paths inside a tar file always use POSIX separators, even on Windows
+                tar_file.extract(member.as_posix(), self.cache_root)
 
 
 class ZipArchiveSource(ArchiveSource):
