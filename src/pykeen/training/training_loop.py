@@ -44,7 +44,7 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker, tracker_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.weights import LossWeighter
-from ..typing import FloatTensor, InductiveMode
+from ..typing import COLUMN_RELATION, FloatTensor, InductiveMode, TargetColumn
 from ..utils import format_relative_comparison, get_batchnorm_modules, get_preferred_device, normalize_string
 
 __all__ = [
@@ -106,6 +106,20 @@ class OptimizerNotRecreatableError(ValueError):
 
 class OptimizerClearedError(ValueError):
     """An exception raised when the optimizer is required, but has been cleared."""
+
+
+def _get_num_targets(model: Model, target: TargetColumn, mode: InductiveMode | None) -> int:
+    """Get the number of candidates for the target column.
+
+    :param model: The model.
+    :param target: The target column.
+    :param mode: The inductive mode, or None in the transductive setting.
+
+    :returns: The number of relations for the relation column, and otherwise the number of entities in the given mode.
+    """
+    if target == COLUMN_RELATION:
+        return model.num_relations
+    return model._get_entity_len(mode=mode)
 
 
 def _make_optimizer_and_lr_scheduler(
@@ -1019,7 +1033,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         """
         # Since the batch_size search with size 1, i.e., one tuple scored on all entities,
         # must have failed to start slice_size search, we start with trying half the entities.
-        return ceil(self.model.num_entities / 2)
+        return ceil(self.model._get_entity_len(mode=self.mode) / 2)
 
     def _slice_size_search(
         self,

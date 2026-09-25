@@ -1,6 +1,10 @@
 """Tests for training loops."""
 
+import pytest
+
+from pykeen.datasets import Nations
 from pykeen.losses import BCEWithLogitsLoss, CrossEntropyLoss, MarginRankingLoss, NSSALoss, SoftplusLoss
+from pykeen.models import TransE
 from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
 from pykeen.training import BatchCWATrainingLoop, LCWATrainingLoop, SLCWATrainingLoop, SymmetricLCWATrainingLoop
 from tests.test_training import cases
@@ -143,3 +147,22 @@ class CrossEntropyLossRelationBatchCWATrainingLoopTestCase(cases.TrainingLoopTes
     cls = BatchCWATrainingLoop
     loss_cls = CrossEntropyLoss
     kwargs = {"target": "relation"}
+
+
+@pytest.mark.parametrize(
+    ("cls", "target", "batch_size", "expected"),
+    [
+        # Nations has 14 entities and 55 relations
+        (LCWATrainingLoop, "tail", 32, 7),
+        (LCWATrainingLoop, "relation", 32, 28),
+        (BatchCWATrainingLoop, "tail", 32, 7),
+        (BatchCWATrainingLoop, "relation", 32, 16),
+        (BatchCWATrainingLoop, "relation", 100, 28),
+    ],
+)
+def test_initial_slice_size(cls: type, target: str, batch_size: int, expected: int) -> None:
+    """Test that the slice size search starts at half the number of candidates along the slicing dimension."""
+    triples_factory = Nations().training
+    model = TransE(triples_factory=triples_factory)
+    loop = cls(model=model, triples_factory=triples_factory, target=target)
+    assert loop._get_initial_slice_size(batch_size=batch_size) == expected

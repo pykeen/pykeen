@@ -2,12 +2,13 @@
 
 import logging
 from collections.abc import Callable
+from math import ceil
 from typing import ClassVar
 
 from torch.nn import functional
 from torch.utils.data import DataLoader, TensorDataset
 
-from .training_loop import TrainingLoop
+from .training_loop import TrainingLoop, _get_num_targets
 from ..constants import get_target_column
 from ..losses import Loss
 from ..models import Model
@@ -70,7 +71,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
 
         # Explicit mentioning of num_transductive_entities since in the evaluation there will be a different number
         # of total entities from another inductive inference factory
-        self.num_targets = self.model.num_relations if self.target == 1 else self.model._get_entity_len(mode=self.mode)
+        self.num_targets = _get_num_targets(model=self.model, target=self.target, mode=self.mode)
 
     def _create_training_data_loader(
         self, triples_factory: CoreTriplesFactory, sampler: str | None, **kwargs
@@ -150,6 +151,10 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
             label_smoothing=label_smoothing,
             slice_size=slice_size,
         )
+
+    def _get_initial_slice_size(self, batch_size: int) -> int:  # noqa: D102
+        # slicing is along the target
+        return ceil(self.num_targets / 2)
 
 
 # note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one

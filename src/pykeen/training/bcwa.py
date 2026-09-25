@@ -7,13 +7,13 @@ from typing import Any, ClassVar, Literal
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from .training_loop import TrainingLoop
+from .training_loop import TrainingLoop, _get_num_targets
 from ..constants import get_target_column
 from ..models import ERModel
 from ..triples import CoreTriplesFactory
 from ..triples.instances import BatchCWABatch, SubGraphSLCWAInstances
 from ..triples.weights import LossWeighter, loss_weighter_resolver
-from ..typing import COLUMN_HEAD, COLUMN_RELATION, FloatTensor, LongTensor, MappedTriples, TargetHint
+from ..typing import COLUMN_HEAD, FloatTensor, LongTensor, MappedTriples, TargetHint
 
 __all__ = [
     "BatchCWATrainingLoop",
@@ -323,5 +323,5 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
 
     def _get_initial_slice_size(self, batch_size: int) -> int:  # noqa: D102
         # slicing is along the batch's unique targets, of which there are at most batch_size
-        num_targets = self.model.num_relations if self.target == COLUMN_RELATION else self.model.num_entities
+        num_targets = _get_num_targets(model=self.model, target=self.target, mode=self.mode)
         return ceil(min(batch_size, num_targets) / 2)
