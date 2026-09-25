@@ -150,19 +150,34 @@ class CrossEntropyLossRelationBatchCWATrainingLoopTestCase(cases.TrainingLoopTes
 
 
 @pytest.mark.parametrize(
-    ("cls", "target", "batch_size", "expected"),
+    ("target", "expected"),
     [
         # Nations has 14 entities and 55 relations
-        (LCWATrainingLoop, "tail", 32, 7),
-        (LCWATrainingLoop, "relation", 32, 28),
-        (BatchCWATrainingLoop, "tail", 32, 7),
-        (BatchCWATrainingLoop, "relation", 32, 16),
-        (BatchCWATrainingLoop, "relation", 100, 28),
+        ("head", 7),
+        ("relation", 28),
+        ("tail", 7),
     ],
 )
-def test_initial_slice_size(cls: type, target: str, batch_size: int, expected: int) -> None:
-    """Test that the slice size search starts at half the number of candidates along the slicing dimension."""
+def test_lcwa_initial_slice_size(target: str, expected: int) -> None:
+    """Test that the slice size search starts at half the number of candidates for the target."""
     triples_factory = Nations().training
     model = TransE(triples_factory=triples_factory)
-    loop = cls(model=model, triples_factory=triples_factory, target=target)
+    loop = LCWATrainingLoop(model=model, triples_factory=triples_factory, target=target)
+    assert loop._get_initial_slice_size(batch_size=32) == expected
+
+
+@pytest.mark.parametrize(
+    ("target", "batch_size", "expected"),
+    [
+        # Nations has 14 entities and 55 relations
+        ("tail", 32, 7),
+        ("relation", 32, 16),
+        ("relation", 100, 28),
+    ],
+)
+def test_bcwa_initial_slice_size(target: str, batch_size: int, expected: int) -> None:
+    """Test that the slice size search starts at half the number of the batch's candidates for the target."""
+    triples_factory = Nations().training
+    model = TransE(triples_factory=triples_factory)
+    loop = BatchCWATrainingLoop(model=model, triples_factory=triples_factory, target=target)
     assert loop._get_initial_slice_size(batch_size=batch_size) == expected

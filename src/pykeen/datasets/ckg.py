@@ -3,12 +3,12 @@
 import tarfile
 from collections.abc import Iterable
 from pathlib import Path
-from urllib.request import urlretrieve
 
 import click
 import pandas as pd
 from docdata import parse_docdata
 from more_click import verbose_option
+from pystow.utils import download
 
 from .base import TabbedDataset
 from ..typing import TorchRandomHint
@@ -56,22 +56,27 @@ class CKG(TabbedDataset):
             random_state=random_state,
             **kwargs,
         )
-        self.preloaded_path = self.cache_root.joinpath("preloaded.tsv.gz")
+
+    @property
+    def preloaded_path(self) -> Path:
+        """The path of the concatenated dataframe, which is cached across runs."""
+        return self.cache_root.joinpath("preloaded.tsv.gz")
 
     def _get_path(self) -> Path | None:
         return self.preloaded_path
 
     def _get_df(self) -> pd.DataFrame:
-        if self.preloaded_path.exists():
-            return pd.read_csv(self.preloaded_path, sep="\t", dtype=str)
+        path = self.preloaded_path
+        if path.exists():
+            return pd.read_csv(path, sep="\t", dtype=str)
         df = pd.concat(self._iterate_dataframes())
-        df.to_csv(self.preloaded_path, sep="\t", index=False)
+        df.to_csv(path, sep="\t", index=False)
         return df
 
     def _iterate_dataframes(self) -> Iterable[pd.DataFrame]:
         archive_path = self.cache_root / "data.tar.gz"
-        if not archive_path.exists():
-            urlretrieve(URL, archive_path)  # noqa:S310
+        # note: pystow removes a partially downloaded archive on failure, so an interrupted download is retried
+        download(url=URL, path=archive_path, force=False)
         with tarfile.TarFile.open(archive_path) as tar_file:
             if tar_file is None:
                 raise ValueError
