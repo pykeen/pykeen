@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import zipfile
-from collections.abc import Collection, Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
 from typing import Any, ClassVar, Self, cast
 
 import click
@@ -36,6 +36,7 @@ from ..utils import ExtraReprMixin, format_relative_comparison, normalize_path, 
 
 __all__ = [
     # Base classes
+    "LazyFactoryMixin",
     "Dataset",
     "EagerDataset",
     "LazyDataset",
@@ -149,6 +150,73 @@ def _reorder_columns(df: pd.DataFrame, usecols: Sequence[Any] | None) -> pd.Data
         return df
     logger.info("reordering columns: %s", usecols)
     return df[usecols]
+
+
+class LazyFactoryMixin:
+    """Lazily materialize a mapping of named triples factories.
+
+    This is the single lazy-loading primitive: subclasses implement ``_load_factories``, which is called at
+    most once, and everything else goes through :attr:`factory_dict`.
+    """
+
+    #: The loaded factories, or ``None`` if they have not been loaded yet
+    _factories: MutableMapping[str, CoreTriplesFactory] | None = None
+    #: The directory in which the cached data is stored
+    cache_root: pathlib.Path
+
+    def __init__(
+        self,
+        *,
+        eager: bool = False,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Initialize the lazy dataset.
+
+        :param eager: Whether to load the data immediately rather than on first access.
+        :param metadata: Additional metadata to store inside the dataset.
+        """
+        self.metadata = metadata
+        if eager:
+            _ = self.factory_dict
+
+    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:
+        """Load all triples factories of this dataset.
+
+        :returns: A mapping from split name to factory, omitting splits the dataset does not provide.
+
+        :raises NotImplementedError: If a subclass does not implement this method.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} does not implement `_load_factories`.")
+
+    @property
+    def _loaded(self) -> bool:
+        """Whether the factories have already been loaded."""
+        return self._factories is not None
+
+    @property
+    def factory_dict(self) -> Mapping[str, CoreTriplesFactory]:
+        """Return the triples factories, loading them on first access."""
+        if self._factories is None:
+            self._factories = dict(self._load_factories())
+        return self._factories
+
+    def _help_cache(self, cache_root: None | str | pathlib.Path) -> pathlib.Path:
+        """Get the appropriate cache root directory.
+
+        :param cache_root: If none is passed, defaults to a subfolder of the PyKEEN home directory defined in
+            :data:`~pykeen.constants.PYKEEN_HOME`. The subfolder is named based on the class inheriting from
+            :class:`~pykeen.datasets.base.Dataset`.
+
+        :returns: A path object for the calculated cache root directory
+        """
+        cache_root = normalize_path(cache_root, *self._cache_sub_directories(), mkdir=True, default=PYKEEN_DATASETS)
+        logger.debug("using cache root at %s", cache_root.as_uri())
+        return cache_root
+
+    def _cache_sub_directories(self) -> Iterable[str]:
+        """Iterate over appropriate cache sub-directory."""
+        # TODO: use class-resolver normalize?
+        yield self.__class__.__name__.lower()
 
 
 class Dataset(ExtraReprMixin):
@@ -534,74 +602,26 @@ class EagerDataset(Dataset):
         yield f"metadata={self.metadata}"
 
 
-class LazyDataset(Dataset):
-    """A dataset whose training, testing, and optional validation factories are lazily loaded."""
+class LazyDataset(LazyFactoryMixin, Dataset):
+    """A dataset whose training, testing, and optional validation factories are lazily loaded.
 
-    #: The actual instance of the training factory, which is exposed to the user through `training`
-    _training: TriplesFactory | None = None
-    #: The actual instance of the testing factory, which is exposed to the user through `testing`
-    _testing: TriplesFactory | None = None
-    #: The actual instance of the validation factory, which is exposed to the user through `validation`
-    _validation: TriplesFactory | None = None
-    #: The directory in which the cached data is stored
-    cache_root: pathlib.Path
+    Subclasses implement ``_load_factories``, which loads all splits at once.
+    """
 
     @property
     def training(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The training triples factory."""
-        if not self._loaded:
-            self._load()
-        assert self._training is not None
-        return self._training
+        return cast(TriplesFactory, self.factory_dict["training"])
 
     @property
     def testing(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
         """The testing triples factory that shares indices with the training triples factory."""
-        if not self._loaded:
-            self._load()
-        assert self._testing is not None
-        return self._testing
+        return cast(TriplesFactory, self.factory_dict["testing"])
 
     @property
     def validation(self) -> TriplesFactory | None:  # type: ignore[override]  # noqa: D401
         """The validation triples factory that shares indices with the training triples factory."""
-        if not self._loaded:
-            self._load()
-        if not self._loaded_validation:
-            self._load_validation()
-        return self._validation
-
-    @property
-    def _loaded(self) -> bool:
-        return self._training is not None and self._testing is not None
-
-    @property
-    def _loaded_validation(self):
-        return self._validation is not None
-
-    def _load(self) -> None:
-        raise NotImplementedError
-
-    def _load_validation(self) -> None:
-        raise NotImplementedError
-
-    def _help_cache(self, cache_root: None | str | pathlib.Path) -> pathlib.Path:
-        """Get the appropriate cache root directory.
-
-        :param cache_root: If none is passed, defaults to a subfolder of the PyKEEN home directory defined in
-            :data:`~pykeen.constants.PYKEEN_HOME`. The subfolder is named based on the class inheriting from
-            :class:`~pykeen.datasets.base.Dataset`.
-
-        :returns: A path object for the calculated cache root directory
-        """
-        cache_root = normalize_path(cache_root, *self._cache_sub_directories(), mkdir=True, default=PYKEEN_DATASETS)
-        logger.debug("using cache root at %s", cache_root.as_uri())
-        return cache_root
-
-    def _cache_sub_directories(self) -> Iterable[str]:
-        """Iterate over appropriate cache sub-directory."""
-        # TODO: use class-resolver normalize?
-        yield self.__class__.__name__.lower()
+        return cast("TriplesFactory | None", self.factory_dict.get("validation"))
 
 
 class PathDataset(LazyDataset):
@@ -632,10 +652,7 @@ class PathDataset(LazyDataset):
 
         self._create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
-
-        if eager:
-            self._load()
-            self._load_validation()
+        super().__init__(eager=eager)
 
     @classmethod
     def from_paths(
@@ -677,37 +694,27 @@ class PathDataset(LazyDataset):
         """The path of the validation triples file, if any."""
         return self.source.get_manifest().get("validation")
 
-    def _load(self) -> None:
+    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
         paths = self.source.paths()
-        self._training = TriplesFactory.from_path(
+        training = TriplesFactory.from_path(
             path=paths["training"],
             create_inverse_triples=self._create_inverse_triples,
             load_triples_kwargs=self.load_triples_kwargs,
         )
-        self._testing = TriplesFactory.from_path(
-            path=paths["testing"],
-            entity_to_id=self._training.entity_to_id,  # share entity index with training
-            relation_to_id=self._training.relation_to_id,  # share relation index with training
-            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-            create_inverse_triples=False,
-            load_triples_kwargs=self.load_triples_kwargs,
-        )
-
-    def _load_validation(self) -> None:
-        # don't call this function by itself. assumes called through the `validation`
-        # property and the _training factory has already been loaded
-        assert self._training is not None
-        if self.validation_path is None:
-            self._validation = None
-        else:
-            self._validation = TriplesFactory.from_path(
-                path=self.validation_path,
-                entity_to_id=self._training.entity_to_id,  # share entity index with training
-                relation_to_id=self._training.relation_to_id,  # share relation index with training
+        factories: dict[str, CoreTriplesFactory] = {"training": training}
+        for key in ("testing", "validation"):
+            path = paths.get(key)
+            if path is None:
+                continue
+            factories[key] = TriplesFactory.from_path(
+                path=path,
+                entity_to_id=training.entity_to_id,  # share entity index with training
+                relation_to_id=training.relation_to_id,  # share relation index with training
                 # do not explicitly create inverse triples for testing; this is handled by the evaluation code
                 create_inverse_triples=False,
                 load_triples_kwargs=self.load_triples_kwargs,
             )
+        return factories
 
     def __repr__(self) -> str:  # noqa: D105
         return (
@@ -897,31 +904,30 @@ class PackedZipRemoteDataset(LazyDataset):
         self.relative_testing_path = pathlib.PurePath(relative_testing_path)
         self.relative_validation_path = pathlib.PurePath(relative_validation_path)
         self._create_inverse_triples = create_inverse_triples
-        if eager:
-            self._load()
-            self._load_validation()
+        super().__init__(eager=eager)
 
-    def _load(self) -> None:  # noqa: D102
-        self._training = self._load_helper(self.relative_training_path)
-        self._testing = self._load_helper(
-            self.relative_testing_path,
-            entity_to_id=self._training.entity_to_id,
-            relation_to_id=self._training.relation_to_id,
-        )
-
-    def _load_validation(self) -> None:
-        assert self._training is not None
-        self._validation = self._load_helper(
-            self.relative_validation_path,
-            entity_to_id=self._training.entity_to_id,
-            relation_to_id=self._training.relation_to_id,
-        )
+    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
+        training = self._load_helper(self.relative_training_path)
+        return {
+            "training": training,
+            **{
+                key: self._load_helper(
+                    relative_path,
+                    entity_to_id=training.entity_to_id,
+                    relation_to_id=training.relation_to_id,
+                )
+                for key, relative_path in (
+                    ("testing", self.relative_testing_path),
+                    ("validation", self.relative_validation_path),
+                )
+            },
+        }
 
     def _load_helper(
         self,
         relative_path: pathlib.PurePath,
-        entity_to_id: Mapping[str, Any] | None = None,
-        relation_to_id: Mapping[str, Any] | None = None,
+        entity_to_id: Mapping[str, int] | None = None,
+        relation_to_id: Mapping[str, int] | None = None,
     ) -> TriplesFactory:
         if not self.path.is_file():
             if self.url is None:
@@ -991,9 +997,7 @@ class CompressedSingleDataset(LazyDataset):
         self._relative_path = pathlib.PurePosixPath(relative_path)
         self.read_csv_kwargs = read_csv_kwargs or {}
         self.read_csv_kwargs.setdefault("sep", self.delimiter)
-
-        if eager:
-            self._load()
+        super().__init__(eager=eager)
 
     def _get_path(self) -> pathlib.Path:
         """Get the path of the *archive*, which is also used as the dataset's metadata path."""
@@ -1009,7 +1013,7 @@ class CompressedSingleDataset(LazyDataset):
             archive_path=self._get_path(),
         )
 
-    def _load(self) -> None:
+    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
         df = self._get_df()
         tf_path = self._get_path()
         tf = TriplesFactory.from_labeled_triples(
@@ -1017,22 +1021,14 @@ class CompressedSingleDataset(LazyDataset):
             create_inverse_triples=self._create_inverse_triples,
             metadata={"path": tf_path},
         )
-        self._training, self._testing, self._validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(
-                ratios=self.ratios,
-                random_state=self.random_state,
-            ),
-        )
+        training, testing, validation = tf.split(ratios=self.ratios, random_state=self.random_state)
         logger.info("[%s] done splitting data from %s", self.__class__.__name__, tf_path)
+        return {"training": training, "testing": testing, "validation": validation}
 
     def _get_df(self) -> pd.DataFrame:
         path = self._get_source().paths()["data"]
         df = pd.read_csv(path, **self.read_csv_kwargs)
         return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
-
-    def _load_validation(self) -> None:
-        pass  # already loaded by _load()
 
 
 class ZipSingleDataset(CompressedSingleDataset):
@@ -1051,7 +1047,6 @@ class TabbedDataset(LazyDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
     ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
-    _triples_factory: TriplesFactory | None
 
     def __init__(
         self,
@@ -1070,16 +1065,9 @@ class TabbedDataset(LazyDataset):
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         """
         self.cache_root = self._help_cache(cache_root)
-
-        self._triples_factory = None
         self.random_state = random_state
         self._create_inverse_triples = create_inverse_triples
-        self._training = None
-        self._testing = None
-        self._validation = None
-
-        if eager:
-            self._load()
+        super().__init__(eager=eager)
 
     def _get_path(self) -> pathlib.Path | None:
         """Get the path of the data if there's a single file."""
@@ -1087,7 +1075,7 @@ class TabbedDataset(LazyDataset):
     def _get_df(self) -> pd.DataFrame:
         raise NotImplementedError
 
-    def _load(self) -> None:
+    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
         df = self._get_df()
         path = self._get_path()
         tf = TriplesFactory.from_labeled_triples(
@@ -1095,23 +1083,12 @@ class TabbedDataset(LazyDataset):
             create_inverse_triples=self._create_inverse_triples,
             metadata={"path": path} if path else None,
         )
-        self._training, self._testing, self._validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(
-                ratios=self.ratios,
-                random_state=self.random_state,
-            ),
-        )
-
-    def _load_validation(self) -> None:
-        pass  # already loaded by _load()
+        training, testing, validation = tf.split(ratios=self.ratios, random_state=self.random_state)
+        return {"training": training, "testing": testing, "validation": validation}
 
 
 class SingleTabbedDataset(TabbedDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
-
-    ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
-    _triples_factory: TriplesFactory | None
 
     #: URL to the data to download
     url: str
@@ -1140,34 +1117,30 @@ class SingleTabbedDataset(TabbedDataset):
         :param download_kwargs: Keyword arguments to pass through to :func:`pystow.utils.download`.
         :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
 
-        :raises ValueError: if there's no URL specified and there is no data already at the calculated path
         """
+        # note: these are set before `super().__init__`, since an eager load reads them
+        self.url = url
+        self.name = name or name_from_url(url)
+        self.download_kwargs = download_kwargs or {}
+        self.read_csv_kwargs = dict(read_csv_kwargs or {})
+        self.read_csv_kwargs.setdefault("sep", "\t")
+
         super().__init__(
             cache_root=cache_root,
             create_inverse_triples=create_inverse_triples,
             random_state=random_state,
-            eager=False,  # because it gets hooked below
+            eager=eager,
         )
 
-        self.name = name or name_from_url(url)
-
-        self.download_kwargs = download_kwargs or {}
-        self.read_csv_kwargs = read_csv_kwargs or {}
-        self.read_csv_kwargs.setdefault("sep", "\t")
-
-        self.url = url
-        if not self._get_path().is_file() and not self.url:
-            raise ValueError(f"must specify url to download from since path does not exist: {self._get_path()}")
-
-        if eager:
-            self._load()
-
-    def _get_path(self) -> pathlib.Path:
+    def _get_path(self) -> pathlib.Path:  # noqa: D102
         return self.cache_root.joinpath(self.name)
 
-    def _get_df(self) -> pd.DataFrame:
-        if not self._get_path().is_file():
-            logger.info("downloading data from %s to %s", self.url, self._get_path())
-            download(url=self.url, path=self._get_path(), **self.download_kwargs)  # noqa:S310
-        df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
+    def _get_df(self) -> pd.DataFrame:  # noqa: D102
+        path = self._get_path()
+        if not path.is_file():
+            if not self.url:
+                raise ValueError(f"must specify url to download from since path does not exist: {path}")
+            logger.info("downloading data from %s to %s", self.url, path)
+            download(url=self.url, path=path, **self.download_kwargs)  # noqa:S310
+        df = pd.read_csv(path, **self.read_csv_kwargs)
         return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))

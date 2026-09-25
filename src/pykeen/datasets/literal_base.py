@@ -1,10 +1,11 @@
 """Base classes for literal datasets."""
 
 import pathlib
+from collections.abc import Mapping
 from typing import TextIO
 
 from .base import LazyDataset
-from ..triples import TriplesNumericLiteralsFactory
+from ..triples import CoreTriplesFactory, TriplesNumericLiteralsFactory
 
 __all__ = [
     "NumericPathDataset",
@@ -40,34 +41,26 @@ class NumericPathDataset(LazyDataset):
         self.literals_path = literals_path
 
         self._create_inverse_triples = create_inverse_triples
+        super().__init__(eager=eager)
 
-        if eager:
-            self._load()
-            self._load_validation()
-
-    def _load(self) -> None:
-        self._training = self.triples_factory_cls.from_path(
+    def _load_factories(self) -> Mapping[str, CoreTriplesFactory]:  # noqa: D102
+        training = self.triples_factory_cls.from_path(
             path=self.training_path,
             path_to_numeric_triples=self.literals_path,
             create_inverse_triples=self._create_inverse_triples,
         )
-        self._testing = self.triples_factory_cls.from_path(
-            path=self.testing_path,
-            path_to_numeric_triples=self.literals_path,
-            entity_to_id=self._training.entity_to_id,  # share entity index with training
-            relation_to_id=self._training.relation_to_id,  # share relation index with training
-        )
-
-    def _load_validation(self) -> None:
-        # don't call this function by itself. assumes called through the `validation`
-        # property and the _training factory has already been loaded
-        assert self._training is not None
-        self._validation = self.triples_factory_cls.from_path(
-            path=self.validation_path,
-            path_to_numeric_triples=self.literals_path,
-            entity_to_id=self._training.entity_to_id,  # share entity index with training
-            relation_to_id=self._training.relation_to_id,  # share relation index with training
-        )
+        return {
+            "training": training,
+            **{
+                key: self.triples_factory_cls.from_path(
+                    path=path,
+                    path_to_numeric_triples=self.literals_path,
+                    entity_to_id=training.entity_to_id,  # share entity index with training
+                    relation_to_id=training.relation_to_id,  # share relation index with training
+                )
+                for key, path in (("testing", self.testing_path), ("validation", self.validation_path))
+            },
+        }
 
     def __repr__(self) -> str:  # noqa: D105
         return (
