@@ -152,14 +152,20 @@ def at_least_eps(x: FloatTensor) -> FloatTensor:
 
 def resolve_device(device: DeviceHint = None) -> torch.device:
     """Resolve a torch.device given a desired device (string)."""
+    cuda_available = torch.cuda.is_available()
+    mps_available = torch.backends.mps.is_available()
     if device is None or device == "gpu":
-        device = "cuda"
+        if cuda_available:
+            return torch.device("cuda")
+        if mps_available:
+            return torch.device("mps")
+        return torch.device("cpu")
     if isinstance(device, str):
         device = torch.device(device)
-    if device.type == "cuda" and not torch.cuda.is_available():
-        device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+    if device.type == "cuda" and not cuda_available:
+        device = torch.device("mps") if mps_available else torch.device("cpu")
         logger.warning(f"No CUDA devices were available. The model runs on {device.type}.")
-    if device.type == "mps" and not torch.backends.mps.is_available():
+    if device.type == "mps" and not mps_available:
         device = torch.device("cpu")
         logger.warning("MPS was not available. The model runs on CPU")
     return device
@@ -1613,15 +1619,15 @@ def determine_maximum_batch_size(batch_size: int | None, device: torch.device, m
         A maximum batch size.
     """
     if batch_size is None:
-        if device.type == "cuda":
-            batch_size = maximum_batch_size
-        else:
+        if device.type != "cuda":
             batch_size = 32
             logger.warning(
                 f"Using automatic batch size on {device.type=} can cause unexplained out-of-memory crashes. "
                 f"Therefore, we use a conservative small {batch_size=:_}. "
                 f"Performance may be improved by explicitly specifying a larger batch size."
             )
+        else:
+            batch_size = maximum_batch_size
         logger.debug(f"Automatically set maximum batch size to {batch_size=:_}")
     return batch_size
 

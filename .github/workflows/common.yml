@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: ${{ github.event_name != 'workflow_dispatch' }}
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: [ "3.11", "3.14" ]
         include:
           # single combination only: macOS runners are a much scarcer, lower-concurrency shared resource than Linux/Windows
