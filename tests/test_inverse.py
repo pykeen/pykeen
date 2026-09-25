@@ -5,7 +5,9 @@ import torch
 
 from pykeen.datasets import Nations
 from pykeen.inverse import DefaultRelationInverter, RelationInverter, relation_inverter_resolver
-from pykeen.models import Model, TransE
+from pykeen.models import CompGCN, ConvE, CooccurrenceFilteredModel, Model, NodePiece, TransE
+from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
+from pykeen.triples.instances import BatchedSLCWAInstances, LCWAInstances
 
 
 @pytest.fixture(params=relation_inverter_resolver.lookup_dict.values())
@@ -127,3 +129,86 @@ def test_create_inverse_triples_setter(create_inverse_triples: bool):
         # the (possibly inverted) triples have to stay within the ID range
         mapped_triples = factory._add_inverse_triples_if_necessary(mapped_triples=factory.mapped_triples)
         assert mapped_triples[:, 1].max().item() < factory.num_relations
+
+
+@pytest.mark.parametrize("factory_flag", [False, True])
+@pytest.mark.parametrize("model_flag", [None, False, True])
+def test_model_flag(factory_flag: bool, model_flag: bool | None):
+    """Test that an explicit model flag overrides the factory's, and that the factory's is the default."""
+    tf = Nations(create_inverse_triples=factory_flag).training
+    model = TransE(triples_factory=tf, embedding_dim=2, random_seed=0, use_inverse_triples=model_flag)
+    expected = factory_flag if model_flag is None else model_flag
+    assert model.use_inverse_triples == expected
+    assert model.num_relations == (2 if expected else 1) * tf.real_num_relations
+    assert model.num_real_relations == tf.real_num_relations
+    assert model.relation_representations[0].max_id == model.num_relations
+
+
+@pytest.mark.parametrize("flag", [False, True])
+def test_slcwa_instances_flag(flag: bool):
+    """Test that an explicit sLCWA instances flag gives the same instances as the factory's flag."""
+    expected = BatchedSLCWAInstances.from_triples_factory(Nations(create_inverse_triples=flag).training, batch_size=8)
+    actual = BatchedSLCWAInstances.from_triples_factory(
+        Nations(create_inverse_triples=not flag).training, create_inverse_triples=flag, batch_size=8
+    )
+    assert torch.equal(actual.mapped_triples, expected.mapped_triples)
+    assert actual.negative_sampler.num_relations == expected.negative_sampler.num_relations
+
+
+@pytest.mark.parametrize("flag", [False, True])
+def test_lcwa_instances_flag(flag: bool):
+    """Test that an explicit LCWA instances flag gives the same instances as the factory's flag."""
+    expected = LCWAInstances.from_triples_factory(Nations(create_inverse_triples=flag).training)
+    actual = LCWAInstances.from_triples_factory(
+        Nations(create_inverse_triples=not flag).training, create_inverse_triples=flag
+    )
+    assert torch.equal(torch.as_tensor(actual.pairs), torch.as_tensor(expected.pairs))
+    assert (actual.compressed != expected.compressed).nnz == 0
+
+
+@pytest.mark.parametrize("training_loop_cls", [SLCWATrainingLoop, LCWATrainingLoop])
+def test_training_with_model_flag(training_loop_cls: type[TrainingLoop]):
+    """Test that training with the model flag is equivalent to training with the factory flag."""
+    parameters = []
+    for factory_flag, model_flag in ((True, None), (False, True)):
+        tf = Nations(create_inverse_triples=factory_flag).training
+        model = TransE(triples_factory=tf, embedding_dim=2, random_seed=0, use_inverse_triples=model_flag)
+        training_loop_cls(model=model, triples_factory=tf).train(
+            triples_factory=tf, num_epochs=2, batch_size=64, use_tqdm=False
+        )
+        parameters.append([p.detach().clone() for p in model.parameters()])
+    for expected, actual in zip(*parameters, strict=True):
+        assert torch.allclose(expected, actual)
+
+
+@pytest.mark.parametrize("model_cls", [ConvE, NodePiece, CompGCN])
+def test_model_builds_without_factory_flag(model_cls: type[Model]):
+    """Test that models requiring inverse relations can be created from a factory without them."""
+    tf = Nations(create_inverse_triples=False).training
+    kwargs = {"use_inverse_triples": True} if model_cls is ConvE else {}
+    model = model_cls(triples_factory=tf, embedding_dim=16, random_seed=0, **kwargs)
+    assert model.use_inverse_triples
+    assert model.num_relations == 2 * tf.real_num_relations
+    # scoring with inverse relations works
+    model.score_h_inverse(rt_batch=tf.mapped_triples[:4, 1:])
+
+
+@pytest.mark.parametrize("model_cls", [NodePiece, CompGCN])
+def test_model_requires_flag(model_cls: type[Model]):
+    """Test that models requiring inverse relations raise an error if they are disabled."""
+    with pytest.raises(ValueError, match="use_inverse_triples=True"):
+        model_cls(
+            triples_factory=Nations(create_inverse_triples=True).training,
+            embedding_dim=4,
+            random_seed=0,
+            use_inverse_triples=False,
+        )
+
+
+def test_filtered_model_mirrors_base_flag():
+    """Test that the co-occurrence filtered model uses the base model's flag."""
+    tf = Nations(create_inverse_triples=False).training
+    model = CooccurrenceFilteredModel(triples_factory=tf, base=TransE, use_inverse_triples=True, random_seed=0)
+    assert model.use_inverse_triples
+    assert model.base.use_inverse_triples
+    assert model.num_relations == model.base.num_relations

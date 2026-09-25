@@ -94,6 +94,7 @@ class CooccurrenceFilteredModel(Model):
             loss=base.loss,
             predict_with_sigmoid=base.predict_with_sigmoid,
             random_seed=base._random_seed,
+            use_inverse_triples=base.use_inverse_triples,
         )
         # assign *after* nn.Module.__init__
         self.base = base
@@ -108,7 +109,7 @@ class CooccurrenceFilteredModel(Model):
         mapped_triples = prepare_filter_triples(
             mapped_triples=triples_factory.mapped_triples, additional_filter_triples=additional_triples, warn=False
         ).numpy()
-        nums = [triples_factory.num_entities, triples_factory.num_relations, triples_factory.num_entities]
+        nums = [triples_factory.num_entities, self.num_relations, triples_factory.num_entities]
         self.indexes = {
             col_label: {
                 row_label: get_csr_matrix(

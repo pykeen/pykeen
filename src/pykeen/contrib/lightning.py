@@ -198,6 +198,7 @@ class SLCWALitModule(LitModule):
         return torch.utils.data.DataLoader(
             dataset=BatchedSLCWAInstances.from_triples_factory(
                 triples_factory,
+                create_inverse_triples=self.model.use_inverse_triples,
                 batch_size=self.batch_size,
                 # TODO:
                 # shuffle=shuffle,
@@ -241,7 +242,9 @@ class LCWALitModule(LitModule):
 
     def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:  # noqa: D102
         return torch.utils.data.DataLoader(
-            dataset=LCWAInstances.from_triples_factory(triples_factory),
+            dataset=LCWAInstances.from_triples_factory(
+                triples_factory, create_inverse_triples=self.model.use_inverse_triples
+            ),
             batch_size=self.batch_size,
             shuffle=shuffle,
         )
