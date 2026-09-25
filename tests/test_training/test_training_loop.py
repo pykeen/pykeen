@@ -1,6 +1,10 @@
 """Test for sLCWA and LCWA."""
 
+import pytest
+
+from pykeen.datasets import Nations
 from pykeen.losses import CrossEntropyLoss, MarginRankingLoss, NSSALoss, SoftplusLoss
+from pykeen.models import TransE
 from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, SymmetricLCWATrainingLoop
 from tests.test_training import cases
@@ -99,3 +103,20 @@ class SymmetricLCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
 
     cls = SymmetricLCWATrainingLoop
     loss_cls = CrossEntropyLoss
+
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        # Nations has 14 entities and 55 relations
+        ("head", 7),
+        ("relation", 28),
+        ("tail", 7),
+    ],
+)
+def test_lcwa_initial_slice_size(target: str, expected: int) -> None:
+    """Test that the slice size search starts at half the number of candidates for the target."""
+    triples_factory = Nations().training
+    model = TransE(triples_factory=triples_factory)
+    loop = LCWATrainingLoop(model=model, triples_factory=triples_factory, target=target)
+    assert loop._get_initial_slice_size(batch_size=32) == expected
