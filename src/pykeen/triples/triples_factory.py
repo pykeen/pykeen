@@ -5,6 +5,7 @@ import logging
 import pathlib
 import re
 from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
+from io import TextIOWrapper
 from typing import IO, Any, ClassVar, Self
 
 import numpy as np
@@ -1297,7 +1298,7 @@ class TriplesFactory(CoreTriplesFactory):
         :return:
             A new triples factory.
         """
-        path_name = pathlib.Path(path.name if isinstance(path, IO) else path)
+        path_name = pathlib.Path(path.name if isinstance(path, IO | TextIOWrapper) else path)
 
         # TODO: Check if lazy evaluation would make sense
         triples = load_triples(path, **(load_triples_kwargs or {}))
