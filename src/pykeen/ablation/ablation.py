@@ -538,7 +538,7 @@ def prepare_ablation(
             hpo_config["testing"] = dataset["testing"]
             hpo_config["validation"] = dataset["validation"]
         else:
-            raise ValueError(
+            raise TypeError(
                 "Dataset must be either the dataset name, i.e., of type str, or a dictionary containing\n"
                 "the paths to the training, testing, and validation data.",
             )

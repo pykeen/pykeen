@@ -1146,7 +1146,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
-                raise e
+                raise
         if score is self.instance.score_r and self.create_inverse_triples:
             # TODO: look into score_r for inverse relations
             logger.warning("score_r's shape is not clear yet for models with inverse relations")
@@ -1255,7 +1255,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             if str(e) == "fft: ATen not compiled with MKL support":
                 self.skipTest(str(e))
             else:
-                raise e
+                raise
         else:
             return losses
 

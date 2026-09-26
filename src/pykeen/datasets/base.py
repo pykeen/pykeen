@@ -207,14 +207,14 @@ class Dataset(ExtraReprMixin):
     def entity_to_id(self) -> Mapping[str, int]:
         """The mapping of entity labels to IDs."""
         if not isinstance(self.training, TriplesFactory):
-            raise AttributeError(f"{self.training.__class__} does not have labeling information.")
+            raise TypeError(f"{self.training.__class__} does not have labeling information.")
         return self.training.entity_to_id
 
     @property
     def relation_to_id(self) -> Mapping[str, int]:
         """The mapping of relation labels to IDs."""
         if not isinstance(self.training, TriplesFactory):
-            raise AttributeError(f"{self.training.__class__} does not have labeling information.")
+            raise TypeError(f"{self.training.__class__} does not have labeling information.")
         return self.training.relation_to_id
 
     @property
