@@ -17,6 +17,7 @@ from .ilpc2022 import ILPC2022Large, ILPC2022Small
 __all__ = [
     # Base class
     "InductiveDataset",
+    "Version",
     # Mid-level classes
     "EagerInductiveDataset",
     "LazyInductiveDataset",
@@ -29,8 +30,6 @@ __all__ = [
     "InductiveNELL",
     "ILPC2022Large",
     "ILPC2022Small",
-    # Utils
-    "Version",
 ]
 
 #: A resolver for inductive datasets

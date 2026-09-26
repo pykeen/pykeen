@@ -14,6 +14,7 @@ Inductive Datasets
 ==================
 
 .. automodapi:: pykeen.datasets.inductive
+    :include-all-objects:
 
 Entity Alignment
 ================
