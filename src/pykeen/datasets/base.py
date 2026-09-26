@@ -526,7 +526,7 @@ class EagerDataset(Dataset):
         yield f"metadata={self.metadata}"
 
 
-class LazyDataset(Dataset):
+class LazyDataset(Dataset, ABC):
     """A dataset whose training, testing, and optional validation factories are lazily loaded."""
 
     #: The actual instance of the training factory, which is exposed to the user through `training`
@@ -571,11 +571,13 @@ class LazyDataset(Dataset):
     def _loaded_validation(self):
         return self._validation is not None
 
+    @abstractmethod
     def _load(self) -> None:
-        raise NotImplementedError
+        """Load the training and testing triples factories."""
 
+    @abstractmethod
     def _load_validation(self) -> None:
-        raise NotImplementedError
+        """Load the validation triples factory."""
 
     def _help_cache(self, cache_root: None | str | pathlib.Path) -> pathlib.Path:
         """Get the appropriate cache root directory.
@@ -955,7 +957,7 @@ class TabbedDataset(LazyDataset, ABC):
 
     @abstractmethod
     def _get_df(self) -> pd.DataFrame:
-        raise NotImplementedError
+        """Get a dataframe."""
 
     def _load(self) -> None:
         df = self._get_df()
