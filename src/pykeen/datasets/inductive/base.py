@@ -20,6 +20,7 @@ __all__ = [
     # Base class
     "InductiveDataset",
     # Mid-level classes
+    "DisjointInductiveSourceDataset",
     "EagerInductiveDataset",
     "LazyInductiveDataset",
     "DisjointInductivePathDataset",
