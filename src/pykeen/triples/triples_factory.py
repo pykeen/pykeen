@@ -550,7 +550,7 @@ class CoreTriplesFactory(KGInfo):
             metadata=metadata,
         )
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o: object, /) -> bool:
         if not isinstance(__o, CoreTriplesFactory):
             return False
         return (
@@ -1315,7 +1315,7 @@ class TriplesFactory(CoreTriplesFactory):
             },
         )
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o: object, /) -> bool:
         return (
             isinstance(__o, TriplesFactory)
             and super().__eq__(__o)

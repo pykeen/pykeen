@@ -112,7 +112,7 @@ class GroupedSLCWABatch(TypedDict):
     neg_weights: NotRequired[dict[Target, FloatTensor]]
 
 
-class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
+class Instances(data.Dataset[BatchType], ABC, Generic[BatchType]):
     """Base class for training instances."""
 
     @abstractmethod
