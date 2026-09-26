@@ -5,7 +5,7 @@ import logging
 import pathlib
 import re
 from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
-from typing import Any, ClassVar, Self, TextIO
+from typing import IO, Any, ClassVar, Self, TextIO
 
 import numpy as np
 import pandas as pd
@@ -1262,7 +1262,7 @@ class TriplesFactory(CoreTriplesFactory):
     @classmethod
     def from_path(
         cls,
-        path: str | pathlib.Path | TextIO,
+        path: str | pathlib.Path | IO[str],
         *,
         create_inverse_triples: bool = False,
         entity_to_id: EntityMapping | None = None,
@@ -1297,7 +1297,7 @@ class TriplesFactory(CoreTriplesFactory):
         :return:
             A new triples factory.
         """
-        path = normalize_path(path)
+        path_name = path.name if isinstance(path, IO) else str(path)
 
         # TODO: Check if lazy evaluation would make sense
         triples = load_triples(path, **(load_triples_kwargs or {}))
@@ -1309,7 +1309,7 @@ class TriplesFactory(CoreTriplesFactory):
             relation_to_id=relation_to_id,
             compact_id=compact_id,
             metadata={
-                "path": path,
+                "path": path_name,
                 **(metadata or {}),
             },
         )

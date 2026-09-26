@@ -20,6 +20,7 @@ from more_click import verbose_option
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
 
+from .source import SimpleSource, Source
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
@@ -598,7 +599,66 @@ class LazyDataset(Dataset):
         yield self.__class__.__name__.lower()
 
 
-class PathDataset(LazyDataset):
+class SourceDataSet(LazyDataset):
+    def __init__(
+        self,
+        training_source: Source,
+        testing_source: Source,
+        validation_source: Source | None = None,
+        *,
+        eager: bool = False,
+        create_inverse_triples: bool = False,
+        load_triples_kwargs: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Initialize a dataset from sources."""
+        self.training_source = training_source
+        self.testing_source = testing_source
+        self.validation_source = validation_source
+        self._create_inverse_triples = create_inverse_triples
+        self.load_triples_kwargs = load_triples_kwargs
+
+        if eager:
+            self._load()
+            self._load_validation()
+
+    def _load(self) -> None:
+        with self.training_source.open() as training_file:
+            self._training = TriplesFactory.from_path(
+                training_file,
+                create_inverse_triples=self._create_inverse_triples,
+                load_triples_kwargs=self.load_triples_kwargs,
+            )
+        with self.testing_source.open() as testing_file:
+            self._testing = TriplesFactory.from_path(
+                testing_file,
+                entity_to_id=self._training.entity_to_id,  # share entity index with training
+                relation_to_id=self._training.relation_to_id,  # share relation index with training
+                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+                create_inverse_triples=False,
+                load_triples_kwargs=self.load_triples_kwargs,
+            )
+
+    def _load_validation(self) -> None:
+        # don't call this function by itself. assumes called through the `validation`
+        # property and the _training factory has already been loaded
+        assert self._training is not None
+        if self.validation_source is None:
+            self._validation = None
+        else:
+            with self.validation_source.open() as file:
+                self._validation = TriplesFactory.from_path(
+                    file,
+                    entity_to_id=self._training.entity_to_id,  # share entity index with training
+                    relation_to_id=self._training.relation_to_id,  # share relation index with training
+                    # do not explicitly create inverse triples for testing; this is handled by the evaluation code
+                    create_inverse_triples=False,
+                    load_triples_kwargs=self.load_triples_kwargs,
+                )
+
+    # TODO repr
+
+
+class PathDataset(SourceDataSet):
     """Contains a lazy reference to a training, testing, and validation dataset."""
 
     def __init__(
@@ -620,52 +680,13 @@ class PathDataset(LazyDataset):
         :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
             and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
         """
-        self.training_path = pathlib.Path(training_path)
-        self.testing_path = pathlib.Path(testing_path)
-        self.validation_path = pathlib.Path(validation_path) if validation_path else None
-
-        self._create_inverse_triples = create_inverse_triples
-        self.load_triples_kwargs = load_triples_kwargs
-
-        if eager:
-            self._load()
-            self._load_validation()
-
-    def _load(self) -> None:
-        self._training = TriplesFactory.from_path(
-            path=self.training_path,
-            create_inverse_triples=self._create_inverse_triples,
-            load_triples_kwargs=self.load_triples_kwargs,
-        )
-        self._testing = TriplesFactory.from_path(
-            path=self.testing_path,
-            entity_to_id=self._training.entity_to_id,  # share entity index with training
-            relation_to_id=self._training.relation_to_id,  # share relation index with training
-            # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-            create_inverse_triples=False,
-            load_triples_kwargs=self.load_triples_kwargs,
-        )
-
-    def _load_validation(self) -> None:
-        # don't call this function by itself. assumes called through the `validation`
-        # property and the _training factory has already been loaded
-        assert self._training is not None
-        if self.validation_path is None:
-            self._validation = None
-        else:
-            self._validation = TriplesFactory.from_path(
-                path=self.validation_path,
-                entity_to_id=self._training.entity_to_id,  # share entity index with training
-                relation_to_id=self._training.relation_to_id,  # share relation index with training
-                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                create_inverse_triples=False,
-                load_triples_kwargs=self.load_triples_kwargs,
-            )
-
-    def __repr__(self) -> str:  # noqa: D105
-        return (
-            f'{self.__class__.__name__}(training_path="{self.training_path}", testing_path="{self.testing_path}",'
-            f' validation_path="{self.validation_path}")'
+        super().__init__(
+            training_source=SimpleSource(pathlib.Path(training_path)),
+            testing_source=SimpleSource(pathlib.Path(testing_path)),
+            validation_source=SimpleSource(pathlib.Path(validation_path)) if validation_path else None,
+            eager=eager,
+            create_inverse_triples=create_inverse_triples,
+            load_triples_kwargs=load_triples_kwargs,
         )
 
 
