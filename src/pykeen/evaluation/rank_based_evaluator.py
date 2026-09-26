@@ -47,11 +47,11 @@ from ..typing import (
 )
 
 __all__ = [
+    "MacroRankBasedEvaluator",
     "RankBasedEvaluator",
     "RankBasedMetricResults",
-    "sample_negatives",
     "SampledRankBasedEvaluator",
-    "MacroRankBasedEvaluator",
+    "sample_negatives",
 ]
 
 logger = logging.getLogger(__name__)
@@ -201,7 +201,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         match = METRIC_PATTERN.match(s)
         if not match:
             raise ValueError(f"Invalid metric name: {s}")
-        k: None | str | int
+        k: str | int | None
         name, side, rank_type, k = (match.group(key) for key in ("name", "side", "type", "k"))
         name = name.lower()
         match = HITS_PATTERN.match(name)
@@ -498,7 +498,7 @@ def summarize_values(
 
 def sample_negatives(
     evaluation_triples: MappedTriples,
-    additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
+    additional_filter_triples: MappedTriples | list[MappedTriples] | None = None,
     num_samples: int = 50,
     num_entities: int | None = None,
 ) -> Mapping[Target, FloatTensor]:
@@ -538,7 +538,7 @@ def sample_negatives(
                     f"There are less than num_samples={num_samples} candidates for side={side}, triples={group}.",
                 )
                 # repeat
-                pool = int(math.ceil(num_samples / len(pool))) * pool
+                pool = math.ceil(num_samples / len(pool)) * pool
             for i in group["index"].unique():
                 this_negatives[i, :] = torch.as_tensor(
                     data=random.sample(population=pool, k=num_samples),
@@ -563,7 +563,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         self,
         evaluation_factory: CoreTriplesFactory,
         *,
-        additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
+        additional_filter_triples: MappedTriples | list[MappedTriples] | None = None,
         num_negatives: int | None = None,
         head_negatives: LongTensor | None = None,
         tail_negatives: LongTensor | None = None,

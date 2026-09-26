@@ -30,11 +30,11 @@ from ..typing import FloatTensor, LongTensor
 from ..utils import ExtraReprMixin, einsum
 
 __all__ = [
-    "RGCNRepresentation",
-    "RGCNLayer",
-    "Decomposition",
     "BasesDecomposition",
     "BlockDecomposition",
+    "Decomposition",
+    "RGCNLayer",
+    "RGCNRepresentation",
     "decomposition_resolver",
 ]
 

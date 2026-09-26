@@ -21,7 +21,7 @@ class LCWAInstancesTestCase(cases.TrainingInstancesTestCase):
 
     cls = LCWAInstances
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         other_instance = LCWAInstances.from_triples_factory(tf=self.factory)
         kwargs["pairs"] = other_instance.pairs

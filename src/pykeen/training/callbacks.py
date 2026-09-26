@@ -79,17 +79,17 @@ from ..utils import determine_maximum_batch_size
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "callback_resolver",
-    "TrainingCallbackHint",
-    "TrainingCallback",
-    "StopperTrainingCallback",
-    "TrackerTrainingCallback",
+    "CheckpointTrainingCallback",
     "EvaluationLoopTrainingCallback",
     "EvaluationTrainingCallback",
-    "CheckpointTrainingCallback",
-    "MultiTrainingCallback",
-    "GradientNormClippingTrainingCallback",
     "GradientAbsClippingTrainingCallback",
+    "GradientNormClippingTrainingCallback",
+    "MultiTrainingCallback",
+    "StopperTrainingCallback",
+    "TrackerTrainingCallback",
+    "TrainingCallback",
+    "TrainingCallbackHint",
+    "callback_resolver",
 ]
 
 
@@ -101,29 +101,29 @@ class TrainingCallback:
         self._training_loop = None
 
     @property
-    def training_loop(self) -> training.TrainingLoop:  # noqa:D401
+    def training_loop(self) -> training.TrainingLoop:
         """The training loop."""
         if self._training_loop is None:
             raise ValueError("Callback was never initialized")
         return self._training_loop
 
     @property
-    def model(self) -> Model:  # noqa:D401
+    def model(self) -> Model:
         """The model, accessed via the training loop."""
         return self.training_loop.model
 
     @property
-    def loss(self) -> Loss:  # noqa: D401
+    def loss(self) -> Loss:
         """The loss, accessed via the training loop."""
         return self.training_loop.loss
 
     @property
-    def optimizer(self) -> optim.Optimizer:  # noqa:D401
+    def optimizer(self) -> optim.Optimizer:
         """The optimizer, accessed via the training loop."""
         return self.training_loop.optimizer
 
     @property
-    def result_tracker(self) -> ResultTracker:  # noqa: D401
+    def result_tracker(self) -> ResultTracker:
         """The result tracker, accessed via the training loop."""
         assert self.training_loop.result_tracker is not None
         return self.training_loop.result_tracker
@@ -397,14 +397,14 @@ class OptimizerTrainingCallback(TrainingCallback):
         super().__init__()
         self.pre_step_callbacks = tuple(pre_step_callbacks or [])
 
-    def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
+    def pre_batch(self, **kwargs: Any) -> None:
         # Recall that torch *accumulates* gradients. Before passing in a
         # new instance, you need to zero out the gradients from the old instance
 
         # note: we want to run this step during size probing to cleanup any remaining grads
         self.optimizer.zero_grad(set_to_none=True)
 
-    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
+    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:
         # pre-step callbacks
         for cb in self.pre_step_callbacks:
             cb.pre_step(epoch=epoch, **kwargs)
@@ -423,7 +423,7 @@ class OptimizerTrainingCallback(TrainingCallback):
 class LearningRateSchedulerTrainingCallback(TrainingCallback):
     """Update learning rate scheduler."""
 
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         if self.training_loop.lr_scheduler is None:
             raise ValueError(f"{self} can only be called when a learning rate schedule is used.")
         self.training_loop.lr_scheduler.step(epoch=epoch)
@@ -525,11 +525,11 @@ class EvaluationLossTrainingCallback(TrainingCallback):
         self.maximum_batch_size = maximum_batch_size
         self.callback = MultiTrainingCallback(callbacks=callbacks, callbacks_kwargs=callbacks_kwargs)
 
-    def register_training_loop(self, training_loop: training.TrainingLoop) -> None:  # noqa: D102
+    def register_training_loop(self, training_loop: training.TrainingLoop) -> None:
         super().register_training_loop(training_loop)
         self.callback.register_training_loop(training_loop=training_loop)
 
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         from .lcwa import LCWATrainingLoop
 
         # set to evaluation mode

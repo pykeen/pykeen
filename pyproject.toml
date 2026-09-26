@@ -304,13 +304,14 @@ select = [
     # refurb (FURB)
     "FURB",
     # Ruff-specific rules (RUF)
-    # "RUF",
+    "RUF",
     # tryceratops (TRY)
     # "TRY",
 ]
 ignore = [
     "D105", # Missing docstring in magic method
     "S101", # Use of assert detected, TODO remove
+    "RUF012", # FIXME
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores

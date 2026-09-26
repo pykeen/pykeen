@@ -9,8 +9,8 @@ from typing import Any
 import torch
 
 __all__ = [
-    "Stopper",
     "NopStopper",
+    "Stopper",
 ]
 
 logger = logging.getLogger(__name__)

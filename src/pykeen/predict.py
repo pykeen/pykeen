@@ -298,23 +298,21 @@ from .typing import (
 from .utils import determine_maximum_batch_size, invert_mapping, isin_many_dim, resolve_device
 
 __all__ = [
-    # high-level
-    "predict_all",
-    "predict_triples",
-    "predict_target",
-    # Low-Level
-    "consume_scores",
-    "ScoreConsumer",
-    "CountScoreConsumer",
-    "TopKScoreConsumer",
-    "AllScoreConsumer",
-    "ScorePack",
-    "Predictions",
-    "TriplePredictions",
-    "TargetPredictions",
-    "PredictionDataset",
     "AllPredictionDataset",
+    "AllScoreConsumer",
+    "CountScoreConsumer",
     "PartiallyRestrictedPredictionDataset",
+    "PredictionDataset",
+    "Predictions",
+    "ScoreConsumer",
+    "ScorePack",
+    "TargetPredictions",
+    "TopKScoreConsumer",
+    "TriplePredictions",
+    "consume_scores",
+    "predict_all",
+    "predict_target",
+    "predict_triples",
 ]
 
 logger = logging.getLogger(__name__)
@@ -386,13 +384,13 @@ class Predictions(ABC):
 class TriplePredictions(Predictions):
     """Triples with their predicted scores."""
 
-    def __post_init__(self):  # noqa: D105
+    def __post_init__(self):
         super().__post_init__()
         columns = {f"{column}_id" for column in COLUMN_LABELS}
         if not columns.issubset(self.df.columns):
             raise ValueError(f"df must have a columns named {columns}, but df.columns={self.df.columns}")
 
-    def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:  # noqa: D102
+    def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
         contained = (
             isin_many_dim(
                 elements=torch.as_tensor(
@@ -419,12 +417,12 @@ class TargetPredictions(Predictions):
     #: the other column's fixed IDs
     other_columns_fixed_ids: tuple[int, int]
 
-    def __post_init__(self):  # noqa: D105
+    def __post_init__(self):
         super().__post_init__()
         if f"{self.target}_id" not in self.df.columns:
             raise ValueError(f"df must have a column named '{self.target}_id', but df.columns={self.df.columns}")
 
-    def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:  # noqa: D102
+    def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
         col = TARGET_TO_INDEX[self.target]
         other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
         device = mapped_triples.device
@@ -455,7 +453,7 @@ class ScorePack:
 
 
 def _get_targets(
-    ids: None | torch.Tensor | Collection[str | int],
+    ids: torch.Tensor | Collection[str | int] | None,
     triples_factory: TriplesFactory | None,
     device: torch.device,
     entity: bool = True,
@@ -521,9 +519,9 @@ def _get_targets(
 def _get_input_batch(
     factory: TriplesFactory | None = None,
     # exactly one of them is None
-    head: None | int | str = None,
-    relation: None | int | str = None,
-    tail: None | int | str = None,
+    head: int | str | None = None,
+    relation: int | str | None = None,
+    tail: int | str | None = None,
 ) -> tuple[Target, LongTensor, tuple[int, int]]:
     """Prepare input batch for prediction.
 
@@ -757,11 +755,11 @@ class PredictionDataset(torch.utils.data.Dataset):
         self.target = target
 
     @abstractmethod
-    def __getitem__(self, item: int) -> PredictionBatch:  # noqa: D105
+    def __getitem__(self, item: int) -> PredictionBatch:
         raise NotImplementedError
 
     @abstractmethod
-    def __len__(self) -> int:  # noqa: D105
+    def __len__(self) -> int:
         raise NotImplementedError
 
 
@@ -786,12 +784,12 @@ class AllPredictionDataset(PredictionDataset):
         # (h, r, ?) => h.stride > r.stride
         self.divisor = num_relations if self.target == LABEL_TAIL else num_entities
 
-    def __len__(self) -> int:  # noqa: D105
+    def __len__(self) -> int:
         if self.target == LABEL_RELATION:
             return self.num_entities**2
         return self.num_entities * self.num_relations
 
-    def __getitem__(self, item: int) -> LongTensor:  # noqa: D105
+    def __getitem__(self, item: int) -> LongTensor:
         quotient, remainder = divmod(item, self.divisor)
         return torch.as_tensor([quotient, remainder])
 
@@ -878,10 +876,10 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
         assert len(parts) == 2
         self.parts = (parts[0], parts[1])  # for mypy
 
-    def __len__(self) -> int:  # noqa: D105
+    def __len__(self) -> int:
         return math.prod(map(len, self.parts))
 
-    def __getitem__(self, item: int) -> PredictionBatch:  # noqa: D105
+    def __getitem__(self, item: int) -> PredictionBatch:
         remainder, quotient = divmod(item, len(self.parts[0]))
         return torch.as_tensor([self.parts[0][quotient], self.parts[1][remainder]])
 
@@ -1024,12 +1022,12 @@ def predict_target(
     model: Model,
     *,
     # exactly one of them is None
-    head: None | int | str = None,
-    relation: None | int | str = None,
-    tail: None | int | str = None,
+    head: int | str | None = None,
+    relation: int | str | None = None,
+    tail: int | str | None = None,
     #
     triples_factory: TriplesFactory | None = None,
-    targets: None | LongTensor | Sequence[int | str] = None,
+    targets: LongTensor | Sequence[int | str] | None = None,
     mode: InductiveMode | None = None,
 ) -> Predictions:
     """Get predictions for the head, relation, and/or tail combination.
@@ -1089,7 +1087,7 @@ def predict_target(
 def predict_triples(
     model: Model,
     *,
-    triples: None | MappedTriples | LabeledTriples | tuple[str, str, str] | Sequence[tuple[str, str, str]] = None,
+    triples: MappedTriples | LabeledTriples | tuple[str, str, str] | Sequence[tuple[str, str, str]] | None = None,
     triples_factory: CoreTriplesFactory | None = None,
     batch_size: int | None = None,
     mode: InductiveMode | None = None,

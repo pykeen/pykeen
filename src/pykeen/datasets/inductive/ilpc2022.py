@@ -8,8 +8,8 @@ from .base import UnpackedRemoteDisjointInductiveDataset
 from ..base import UnpackedRemoteDataSetKwargs
 
 __all__ = [
-    "ILPC2022Small",
     "ILPC2022Large",
+    "ILPC2022Small",
 ]
 
 # ZENODO_URL = "https://zenodo.org/record/6321299/files/pykeen/ilpc2022-v1.0.zip"

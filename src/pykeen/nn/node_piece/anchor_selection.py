@@ -19,16 +19,13 @@ from ...typing import OneOrSequence
 from ...utils import ExtraReprMixin
 
 __all__ = [
-    # Resolver
-    "anchor_selection_resolver",
-    # Base classes
     "AnchorSelection",
-    "SingleSelection",
-    # Concrete classes
     "DegreeAnchorSelection",
     "MixtureAnchorSelection",
     "PageRankAnchorSelection",
     "RandomAnchorSelection",
+    "SingleSelection",
+    "anchor_selection_resolver",
 ]
 
 logger = logging.getLogger(__name__)
@@ -195,7 +192,7 @@ class MixtureAnchorSelection(AnchorSelection):
     def __init__(
         self,
         selections: Sequence[HintOrType[AnchorSelection]],
-        ratios: None | float | Sequence[float] = None,
+        ratios: float | Sequence[float] | None = None,
         selections_kwargs: OneOrSequence[OptionalKwargs] = None,
         **kwargs,
     ) -> None:

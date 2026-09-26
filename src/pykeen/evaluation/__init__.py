@@ -15,21 +15,21 @@ from .rank_based_evaluator import (
 )
 
 __all__ = [
-    "Evaluator",
-    "MetricResults",
-    "RankBasedEvaluator",
-    "RankBasedMetricResults",
-    "MacroRankBasedEvaluator",
-    "EvaluationLoop",
-    "LCWAEvaluationLoop",
-    "SampledRankBasedEvaluator",
-    "sample_negatives",
-    "OGBEvaluator",
-    "evaluate_ogb",
     "ClassificationEvaluator",
     "ClassificationMetricResults",
+    "EvaluationLoop",
+    "Evaluator",
+    "LCWAEvaluationLoop",
+    "MacroRankBasedEvaluator",
+    "MetricResults",
+    "OGBEvaluator",
+    "RankBasedEvaluator",
+    "RankBasedMetricResults",
+    "SampledRankBasedEvaluator",
+    "evaluate_ogb",
     "evaluator_resolver",
     "metric_resolver",
+    "sample_negatives",
 ]
 
 #: A resolver for evaluators

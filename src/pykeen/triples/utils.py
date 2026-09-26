@@ -13,12 +13,12 @@ from ..typing import LabeledTriples, LongTensor, MappedTriples
 
 __all__ = [
     "compute_compressed_adjacency_list",
-    "load_triples",
     "get_entities",
-    "get_relations",
-    "tensor_to_df",
-    "max_value",
     "get_num_ids",
+    "get_relations",
+    "load_triples",
+    "max_value",
+    "tensor_to_df",
 ]
 
 TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label")

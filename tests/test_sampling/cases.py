@@ -55,7 +55,7 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
         batch_indices = random_state.randint(low=0, high=len(self.training_instances), size=(self.batch_size,))
         self.positive_batch = self.training_instances.mapped_triples[batch_indices]
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs.update(
             {

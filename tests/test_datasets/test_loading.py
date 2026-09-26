@@ -39,7 +39,7 @@ class TestAnnotated(unittest.TestCase):
 
                 # Check either a github link or author/publication information is given
                 citation = docdata["citation"]
-                assert "author" in citation and "link" in citation and "year" in citation or "github" in citation
+                assert ("author" in citation and "link" in citation and "year" in citation) or "github" in citation
 
             signature = dataset_resolver.signature(cls)
             random_state_param = signature.parameters.get("random_state")

@@ -11,7 +11,7 @@ class MarginalDistributionBaselineTests(cases.EvaluationOnlyModelTestCase):
 
     cls = pykeen.models.MarginalDistributionBaseline
 
-    def _verify(self, scores: torch.FloatTensor):  # noqa: D102
+    def _verify(self, scores: torch.FloatTensor):
         # check probability distribution
         assert (scores >= 0.0).all()
         assert (scores <= 1.0).all()

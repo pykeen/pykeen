@@ -67,13 +67,13 @@ from ..typing import FloatTensor, InductiveMode, LongTensor
 from ..utils import get_dropout_modules
 
 __all__ = [
-    "predict_hrt_uncertain",
-    "predict_h_uncertain",
-    "predict_t_uncertain",
-    "predict_r_uncertain",
-    "predict_uncertain_helper",
     "MissingDropoutError",
     "UncertainPrediction",
+    "predict_h_uncertain",
+    "predict_hrt_uncertain",
+    "predict_r_uncertain",
+    "predict_t_uncertain",
+    "predict_uncertain_helper",
 ]
 
 

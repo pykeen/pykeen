@@ -8,10 +8,10 @@ from docdata import parse_docdata
 from ..base import PathDataset, PathDatasetKwargs
 
 __all__ = [
-    "UMLS_TRAIN_PATH",
-    "UMLS_TEST_PATH",
-    "UMLS_VALIDATE_PATH",
     "UMLS",
+    "UMLS_TEST_PATH",
+    "UMLS_TRAIN_PATH",
+    "UMLS_VALIDATE_PATH",
 ]
 
 HERE = pathlib.Path(__file__).resolve().parent

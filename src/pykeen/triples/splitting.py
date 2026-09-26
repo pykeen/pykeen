@@ -28,21 +28,18 @@ from ..utils import ensure_torch_random_state, format_relative_comparison
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "split",
-    # Cleaners
-    "cleaner_resolver",
     "Cleaner",
-    "RandomizedCleaner",
-    "DeterministicCleaner",
-    # Splitters
-    "splitter_resolver",
-    "Splitter",
     "CleanupSplitter",
     "CoverageSplitter",
-    # Utils
+    "DeterministicCleaner",
+    "RandomizedCleaner",
+    "Splitter",
     "TripleCoverageError",
-    "normalize_ratios",
+    "cleaner_resolver",
     "get_absolute_split_sizes",
+    "normalize_ratios",
+    "split",
+    "splitter_resolver",
 ]
 
 
@@ -191,7 +188,7 @@ def normalize_ratios(
     ratios = tuple(ratios)
     ratio_sum = sum(ratios)
     if ratio_sum < 1.0 - epsilon:
-        ratios = ratios + (1.0 - ratio_sum,)
+        ratios = (*ratios, 1.0 - ratio_sum)
     elif ratio_sum > 1.0 + epsilon:
         raise ValueError(f"ratios sum to more than 1.0: {ratios} (sum={ratio_sum})")
     return ratios
@@ -480,7 +477,7 @@ class CoverageSplitter(Splitter):
         remaining_triples = mapped_triples[~seed_mask]
         if train_seed.shape[0] > sizes[0]:
             raise ValueError(f"Could not find a coverage of all entities and relation with only {sizes[0]} triples.")
-        remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
+        remaining_sizes = (sizes[0] - train_seed.shape[0], *tuple(sizes[1:]))
         train, *rest = _split_triples(mapped_triples=remaining_triples, sizes=remaining_sizes, generator=generator)
         return [torch.cat([train_seed, train], dim=0), *rest]
 

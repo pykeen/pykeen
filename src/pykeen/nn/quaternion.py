@@ -7,9 +7,9 @@ import torch
 from ..typing import FloatTensor
 
 __all__ = [
-    "normalize",
     "hamiltonian_product",
     "multiplication_table",
+    "normalize",
 ]
 
 

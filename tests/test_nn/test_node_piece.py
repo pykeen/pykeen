@@ -157,7 +157,7 @@ class PrecomputedPoolTokenizerTests(cases.TokenizerTestCase):
 
     cls = pykeen.nn.node_piece.PrecomputedPoolTokenizer
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         # generate random pool
         kwargs["pool"] = {

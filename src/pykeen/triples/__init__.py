@@ -78,20 +78,20 @@ from .triples_factory import (
 from .triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 
 __all__ = [
-    "Instances",
+    "AnyTriples",
     "BaseBatchedSLCWAInstances",
-    "LCWABatch",
     "BatchCWABatch",
-    "SLCWABatch",
-    "GroupedSLCWABatch",
-    "LCWAInstances",
     "BatchedSLCWAInstances",
-    "SubGraphSLCWAInstances",
-    "KGInfo",
     "CoreTriplesFactory",
+    "GroupedSLCWABatch",
+    "Instances",
+    "KGInfo",
+    "LCWABatch",
+    "LCWAInstances",
+    "SLCWABatch",
+    "SubGraphSLCWAInstances",
     "TriplesFactory",
     "TriplesNumericLiteralsFactory",
     "get_mapped_triples",
-    "AnyTriples",
     "splits_similarity",
 ]

@@ -58,7 +58,7 @@ class OGBEvaluator(SampledRankBasedEvaluator):
         restrict_entities_to: Collection[int] | None = None,
         restrict_relations_to: Collection[int] | None = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
+        additional_filter_triples: MappedTriples | list[MappedTriples] | None = None,
         pre_filtered_triples: bool = True,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
     ) -> MetricResults:

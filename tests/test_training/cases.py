@@ -20,8 +20,8 @@ from pykeen.training.training_loop import NonFiniteLossError, NoTrainingBatchErr
 from pykeen.triples import TriplesFactory
 
 __all__ = [
-    "TrainingLoopTestCase",
     "SLCWATrainingLoopTestCase",
+    "TrainingLoopTestCase",
 ]
 
 
@@ -54,7 +54,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
             optimizer=self.optimizer_cls(model.get_grad_params()),
         )
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = self.triples_factory
         kwargs["automatic_memory_optimization"] = False
@@ -202,7 +202,7 @@ class SLCWATrainingLoopTestCase(TrainingLoopTestCase):
     #: Should negative samples be filtered?
     filterer_cls: ClassVar[type[Filterer] | None] = None
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["negative_sampler"] = "basic"
         kwargs["negative_sampler_kwargs"] = {"filterer": self.filterer_cls}
