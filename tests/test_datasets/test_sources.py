@@ -44,11 +44,11 @@ class TestRemoteSource(unittest.TestCase):
         """Clean up the temporary cache directory."""
         self.directory.cleanup()
 
-    def _make(self, sub_directories: dict[str, str] | None = None) -> RemoteSource:
-        sub_directories = sub_directories or {}
+    def _make(self, subdirectories: dict[str, str] | None = None) -> RemoteSource:
+        subdirectories = subdirectories or {}
         return RemoteSource(
             files=[
-                RemoteFile(key=key, url=path.as_uri(), sub_directory=sub_directories.get(key))
+                RemoteFile(key=key, url=path.as_uri(), subdirectory=subdirectories.get(key))
                 for key, path in (
                     ("training", NATIONS_TRAIN_PATH),
                     ("testing", NATIONS_TEST_PATH),
@@ -59,7 +59,7 @@ class TestRemoteSource(unittest.TestCase):
         )
 
     def test_manifest_does_not_download(self):
-        """Test that asking where the files will be does not download them."""
+        """Test that asking where the files will be, does not download them."""
         source = self._make()
         paths = source.get_manifest()
         assert set(paths) == {"training", "testing", "validation"}
@@ -78,9 +78,9 @@ class TestRemoteSource(unittest.TestCase):
         with pytest.raises(ValueError, match="duplicate"):
             RemoteSource(files=files, cache_root=self.cache_root)
 
-    def test_sub_directories(self):
-        """Test that the per-file sub-directories are used."""
-        source = self._make(sub_directories={"training": "a", "testing": "b", "validation": "b"})
+    def test_subdirectories(self):
+        """Test that the per-file subdirectories are used."""
+        source = self._make(subdirectories={"training": "a", "testing": "b", "validation": "b"})
         paths = source.paths()
         assert paths["training"] == self.cache_root.joinpath("a", "train.txt")
         assert paths["testing"] == self.cache_root.joinpath("b", "test.txt")

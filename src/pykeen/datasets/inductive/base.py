@@ -370,10 +370,10 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
             source=RemoteSource(
                 # note: the transductive training graph and the inductive part are kept in separate directories
                 files=[
-                    RemoteFile(key="transductive_training", url=transductive_training_url, sub_directory="training"),
-                    RemoteFile(key="inductive_inference", url=inductive_inference_url, sub_directory="inference"),
-                    RemoteFile(key="inductive_testing", url=inductive_testing_url, sub_directory="inference"),
-                    RemoteFile(key="inductive_validation", url=inductive_validation_url, sub_directory="inference"),
+                    RemoteFile(key="transductive_training", url=transductive_training_url, subdirectory="training"),
+                    RemoteFile(key="inductive_inference", url=inductive_inference_url, subdirectory="inference"),
+                    RemoteFile(key="inductive_testing", url=inductive_testing_url, subdirectory="inference"),
+                    RemoteFile(key="inductive_validation", url=inductive_validation_url, subdirectory="inference"),
                 ],
                 cache_root=self.cache_root,
                 force=force,

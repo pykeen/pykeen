@@ -1,14 +1,16 @@
 """Sources resolve the files backing a dataset to local paths.
 
-A :class:`Source` encapsulates *where the data lives* -- a local directory, one URL per split, or members of a
-remote archive -- and is deliberately ignorant of how those files are turned into triples factories.
+A :class:`Source` encapsulates *where the data lives* -- a local directory, one URL per
+split, or members of a remote archive -- and is deliberately ignorant of how those files
+are turned into triples factories.
 
-Keeping the two apart means that a new location, e.g., a new archive format, does not require re-implementing the
-loading logic, and vice versa.
+Keeping the two apart means that a new location, e.g., a new archive format, does not
+require re-implementing the loading logic, and vice versa.
 
-Every source distinguishes the paths it *will* have, cf. :meth:`Source.get_manifest`, from the paths it *does*
-have, cf. :meth:`Source.paths`. Only the latter triggers a download, which keeps lazy datasets lazy while still
-allowing them to report where their data lives.
+Every source distinguishes the paths it *will* have, cf. :meth:`Source.get_manifest`,
+from the paths it *does* have, cf. :meth:`Source.paths`. Only the latter triggers a
+download, which keeps lazy datasets lazy while still allowing them to report where their
+data lives.
 """
 
 from __future__ import annotations
@@ -44,23 +46,26 @@ class Source(ABC):
     def get_manifest(self) -> Mapping[str, pathlib.Path]:
         """Return where the files are (or will be), *without* downloading anything.
 
-        Keys which the source cannot provide are omitted rather than mapped to ``None``. This is how an absent
-        optional split, e.g., validation, is expressed.
+        Keys which the source cannot provide are omitted rather than mapped to ``None``.
+        This is how an absent optional split, e.g., validation, is expressed.
 
-        :returns: A mapping from logical file key, e.g., ``"training"``, to a local path.
+        :returns: A mapping from logical file key, e.g., ``"training"``, to a local
+            path.
         """
 
     def materialize(self) -> None:
         """Ensure the files are present locally, downloading and extracting them if necessary.
 
-        The default does nothing, which is correct for sources whose files are always present.
+        The default does nothing, which is correct for sources whose files are always
+        present.
         """
         return
 
     def paths(self) -> Mapping[str, pathlib.Path]:
         """Materialize the files and return the mapping from key to local path.
 
-        :returns: A mapping from logical file key, e.g., ``"training"``, to an existing local path.
+        :returns: A mapping from logical file key, e.g., ``"training"``, to an existing
+            local path.
         """
         self.materialize()
         return self.get_manifest()
@@ -75,7 +80,8 @@ class LocalSource(Source):
     def __init__(self, **paths: None | str | pathlib.Path) -> None:
         """Initialize the source.
 
-        :param paths: The local paths, keyed by their logical file key. ``None`` values are dropped.
+        :param paths: The local paths, keyed by their logical file key. ``None`` values
+            are dropped.
         """
         self._paths = {key: pathlib.Path(path) for key, path in paths.items() if path is not None}
 
@@ -103,9 +109,9 @@ class RemoteFile:
     key: str
     #: The URL from which the file is downloaded
     url: str
-    #: An optional sub-directory of the source's cache root to download the file into. Used by datasets which keep,
+    #: An optional subdirectory of the source's cache root to download the file into. Used by datasets which keep,
     #: e.g., the training and the inference part in separate directories.
-    sub_directory: str | None = None
+    subdirectory: str | None = None
 
 
 class RemoteSource(Source):
@@ -124,7 +130,8 @@ class RemoteSource(Source):
         :param files: The files to download, each with its logical key.
         :param cache_root: The directory into which the files are downloaded.
         :param force: Whether to re-download files which are already present.
-        :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`.
+        :param download_kwargs: Keyword arguments to pass to
+            :func:`pystow.utils.download`.
 
         :raises ValueError: If two files share the same key.
         """
@@ -138,8 +145,8 @@ class RemoteSource(Source):
 
     def _get_path(self, file: RemoteFile) -> pathlib.Path:
         directory = self.cache_root
-        if file.sub_directory is not None:
-            directory = directory.joinpath(file.sub_directory)
+        if file.subdirectory is not None:
+            directory = directory.joinpath(file.subdirectory)
         return directory.joinpath(name_from_url(file.url))
 
     def get_manifest(self) -> Mapping[str, pathlib.Path]:  # noqa: D102
@@ -175,17 +182,23 @@ class ArchiveSource(Source):
     ) -> None:
         """Initialize the source.
 
-        :param members: The path *inside* the archive for each logical file key. After extraction, the file is
-            found at ``cache_root / member``.
-        :param cache_root: The directory into which the archive is downloaded and extracted.
-        :param url: The URL from which to download the archive. May be ``None`` if the archive is already present.
+        :param members: The path *inside* the archive for each logical file key. After
+            extraction, the file is found at ``cache_root / member``.
+        :param cache_root: The directory into which the archive is downloaded and
+            extracted.
+        :param url: The URL from which to download the archive. May be ``None`` if the
+            archive is already present.
         :param name: The file name of the archive. Defaults to the last part of the URL.
-        :param archive_path: An explicit location for the archive, overriding ``cache_root / name``.
-        :param extract_all: Whether to unpack the whole archive rather than only the requested members. This is
-            appropriate for archives which contain little besides the dataset itself, and is more robust against
-            member names which do not exactly match the requested ones.
-        :param force: Whether to re-download and re-extract even if the files are already present.
-        :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`.
+        :param archive_path: An explicit location for the archive, overriding
+            ``cache_root / name``.
+        :param extract_all: Whether to unpack the whole archive rather than only the
+            requested members. This is appropriate for archives which contain little
+            besides the dataset itself, and is more robust against member names which do
+            not exactly match the requested ones.
+        :param force: Whether to re-download and re-extract even if the files are
+            already present.
+        :param download_kwargs: Keyword arguments to pass to
+            :func:`pystow.utils.download`.
 
         :raises ValueError: If neither a URL, a name, nor an archive path is given.
         """
@@ -215,7 +228,8 @@ class ArchiveSource(Source):
 
         :returns: The local path of the archive.
 
-        :raises ValueError: If the archive is missing and there is no URL to download it from.
+        :raises ValueError: If the archive is missing and there is no URL to download it
+            from.
         """
         path = self.archive_path
         if path.is_file() and not self.force:
