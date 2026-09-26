@@ -7,13 +7,11 @@ import pathlib
 import tarfile
 import zipfile
 from collections.abc import Collection, Iterable, Mapping, Sequence
-from io import BytesIO
 from typing import Any, ClassVar, Self, cast
 
 import click
 import docdata
 import pandas as pd
-import requests
 import torch
 from more_click import verbose_option
 from pystow.utils import download, name_from_url
@@ -747,7 +745,7 @@ class UnpackedRemoteDataset(SourceDataSet):
         )
 
 
-class TarFileRemoteDataset(PathDataset):
+class TarFileRemoteDataset(SourceDataSet):
     """Contains a lazy reference to a remote dataset that is loaded if needed."""
 
     def __init__(
@@ -756,10 +754,10 @@ class TarFileRemoteDataset(PathDataset):
         relative_training_path: str | pathlib.PurePath,
         relative_testing_path: str | pathlib.PurePath,
         relative_validation_path: str | pathlib.PurePath,
+        *,
         cache_root: str | None = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
-        timeout=None,
     ) -> None:
         """Initialize dataset.
 
@@ -772,52 +770,33 @@ class TarFileRemoteDataset(PathDataset):
             ``~/.data/pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param timeout: The timeout number of seconds for waiting to download the dataset. Defaults to 60.
         """
         self.cache_root = self._help_cache(cache_root)
-
-        self.url = url
-        self.timeout = timeout if timeout is not None else 60
-        self._relative_training_path = pathlib.PurePath(relative_training_path)
-        self._relative_testing_path = pathlib.PurePath(relative_testing_path)
-        self._relative_validation_path = pathlib.PurePath(relative_validation_path)
-
-        training_path, testing_path, validation_path = self._get_paths()
+        name = name_from_url(url)
+        path = self.cache_root.joinpath(name)
+        training_source = RemoteArchivedSource(
+            archive_type="tar", url=url, path=path, inner_path=str(pathlib.PurePath(relative_training_path))
+        )
+        testing_source = RemoteArchivedSource(
+            archive_type="tar",
+            url=url,
+            path=path,
+            inner_path=str(pathlib.PurePath(relative_testing_path)),
+        )
+        validation_source = RemoteArchivedSource(
+            archive_type="tar",
+            url=url,
+            path=path,
+            inner_path=str(pathlib.PurePath(relative_validation_path)),
+        )
         super().__init__(
-            training_path=training_path,
-            testing_path=testing_path,
-            validation_path=validation_path,
+            training_source=training_source,
+            testing_source=testing_source,
+            validation_source=validation_source,
             eager=eager,
             create_inverse_triples=create_inverse_triples,
+            # load_triples_kwargs=load_triples_kwargs,
         )
-
-    def _get_paths(self) -> tuple[pathlib.Path, pathlib.Path, pathlib.Path]:  # noqa: D401
-        """Get the paths where the extracted files can be found."""
-        return (
-            self.cache_root.joinpath(self._relative_training_path),
-            self.cache_root.joinpath(self._relative_testing_path),
-            self.cache_root.joinpath(self._relative_validation_path),
-        )
-
-    def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
-        with tarfile.open(fileobj=archive_file) as tf:
-            tf.extractall(path=self.cache_root)  # noqa:S202
-
-    def _get_bytes(self) -> BytesIO:
-        logger.info(f"Requesting dataset from {self.url}")
-        res = requests.get(url=self.url, timeout=self.timeout)
-        res.raise_for_status()
-        return BytesIO(res.content)
-
-    def _load(self) -> None:  # noqa: D102
-        all_unpacked = all(path.is_file() for path in self._get_paths())
-
-        if not all_unpacked:
-            archive_file = self._get_bytes()
-            self._extract(archive_file=archive_file)
-            logger.info(f"Extracted to {self.cache_root}.")
-
-        super()._load()
 
 
 class PackedZipRemoteDataset(SourceDataSet):

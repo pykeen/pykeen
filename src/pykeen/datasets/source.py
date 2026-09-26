@@ -77,7 +77,7 @@ class ArchivedSource(Source):
             with open_zipfile(self.path, inner_path=self.inner_path) as file:
                 yield file
         elif self.archive_type == "tar":
-            with open_tarfile(self.path, inner_path=self.inner_path, representation="text") as file:
+            with open_tarfile(self.path, inner_path=self.inner_path) as file:
                 yield file
         else:
             raise ValueError(f"unknown {self.archive_type=}")
