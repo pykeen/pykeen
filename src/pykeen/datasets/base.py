@@ -874,19 +874,15 @@ class CompressedSingleDataset(LazyDataset):
         if eager:
             self._load()
 
-    def _get_path(self) -> pathlib.Path:
-        return self.cache_root.joinpath(self.name)
-
     def _load(self) -> None:
         with self.source.open() as file:
             df = pd.read_csv(file, **self.read_csv_kwargs)
         df = _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
 
-        tf_path = self._get_path()
         tf = TriplesFactory.from_labeled_triples(
             triples=df.values,
             create_inverse_triples=self._create_inverse_triples,
-            metadata={"path": tf_path},
+            metadata={"path": self.source.path},
         )
         self._training, self._testing, self._validation = cast(
             tuple[TriplesFactory, TriplesFactory, TriplesFactory],
@@ -895,7 +891,7 @@ class CompressedSingleDataset(LazyDataset):
                 random_state=self.random_state,
             ),
         )
-        logger.info("[%s] done splitting data from %s", self.__class__.__name__, tf_path)
+        logger.info("[%s] done splitting data from %s", self.__class__.__name__, self.source.path)
 
     def _load_validation(self) -> None:
         pass  # already loaded by _load()
