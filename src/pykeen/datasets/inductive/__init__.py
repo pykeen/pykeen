@@ -4,6 +4,7 @@ from class_resolver import ClassResolver
 
 from .base import (
     DisjointInductivePathDataset,
+    DisjointInductiveSourceDataset,
     EagerInductiveDataset,
     InductiveDataset,
     LazyInductiveDataset,
@@ -20,6 +21,7 @@ __all__ = [
     "LazyInductiveDataset",
     "DisjointInductivePathDataset",
     "UnpackedRemoteDisjointInductiveDataset",
+    "DisjointInductiveSourceDataset",
     # Datasets
     "InductiveFB15k237",
     "InductiveWN18RR",
@@ -36,5 +38,6 @@ inductive_dataset_resolver: ClassResolver[InductiveDataset] = ClassResolver.from
         LazyInductiveDataset,
         DisjointInductivePathDataset,
         UnpackedRemoteDisjointInductiveDataset,
+        DisjointInductiveSourceDataset,
     },
 )
