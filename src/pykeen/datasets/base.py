@@ -1005,9 +1005,13 @@ class TarFileSingleDataset(CompressedSingleDataset):
 class SingleTabbedDatasetKwargs(TabbedDatasetKwargs):
     """Keyword arguments for a single file tabbed dataset."""
 
+    #: The name of the file
     name: NotRequired[str | None]
+    #: An override for where the files are cached
     cache_root: NotRequired[str | None]
+    #: An override for configuration of the download workflow with :func:`pystow.utils.download`
     download_kwargs: NotRequired[DownloadKwargs | None]
+    #: If given as true, will re-download the file
     force: NotRequired[bool]
 
 
