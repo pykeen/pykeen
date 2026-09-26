@@ -40,6 +40,7 @@ __all__ = [
     "ZipSingleDataset",
     "TabbedDataset",
     "SingleTabbedDataset",
+    "PackedRemoteDataSet",
     # Utilities
     "dataset_similarity",
 ]

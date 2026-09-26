@@ -9,6 +9,15 @@ from typing import IO
 
 from pystow.utils import ArchiveType, DownloadKwargs, download, open_archive, safe_open
 
+__all__ = [
+    "Source",
+    "RemoteSimpleSource",
+    "RemoteArchivedSource",
+    "RemoteSource",
+    "ArchivedSource",
+    "SimpleSource",
+]
+
 
 @dataclass
 class Source(ABC):
