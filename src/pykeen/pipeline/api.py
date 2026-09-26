@@ -187,8 +187,8 @@ logger = logging.getLogger(__name__)
 def triple_hash(*triples: MappedTriples) -> Mapping[str, str]:
     """Slow triple hash using sha512 and conversion to Python."""
     items = (t.tolist() for t in triples)
-    reduced = functools.reduce(operator.iadd, items, [])
-    return {"sha512": hashlib.sha512(str(sorted(reduced)).encode("utf8")).hexdigest()}
+    hsh = hashlib.sha512(str(sorted(functools.reduce(operator.iadd, items, []))).encode("utf8"))
+    return {"sha512": hsh.hexdigest()}
 
 
 @fix_dataclass_init_docs
