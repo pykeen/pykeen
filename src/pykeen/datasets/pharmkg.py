@@ -17,8 +17,8 @@ from .base import (
 )
 
 __all__ = [
-    "PharmKG8k",
     "PharmKG",
+    "PharmKG8k",
 ]
 
 BASE_URL = "https://raw.githubusercontent.com/biomed-AI/PharmKG/master/data/PharmKG-8k/"

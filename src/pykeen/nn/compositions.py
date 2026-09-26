@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import ClassVar
+from typing import ClassVar, TypeAlias
 
 import torch
 from class_resolver import ClassResolver
@@ -12,19 +12,17 @@ from ..typing import FloatTensor
 from ..utils import circular_correlation
 
 __all__ = [
-    # Base
-    "CompositionModule",
-    # Concrete
-    "FunctionalCompositionModule",
-    "SubtractionCompositionModule",
-    "MultiplicationCompositionModule",
     "CircularCorrelationCompositionModule",
-    # Resolver
+    "Composition",
+    "CompositionModule",
+    "FunctionalCompositionModule",
+    "MultiplicationCompositionModule",
+    "SubtractionCompositionModule",
     "composition_resolver",
 ]
 
-
-Composition = Callable[[FloatTensor, FloatTensor], FloatTensor]
+#: A composition function
+Composition: TypeAlias = Callable[[FloatTensor, FloatTensor], FloatTensor]
 
 
 class CompositionModule(nn.Module, ABC):

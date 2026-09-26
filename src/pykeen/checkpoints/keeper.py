@@ -14,13 +14,13 @@ from .utils import MetricSelection, ResultListenerAdapter
 from ..trackers.base import ResultTracker
 
 __all__ = [
+    "BestCheckpointKeeper",
     "CheckpointKeeper",
-    "keeper_resolver",
+    "ExplicitCheckpointKeeper",
     "LastCheckpointKeeper",
     "ModuloCheckpointKeeper",
-    "ExplicitCheckpointKeeper",
-    "BestCheckpointKeeper",
     "UnionCheckpointKeeper",
+    "keeper_resolver",
 ]
 
 

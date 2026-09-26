@@ -61,75 +61,76 @@ from .typing import (
 from .version import get_git_hash
 
 __all__ = [
-    "at_least_eps",
-    "broadcast_upgrade_to_sequences",
-    "compose",
-    "clamp_norm",
-    "parallel_prefix_unsqueeze",
-    "broadcast_index_shapes",
-    "compact_mapping",
-    "create_relation_to_entity_set_mapping",
-    "ensure_complex",
-    "ensure_torch_random_state",
-    "format_relative_comparison",
-    "invert_mapping",
-    "random_non_negative_int",
-    "resolve_device",
-    "split_complex",
-    "normalize_string",
-    "get_until_first_blank",
-    "flatten_dictionary",
-    "set_random_seed",
+    "Bias",
+    "ExtraReprMixin",
     "NoRandomSeedNecessary",
     "Result",
-    "fix_dataclass_init_docs",
-    "get_benchmark",
-    "upgrade_to_sequence",
-    "ensure_tuple",
-    "unpack_singletons",
-    "extend_batch",
-    "check_shapes",
     "all_in_bounds",
-    "view_complex",
-    "combine_complex",
-    "get_model_io",
-    "get_json_bytes_io",
-    "get_df_io",
-    "ensure_ftp_directory",
-    "get_batchnorm_modules",
-    "get_dropout_modules",
-    "calculate_broadcasted_elementwise_result_shape",
-    "pad_trailing_dims",
-    "estimate_cost_of_sequence",
-    "get_optimal_sequence",
-    "tensor_sum",
-    "tensor_product",
-    "negative_norm_of_sum",
-    "negative_norm",
-    "project_entity",
-    "get_expected_norm",
-    "Bias",
-    "complex_normalize",
-    "lp_norm",
-    "powersum_norm",
-    "get_devices",
-    "get_preferred_device",
-    "triple_tensor_to_set",
-    "is_triple_tensor_subset",
-    "logcumsumexp",
-    "get_connected_components",
-    "normalize_path",
-    "get_edge_index",
-    "prepare_filter_triples",
-    "nested_get",
-    "rate_limited",
-    "ExtraReprMixin",
-    "einsum",
-    "isin_many_dim",
-    "split_workload",
+    "at_least_eps",
     "batched_dot",
+    "broadcast_index_shapes",
+    "broadcast_upgrade_to_sequences",
+    "calculate_broadcasted_elementwise_result_shape",
+    "check_shapes",
+    "circular_correlation",
+    "clamp_norm",
+    "combine_complex",
+    "compact_mapping",
+    "complex_normalize",
+    "compose",
+    "create_relation_to_entity_set_mapping",
+    "einsum",
+    "ensure_complex",
+    "ensure_ftp_directory",
+    "ensure_torch_random_state",
+    "ensure_tuple",
+    "estimate_cost_of_sequence",
+    "extend_batch",
+    "fix_dataclass_init_docs",
+    "flatten_dictionary",
+    "format_relative_comparison",
+    "get_batchnorm_modules",
+    "get_benchmark",
+    "get_connected_components",
+    "get_devices",
+    "get_df_io",
+    "get_dropout_modules",
+    "get_edge_index",
+    "get_expected_norm",
+    "get_json_bytes_io",
+    "get_model_io",
+    "get_optimal_sequence",
+    "get_preferred_device",
+    "get_until_first_blank",
+    "invert_mapping",
+    "is_triple_tensor_subset",
+    "isin_many_dim",
+    "logcumsumexp",
+    "lp_norm",
     "merge_kwargs",
+    "negative_norm",
+    "negative_norm_of_sum",
+    "nested_get",
+    "normalize_path",
+    "normalize_string",
+    "pad_trailing_dims",
+    "parallel_prefix_unsqueeze",
+    "powersum_norm",
     "prefix_unsqueeze_target",
+    "prepare_filter_triples",
+    "project_entity",
+    "random_non_negative_int",
+    "rate_limited",
+    "resolve_device",
+    "set_random_seed",
+    "split_complex",
+    "split_workload",
+    "tensor_product",
+    "tensor_sum",
+    "triple_tensor_to_set",
+    "unpack_singletons",
+    "upgrade_to_sequence",
+    "view_complex",
 ]
 
 logger = logging.getLogger(__name__)
@@ -231,7 +232,7 @@ def _flatten_dictionary(
     """Help flatten a nested dictionary."""
     result = {}
     for k, v in dictionary.items():
-        new_prefix = prefix + (k,)
+        new_prefix = (*prefix, k)
         if isinstance(v, dict):
             result.update(_flatten_dictionary(dictionary=v, prefix=new_prefix))
         else:
@@ -243,7 +244,7 @@ def clamp_norm(
     x: torch.Tensor,
     maxnorm: float,
     p: str | int = "fro",
-    dim: None | int | Iterable[int] = None,
+    dim: int | Iterable[int] | None = None,
 ) -> torch.Tensor:
     """Ensure that a tensor's norm does not exceeds some threshold.
 
@@ -552,7 +553,7 @@ def estimate_cost_of_sequence(
             np.prod,
             itt.islice(
                 itt.accumulate(
-                    (shape,) + other_shapes,
+                    (shape, *other_shapes),
                     calculate_broadcasted_elementwise_result_shape,
                 ),
                 1,
@@ -1462,7 +1463,7 @@ def get_edge_index(
 
 def prepare_filter_triples(
     mapped_triples: MappedTriples,
-    additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
+    additional_filter_triples: MappedTriples | list[MappedTriples] | None = None,
     warn: bool = True,
 ) -> MappedTriples:
     """Prepare the filter triples from the evaluation triples, and additional filter triples."""
@@ -1571,7 +1572,7 @@ class ExtraReprMixin:
         """
         return ", ".join(self.iter_extra_repr())
 
-    def __repr__(self) -> str:  # noqa: D105
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.extra_repr()})"
 
 

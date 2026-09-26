@@ -139,7 +139,7 @@ class MedianAbsoluteDeviationTests(cases.RankBasedMetricTestCase):
 
     cls = pykeen.metrics.ranking.MedianAbsoluteDeviation
 
-    def test_weights_coherence(self):  # noqa: D102
+    def test_weights_coherence(self):
         raise unittest.SkipTest("Does not work well with the sampling weight interpretation.")
 
     def test_weights_direction(self) -> None:
@@ -247,7 +247,7 @@ class WeightedTests(unittest.TestCase):
         individual = generator.random(size=(13,))
         # x_i ~ N(mu_i, 1)
         value = individual if key == "loc" else numpy.sqrt(individual)
-        samples = generator.normal(size=(1_000,) + individual.shape, **{key: value})
+        samples = generator.normal(size=(1000, *individual.shape), **{key: value})
 
         for weights in (None, generator.random(size=individual.shape)):
             # closed-form solution

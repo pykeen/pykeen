@@ -11,12 +11,11 @@ from ..typing import FloatTensor, LongTensor, OneOrSequence
 from ..utils import upgrade_to_sequence
 
 __all__ = [
+    "ShapeError",
+    "adjacency_tensor_to_stacked_matrix",
     "apply_optional_bn",
     "safe_diagonal",
-    "adjacency_tensor_to_stacked_matrix",
     "use_horizontal_stacking",
-    "ShapeError",
-    # Caches
 ]
 
 logger = logging.getLogger(__name__)

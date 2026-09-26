@@ -102,11 +102,11 @@ are needed to score the batch triples anyway.
 
 from class_resolver import ClassResolver
 
-from .bcwa import BatchCWATrainingLoop  # noqa: F401
-from .callbacks import TrainingCallback, callback_resolver  # noqa: F401
-from .lcwa import LCWATrainingLoop, SymmetricLCWATrainingLoop  # noqa: F401
-from .slcwa import SLCWATrainingLoop  # noqa: F401
-from .training_loop import (  # noqa: F401
+from .bcwa import BatchCWATrainingLoop
+from .callbacks import TrainingCallback, callback_resolver
+from .lcwa import LCWATrainingLoop, SymmetricLCWATrainingLoop
+from .slcwa import SLCWATrainingLoop
+from .training_loop import (
     NonFiniteLossError,
     OptimizerClearedError,
     OptimizerNotRecreatableError,
@@ -114,18 +114,17 @@ from .training_loop import (  # noqa: F401
 )
 
 __all__ = [
-    "TrainingLoop",
-    "SLCWATrainingLoop",
-    "LCWATrainingLoop",
-    "SymmetricLCWATrainingLoop",
     "BatchCWATrainingLoop",
+    "LCWATrainingLoop",
     "NonFiniteLossError",
-    "OptimizerNotRecreatableError",
     "OptimizerClearedError",
-    "training_loop_resolver",
-    #
+    "OptimizerNotRecreatableError",
+    "SLCWATrainingLoop",
+    "SymmetricLCWATrainingLoop",
     "TrainingCallback",
+    "TrainingLoop",
     "callback_resolver",
+    "training_loop_resolver",
 ]
 
 #: A resolver for training loops

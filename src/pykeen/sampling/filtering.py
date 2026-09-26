@@ -133,10 +133,10 @@ from ..typing import BoolTensor, LongTensor, MappedTriples
 from ..utils import triple_tensor_to_set
 
 __all__ = [
-    "filterer_resolver",
-    "Filterer",
     "BloomFilterer",
+    "Filterer",
     "PythonSetFilterer",
+    "filterer_resolver",
 ]
 
 
@@ -258,7 +258,7 @@ class BloomFilterer(Filterer):
         # Store some meta-data
         self.error_rate = error_rate
 
-    def __repr__(self):  # noqa:D105
+    def __repr__(self):
         return (
             f"{self.__class__.__name__}("
             f"error_rate={self.error_rate}, "
@@ -284,7 +284,7 @@ class BloomFilterer(Filterer):
         numerator = -1 * num * math.log(error_rate)
         denominator = math.log(2) ** 2
         real_num_bits_m = numerator / denominator
-        return int(math.ceil(real_num_bits_m))
+        return math.ceil(real_num_bits_m)
 
     @staticmethod
     def num_probes(num_elements: int, num_bits: int):
@@ -301,7 +301,7 @@ class BloomFilterer(Filterer):
         """
         num_bits = num_bits
         real_num_probes_k = (num_bits / num_elements) * math.log(2)
-        return int(math.ceil(real_num_probes_k))
+        return math.ceil(real_num_probes_k)
 
     def probe(
         self,

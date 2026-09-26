@@ -13,12 +13,12 @@ from ..utils import ExtraReprMixin, camel_to_snake
 __all__ = [
     "Metric",
     "ValueRange",
-    "weighted_mean_expectation",
-    "weighted_mean_variance",
-    "weighted_harmonic_mean",
-    "weighted_median",
     "compute_log_expected_power",
     "compute_median_survival_function",
+    "weighted_harmonic_mean",
+    "weighted_mean_expectation",
+    "weighted_mean_variance",
+    "weighted_median",
 ]
 
 

@@ -17,15 +17,12 @@ from ...typing import DeviceHint
 from ...utils import ExtraReprMixin, format_relative_comparison, resolve_device
 
 __all__ = [
-    # Resolver
-    "anchor_searcher_resolver",
-    # Base classes
     "AnchorSearcher",
-    # Concrete classes
-    "ScipySparseAnchorSearcher",
     "CSGraphAnchorSearcher",
-    "SparseBFSSearcher",
     "PersonalizedPageRankAnchorSearcher",
+    "ScipySparseAnchorSearcher",
+    "SparseBFSSearcher",
+    "anchor_searcher_resolver",
 ]
 
 logger = logging.getLogger(__name__)
@@ -47,7 +44,6 @@ class AnchorSearcher(ExtraReprMixin, ABC):
 
         :returns: shape: (n, k), -1 <= res < a the Ids of the closest anchors
         """
-        raise NotImplementedError
 
 
 class CSGraphAnchorSearcher(AnchorSearcher):

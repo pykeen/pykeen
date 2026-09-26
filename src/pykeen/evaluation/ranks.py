@@ -8,8 +8,8 @@ import torch
 from ..typing import RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC, FloatTensor, LongTensor, RankType
 
 __all__ = [
-    "Ranks",
     "RankBuilder",
+    "Ranks",
 ]
 
 

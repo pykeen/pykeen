@@ -6,6 +6,6 @@ from .representation import VisionDataset, VisualRepresentation, WikidataVisualR
 __all__ = [
     "VisionDataset",
     "VisualRepresentation",
-    "WikidataVisualRepresentation",
     "WikidataImageCache",
+    "WikidataVisualRepresentation",
 ]

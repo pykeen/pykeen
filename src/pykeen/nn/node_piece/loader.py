@@ -12,13 +12,10 @@ from class_resolver import ClassResolver
 from tqdm.auto import tqdm
 
 __all__ = [
-    # Resolver
-    "precomputed_tokenizer_loader_resolver",
-    # Base classes
-    "PrecomputedTokenizerLoader",
-    # Concrete classes
     "GalkinPrecomputedTokenizerLoader",
+    "PrecomputedTokenizerLoader",
     "TorchPrecomputedTokenizerLoader",
+    "precomputed_tokenizer_loader_resolver",
 ]
 
 logger = logging.getLogger(__name__)
@@ -30,7 +27,6 @@ class PrecomputedTokenizerLoader(ABC):
     @abstractmethod
     def __call__(self, path: pathlib.Path) -> tuple[Mapping[int, Collection[int]], int]:
         """Load tokenization from the given path."""
-        raise NotImplementedError
 
 
 class GalkinPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):

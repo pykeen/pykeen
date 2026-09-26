@@ -22,9 +22,9 @@ from ...triples import TriplesFactory
 from ...typing import EA_SIDE_LEFT, EA_SIDE_RIGHT, EA_SIDES, LABEL_HEAD, LABEL_TAIL, EASide
 
 __all__ = [
+    "CN3l",
     "MTransEDataset",
     "WK3l15k",
-    "CN3l",
     "WK3l120k",
 ]
 
@@ -43,7 +43,7 @@ class MTransEDataset(EADataset, ABC):
     """Base class for WK3l datasets (WK3l-15k, WK3l-120k, CN3l)."""
 
     #: The mapping from (graph-pair, side) to triple file name
-    FILE_NAMES: ClassVar[Mapping[tuple[GraphPair, None | EASide | tuple[EASide, EASide]], str]]
+    FILE_NAMES: ClassVar[Mapping[tuple[GraphPair, EASide | tuple[EASide, EASide] | None], str]]
 
     #: The internal dataset name
     DATASET_NAME: ClassVar[str]
@@ -77,12 +77,12 @@ class MTransEDataset(EADataset, ABC):
         )
         super().__init__(**kwargs)
 
-    def _cache_sub_directories(self) -> Iterable[str]:  # noqa: D102
+    def _cache_sub_directories(self) -> Iterable[str]:
         # shared directory for multiple datasets.
         yield "wk3l"
 
     @classmethod
-    def _relative_path(cls, graph_pair: GraphPair, key: None | EASide | tuple[EASide, EASide]) -> pathlib.PurePath:
+    def _relative_path(cls, graph_pair: GraphPair, key: EASide | tuple[EASide, EASide] | None) -> pathlib.PurePath:
         """Determine the relative path inside the zip file."""
         return pathlib.PurePosixPath(
             "data",
@@ -91,7 +91,7 @@ class MTransEDataset(EADataset, ABC):
             cls.FILE_NAMES[graph_pair, key],
         )
 
-    def _load_df(self, key: None | EASide | tuple[EASide, EASide], **kwargs) -> pandas.DataFrame:
+    def _load_df(self, key: EASide | tuple[EASide, EASide] | None, **kwargs) -> pandas.DataFrame:
         return read_zipfile_csv(
             path=self.zip_path,
             inner_path=str(self._relative_path(graph_pair=self.graph_pair, key=key)),
@@ -104,7 +104,7 @@ class MTransEDataset(EADataset, ABC):
             **kwargs,
         )
 
-    def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
+    def _load_graph(self, side: EASide) -> TriplesFactory:
         logger.info(f"Loading graph for side: {side}")
         df = self._load_df(key=side, names=COLUMN_LABELS)
         # create triples factory
@@ -112,7 +112,7 @@ class MTransEDataset(EADataset, ABC):
             triples=df.values, metadata={"graph_pair": self.graph_pair, "side": side}
         )
 
-    def _load_alignment(self) -> pandas.DataFrame:  # noqa: D102
+    def _load_alignment(self) -> pandas.DataFrame:
         """Load entity alignment information for the given graph pair."""
         logger.info("Loading alignment information")
         # load mappings for both sides
@@ -242,7 +242,7 @@ class CN3l(MTransEDataset):
 @click.command()
 @verbose_option
 def _main() -> None:
-    for cls, graph_pair, side in itertools.product((WK3l15k, WK3l120k, CN3l), GRAPH_PAIRS, EA_SIDES + (None,)):
+    for cls, graph_pair, side in itertools.product((WK3l15k, WK3l120k, CN3l), GRAPH_PAIRS, (*EA_SIDES, None)):
         ds = cls(graph_pair=graph_pair, side=side)
         ds.summarize()
 

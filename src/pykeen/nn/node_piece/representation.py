@@ -26,9 +26,9 @@ from ...typing import FloatTensor, LongTensor, MappedTriples, OneOrSequence
 from ...utils import broadcast_upgrade_to_sequences
 
 __all__ = [
-    "TokenizationRepresentation",
     "HashDiversityInfo",
     "NodePieceRepresentation",
+    "TokenizationRepresentation",
 ]
 
 logger = logging.getLogger(__name__)
@@ -116,7 +116,7 @@ class TokenizationRepresentation(Representation):
             token_representation_kwargs,
             max_id=self.vocabulary_size,
         )
-        shape = ShapeError.verify(shape=(num_chosen_tokens,) + token_representation.shape, reference=shape)
+        shape = ShapeError.verify(shape=(num_chosen_tokens, *token_representation.shape), reference=shape)
         super().__init__(max_id=max_id, shape=shape, **kwargs)
 
         # input validation
@@ -193,7 +193,7 @@ class TokenizationRepresentation(Representation):
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # get token IDs, shape: (*, num_chosen_tokens)
         token_ids = self.assignment
         if indices is not None:
@@ -269,7 +269,7 @@ class NodePieceRepresentation(CombinedRepresentation):
         tokenizers: OneOrManyHintOrType[Tokenizer] = None,
         tokenizers_kwargs: OneOrManyOptionalKwargs = None,
         num_tokens: OneOrSequence[int] = 2,
-        aggregation: None | str | Callable[[FloatTensor, int], FloatTensor] = None,
+        aggregation: str | Callable[[FloatTensor, int], FloatTensor] | None = None,
         aggregation_kwargs: OptionalKwargs = None,
         max_id: int | None = None,
         **kwargs,

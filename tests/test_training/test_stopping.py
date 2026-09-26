@@ -39,7 +39,7 @@ class DummyTrainingLoop(SLCWATrainingLoop):
         stop: int,
         label_smoothing: float = 0.0,
         slice_size: int | None = None,
-    ) -> torch.FloatTensor:  # noqa: D102
+    ) -> torch.FloatTensor:
         assert (stop - start) <= self.sub_batch_size
 
         # check for empty batches

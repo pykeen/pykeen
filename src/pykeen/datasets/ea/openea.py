@@ -119,7 +119,7 @@ class OpenEA(EADataset):
         # delegate to super class
         super().__init__(**kwargs)
 
-    def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
+    def _load_graph(self, side: EASide) -> TriplesFactory:
         # left side has files ending with 1, right side with 2
         one_or_two = "1" if side == EA_SIDE_LEFT else "2"
         file_name = f"rel_triples_{one_or_two}"
@@ -136,7 +136,7 @@ class OpenEA(EADataset):
             metadata={"path": self.zip_path},
         )
 
-    def _load_alignment(self) -> pandas.DataFrame:  # noqa: D102
+    def _load_alignment(self) -> pandas.DataFrame:
         return read_zipfile_csv(
             path=self.zip_path,
             inner_path=str(self.inner_path.joinpath("ent_links")),
@@ -152,7 +152,7 @@ class OpenEA(EADataset):
 @verbose_option
 def _main() -> None:
     for size, version, graph_pair, side in itertools.product(
-        GRAPH_SIZES, GRAPH_VERSIONS, GRAPH_PAIRS, EA_SIDES + (None,)
+        GRAPH_SIZES, GRAPH_VERSIONS, GRAPH_PAIRS, (*EA_SIDES, None)
     ):
         ds = OpenEA(graph_pair=graph_pair, side=side, size=size, version=version)
         ds.summarize()

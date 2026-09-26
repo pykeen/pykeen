@@ -11,7 +11,7 @@ from .ablation import (
 __all__ = [
     "ablation_pipeline",
     "ablation_pipeline_from_config",
+    "prepare_ablation",
     "prepare_ablation_from_config",
     "prepare_ablation_from_path",
-    "prepare_ablation",
 ]

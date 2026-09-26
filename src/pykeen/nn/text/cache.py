@@ -21,12 +21,11 @@ from ...utils import nested_get
 from ...version import get_version
 
 __all__ = [
-    "text_cache_resolver",
-    "TextCache",
-    # Concrete classes
     "IdentityCache",
     "PyOBOTextCache",
+    "TextCache",
     "WikidataTextCache",
+    "text_cache_resolver",
 ]
 
 
@@ -46,10 +45,7 @@ class TextCache(ABC):
 
 
 class IdentityCache(TextCache):
-    """A cache without functionality.
-
-    Mostly used for testing.
-    """
+    """A cache without functionality, mostly used for testing."""
 
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str | None]:  # noqa: D102
         return identifiers

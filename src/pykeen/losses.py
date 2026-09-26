@@ -179,31 +179,28 @@ from torch.nn.modules.loss import _Loss
 from .typing import BoolTensor, FloatTensor, LongTensor
 
 __all__ = [
-    # Base Classes
-    "Loss",
-    "PointwiseLoss",
-    "DeltaPointwiseLoss",
-    "MarginPairwiseLoss",
-    "PairwiseLoss",
-    "SetwiseLoss",
-    "AdversarialLoss",
-    # Concrete Classes
     "AdversarialBCEWithLogitsLoss",
+    "AdversarialLoss",
     "BCEAfterSigmoidLoss",
     "BCEWithLogitsLoss",
     "CrossEntropyLoss",
+    "DeltaPointwiseLoss",
+    "DoubleMarginLoss",
     "FocalLoss",
     "InfoNCELoss",
-    "MarginRankingLoss",
+    "Loss",
     "MSELoss",
+    "MarginPairwiseLoss",
+    "MarginRankingLoss",
     "NSSALoss",
-    "SoftplusLoss",
-    "SoftPointwiseHingeLoss",
-    "PointwiseHingeLoss",
-    "DoubleMarginLoss",
-    "SoftMarginRankingLoss",
     "PairwiseLogisticLoss",
-    # Utils
+    "PairwiseLoss",
+    "PointwiseHingeLoss",
+    "PointwiseLoss",
+    "SetwiseLoss",
+    "SoftMarginRankingLoss",
+    "SoftPointwiseHingeLoss",
+    "SoftplusLoss",
     "loss_resolver",
 ]
 
@@ -595,7 +592,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
 
     pos_weight: FloatTensor | None
 
-    def __init__(self, reduction: Reduction = "mean", pos_weight: None | float = None):
+    def __init__(self, reduction: Reduction = "mean", pos_weight: float | None = None):
         """Initialize the loss criterion.
 
         :param reduction:

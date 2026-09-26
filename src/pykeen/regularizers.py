@@ -16,16 +16,13 @@ from .typing import FloatTensor
 from .utils import lp_norm, powersum_norm
 
 __all__ = [
-    # Base Class
-    "Regularizer",
-    # Child classes
+    "CombinedRegularizer",
     "LpRegularizer",
     "NoRegularizer",
-    "CombinedRegularizer",
-    "PowerSumRegularizer",
-    "OrthogonalityRegularizer",
     "NormLimitRegularizer",
-    # Utils
+    "OrthogonalityRegularizer",
+    "PowerSumRegularizer",
+    "Regularizer",
     "regularizer_resolver",
 ]
 DEFAULT_REGULARIZER_WEIGHT_HPO_RANGE = {
@@ -58,7 +55,7 @@ class Regularizer(nn.Module, ABC):
         weight: float = 1.0,
         apply_only_once: bool = False,
         parameters: Iterable[nn.Parameter] | None = None,
-    ):
+    ) -> None:
         """Instantiate the regularizer.
 
         :param weight: The relative weight of the regularization
@@ -91,7 +88,6 @@ class Regularizer(nn.Module, ABC):
     @abstractmethod
     def forward(self, x: FloatTensor) -> FloatTensor:
         """Compute the regularization term for one tensor."""
-        raise NotImplementedError
 
     def update(self, *tensors: FloatTensor) -> None:
         """Update the regularization term based on passed tensors."""

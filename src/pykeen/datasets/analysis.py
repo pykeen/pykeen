@@ -14,13 +14,12 @@ from ..typing import MappedTriples
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "get_relation_count_df",
     "get_entity_count_df",
     "get_entity_relation_co_occurrence_df",
-    "get_relation_functionality_df",
-    # relation typing
-    "get_relation_pattern_types_df",
     "get_relation_cardinality_types_df",
+    "get_relation_count_df",
+    "get_relation_functionality_df",
+    "get_relation_pattern_types_df",
 ]
 
 # constants
@@ -31,7 +30,7 @@ def _get_mapped_triples(dataset: Dataset, parts: Collection[str]) -> Collection[
     return torch.cat([dataset.factory_dict[part].mapped_triples for part in parts], dim=0).tolist()
 
 
-def _normalize_parts(dataset: Dataset, parts: None | str | Collection[str]) -> Collection[str]:
+def _normalize_parts(dataset: Dataset, parts: str | Collection[str] | None) -> Collection[str]:
     if parts is None:
         parts = dataset.factory_dict.keys()
     elif isinstance(parts, str):

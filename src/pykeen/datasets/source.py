@@ -10,12 +10,12 @@ from typing import IO
 from pystow.utils import ArchiveType, DownloadKwargs, download, open_archive, safe_open
 
 __all__ = [
-    "Source",
-    "RemoteSimpleSource",
-    "RemoteArchivedSource",
-    "RemoteSource",
     "ArchivedSource",
+    "RemoteArchivedSource",
+    "RemoteSimpleSource",
+    "RemoteSource",
     "SimpleSource",
+    "Source",
 ]
 
 

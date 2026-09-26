@@ -2,7 +2,7 @@
 
 import logging
 import pathlib
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Collection, Mapping
 
@@ -20,21 +20,18 @@ from ...typing import DeviceHint, LongTensor, MappedTriples
 from ...utils import format_relative_comparison, get_edge_index, resolve_device
 
 __all__ = [
-    # Resolver
-    "tokenizer_resolver",
-    # Base classes
-    "Tokenizer",
-    # Concrete classes
-    "RelationTokenizer",
     "AnchorTokenizer",
     "MetisAnchorTokenizer",
     "PrecomputedPoolTokenizer",
+    "RelationTokenizer",
+    "Tokenizer",
+    "tokenizer_resolver",
 ]
 
 logger = logging.getLogger(__name__)
 
 
-class Tokenizer:
+class Tokenizer(ABC):
     """A base class for tokenizers for NodePiece representations."""
 
     @abstractmethod
@@ -55,7 +52,6 @@ class Tokenizer:
         :returns: shape: (num_entities, num_tokens), -1 <= res < vocabulary_size the selected relation IDs for each
             entity. -1 is used as a padding token.
         """
-        raise NotImplementedError
 
 
 class RelationTokenizer(Tokenizer):

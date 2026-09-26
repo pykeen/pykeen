@@ -9,11 +9,11 @@ from ..nn.representation import Representation
 from ..stoppers import EarlyStopper
 
 __all__ = [
-    "plot_losses",
+    "build_representation_getter",
+    "plot",
     "plot_early_stopping",
     "plot_er",
-    "plot",
-    "build_representation_getter",
+    "plot_losses",
 ]
 
 logger = logging.getLogger(__name__)

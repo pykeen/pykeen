@@ -1,5 +1,6 @@
 """Combination strategies for entity alignment datasets."""
 
+import itertools
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -27,15 +28,12 @@ from ...typing import (
 from ...utils import format_relative_comparison, get_connected_components
 
 __all__ = [
-    # Abstract class
-    "GraphPairCombinator",
-    # Concrete classes
-    "DisjointGraphPairCombinator",
-    "SwapGraphPairCombinator",
-    "ExtraRelationGraphPairCombinator",
     "CollapseGraphPairCombinator",
-    # Data Structures
+    "DisjointGraphPairCombinator",
+    "ExtraRelationGraphPairCombinator",
+    "GraphPairCombinator",
     "ProcessedTuple",
+    "SwapGraphPairCombinator",
 ]
 
 logger = logging.getLogger(__name__)
@@ -120,7 +118,7 @@ def merge_label_to_id_mapping(
     # reconstruct label-to-id
     result: dict[str, int] = {}
     for value, keys in value_to_keys.items():
-        key = list(keys)[0] if len(keys) == 1 else str(set(keys))
+        key = next(iter(keys)) if len(keys) == 1 else str(set(keys))
         result[key] = value
     return result
 
@@ -444,8 +442,8 @@ def iter_entity_mappings(
     :yields: explicit id remappings
     """
     old, new = (torch.cat(tensors, dim=0) for tensors in zip(*old_new_ids_pairs, strict=False))
-    offsets = offsets.tolist() + [get_num_ids(old)]
-    for low, high in zip(offsets, offsets[1:], strict=False):
+    offsets = [*offsets.tolist(), get_num_ids(old)]
+    for low, high in itertools.pairwise(offsets):
         mask = (low <= old) & (old < high)
         this_old = old[mask] - low
         this_new = new[mask]

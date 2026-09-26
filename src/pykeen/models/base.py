@@ -165,7 +165,7 @@ class Model(nn.Module, ABC):
         """Return the model's device."""
         return get_preferred_device(self, allow_ambiguity=False)
 
-    def reset_parameters_(self):  # noqa: D401
+    def reset_parameters_(self):
         """Reset all parameters of the model and enforce model constraints."""
         self._reset_parameters_()
         # TODO: why do we need to empty the cache?
@@ -184,7 +184,7 @@ class Model(nn.Module, ABC):
     """Abstract methods"""
 
     @abstractmethod
-    def _reset_parameters_(self):  # noqa: D401
+    def _reset_parameters_(self):
         """Reset all parameters of the model in-place."""
 
     @abstractmethod

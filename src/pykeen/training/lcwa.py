@@ -75,7 +75,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
 
     def _create_training_data_loader(
         self, triples_factory: CoreTriplesFactory, sampler: str | None, **kwargs
-    ) -> DataLoader[LCWABatch]:  # noqa: D102
+    ) -> DataLoader[LCWABatch]:
         if sampler:
             raise NotImplementedError(
                 f"LCWA training does not support non-default batch sampling. Expected sampler=None, but got "
@@ -91,7 +91,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         return DataLoader(dataset=dataset, **kwargs)
 
     @staticmethod
-    def _get_batch_size(batch: LCWABatch) -> int:  # noqa: D102
+    def _get_batch_size(batch: LCWABatch) -> int:
         return batch["pairs"].shape[0]
 
     @staticmethod
@@ -138,7 +138,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         stop: int,
         label_smoothing: float = 0.0,
         slice_size: int | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         return self._process_batch_static(
             model=self.model,
             score_method=self.score_method,
@@ -152,7 +152,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
             slice_size=slice_size,
         )
 
-    def _get_initial_slice_size(self, batch_size: int) -> int:  # noqa: D102
+    def _get_initial_slice_size(self, batch_size: int) -> int:
         # slicing is along the target
         return ceil(self.num_targets / 2)
 
@@ -182,7 +182,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
 
     def _create_training_data_loader(
         self, triples_factory: CoreTriplesFactory, sampler: str | None, **kwargs
-    ) -> DataLoader[tuple[MappedTriples]]:  # noqa: D102
+    ) -> DataLoader[tuple[MappedTriples]]:
         assert sampler is None
         return DataLoader(dataset=TensorDataset(triples_factory.mapped_triples), **kwargs)
 
@@ -193,7 +193,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
         stop: int,
         label_smoothing: float = 0,
         slice_size: int | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # unpack
         hrt_batch = batch[0]
         # Send batch to device
@@ -222,7 +222,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
         )
 
     @staticmethod
-    def _get_batch_size(batch: tuple[MappedTriples]) -> int:  # noqa: D102
+    def _get_batch_size(batch: tuple[MappedTriples]) -> int:
         assert len(batch) == 1
         return batch[0].shape[0]
 

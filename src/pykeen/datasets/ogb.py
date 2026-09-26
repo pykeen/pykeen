@@ -27,8 +27,8 @@ if typing.TYPE_CHECKING:
     from ogb.linkproppred import LinkPropPredDataset
 
 __all__ = [
-    "OGBLoader",
     "OGBBioKG",
+    "OGBLoader",
     "OGBWikiKG2",
 ]
 
@@ -60,7 +60,7 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
         self.cache_root = self._help_cache(cache_root)
         self._create_inverse_triples = create_inverse_triples
 
-    def _load(self) -> None:  # noqa: D102
+    def _load(self) -> None:
         dataset = self._load_ogb_dataset()
         # label mapping is in dataset.root/mapping
         entity_to_id, relation_to_id = self._load_mappings(pathlib.Path(dataset.root).joinpath("mapping"))
@@ -76,7 +76,7 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
             relation_to_id=relation_to_id,
         )
 
-    def _load_validation(self) -> None:  # noqa: D102
+    def _load_validation(self) -> None:
         dataset = self._load_ogb_dataset()
         self._validation = TriplesFactory(
             mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "valid")),
@@ -170,7 +170,7 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
 
     name = "ogbl-wikikg2"
 
-    def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:  # noqa: D102
+    def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:
         df_ent = pandas.read_csv(mapping_root.joinpath("nodeidx2entityid.csv.gz"))
         entity_to_id = dict(zip(df_ent["entity id"].tolist(), df_ent["node idx"].tolist(), strict=False))
         df_rel = pandas.read_csv(mapping_root.joinpath("reltype2relid.csv.gz"))
@@ -178,14 +178,13 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
         return entity_to_id, relation_to_id
 
     def _load_data_dict_for_split(self, dataset, which):
-        # noqa: D102
         data_dict = torch.load(
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
             weights_only=False,
         )
         return cast(WikiKG2TrainDict, data_dict) if which == "train" else cast(WikiKG2EvalDict, data_dict)
 
-    def _compose_mapped_triples(self, data_dict: WikiKG2TrainDict | WikiKG2EvalDict) -> numpy.ndarray:  # noqa: D102
+    def _compose_mapped_triples(self, data_dict: WikiKG2TrainDict | WikiKG2EvalDict) -> numpy.ndarray:
         return numpy.stack([data_dict["head"], data_dict["relation"], data_dict["tail"]], axis=-1)
 
 
@@ -247,7 +246,7 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
 
     name = "ogbl-biokg"
 
-    def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:  # noqa: D102
+    def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:
         df_rel = pandas.read_csv(mapping_root.joinpath("relidx2relname.csv.gz"))
         LOGGER.info(f"Loaded relation mapping for {len(df_rel)} relations.")
         relation_to_id = dict(zip(df_rel["rel name"].tolist(), df_rel["rel idx"].tolist(), strict=False))
@@ -288,7 +287,7 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
 
     def _load_data_dict_for_split(
         self, dataset: LinkPropPredDataset, which: SplitKey
-    ) -> BioKGTrainDict | BioKGEvalDict:  # noqa: D102
+    ) -> BioKGTrainDict | BioKGEvalDict:
         data_dict = torch.load(
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
             weights_only=False,

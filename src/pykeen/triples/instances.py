@@ -31,15 +31,15 @@ from ..typing import (
 from ..utils import split_workload
 
 __all__ = [
-    "Instances",
-    "LCWAInstances",
     "BaseBatchedSLCWAInstances",
-    "BatchedSLCWAInstances",
-    "SubGraphSLCWAInstances",
-    "LCWABatch",
     "BatchCWABatch",
-    "SLCWABatch",
+    "BatchedSLCWAInstances",
     "GroupedSLCWABatch",
+    "Instances",
+    "LCWABatch",
+    "LCWAInstances",
+    "SLCWABatch",
+    "SubGraphSLCWAInstances",
 ]
 
 BatchType = TypeVar("BatchType")
@@ -443,10 +443,10 @@ class LCWAInstances(Instances[LCWABatch]):
             loss_weighter_kwargs=loss_weighter_kwargs,
         )
 
-    def __len__(self) -> int:  # noqa: D105
+    def __len__(self) -> int:
         return self.pairs.shape[0]
 
-    def __getitem__(self, item: int) -> LCWABatch:  # noqa: D105
+    def __getitem__(self, item: int) -> LCWABatch:
         pairs = self.pairs[item]
         result = LCWABatch(pairs=pairs, target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :]))
         if self.loss_weighter is None:
