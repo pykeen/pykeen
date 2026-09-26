@@ -6,7 +6,6 @@ import logging
 import pathlib
 import tarfile
 import zipfile
-from abc import abstractmethod
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from io import BytesIO
 from typing import Any, ClassVar, Self, cast
@@ -35,7 +34,6 @@ __all__ = [
     "EagerDataset",
     "LazyDataset",
     "PathDataset",
-    "RemoteDataset",
     "UnpackedRemoteDataset",
     "TarFileRemoteDataset",
     "PackedZipRemoteDataset",
@@ -749,7 +747,7 @@ class UnpackedRemoteDataset(SourceDataSet):
         )
 
 
-class RemoteDataset(PathDataset):
+class TarFileRemoteDataset(PathDataset):
     """Contains a lazy reference to a remote dataset that is loaded if needed."""
 
     def __init__(
@@ -801,10 +799,9 @@ class RemoteDataset(PathDataset):
             self.cache_root.joinpath(self._relative_validation_path),
         )
 
-    @abstractmethod
-    def _extract(self, archive_file: BytesIO) -> None:
-        """Extract from the downloaded file."""
-        raise NotImplementedError
+    def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
+        with tarfile.open(fileobj=archive_file) as tf:
+            tf.extractall(path=self.cache_root)  # noqa:S202
 
     def _get_bytes(self) -> BytesIO:
         logger.info(f"Requesting dataset from {self.url}")
@@ -821,14 +818,6 @@ class RemoteDataset(PathDataset):
             logger.info(f"Extracted to {self.cache_root}.")
 
         super()._load()
-
-
-class TarFileRemoteDataset(RemoteDataset):
-    """A remote dataset stored as a tar file."""
-
-    def _extract(self, archive_file: BytesIO) -> None:  # noqa: D102
-        with tarfile.open(fileobj=archive_file) as tf:
-            tf.extractall(path=self.cache_root)  # noqa:S202
 
 
 class PackedZipRemoteDataset(SourceDataSet):
