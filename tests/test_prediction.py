@@ -270,9 +270,9 @@ def _iter_get_input_batch_inputs() -> Iterable[
 @pytest.mark.parametrize(("factory", "head", "relation", "tail", "exp_target"), list(_iter_get_input_batch_inputs()))
 def test_get_input_batch(
     factory: CoreTriplesFactory | None,
-    head: None | int | str,
-    relation: None | int | str,
-    tail: None | int | str,
+    head: int | str | None,
+    relation: int | str | None,
+    tail: int | str | None,
     exp_target: pykeen.typing.Target,
 ):
     """Test input batch construction for target prediction."""
@@ -288,7 +288,7 @@ def test_get_input_batch(
 
 
 def _iter_get_targets_inputs() -> Iterable[
-    tuple[None | torch.Tensor | Collection[str | int], CoreTriplesFactory | None, bool]
+    tuple[torch.Tensor | Collection[str | int] | None, CoreTriplesFactory | None, bool]
 ]:
     """Iterate over test inputs for _get_targets."""
     factory = Nations().training
@@ -313,7 +313,7 @@ def _iter_get_targets_inputs() -> Iterable[
     ("ids", "factory", "entity", "exp_labels", "exp_ids", "exp_tensor"), _iter_get_targets_inputs()
 )
 def test_get_targets(
-    ids: None | torch.Tensor | Collection[str | int],
+    ids: torch.Tensor | Collection[str | int] | None,
     factory: CoreTriplesFactory | None,
     entity: bool,
     exp_labels: Sequence[str] | None,
@@ -360,11 +360,11 @@ def _iter_predict_target_inputs() -> Iterable[
 )
 def test_predict_target(
     model: pykeen.models.Model,
-    head: None | int | str,
-    relation: None | int | str,
-    tail: None | int | str,
+    head: int | str | None,
+    relation: int | str | None,
+    tail: int | str | None,
     factory: CoreTriplesFactory | None,
-    targets: None | torch.LongTensor | Sequence[int | str],
+    targets: torch.LongTensor | Sequence[int | str] | None,
 ):
     """Test target scoring."""
     pred = pykeen.predict.predict_target(
@@ -375,7 +375,7 @@ def test_predict_target(
 
 
 @pytest.mark.parametrize("targets", [None, [1, 2, 3]])
-def test_predict_relation_target_with_inverse_triples(targets: None | Sequence[int]):
+def test_predict_relation_target_with_inverse_triples(targets: Sequence[int] | None):
     """Test that relation prediction reports "real" relation IDs when using inverse relations."""
     factory = Nations(create_inverse_triples=True).training
     model = pykeen.models.mocks.FixedModel(triples_factory=factory)

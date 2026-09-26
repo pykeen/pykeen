@@ -21,12 +21,10 @@ if TYPE_CHECKING:
     from ..representation import Representation
 
 __all__ = [
-    # abstract
-    "TextEncoder",
-    "text_encoder_resolver",
-    # concrete
     "CharacterEmbeddingTextEncoder",
+    "TextEncoder",
     "TransformerTextEncoder",
+    "text_encoder_resolver",
 ]
 
 logger = logging.getLogger(__name__)

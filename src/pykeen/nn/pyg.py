@@ -47,11 +47,9 @@ from ..typing import BoolTensor, FloatTensor, LongTensor, OneOrSequence
 from ..utils import get_edge_index, upgrade_to_sequence
 
 __all__ = [
-    # abstract
-    "MessagePassingRepresentation",
-    # concrete classes
-    "SimpleMessagePassingRepresentation",
     "FeaturizedMessagePassingRepresentation",
+    "MessagePassingRepresentation",
+    "SimpleMessagePassingRepresentation",
     "TypedMessagePassingRepresentation",
 ]
 
@@ -206,7 +204,7 @@ class MessagePassingRepresentation(Representation, ABC):
         #   * replace base representations
         #   * keep layers & activations
 
-    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:
         if self.restrict_k_hop and indices is not None:
             # we can restrict the message passing to the k-hop neighborhood of the desired indices;
             # this does only make sense if we do not request *all* indices

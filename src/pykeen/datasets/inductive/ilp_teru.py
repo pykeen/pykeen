@@ -15,8 +15,8 @@ from ..base import UnpackedRemoteDataSetKwargs
 
 __all__ = [
     "InductiveFB15k237",
-    "InductiveWN18RR",
     "InductiveNELL",
+    "InductiveWN18RR",
 ]
 
 BASE_URL = "https://raw.githubusercontent.com/kkteru/grail/master/data"

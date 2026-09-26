@@ -137,7 +137,7 @@ class TestPipelineTriples(unittest.TestCase):
         class ModifiedTrainingLoop(SLCWATrainingLoop):
             """A wrapper around SLCWA training loop which remembers batch losses."""
 
-            def _forward_pass(self, *args, **kwargs):  # noqa: D102
+            def _forward_pass(self, *args, **kwargs):
                 loss = super()._forward_pass(*args, **kwargs)
                 losses.append(loss)
                 return loss
@@ -187,11 +187,11 @@ class TestPipelineTriples(unittest.TestCase):
 class TestPipelineReplicate(unittest.TestCase):
     """Test the replication with pipeline."""
 
-    def setUp(self) -> None:  # noqa: D102
+    def setUp(self) -> None:
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.tmp_dir_path = pathlib.Path(self.tmp_dir.name)
 
-    def tearDown(self) -> None:  # noqa: D102
+    def tearDown(self) -> None:
         self.tmp_dir.cleanup()
 
     def test_replicate_pipeline_from_config(self):

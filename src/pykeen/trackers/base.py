@@ -12,10 +12,10 @@ from tqdm.auto import tqdm
 from ..utils import flatten_dictionary
 
 __all__ = [
-    "ResultTracker",
     "ConsoleResultTracker",
     "MultiResultTracker",
     "PythonResultTracker",
+    "ResultTracker",
 ]
 
 
@@ -120,9 +120,9 @@ class ConsoleResultTracker(ResultTracker):
         self,
         *,
         track_parameters: bool = True,
-        parameter_filter: None | str | Pattern[str] = None,
+        parameter_filter: str | Pattern[str] | None = None,
         track_metrics: bool = True,
-        metric_filter: None | str | Pattern[str] = None,
+        metric_filter: str | Pattern[str] | None = None,
         start_end_run: bool = False,
         writer: str = "tqdm",
     ):

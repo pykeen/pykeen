@@ -18,14 +18,14 @@ class FiltererTest(unittest_templates.GenericTestCase[Filterer]):
     batch_size = 16
     num_negs_per_pos = 10
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         self.generator = set_random_seed(seed=self.seed)[1]
         self.triples_factory = Nations().training
         kwargs["mapped_triples"] = self.mapped_triples = self.triples_factory.mapped_triples
         return kwargs
 
-    def post_instantiation_hook(self) -> None:  # noqa: D102
+    def post_instantiation_hook(self) -> None:
         self.positive_batch = self.mapped_triples[
             torch.randint(
                 low=0,

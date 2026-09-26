@@ -27,8 +27,8 @@ from .utils import Metric, ValueRange
 
 __all__ = [
     "ClassificationMetric",
-    "construct_indicator",
     "classification_metric_resolver",
+    "construct_indicator",
 ]
 
 ZeroDivisionPolicy = Literal["warn", 0, 1]
@@ -145,7 +145,7 @@ class NumScores(ClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("score_count",)
 
-    def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:  # noqa: D102
+    def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
         return y_score.size
 
 
@@ -154,7 +154,7 @@ class BinarizedClassificationMetric(ClassificationMetric, abc.ABC):
 
     binarize: ClassVar[bool] = True
 
-    def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:  # noqa: D102
+    def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
         return super().__call__(
             y_true=y_true, y_score=construct_indicator(y_score=y_score, y_true=y_true), weights=weights
         )
@@ -177,7 +177,7 @@ class BalancedAccuracyScore(BinarizedClassificationMetric):
 
     def forward(
         self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return float(metrics.balanced_accuracy_score(y_true=y_true, y_pred=y_score, sample_weight=sample_weight))
 
 
@@ -205,7 +205,7 @@ class AveragePrecisionScore(ClassificationMetric):
 
     def forward(
         self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return float(metrics.average_precision_score(y_true=y_true, y_score=y_score, sample_weight=sample_weight))
 
 
@@ -226,7 +226,7 @@ class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
 
     def forward(
         self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         return float(metrics.roc_auc_score(y_true=y_true, y_score=y_score, sample_weight=sample_weight))
 
 
@@ -260,7 +260,7 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
         """
         # todo: it would make sense to have a separate evaluator which constructs the confusion matrix only once
 
-    def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:  # noqa: D102
+    def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
         y_pred = construct_indicator(y_score=y_score, y_true=y_true)
         matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred, sample_weight=weights, normalize=None)
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html
@@ -286,7 +286,7 @@ class TruePositiveRate(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("tpr", "sensitivity", "recall", "hit rate")
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=tp, denominator=tp + fn, zero_division=self.zero_division)
 
 
@@ -313,7 +313,7 @@ class TrueNegativeRate(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("tnr", "specificity", "selectivity")
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=tn, denominator=tn + fp, zero_division=self.zero_division)
 
 
@@ -335,7 +335,7 @@ class FalsePositiveRate(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("fpr", "fall-out", "false alarm ratio")
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=fp, denominator=fp + tn, zero_division=self.zero_division)
 
 
@@ -357,7 +357,7 @@ class FalseNegativeRate(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("fnr", "miss-rate")
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=fn, denominator=fn + tp, zero_division=self.zero_division)
 
 
@@ -379,7 +379,7 @@ class PositivePredictiveValue(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("ppv",)
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=tp, denominator=tp + fp, zero_division=self.zero_division)
 
 
@@ -401,7 +401,7 @@ class NegativePredictiveValue(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("npv",)
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=tn, denominator=tn + fn, zero_division=self.zero_division)
 
 
@@ -423,7 +423,7 @@ class FalseDiscoveryRate(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("fdr",)
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=fp, denominator=fp + tp, zero_division=self.zero_division)
 
 
@@ -445,7 +445,7 @@ class FalseOmissionRate(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("fom",)
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=fn, denominator=fn + tn, zero_division=self.zero_division)
 
 
@@ -467,7 +467,7 @@ class PositiveLikelihoodRatio(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("lr+",)
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(
             numerator=tp * (tn + fp),
             denominator=fp * (tp + fn),
@@ -493,7 +493,7 @@ class NegativeLikelihoodRatio(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("lr-",)
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(
             numerator=fn * (tn + fp),
             denominator=tn * (tp + fn),
@@ -521,7 +521,7 @@ class DiagnosticOddsRatio(ConfusionMatrixClassificationMetric):
 
     # todo: https://en.wikipedia.org/wiki/Diagnostic_odds_ratio#Confidence_interval
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=tp * tn, denominator=fp * fn, zero_division=self.zero_division)
 
 
@@ -543,7 +543,7 @@ class Accuracy(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("acc", "fraction correct", "fc")
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=tp + tn, denominator=tp + tn + fp + fn, zero_division=self.zero_division)
 
 
@@ -565,7 +565,7 @@ class F1Score(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("f1",)
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=2 * tp, denominator=2 * tp + fp + fn, zero_division=self.zero_division)
 
 
@@ -588,7 +588,7 @@ class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("pt",)
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         fpr = FalsePositiveRate().extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
         tpr = TruePositiveRate().extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
         return safe_divide(
@@ -616,7 +616,7 @@ class ThreatScore(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("ts", "critical success index", "csi", "jaccard index")
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=tp, denominator=tp + fn + fp, zero_division=self.zero_division)
 
 
@@ -638,7 +638,7 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("fm", "fmi")
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return math.sqrt(safe_divide(numerator=tp**2, denominator=2 * tp + fp + fn, zero_division=self.zero_division))
 
 
@@ -660,7 +660,7 @@ class Informedness(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("Youden's J", "Youden's Index", "yi")
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return (
             safe_divide(numerator=tp, denominator=tp + fn, zero_division=self.zero_division)
             + safe_divide(numerator=tn, denominator=tn + fp, zero_division=self.zero_division)
@@ -688,7 +688,7 @@ class MatthewsCorrelationCoefficient(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("mcc",)
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa: D102
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(
             numerator=tp * tn - fp * fn,
             denominator=math.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)),

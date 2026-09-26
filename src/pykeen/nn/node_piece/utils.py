@@ -10,9 +10,9 @@ from tqdm.auto import tqdm
 from ...typing import LongTensor
 
 __all__ = [
-    "random_sample_no_replacement",
     "ensure_num_entities",
     "prepare_edges_for_metis",
+    "random_sample_no_replacement",
 ]
 
 logger = logging.getLogger(__name__)

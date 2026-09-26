@@ -21,7 +21,7 @@ class CustomRepresentation(Representation):
         super().__init__(max_id=num_entities, shape=shape)
         self.x = nn.Parameter(torch.rand(*shape))
 
-    def _plain_forward(self, indices: torch.LongTensor | None = None) -> torch.FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: torch.LongTensor | None = None) -> torch.FloatTensor:
         n = self.max_id if indices is None else indices.shape[0]
         return self.x.unsqueeze(dim=0).repeat(n, *(1 for _ in self.shape))
 
@@ -51,13 +51,13 @@ class MockEvaluator(Evaluator):
         true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
         dense_positive_mask: torch.FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         pass
 
-    def clear(self):  # noqa: D102
+    def clear(self):
         pass
 
-    def finalize(self) -> MetricResults:  # noqa: D102
+    def finalize(self) -> MetricResults:
         result = RankBasedMetricResults.create_random(self.random_state)
         assert self.values_iter is not None
         if self.key not in result.data:
@@ -65,5 +65,5 @@ class MockEvaluator(Evaluator):
         result.data[self.key] = next(self.values_iter)
         return result
 
-    def __repr__(self):  # noqa: D105
+    def __repr__(self):
         return f"{self.__class__.__name__}(values={self.values})"

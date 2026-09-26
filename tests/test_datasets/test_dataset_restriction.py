@@ -51,7 +51,7 @@ def rng() -> random.Random:
 class PartialCase(NamedTuple):
     """One part of the test case (either entities or relations)."""
 
-    selection: None | Collection[int]
+    selection: Collection[int] | None
     invert: bool
     max_ids: int
 

@@ -12,7 +12,7 @@ class TestExperimentIntegrity(unittest.TestCase):
     """Test the integrity of the reproduction experiment scripts."""
 
 
-def _generate(model, config, path):  # noqa: D202
+def _generate(model, config, path):
     """Generate a new test function for the given model/config/path."""
 
     def _x(test_case: unittest.TestCase):

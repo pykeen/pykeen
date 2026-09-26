@@ -25,11 +25,9 @@ from ..utils import determine_maximum_batch_size, upgrade_to_sequence
 
 __all__ = [
     "AdditionalFilterTriplesHint",
-    # Evaluation loops
     "EvaluationLoop",
-    "LCWAEvaluationLoop",
-    # Evaluation datasets
     "LCWAEvaluationDataset",
+    "LCWAEvaluationLoop",
 ]
 
 logger = logging.getLogger(__name__)
@@ -227,7 +225,7 @@ class FilterIndex:
         # instantiate
         return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=numpy.asarray(bounds), indices=indices)
 
-    def __getitem__(self, item: int) -> numpy.ndarray:  # noqa: D105
+    def __getitem__(self, item: int) -> numpy.ndarray:
         # return indices corresponding to the `item`-th triple
         key_id = self.triple_id_to_key_id[item]
         low, high = self.bounds[key_id : key_id + 2]
@@ -291,10 +289,10 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, torch.T
         """Return the number of targets."""
         return len(self.targets)
 
-    def __len__(self) -> int:  # noqa: D105
+    def __len__(self) -> int:
         return self.num_triples * self.num_targets
 
-    def __getitem__(self, index: int) -> tuple[Target, MappedTriples, LongTensor | None]:  # noqa: D105
+    def __getitem__(self, index: int) -> tuple[Target, MappedTriples, LongTensor | None]:
         # sorted by target -> most of the batches only have a single target
         target_id, index = divmod(index, self.num_triples)
         target = self.targets[target_id]

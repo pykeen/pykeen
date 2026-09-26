@@ -115,9 +115,11 @@ the :class:`~pykeen.datasets.Nations` constructor.
 from __future__ import annotations
 
 import ftplib
+import functools
 import hashlib
 import json
 import logging
+import operator
 import pathlib
 import pickle
 import time
@@ -171,11 +173,11 @@ __all__ = [
     "PipelineResult",
     "ResolutionResult",
     "TrainResult",
-    "pipeline_from_path",
+    "pipeline",
     "pipeline_from_config",
+    "pipeline_from_path",
     "replicate_pipeline_from_config",
     "replicate_pipeline_from_path",
-    "pipeline",
     "resolve_pipeline",
 ]
 
@@ -184,7 +186,9 @@ logger = logging.getLogger(__name__)
 
 def triple_hash(*triples: MappedTriples) -> Mapping[str, str]:
     """Slow triple hash using sha512 and conversion to Python."""
-    return {"sha512": hashlib.sha512(str(sorted(sum((t.tolist() for t in triples), []))).encode("utf8")).hexdigest()}
+    items = (t.tolist() for t in triples)
+    hsh = hashlib.sha512(str(sorted(functools.reduce(operator.iadd, items, []))).encode("utf8"))
+    return {"sha512": hsh.hexdigest()}
 
 
 @fix_dataclass_init_docs
@@ -238,7 +242,7 @@ class PipelineResult(Result):
     TRAINING_TRIPLES_FILE_NAME: ClassVar[str] = "training_triples"
 
     @property
-    def title(self) -> str | None:  # noqa:D401
+    def title(self) -> str | None:
         """The title of the experiment."""
         if self.metadata is None:
             return None
@@ -763,7 +767,7 @@ class _ResultAccumulator:
             the pipeline result
         """
         row: list[Any] = [result.get_metric(key=key) for key in self.keys]
-        self.data.append([False] + row)
+        self.data.append([False, *row])
 
     def is_non_empty(self) -> bool:
         """Return whether there are keys."""
@@ -785,7 +789,7 @@ class _ResultAccumulator:
         :return: original | metric1 | metric2 ...
             a dataframe with the results of the original model and each replicate
         """
-        return pd.DataFrame(data=self.data, columns=["original"] + self.keys)
+        return pd.DataFrame(data=self.data, columns=["original", *self.keys])
 
 
 def compare_results(df: pd.DataFrame, significance_level: float = 0.01) -> pd.DataFrame:
@@ -1042,7 +1046,7 @@ def _log_hint(hint: Hint[CoreTriplesFactory]) -> str | None:
 def _handle_dataset(
     *,
     _result_tracker: ResultTracker,
-    dataset: None | str | Dataset | type[Dataset] = None,
+    dataset: str | Dataset | type[Dataset] | None = None,
     dataset_kwargs: Mapping[str, Any] | None = None,
     training: Hint[CoreTriplesFactory] = None,
     testing: Hint[CoreTriplesFactory] = None,
@@ -1116,11 +1120,11 @@ def _handle_model(
     _random_seed: int,
     training: CoreTriplesFactory,
     # 2. Model
-    model: None | str | Model | type[Model] = None,
+    model: str | Model | type[Model] | None = None,
     model_kwargs: Mapping[str, Any] | None = None,
-    interaction: None | str | Interaction | type[Interaction] = None,
+    interaction: str | Interaction | type[Interaction] | None = None,
     interaction_kwargs: Mapping[str, Any] | None = None,
-    dimensions: None | int | Mapping[str, int] = None,
+    dimensions: int | Mapping[str, int] | None = None,
     # 3. Loss
     loss: HintType[Loss] = None,
     loss_kwargs: Mapping[str, Any] | None = None,
@@ -1383,7 +1387,9 @@ def _handle_evaluation(
 
     # Evaluate
     # Reuse optimal evaluation parameters from training if available, only if the validation triples are used again
-    if evaluator_instance.batch_size is not None or evaluator_instance.slice_size is not None and not use_testing_data:
+    if evaluator_instance.batch_size is not None or (
+        evaluator_instance.slice_size is not None and not use_testing_data
+    ):
         evaluation_kwargs["batch_size"] = evaluator_instance.batch_size
         evaluation_kwargs["slice_size"] = evaluator_instance.slice_size
     if use_tqdm is not None:
@@ -1416,7 +1422,7 @@ def _handle_evaluation(
 def resolve_pipeline(
     *,
     # 1. Dataset
-    dataset: None | str | Dataset | type[Dataset] = None,
+    dataset: str | Dataset | type[Dataset] | None = None,
     dataset_kwargs: Mapping[str, Any] | None = None,
     training: Hint[CoreTriplesFactory] = None,
     testing: Hint[CoreTriplesFactory] = None,
@@ -1424,11 +1430,11 @@ def resolve_pipeline(
     evaluation_entity_whitelist: Collection[str] | None = None,
     evaluation_relation_whitelist: Collection[str] | None = None,
     # 2. Model
-    model: None | str | Model | type[Model] = None,
+    model: str | Model | type[Model] | None = None,
     model_kwargs: Mapping[str, Any] | None = None,
-    interaction: None | str | Interaction | type[Interaction] = None,
+    interaction: str | Interaction | type[Interaction] | None = None,
     interaction_kwargs: Mapping[str, Any] | None = None,
-    dimensions: None | int | Mapping[str, int] = None,
+    dimensions: int | Mapping[str, int] | None = None,
     # 3. Loss
     loss: HintType[Loss] = None,
     loss_kwargs: Mapping[str, Any] | None = None,
@@ -1599,10 +1605,10 @@ def resolve_pipeline(
     )
 
 
-def pipeline(  # noqa: C901
+def pipeline(
     *,
     # 1. Dataset
-    dataset: None | str | Dataset | type[Dataset] = None,
+    dataset: str | Dataset | type[Dataset] | None = None,
     dataset_kwargs: Mapping[str, Any] | None = None,
     training: Hint[CoreTriplesFactory] = None,
     testing: Hint[CoreTriplesFactory] = None,
@@ -1610,11 +1616,11 @@ def pipeline(  # noqa: C901
     evaluation_entity_whitelist: Collection[str] | None = None,
     evaluation_relation_whitelist: Collection[str] | None = None,
     # 2. Model
-    model: None | str | Model | type[Model] = None,
+    model: str | Model | type[Model] | None = None,
     model_kwargs: Mapping[str, Any] | None = None,
-    interaction: None | str | Interaction | type[Interaction] = None,
+    interaction: str | Interaction | type[Interaction] | None = None,
     interaction_kwargs: Mapping[str, Any] | None = None,
-    dimensions: None | int | Mapping[str, int] = None,
+    dimensions: int | Mapping[str, int] | None = None,
     # 3. Loss
     loss: HintType[Loss] = None,
     loss_kwargs: Mapping[str, Any] | None = None,

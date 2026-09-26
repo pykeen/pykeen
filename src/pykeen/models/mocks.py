@@ -62,7 +62,7 @@ class FixedModel(Model):
             raise NotImplementedError
         return self.num_entities
 
-    def _reset_parameters_(self):  # noqa: D102
+    def _reset_parameters_(self):
         pass  # Not needed for mock model
 
     def _generate_fake_scores(

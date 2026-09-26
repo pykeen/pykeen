@@ -66,7 +66,7 @@ class NumericPathDataset(LazyDataset):
             relation_to_id=self._training.relation_to_id,  # share relation index with training
         )
 
-    def __repr__(self) -> str:  # noqa: D105
+    def __repr__(self) -> str:
         return (
             f'{self.__class__.__name__}(training_path="{self.training_path}", testing_path="{self.testing_path}",'
             f' validation_path="{self.validation_path}", literals_path="{self.literals_path}")'

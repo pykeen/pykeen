@@ -44,12 +44,12 @@ def tokenize(
 
     # heuristic
     if num_anchors is None:
-        num_anchors = max(2, int(math.ceil(math.sqrt(dataset_instance.num_entities))))
+        num_anchors = max(2, math.ceil(math.sqrt(dataset_instance.num_entities)))
         logger.info(f"Inferred number of anchors using sqrt(num_entities) heuristic: {num_anchors}")
 
     # heuristic
     if num_tokens is None:
-        num_tokens = max(2, int(math.ceil(math.sqrt(num_anchors))))
+        num_tokens = max(2, math.ceil(math.sqrt(num_anchors)))
         logger.info(f"Inferred number of tokens using sqrt(num_anchors) heuristic: {num_tokens}")
 
     if configuration_path is None:

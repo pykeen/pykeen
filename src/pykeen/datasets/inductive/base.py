@@ -18,13 +18,11 @@ from ...triples import CoreTriplesFactory, TriplesFactory
 from ...utils import normalize_path
 
 __all__ = [
-    # Base class
-    "InductiveDataset",
-    # Mid-level classes
+    "DisjointInductivePathDataset",
     "DisjointInductiveSourceDataset",
     "EagerInductiveDataset",
+    "InductiveDataset",
     "LazyInductiveDataset",
-    "DisjointInductivePathDataset",
     "UnpackedRemoteDisjointInductiveDataset",
     "Version",
 ]
@@ -83,9 +81,9 @@ class InductiveDataset:
 
     def summarize(self, title: str | None = None, show_examples: int | None = 5, file=None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T201
+        print(self.summary_str(title=title, show_examples=show_examples), file=file)
 
-    def __str__(self) -> str:  # noqa: D105
+    def __str__(self) -> str:
         return (
             f"{self.__class__.__name__}(Training num_entities={self.transductive_training.num_entities},"
             f" num_relations={self.transductive_training.num_relations})"
@@ -119,7 +117,7 @@ class LazyInductiveDataset(InductiveDataset):
     cache_root: pathlib.Path
 
     @property
-    def transductive_training(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
+    def transductive_training(self) -> TriplesFactory:  # type: ignore[override]
         """The training triples factory."""
         if not self._loaded:
             self._load()
@@ -127,7 +125,7 @@ class LazyInductiveDataset(InductiveDataset):
         return self._transductive_training
 
     @property
-    def inductive_inference(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
+    def inductive_inference(self) -> TriplesFactory:  # type: ignore[override]
         """The inductive inference triples factory. MIGHT or MIGHT NOT share indices with the transductive train."""
         if not self._loaded:
             self._load()
@@ -135,7 +133,7 @@ class LazyInductiveDataset(InductiveDataset):
         return self._inductive_inference
 
     @property
-    def inductive_testing(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
+    def inductive_testing(self) -> TriplesFactory:  # type: ignore[override]
         """The testing triples factory that share indices with the INDUCTIVE INFERENCE triples factory."""
         if not self._loaded:
             self._load()
@@ -143,7 +141,7 @@ class LazyInductiveDataset(InductiveDataset):
         return self._inductive_testing
 
     @property
-    def inductive_validation(self) -> TriplesFactory | None:  # type: ignore[override]  # noqa: D401
+    def inductive_validation(self) -> TriplesFactory | None:  # type: ignore[override]
         """The validation triples factory that shares indices with the INDUCTIVE INFERENCE triples factory."""
         if not self._loaded:
             self._load()
@@ -161,7 +159,7 @@ class LazyInductiveDataset(InductiveDataset):
 
     def _help_cache(
         self,
-        cache_root: None | str | pathlib.Path,
+        cache_root: str | pathlib.Path | None,
         version: str | None = None,
         sep_train_inference: bool = False,
     ) -> pathlib.Path:
@@ -270,7 +268,7 @@ class DisjointInductiveSourceDataset(LazyInductiveDataset):
                 load_triples_kwargs=self.load_triples_kwargs,
             )
 
-    def __repr__(self) -> str:  # noqa: D105
+    def __repr__(self) -> str:
         return (
             f'{self.__class__.__name__}(training_path="{self.transductive_training_source}", '
             f' inductive_inference="{self.inductive_inference_source}",'
