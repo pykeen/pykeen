@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import pathlib
+from abc import ABC, abstractmethod
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from typing import Any, ClassVar, Self, cast
 
@@ -914,7 +915,7 @@ class TarFileSingleDataset(CompressedSingleDataset):
     archive_type = "tar"
 
 
-class TabbedDataset(LazyDataset):
+class TabbedDataset(LazyDataset, ABC):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
     ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
@@ -951,6 +952,7 @@ class TabbedDataset(LazyDataset):
     def _get_path(self) -> pathlib.Path | None:
         """Get the path of the data if there's a single file."""
 
+    @abstractmethod
     def _get_df(self) -> pd.DataFrame:
         raise NotImplementedError
 
@@ -979,9 +981,6 @@ class SingleTabbedDataset(TabbedDataset):
 
     ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
     _triples_factory: TriplesFactory | None
-
-    #: URL to the data to download
-    url: str
 
     def __init__(
         self,
@@ -1037,3 +1036,6 @@ class SingleTabbedDataset(TabbedDataset):
         with self.source.open() as file:
             df = pd.read_csv(file, **self.read_csv_kwargs)
         return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
+
+    def _get_path(self) -> pathlib.Path | None:
+        return self.source.path
