@@ -1297,7 +1297,7 @@ class TriplesFactory(CoreTriplesFactory):
         :return:
             A new triples factory.
         """
-        path_name = path.name if isinstance(path, IO) else str(path)
+        path_name = pathlib.Path(path.name if isinstance(path, IO) else path)
 
         # TODO: Check if lazy evaluation would make sense
         triples = load_triples(path, **(load_triples_kwargs or {}))
