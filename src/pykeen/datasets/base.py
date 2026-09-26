@@ -660,7 +660,7 @@ class SourceDataSet(LazyDataset):
         return (
             f'{self.__class__.__name__}(training_path="{self.training_source.path}",'
             f' testing_path="{self.testing_source.path}",'
-            f' validation_path="{self.validation_source.path}")'
+            f' validation_path="{self.validation_source.path if self.validation_source else "None"}")'
         )
 
 
