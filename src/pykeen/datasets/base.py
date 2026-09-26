@@ -15,7 +15,7 @@ from more_click import verbose_option
 from pystow.utils import ArchiveType, DownloadKwargs, download, name_from_url
 from tabulate import tabulate
 
-from .source import RemoteArchivedSource, RemoteSource, SimpleSource, Source
+from .source import RemoteArchivedSource, RemoteSimpleSource, SimpleSource, Source
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
@@ -720,19 +720,19 @@ class UnpackedRemoteDataset(SourceDataSet):
 
         download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
         download_kwargs.setdefault("backend", "urllib")
-        training_source = RemoteSource(
+        training_source = RemoteSimpleSource(
             path=self.cache_root.joinpath(name_from_url(training_url)),
             url=training_url,
             force=force,
             download_kwargs=cast(DownloadKwargs, download_kwargs),
         )
-        testing_source = RemoteSource(
+        testing_source = RemoteSimpleSource(
             path=self.cache_root.joinpath(name_from_url(testing_url)),
             url=testing_url,
             force=force,
             download_kwargs=cast(DownloadKwargs, download_kwargs),
         )
-        validation_source = RemoteSource(
+        validation_source = RemoteSimpleSource(
             path=self.cache_root.joinpath(name_from_url(validation_url)),
             url=validation_url,
             force=force,
