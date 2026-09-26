@@ -4,13 +4,13 @@
 - Paper: https://arxiv.org/abs/2009.07810
 """
 
-from typing import Any
+from typing import Unpack
 
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import UnpackedRemoteDataset
+from .base import PathDatasetKwargs, UnpackedRemoteDataset, UnpackedRemoteDataSetKwargs
 
 BASE_URL = "https://raw.githubusercontent.com/tsafavi/codex/master/data/triples/"
 SMALL_VALID_URL = f"{BASE_URL}/codex-s/valid.txt"
@@ -50,7 +50,7 @@ class CoDExSmall(UnpackedRemoteDataset):
         triples: 36543
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: Unpack[UnpackedRemoteDataSetKwargs]) -> None:
         """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ small dataset from [safavi2020]_.
 
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
@@ -83,7 +83,7 @@ class CoDExMedium(UnpackedRemoteDataset):
         triples: 206205
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: Unpack[PathDatasetKwargs]) -> None:
         """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ medium dataset from [safavi2020]_.
 
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
@@ -116,7 +116,7 @@ class CoDExLarge(UnpackedRemoteDataset):
         triples: 612437
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: Unpack[PathDatasetKwargs]) -> None:
         """Initialize the `CoDEx <https://github.com/tsafavi/codex>`_ large dataset from [safavi2020]_.
 
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.

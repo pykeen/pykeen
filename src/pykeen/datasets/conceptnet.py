@@ -3,12 +3,13 @@
 Get a summary with ``python -m pykeen.datasets.conceptnet``
 """
 
+from typing import Unpack
+
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import SingleTabbedDataset
-from ..typing import TorchRandomHint
+from .base import SingleTabbedDataset, SingleTabbedDatasetKwargs
 
 URL = "https://s3.amazonaws.com/conceptnet/downloads/2019/edges/conceptnet-assertions-5.7.0.csv.gz"
 
@@ -37,25 +38,18 @@ class ConceptNet(SingleTabbedDataset):
         validation: 3407492
     """
 
-    def __init__(
-        self,
-        random_state: TorchRandomHint = 0,
-        **kwargs,
-    ):
+    def __init__(self, **kwargs: Unpack[SingleTabbedDatasetKwargs]) -> None:
         """Initialize the `ConceptNet <https://github.com/commonsense/conceptnet5>`_ dataset from [speer2017]_.
 
         :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.SingleTabbedDataset`.
         """
-        super().__init__(
-            url=URL,
-            random_state=random_state,
-            read_csv_kwargs={
-                "usecols": [2, 1, 3],
-                "header": None,
-            },
-            **kwargs,
-        )
+        kwargs.setdefault("random_state", 0)
+        kwargs["read_csv_kwargs"] = {
+            "usecols": [2, 1, 3],
+            "header": None,
+        }
+        super().__init__(url=URL, **kwargs)
 
 
 @click.command()

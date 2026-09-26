@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import logging
 import pathlib
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any
+from typing import Literal, Unpack
 
 from pystow.utils import DownloadKwargs, name_from_url
 from tabulate import tabulate
 
+from ..base import PathDatasetKwargs
 from ..source import RemoteSimpleSource, SimpleSource, Source
 from ...constants import PYKEEN_DATASETS
 from ...triples import CoreTriplesFactory, TriplesFactory
@@ -205,10 +206,7 @@ class DisjointInductiveSourceDataset(LazyInductiveDataset):
         inductive_inference_source: Source,
         inductive_testing_source: Source,
         inductive_validation_source: Source,
-        *,
-        eager: bool = False,
-        create_inverse_triples: bool = False,
-        load_triples_kwargs: Mapping[str, Any] | None = None,
+        **kwargs: Unpack[PathDatasetKwargs],
     ) -> None:
         """Initialize the dataset.
 
@@ -216,20 +214,16 @@ class DisjointInductiveSourceDataset(LazyInductiveDataset):
         :param inductive_inference_source: The inductive inference triples source
         :param inductive_testing_source: The testing triples file source
         :param inductive_validation_source: The validation triples source
-        :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
-            and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
         """
         self.transductive_training_source = transductive_training_source
         self.inductive_inference_source = inductive_inference_source
         self.inductive_testing_source = inductive_testing_source
         self.inductive_validation_source = inductive_validation_source
 
-        self.create_inverse_triples = create_inverse_triples
-        self.load_triples_kwargs = load_triples_kwargs
+        self.create_inverse_triples = kwargs.get("create_inverse_triples") or False
+        self.load_triples_kwargs = kwargs.get("load_triples_kwargs")
 
-        if eager:
+        if kwargs.get("eager"):
             self._load()
 
     def _load(self) -> None:
@@ -297,10 +291,7 @@ class DisjointInductivePathDataset(DisjointInductiveSourceDataset):
         inductive_inference_path: str | pathlib.Path,
         inductive_testing_path: str | pathlib.Path,
         inductive_validation_path: str | str | pathlib.Path,
-        *,
-        eager: bool = False,
-        create_inverse_triples: bool = False,
-        load_triples_kwargs: Mapping[str, Any] | None = None,
+        **kwargs: Unpack[PathDatasetKwargs],
     ) -> None:
         """Initialize the dataset.
 
@@ -308,20 +299,17 @@ class DisjointInductivePathDataset(DisjointInductiveSourceDataset):
         :param inductive_inference_path: Path to the inductive inference triples file or training triples file.
         :param inductive_testing_path: Path to the testing triples file or testing triples file.
         :param inductive_validation_path: Path to the validation triples file or validation triples file.
-        :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
-            and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
         """
         super().__init__(
             transductive_training_source=SimpleSource(pathlib.Path(transductive_training_path)),
             inductive_inference_source=SimpleSource(pathlib.Path(inductive_inference_path)),
             inductive_testing_source=SimpleSource(pathlib.Path(inductive_testing_path)),
             inductive_validation_source=SimpleSource(pathlib.Path(inductive_validation_path)),
-            eager=eager,
-            create_inverse_triples=create_inverse_triples,
-            load_triples_kwargs=load_triples_kwargs,
+            **kwargs,
         )
+
+
+Version = Literal["v1", "v2", "v3", "v4"]
 
 
 class UnpackedRemoteDisjointInductiveDataset(DisjointInductiveSourceDataset):
@@ -336,11 +324,9 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductiveSourceDataset):
         *,
         cache_root: str | None = None,
         force: bool = False,
-        eager: bool = False,
-        create_inverse_triples: bool = False,
-        load_triples_kwargs: Mapping[str, Any] | None = None,
         download_kwargs: DownloadKwargs | None = None,
-        version: str | None = None,
+        version: Version | None = None,
+        **kwargs: Unpack[PathDatasetKwargs],
     ) -> None:
         """Initialize dataset.
 
@@ -352,10 +338,6 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductiveSourceDataset):
             directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
             ``~/.data/pykeen``.
         :param force: If true, redownload any cached files
-        :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
-            and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
         :param version: accepts a string "v1" to "v4" to select among Teru et al inductive datasets
         """
@@ -393,7 +375,5 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductiveSourceDataset):
             inductive_inference_source=inductive_inference_source,
             inductive_testing_source=inductive_testing_source,
             inductive_validation_source=inductive_validation_source,
-            eager=eager,
-            create_inverse_triples=create_inverse_triples,
-            load_triples_kwargs=load_triples_kwargs,
+            **kwargs,
         )

@@ -3,11 +3,17 @@
 Get a summary with ``python -m pykeen.datasets.pharmkg``.
 """
 
+from typing import Unpack
+
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import SingleTabbedDataset, UnpackedRemoteDataset
+from .base import (
+    SingleTabbedDataset,
+    UnpackedRemoteDataset,
+    UnpackedRemoteDataSetKwargs,
+)
 from ..typing import TorchRandomHint
 
 __all__ = [
@@ -44,10 +50,7 @@ class PharmKG8k(UnpackedRemoteDataset):
         triples: 485787
     """
 
-    def __init__(
-        self,
-        **kwargs,
-    ):
+    def __init__(self, **kwargs: Unpack[UnpackedRemoteDataSetKwargs]) -> None:
         """Initialize the PharmKG8k dataset from [zheng2020]_.
 
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.

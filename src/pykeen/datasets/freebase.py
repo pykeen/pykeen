@@ -5,12 +5,17 @@
 """
 
 import pathlib
+from typing import Unpack
 
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import PackedZipRemoteDataset, TarFileRemoteDataset
+from .base import (
+    PackedRemoteDataSetKwargs,
+    PackedZipRemoteDataset,
+    TarFileRemoteDataset,
+)
 
 __all__ = [
     "FB15k",
@@ -37,7 +42,7 @@ class FB15k(TarFileRemoteDataset):
         link: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[PackedRemoteDataSetKwargs]) -> None:
         """Initialize the FreeBase 15K dataset.
 
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileRemoteDataset`.
@@ -72,7 +77,7 @@ class FB15k237(PackedZipRemoteDataset):
         link: https://www.aclweb.org/anthology/W15-4007/
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[PackedRemoteDataSetKwargs]):
         """Initialize the FreeBase 15K (237) dataset.
 
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PackedZipRemoteDataset`.

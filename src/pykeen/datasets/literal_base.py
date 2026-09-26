@@ -1,9 +1,9 @@
 """Base classes for literal datasets."""
 
 import pathlib
-from typing import IO
+from typing import IO, Unpack
 
-from .base import LazyDataset
+from .base import LazyDataset, LazyDatasetKwargs
 from ..triples import TriplesNumericLiteralsFactory
 
 __all__ = [
@@ -22,8 +22,7 @@ class NumericPathDataset(LazyDataset):
         testing_path: str | pathlib.Path | IO[str],
         validation_path: str | pathlib.Path | IO[str],
         literals_path: str | pathlib.Path | IO[str],
-        eager: bool = False,
-        create_inverse_triples: bool = False,
+        **kwargs: Unpack[LazyDatasetKwargs],
     ) -> None:
         """Initialize the dataset.
 
@@ -31,17 +30,15 @@ class NumericPathDataset(LazyDataset):
         :param testing_path: Path to the testing triples file or testing triples file.
         :param validation_path: Path to the validation triples file or validation triples file.
         :param literals_path: Path to the literals triples file or literal triples file
-        :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         """
         self.training_path = training_path
         self.testing_path = testing_path
         self.validation_path = validation_path
         self.literals_path = literals_path
 
-        self._create_inverse_triples = create_inverse_triples
+        self._create_inverse_triples = kwargs.get("create_inverse_triples") or False
 
-        if eager:
+        if kwargs.get("eager"):
             self._load()
             self._load_validation()
 
