@@ -149,48 +149,26 @@ class DatasetTestCase(unittest.TestCase):
     #: The instantiated dataset
     dataset: LazyDataset
 
-    #: Should the validation be assumed to have been loaded with train/test?
-    autoloaded_validation: ClassVar[bool] = False
-
     def test_dataset(self):
         """Generic test for datasets."""
         assert isinstance(self.dataset, LazyDataset)
 
         # Not loaded
-        assert self.dataset._training is None
-        assert self.dataset._testing is None
-        assert self.dataset._validation is None
         assert not self.dataset._loaded
-        assert not self.dataset._loaded_validation
 
         # Load
-        self.dataset._load()
+        factory_dict = self.dataset.factory_dict
+        assert self.dataset._loaded
+        assert set(factory_dict) == {"training", "testing", "validation"}
 
         assert isinstance(self.dataset.training, TriplesFactory)
         assert isinstance(self.dataset.testing, TriplesFactory)
-        assert self.dataset._loaded
-
-        if self.autoloaded_validation:
-            assert self.dataset._loaded_validation
-        else:
-            assert not self.dataset._loaded_validation
-            self.dataset._load_validation()
-
         assert isinstance(self.dataset.validation, TriplesFactory)
-
-        assert self.dataset._training is not None
-        assert self.dataset._testing is not None
-        assert self.dataset._validation is not None
-        assert self.dataset._loaded
-        assert self.dataset._loaded_validation
 
         assert self.dataset.num_entities == self.exp_num_entities
         assert self.dataset.num_relations == self.exp_num_relations
 
-        num_triples = sum(
-            triples_factory.num_triples
-            for triples_factory in (self.dataset._training, self.dataset._testing, self.dataset._validation)
-        )
+        num_triples = sum(triples_factory.num_triples for triples_factory in factory_dict.values())
         if self.exp_num_triples_tolerance is None:
             assert self.exp_num_triples == num_triples
         else:

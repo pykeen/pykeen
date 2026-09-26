@@ -137,7 +137,6 @@ class TestSingle(cases.CachedDatasetCase):
     exp_num_relations = 55
     exp_num_triples = 1592  # because only loading training set from Nations
     exp_num_triples_tolerance = 5
-    autoloaded_validation = True
     dataset_cls = MockSingleTabbedDataset
 
 
@@ -153,7 +152,6 @@ class TestTarFileSingle(cases.CachedDatasetCase):
     exp_num_relations = 55
     exp_num_triples = 1592  # because only loading training set from Nations
     exp_num_triples_tolerance = 5
-    autoloaded_validation = True
     dataset_cls = MockTarFileSingleDataset
 
 
@@ -169,7 +167,6 @@ class TestZipFileSingle(cases.CachedDatasetCase):
     exp_num_relations = 55
     exp_num_triples = 1592  # because only loading training set from Nations
     exp_num_triples_tolerance = 5
-    autoloaded_validation = True
     dataset_cls = MockZipFileSingleDataset
 
 
