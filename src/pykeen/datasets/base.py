@@ -20,7 +20,7 @@ from more_click import verbose_option
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
 
-from .source import SimpleSource, Source
+from .source import RemoteSource, SimpleSource, Source
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
@@ -690,7 +690,7 @@ class PathDataset(SourceDataSet):
         )
 
 
-class UnpackedRemoteDataset(PathDataset):
+class UnpackedRemoteDataset(SourceDataSet):
     """A dataset with all three of train, test, and validation sets as URLs."""
 
     def __init__(
@@ -722,29 +722,27 @@ class UnpackedRemoteDataset(PathDataset):
         """
         self.cache_root = self._help_cache(cache_root)
 
-        self.training_url = training_url
-        self.testing_url = testing_url
-        self.validation_url = validation_url
-
-        training_path = self.cache_root.joinpath(name_from_url(self.training_url))
-        testing_path = self.cache_root.joinpath(name_from_url(self.testing_url))
-        validation_path = self.cache_root.joinpath(name_from_url(self.validation_url))
-
         download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
         download_kwargs.setdefault("backend", "urllib")
-
-        for url, path in [
-            (self.training_url, training_path),
-            (self.testing_url, testing_path),
-            (self.validation_url, validation_path),
-        ]:
-            if force or not path.is_file():
-                download(url, path, **download_kwargs)
-
+        training_source = RemoteSource(
+            path=self.cache_root.joinpath(name_from_url(training_url)),
+            url=training_url,
+            download_kwargs=download_kwargs,
+        )
+        testing_source = RemoteSource(
+            path=self.cache_root.joinpath(name_from_url(testing_url)),
+            url=testing_url,
+            download_kwargs=download_kwargs,
+        )
+        validation_source = RemoteSource(
+            path=self.cache_root.joinpath(name_from_url(validation_url)),
+            url=validation_url,
+            download_kwargs=download_kwargs,
+        )
         super().__init__(
-            training_path=training_path,
-            testing_path=testing_path,
-            validation_path=validation_path,
+            training_source=training_source,
+            testing_source=testing_source,
+            validation_source=validation_source,
             eager=eager,
             create_inverse_triples=create_inverse_triples,
             load_triples_kwargs=load_triples_kwargs,
