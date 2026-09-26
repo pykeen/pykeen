@@ -12,7 +12,7 @@ import docdata
 import pandas as pd
 import torch
 from more_click import verbose_option
-from pystow.utils import ArchiveType, DownloadKwargs, download, name_from_url
+from pystow.utils import ArchiveType, DownloadKwargs, name_from_url
 from tabulate import tabulate
 
 from .source import RemoteArchivedSource, RemoteSimpleSource, SimpleSource, Source
@@ -29,6 +29,7 @@ __all__ = [
     "Dataset",
     "EagerDataset",
     "LazyDataset",
+    "SourceDataSet",
     "PathDataset",
     "UnpackedRemoteDataset",
     "TarFileRemoteDataset",
@@ -699,7 +700,7 @@ class UnpackedRemoteDataset(SourceDataSet):
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
-        download_kwargs: Mapping[str, Any] | None = None,
+        download_kwargs: DownloadKwargs | None = None,
     ) -> None:
         """Initialize dataset.
 
@@ -718,7 +719,8 @@ class UnpackedRemoteDataset(SourceDataSet):
         """
         self.cache_root = self._help_cache(cache_root)
 
-        download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
+        if download_kwargs is None:
+            download_kwargs = {}
         download_kwargs.setdefault("backend", "urllib")
         training_source = RemoteSimpleSource(
             path=self.cache_root.joinpath(name_from_url(training_url)),
@@ -864,10 +866,13 @@ class CompressedSingleDataset(LazyDataset):
         self.read_csv_kwargs = read_csv_kwargs or {}
         self.read_csv_kwargs.setdefault("sep", self.delimiter)
 
+        if not name:
+            name = name_from_url(url) if url else pathlib.PurePath(relative_path).name
+
         self.source = RemoteArchivedSource(
             archive_type=self.archive_type,
             url=url,
-            path=self.cache_root.joinpath(name or name_from_url(url)),
+            path=self.cache_root.joinpath(name),
             inner_path=relative_path,
         )
 
@@ -986,9 +991,10 @@ class SingleTabbedDataset(TabbedDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = None,
-        download_kwargs: dict[str, Any] | None = None,
+        download_kwargs: DownloadKwargs | None = None,
         read_csv_kwargs: dict[str, Any] | None = None,
-    ):
+        force: bool = False,
+    ) -> None:
         """Initialize dataset.
 
         :param url: The url where to download the dataset from
@@ -1011,25 +1017,23 @@ class SingleTabbedDataset(TabbedDataset):
             eager=False,  # because it gets hooked below
         )
 
-        self.name = name or name_from_url(url)
+        name = name or name_from_url(url)
+        path = self.cache_root.joinpath(name)
 
-        self.download_kwargs = download_kwargs or {}
+        self.source = RemoteSimpleSource(
+            url=url,
+            force=force,
+            path=path,
+            download_kwargs=download_kwargs,
+        )
+
         self.read_csv_kwargs = read_csv_kwargs or {}
         self.read_csv_kwargs.setdefault("sep", "\t")
-
-        self.url = url
-        if not self._get_path().is_file() and not self.url:
-            raise ValueError(f"must specify url to download from since path does not exist: {self._get_path()}")
 
         if eager:
             self._load()
 
-    def _get_path(self) -> pathlib.Path:
-        return self.cache_root.joinpath(self.name)
-
     def _get_df(self) -> pd.DataFrame:
-        if not self._get_path().is_file():
-            logger.info("downloading data from %s to %s", self.url, self._get_path())
-            download(url=self.url, path=self._get_path(), **self.download_kwargs)  # noqa:S310
-        df = pd.read_csv(self._get_path(), **self.read_csv_kwargs)
+        with self.source.open() as file:
+            df = pd.read_csv(file, **self.read_csv_kwargs)
         return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
