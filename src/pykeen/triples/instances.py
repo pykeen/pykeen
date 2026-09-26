@@ -457,11 +457,7 @@ class LCWAInstances(Instances[LCWABatch]):
                 create_inverse_triples=create_inverse_triples,
             ),
             num_entities=tf.num_entities,
-            num_relations=(
-                2 * tf.real_num_relations
-                if create_inverse_triples
-                else tf.real_num_relations
-            ),
+            num_relations=2 * tf.real_num_relations if create_inverse_triples else tf.real_num_relations,
             target=target,
             loss_weighter=loss_weighter,
             loss_weighter_kwargs=loss_weighter_kwargs,
