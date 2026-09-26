@@ -656,7 +656,12 @@ class SourceDataSet(LazyDataset):
                     load_triples_kwargs=self.load_triples_kwargs,
                 )
 
-    # TODO repr
+    def __repr__(self) -> str:  # noqa: D105
+        return (
+            f'{self.__class__.__name__}(training_path="{self.training_source.path}",'
+            f' testing_path="{self.testing_source.path}",'
+            f' validation_path="{self.validation_source.path}")'
+        )
 
 
 class PathDataset(SourceDataSet):
