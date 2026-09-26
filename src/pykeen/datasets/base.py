@@ -830,134 +830,48 @@ class PackedZipRemoteDataset(PackedRemoteDataSet):
     archive_type = "zip"
 
 
-class CompressedSingleDataset(LazyDataset):
-    """Loads a dataset that's a single file inside an archive."""
-
-    ratios = (0.8, 0.1, 0.1)
-    archive_type: ClassVar[ArchiveType]
-
-    def __init__(
-        self,
-        url: str,
-        relative_path: str | pathlib.PurePosixPath,
-        name: str | None = None,
-        cache_root: str | None = None,
-        eager: bool = False,
-        create_inverse_triples: bool = False,
-        delimiter: str | None = None,
-        random_state: TorchRandomHint = None,
-        read_csv_kwargs: dict[str, Any] | None = None,
-    ):
-        """Initialize dataset.
-
-        :param url: The url where to download the dataset from
-        :param relative_path: The path inside the archive to the contained dataset.
-        :param name: The name of the file. If not given, tries to get the name from the end of the URL
-        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
-            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
-            ``~/.pykeen``.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-        :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param random_state: An optional random state to make the training/testing/validation split reproducible.
-        :param delimiter: The delimiter for the contained dataset.
-        :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
-        """
-        self.cache_root = self._help_cache(cache_root)
-
-        self.random_state = random_state
-        self.delimiter = delimiter or "\t"
-        self._create_inverse_triples = create_inverse_triples
-        self.read_csv_kwargs = read_csv_kwargs or {}
-        self.read_csv_kwargs.setdefault("sep", self.delimiter)
-
-        if not name:
-            name = name_from_url(url) if url else pathlib.PurePath(relative_path).name
-
-        self.source = RemoteArchivedSource(
-            archive_type=self.archive_type,
-            url=url,
-            path=self.cache_root.joinpath(name),
-            inner_path=relative_path,
-        )
-
-        if eager:
-            self._load()
-
-    def _load(self) -> None:
-        with self.source.open() as file:
-            df = pd.read_csv(file, **self.read_csv_kwargs)
-        df = _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
-
-        tf = TriplesFactory.from_labeled_triples(
-            triples=df.values,
-            create_inverse_triples=self._create_inverse_triples,
-            metadata={"path": self.source.path},
-        )
-        self._training, self._testing, self._validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(
-                ratios=self.ratios,
-                random_state=self.random_state,
-            ),
-        )
-        logger.info("[%s] done splitting data from %s", self.__class__.__name__, self.source.path)
-
-    def _load_validation(self) -> None:
-        pass  # already loaded by _load()
-
-
-class ZipSingleDataset(CompressedSingleDataset):
-    """Loads a dataset that's a single file inside a zip archive."""
-
-    archive_type = "zip"
-
-
-class TarFileSingleDataset(CompressedSingleDataset):
-    """Loads a dataset that's a single file inside a tar.gz archive."""
-
-    archive_type = "tar"
-
-
 class TabbedDataset(LazyDataset, ABC):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
     ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
-    _triples_factory: TriplesFactory | None
 
     def __init__(
         self,
-        cache_root: str | None = None,
+        source: Source,
+        *,
         eager: bool = False,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = None,
-    ):
+        read_csv_kwargs: dict[str, Any] | None = None,
+        delimiter: str | None = None,
+    ) -> None:
         """Initialize dataset.
 
-        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
-            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
-            ``~/.pykeen``.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         """
-        self.cache_root = self._help_cache(cache_root)
-
-        self._triples_factory = None
         self.random_state = random_state
         self._create_inverse_triples = create_inverse_triples
         self._training = None
         self._testing = None
         self._validation = None
 
+        self.source = source
+        self.read_csv_kwargs = read_csv_kwargs or {}
+        self.read_csv_kwargs.setdefault("sep", delimiter or "\t")
+
         if eager:
             self._load()
 
     def _get_path(self) -> pathlib.Path | None:
         """Get the path of the data if there's a single file."""
+        return self.source.path
 
-    @abstractmethod
     def _get_df(self) -> pd.DataFrame:
-        """Get a dataframe."""
+        with self.source.open() as file:
+            df = pd.read_csv(file, **self.read_csv_kwargs)
+        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
 
     def _load(self) -> None:
         df = self._get_df()
@@ -979,23 +893,73 @@ class TabbedDataset(LazyDataset, ABC):
         pass  # already loaded by _load()
 
 
+class CompressedSingleDataset(TabbedDataset):
+    """Loads a dataset that's a single file inside an archive."""
+
+    archive_type: ClassVar[ArchiveType]
+
+    def __init__(
+        self,
+        url: str,
+        relative_path: str | pathlib.PurePosixPath,
+        *,
+        name: str | None = None,
+        cache_root: str | None = None,
+        download_kwargs: DownloadKwargs | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize dataset.
+
+        :param url: The url where to download the dataset from
+        :param relative_path: The path inside the archive to the contained dataset.
+        :param name: The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
+        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
+        :param eager: Should the data be loaded eagerly? Defaults to false.
+        :param random_state: An optional random state to make the training/testing/validation split reproducible.
+        :param delimiter: The delimiter for the contained dataset.
+        :param read_csv_kwargs: Keyword arguments to pass through to :func:`pandas.read_csv`.
+        """
+        cache_root_ = self._help_cache(cache_root)
+        if not name:
+            name = name_from_url(url) if url else pathlib.PurePath(relative_path).name
+        source = RemoteArchivedSource(
+            archive_type=self.archive_type,
+            url=url,
+            path=cache_root_.joinpath(name),
+            inner_path=relative_path,
+            download_kwargs=download_kwargs,
+        )
+        super().__init__(source, **kwargs)
+
+
+class ZipSingleDataset(CompressedSingleDataset):
+    """Loads a dataset that's a single file inside a zip archive."""
+
+    archive_type = "zip"
+
+
+class TarFileSingleDataset(CompressedSingleDataset):
+    """Loads a dataset that's a single file inside a tar.gz archive."""
+
+    archive_type = "tar"
+
+
 class SingleTabbedDataset(TabbedDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
     ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
-    _triples_factory: TriplesFactory | None
 
     def __init__(
         self,
         url: str,
         name: str | None = None,
         cache_root: str | None = None,
-        eager: bool = False,
-        create_inverse_triples: bool = False,
-        random_state: TorchRandomHint = None,
         download_kwargs: DownloadKwargs | None = None,
-        read_csv_kwargs: dict[str, Any] | None = None,
         force: bool = False,
+        **kwargs: Any,
     ) -> None:
         """Initialize dataset.
 
@@ -1012,33 +976,12 @@ class SingleTabbedDataset(TabbedDataset):
 
         :raises ValueError: if there's no URL specified and there is no data already at the calculated path
         """
-        super().__init__(
-            cache_root=cache_root,
-            create_inverse_triples=create_inverse_triples,
-            random_state=random_state,
-            eager=False,  # because it gets hooked below
-        )
-
         name = name or name_from_url(url)
-        path = self.cache_root.joinpath(name)
-
-        self.source = RemoteSimpleSource(
+        path = self._help_cache(cache_root).joinpath(name)
+        source = RemoteSimpleSource(
             url=url,
             force=force,
             path=path,
             download_kwargs=download_kwargs,
         )
-
-        self.read_csv_kwargs = read_csv_kwargs or {}
-        self.read_csv_kwargs.setdefault("sep", "\t")
-
-        if eager:
-            self._load()
-
-    def _get_df(self) -> pd.DataFrame:
-        with self.source.open() as file:
-            df = pd.read_csv(file, **self.read_csv_kwargs)
-        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
-
-    def _get_path(self) -> pathlib.Path | None:
-        return self.source.path
+        super().__init__(source=source, **kwargs)

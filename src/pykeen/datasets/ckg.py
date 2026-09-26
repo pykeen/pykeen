@@ -1,7 +1,7 @@
 """Clinical Knowledge Graph."""
 
 import tarfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -9,17 +9,16 @@ import click
 import pandas as pd
 from docdata import parse_docdata
 from more_click import verbose_option
-from pystow.utils import DownloadKwargs, download
+from pystow.utils import download
 
 from .base import TabbedDataset
-from .source import SimpleSource, RemoteSimpleSource
+from .source import RemoteSimpleSource
 from ..typing import TorchRandomHint
 
 __all__ = [
     "CKG",
 ]
 
-URL_OLD = "https://md-datasets-public-files-prod.s3.eu-west-1.amazonaws.com/d1e8d3df-2342-468a-91a9-97a981a479ad"
 URL = "https://prod-dcd-datasets-public-files-eu-west-1.s3.eu-west-1.amazonaws.com/d1e8d3df-2342-468a-91a9-97a981a479ad"
 COLUMNS = ["START_ID", "TYPE", "END_ID"]
 
@@ -46,34 +45,28 @@ class CKG(TabbedDataset):
     """
 
     def __init__(
-        self, random_state: TorchRandomHint = 0, force: bool = False, **kwargs: Any
+        self, *, random_state: TorchRandomHint = 0, cache_root: str | None = None, force: bool = False, **kwargs: Any
     ) -> None:
         """Initialize the `CKG <https://github.com/MannLabs/CKG>`_ dataset from [santos2020]_.
 
         :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TabbedDataset`.
         """
-        super().__init__(random_state=random_state, **kwargs)
-        self.source = CKGSimpleSource(
-            path=self.cache_root.joinpath("preloaded.tsv.gz"),
-            raw_path=self.cache_root / "data.tar.gz",
+        cache_root_ = self._help_cache(cache_root)
+        source = CKGSimpleSource(
+            path=cache_root_.joinpath("preloaded.tsv.gz"),
+            raw_path=cache_root_.joinpath("data.tar.gz"),
             url=URL,
             force=force,
         )
-
-    def _get_path(self) -> Path | None:
-        return self.source.path
-
-    def _get_df(self) -> pd.DataFrame:
-        with self.source.open() as file:
-            return pd.read_csv(file, sep="\t", dtype=str)
+        super().__init__(random_state=random_state, source=source, **kwargs)
 
 
 @dataclass
 class CKGSimpleSource(RemoteSimpleSource):
     """A simple source for CKG."""
 
-    raw_path: Path | None = None # TODO how to make this non-default?
+    raw_path: Path | None = None  # TODO how to make this non-default?
 
     def ensure(self) -> None:
         """Download and process the CKG."""
@@ -92,9 +85,7 @@ class CKGSimpleSource(RemoteSimpleSource):
             if tar_file is None:
                 raise ValueError
             for tarinfo in tar_file:
-                if not tarinfo.name.startswith(
-                    "data/imports/"
-                ) or not tarinfo.name.endswith(".tsv"):
+                if not tarinfo.name.startswith("data/imports/") or not tarinfo.name.endswith(".tsv"):
                     continue
                 path = Path(tarinfo.name)
                 if path.name.startswith("."):
