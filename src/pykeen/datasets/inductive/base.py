@@ -26,6 +26,7 @@ __all__ = [
     "LazyInductiveDataset",
     "DisjointInductivePathDataset",
     "UnpackedRemoteDisjointInductiveDataset",
+    "Version",
 ]
 
 logger = logging.getLogger(__name__)
