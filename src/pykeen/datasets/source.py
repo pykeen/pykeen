@@ -22,6 +22,7 @@ class Source(ABC):
     @contextmanager
     def open(self) -> Generator[IO[str]]:
         """Open the source as a file object."""
+        raise NotImplementedError
 
 
 @dataclass
@@ -30,17 +31,18 @@ class RemoteSource(Source):
 
     #: The remove location of the file.
     url: str
+    force: bool = False
     download_kwargs: DownloadKwargs | None = None
 
     def ensure(self) -> None:
         """Ensure the remote dataset is downloaded."""
-        download(self.url, self.path, force=False, **(self.download_kwargs or {}))
+        download(self.url, self.path, force=self.force, **(self.download_kwargs or {}))
 
     @contextmanager
     def open(self) -> Generator[IO[str]]:
         """Download the file and open it using polymorphism."""
         self.ensure()
-        with super().open() as file:
+        with super().open() as file:  # type:ignore[safe-super]
             yield file
 
 
@@ -78,7 +80,8 @@ class ArchivedSource(Source):
                 yield file
         elif self.archive_type == "tar":
             with open_tarfile(self.path, inner_path=self.inner_path) as file:
-                yield file
+                # TODO make this read into IO[str] upstream in pystow
+                yield file  # type:ignore[misc]
         else:
             raise ValueError(f"unknown {self.archive_type=}")
 

@@ -15,6 +15,7 @@ import pandas as pd
 import torch
 from more_click import verbose_option
 from pystow.utils import download, name_from_url
+from pystow.utils.download import DownloadKwargs
 from tabulate import tabulate
 
 from .source import RemoteArchivedSource, RemoteSource, SimpleSource, Source
@@ -719,22 +720,24 @@ class UnpackedRemoteDataset(SourceDataSet):
         self.cache_root = self._help_cache(cache_root)
 
         download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
-        download_kwargs["force"] = force
         download_kwargs.setdefault("backend", "urllib")
         training_source = RemoteSource(
             path=self.cache_root.joinpath(name_from_url(training_url)),
             url=training_url,
-            download_kwargs=download_kwargs,
+            force=force,
+            download_kwargs=cast(DownloadKwargs, download_kwargs),
         )
         testing_source = RemoteSource(
             path=self.cache_root.joinpath(name_from_url(testing_url)),
             url=testing_url,
-            download_kwargs=download_kwargs,
+            force=force,
+            download_kwargs=cast(DownloadKwargs, download_kwargs),
         )
         validation_source = RemoteSource(
             path=self.cache_root.joinpath(name_from_url(validation_url)),
             url=validation_url,
-            download_kwargs=download_kwargs,
+            force=force,
+            download_kwargs=cast(DownloadKwargs, download_kwargs),
         )
         super().__init__(
             training_source=training_source,
@@ -758,6 +761,7 @@ class PackedRemoteDataSet(SourceDataSet):
         relative_testing_path: str | pathlib.PurePath,
         relative_validation_path: str | pathlib.PurePath,
         *,
+        force: bool = False,
         cache_root: str | None = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
@@ -779,17 +783,23 @@ class PackedRemoteDataSet(SourceDataSet):
         name = name_from_url(url)
         path = self.cache_root.joinpath(name)
         training_source = RemoteArchivedSource(
-            archive_type=self.archive_type, url=url, path=path, inner_path=str(pathlib.PurePath(relative_training_path))
+            archive_type=self.archive_type,
+            url=url,
+            force=force,
+            path=path,
+            inner_path=str(pathlib.PurePath(relative_training_path)),
         )
         testing_source = RemoteArchivedSource(
             archive_type=self.archive_type,
             url=url,
+            force=force,
             path=path,
             inner_path=str(pathlib.PurePath(relative_testing_path)),
         )
         validation_source = RemoteArchivedSource(
             archive_type=self.archive_type,
             url=url,
+            force=force,
             path=path,
             inner_path=str(pathlib.PurePath(relative_validation_path)),
         )

@@ -23,9 +23,9 @@ from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
 from typing import (
+    IO,
     Any,
     Generic,
-    TextIO,
     TypeVar,
     cast,
     overload,
@@ -1163,7 +1163,7 @@ def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collect
     return list(result.values())
 
 
-PathType = str | pathlib.Path | TextIO
+PathType = str | pathlib.Path | IO[str]
 
 
 def normalize_path(
@@ -1199,7 +1199,7 @@ def normalize_path(
         if default is None:
             raise ValueError("If no default is provided, path cannot be None.")
         path = default
-    if isinstance(path, TextIO):
+    if isinstance(path, IO):
         path = path.name
     if isinstance(path, str):
         path = pathlib.Path(path)

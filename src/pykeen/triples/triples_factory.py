@@ -5,7 +5,7 @@ import logging
 import pathlib
 import re
 from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
-from typing import IO, Any, ClassVar, Self, TextIO
+from typing import IO, Any, ClassVar, Self
 
 import numpy as np
 import pandas as pd
@@ -1052,7 +1052,7 @@ class CoreTriplesFactory(KGInfo):
     @classmethod
     def from_path_binary(
         cls,
-        path: str | pathlib.Path | TextIO,
+        path: str | pathlib.Path | IO[str],
     ) -> Self:  # noqa: D102
         """
         Load triples factory from a binary file.
@@ -1084,7 +1084,7 @@ class CoreTriplesFactory(KGInfo):
 
     def to_path_binary(
         self,
-        path: str | pathlib.Path | TextIO,
+        path: str | pathlib.Path | IO[str],
     ) -> pathlib.Path:
         """
         Save triples factory to path in (PyTorch's .pt) binary format.
@@ -1360,7 +1360,7 @@ class TriplesFactory(CoreTriplesFactory):
             metadata=self.metadata,
         )
 
-    def to_path_binary(self, path: str | pathlib.Path | TextIO) -> pathlib.Path:  # noqa: D102
+    def to_path_binary(self, path: str | pathlib.Path | IO[str]) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # store entity/relation to ID
         for name, data in (
