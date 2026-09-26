@@ -809,7 +809,7 @@ class TarFileRemoteDataset(PackedRemoteDataSet):
     archive_type = "tar"
 
 
-class PackedZipRemoteDataset(SourceDataSet):
+class PackedZipRemoteDataset(PackedRemoteDataSet):
     """A remote dataset packed with a ZIP archive."""
 
     archive_type = "zip"
