@@ -20,7 +20,7 @@ from more_click import verbose_option
 from pystow.utils import download, name_from_url
 from tabulate import tabulate
 
-from .source import RemoteSource, SimpleSource, Source
+from .source import RemoteArchivedSource, RemoteSource, SimpleSource, Source
 from ..constants import PYKEEN_DATASETS
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
@@ -831,21 +831,16 @@ class TarFileRemoteDataset(RemoteDataset):
             tf.extractall(path=self.cache_root)  # noqa:S202
 
 
-class PackedZipRemoteDataset(LazyDataset):
+class PackedZipRemoteDataset(SourceDataSet):
     """Contains a lazy reference to a remote dataset that is loaded if needed."""
-
-    head_column: int = 0
-    relation_column: int = 1
-    tail_column: int = 2
-    sep = "\t"
-    header = None
 
     def __init__(
         self,
         relative_training_path: str | pathlib.PurePath,
         relative_testing_path: str | pathlib.PurePath,
         relative_validation_path: str | pathlib.PurePath,
-        url: str | None = None,
+        url: str,
+        *,
         name: str | None = None,
         cache_root: str | None = None,
         eager: bool = False,
@@ -868,71 +863,36 @@ class PackedZipRemoteDataset(LazyDataset):
         """
         self.cache_root = self._help_cache(cache_root)
 
-        if name:
-            self.name = name
-        elif url:
-            self.name = name_from_url(url)
-        else:
-            raise ValueError("must give at least one of name or URL")
-        self.path = self.cache_root.joinpath(self.name)
-        logger.debug("file path at %s", self.path)
-
-        self.url = url
-        if not self.path.is_file() and not self.url:
-            raise ValueError(f"must specify url to download from since path does not exist: {self.path}")
-
-        self.relative_training_path = pathlib.PurePath(relative_training_path)
-        self.relative_testing_path = pathlib.PurePath(relative_testing_path)
-        self.relative_validation_path = pathlib.PurePath(relative_validation_path)
-        self._create_inverse_triples = create_inverse_triples
-        if eager:
-            self._load()
-            self._load_validation()
-
-    def _load(self) -> None:  # noqa: D102
-        self._training = self._load_helper(self.relative_training_path)
-        self._testing = self._load_helper(
-            self.relative_testing_path,
-            entity_to_id=self._training.entity_to_id,
-            relation_to_id=self._training.relation_to_id,
+        if name is None:
+            name = name_from_url(url)
+        path = self.cache_root.joinpath(name)
+        training_source = RemoteArchivedSource(
+            archive_type="zip",
+            path=path,
+            url=url,
+            # TODO update pystow to accept purepaths
+            inner_path=str(pathlib.PurePath(relative_training_path)),
         )
-
-    def _load_validation(self) -> None:
-        assert self._training is not None
-        self._validation = self._load_helper(
-            self.relative_validation_path,
-            entity_to_id=self._training.entity_to_id,
-            relation_to_id=self._training.relation_to_id,
+        testing_source = RemoteArchivedSource(
+            archive_type="zip",
+            path=path,
+            url=url,
+            inner_path=str(pathlib.PurePath(relative_testing_path)),
         )
-
-    def _load_helper(
-        self,
-        relative_path: pathlib.PurePath,
-        entity_to_id: Mapping[str, Any] | None = None,
-        relation_to_id: Mapping[str, Any] | None = None,
-    ) -> TriplesFactory:
-        if not self.path.is_file():
-            if self.url is None:
-                raise ValueError("url should be set")
-            logger.info("downloading data from %s to %s", self.url, self.path)
-            download(url=self.url, path=self.path)
-
-        # relative paths within zip file's always follow Posix path, even on Windows
-        with zipfile.ZipFile(file=self.path) as zf, zf.open(relative_path.as_posix()) as file:
-            logger.debug("loading %s", relative_path)
-            df = pd.read_csv(
-                file,
-                usecols=[self.head_column, self.relation_column, self.tail_column],
-                header=self.header,
-                sep=self.sep,
-            )
-            return TriplesFactory.from_labeled_triples(
-                triples=df.values,
-                create_inverse_triples=self._create_inverse_triples,
-                metadata={"path": relative_path},
-                entity_to_id=entity_to_id,
-                relation_to_id=relation_to_id,
-            )
+        validation_source = RemoteArchivedSource(
+            archive_type="zip",
+            path=path,
+            url=url,
+            inner_path=str(pathlib.PurePath(relative_validation_path)),
+        )
+        super().__init__(
+            training_source=training_source,
+            testing_source=testing_source,
+            validation_source=validation_source,
+            eager=eager,
+            create_inverse_triples=create_inverse_triples,
+            # load_triples_kwargs=load_triples_kwargs,
+        )
 
 
 class CompressedSingleDataset(LazyDataset):

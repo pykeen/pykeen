@@ -18,8 +18,8 @@ class Source(ABC):
     #: The local path where the resource is stored on disk.
     path: Path
 
-    @contextmanager
     @abstractmethod
+    @contextmanager
     def open(self) -> Generator[IO[str]]:
         """Open the source as a file object."""
 
@@ -34,7 +34,7 @@ class RemoteSource(Source):
 
     def ensure(self) -> None:
         """Ensure the remote dataset is downloaded."""
-        download(self.url, self.path, **(self.download_kwargs or {}))
+        download(self.url, self.path, force=False, **(self.download_kwargs or {}))
 
     @contextmanager
     def open(self) -> Generator[IO[str]]:
@@ -70,6 +70,7 @@ class ArchivedSource(Source):
     archive_type: Literal["zip", "tar"]
     inner_path: str
 
+    @contextmanager
     def open(self) -> Generator[IO[str]]:
         """Open the file from within a zip or tar archive."""
         if self.archive_type == "zip":
