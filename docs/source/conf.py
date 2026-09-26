@@ -364,6 +364,8 @@ nitpick_ignore = [
     ("py:class", "optuna.storages._base.BaseStorage"),
     ("py:class", "pandas.core.frame.DataFrame"),
     ("py:class", "pytorch_lightning.core.module.LightningModule"),
+    ("py:class", "DownloadKwargs"),
+    ("py:class", "pystow.utils.download.DownloadKwargs"),
     ("py:class", "scipy.sparse.csgraph"),
     ("py:func", "opt_einsum.contract"),
     ("py:func", "torch_ppr.page_rank"),

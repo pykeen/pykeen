@@ -6,11 +6,12 @@ import logging
 import pathlib
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Self
 
-from pystow.utils import download, name_from_url
+from pystow.utils.download import DownloadKwargs
 from tabulate import tabulate
 
+from ..sources import LocalSource, RemoteFile, RemoteSource, Source
 from ...constants import PYKEEN_DATASETS
 from ...triples import CoreTriplesFactory, TriplesFactory
 from ...utils import normalize_path
@@ -199,29 +200,23 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
 
     def __init__(
         self,
-        transductive_training_path: str | pathlib.Path,
-        inductive_inference_path: str | pathlib.Path,
-        inductive_testing_path: str | pathlib.Path,
-        inductive_validation_path: str | str | pathlib.Path,
+        source: Source,
+        *,
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize the dataset.
 
-        :param transductive_training_path: Path to the training triples file or training triples file.
-        :param inductive_inference_path: Path to the inductive inference triples file or training triples file.
-        :param inductive_testing_path: Path to the testing triples file or testing triples file.
-        :param inductive_validation_path: Path to the validation triples file or validation triples file.
+        :param source: The source of the files, which provides the keys ``"transductive_training"``,
+            ``"inductive_inference"``, ``"inductive_testing"``, and ``"inductive_validation"``. For local files, use
+            :meth:`from_paths`.
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
             and ultimately through to :func:`~pykeen.triples.utils.load_triples`.
         """
-        self.transductive_training_path = pathlib.Path(transductive_training_path)
-        self.inductive_inference_path = pathlib.Path(inductive_inference_path)
-        self.inductive_testing_path = pathlib.Path(inductive_testing_path)
-        self.inductive_validation_path = pathlib.Path(inductive_validation_path)
+        self.source = source
 
         self.create_inverse_triples = create_inverse_triples
         self.load_triples_kwargs = load_triples_kwargs
@@ -229,16 +224,73 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
         if eager:
             self._load()
 
+    @classmethod
+    def from_paths(
+        cls,
+        transductive_training_path: str | pathlib.Path,
+        inductive_inference_path: str | pathlib.Path,
+        inductive_testing_path: str | pathlib.Path,
+        inductive_validation_path: str | pathlib.Path,
+        **kwargs: Any,
+    ) -> Self:
+        """Create a dataset from local files, one per split.
+
+        .. note::
+
+            This only works for subclasses which keep the base class' ``__init__`` signature.
+
+        :param transductive_training_path: Path to the transductive training triples file.
+        :param inductive_inference_path: Path to the inductive inference triples file.
+        :param inductive_testing_path: Path to the inductive testing triples file.
+        :param inductive_validation_path: Path to the inductive validation triples file.
+        :param kwargs: Additional keyword-based parameters passed to ``__init__``.
+
+        :returns: The dataset.
+        """
+        return cls(
+            source=LocalSource(
+                transductive_training=transductive_training_path,
+                inductive_inference=inductive_inference_path,
+                inductive_testing=inductive_testing_path,
+                inductive_validation=inductive_validation_path,
+            ),
+            **kwargs,
+        )
+
+    def _path(self, key: str) -> pathlib.Path | None:
+        return self.source.get_manifest().get(key)
+
+    @property
+    def transductive_training_path(self) -> pathlib.Path | None:
+        """The path of the transductive training triples file."""
+        return self._path("transductive_training")
+
+    @property
+    def inductive_inference_path(self) -> pathlib.Path | None:
+        """The path of the inductive inference triples file."""
+        return self._path("inductive_inference")
+
+    @property
+    def inductive_testing_path(self) -> pathlib.Path | None:
+        """The path of the inductive testing triples file."""
+        return self._path("inductive_testing")
+
+    @property
+    def inductive_validation_path(self) -> pathlib.Path | None:
+        """The path of the inductive validation triples file."""
+        return self._path("inductive_validation")
+
     def _load(self) -> None:
+        paths = self.source.paths()
         self._transductive_training = TriplesFactory.from_path(
-            path=self.transductive_training_path,
+            path=paths["transductive_training"],
             create_inverse_triples=self.create_inverse_triples,
             load_triples_kwargs=self.load_triples_kwargs,
         )
 
         # important: inductive_inference shares the same RELATIONS with the transductive training graph
         self._inductive_inference = TriplesFactory.from_path(
-            path=self.inductive_inference_path,
+            path=paths["inductive_inference"],
             create_inverse_triples=self.create_inverse_triples,
             relation_to_id=self._transductive_training.relation_to_id,
             load_triples_kwargs=self.load_triples_kwargs,
@@ -246,7 +298,7 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
 
         # inductive validation shares both ENTITIES and RELATIONS with the inductive inference graph
         self._inductive_validation = TriplesFactory.from_path(
-            path=self.inductive_validation_path,
+            path=paths["inductive_validation"],
             entity_to_id=self._inductive_inference.entity_to_id,  # shares entity index with inductive inference
             relation_to_id=self._inductive_inference.relation_to_id,  # shares relation index with inductive inference
             # do not explicitly create inverse triples for testing; this is handled by the evaluation code
@@ -256,7 +308,7 @@ class DisjointInductivePathDataset(LazyInductiveDataset):
 
         # inductive testing shares both ENTITIES and RELATIONS with the inductive inference graph
         self._inductive_testing = TriplesFactory.from_path(
-            path=self.inductive_testing_path,
+            path=paths["inductive_testing"],
             entity_to_id=self._inductive_inference.entity_to_id,  # share entity index with inductive inference
             relation_to_id=self._inductive_inference.relation_to_id,  # share relation index with inductive inference
             # do not explicitly create inverse triples for testing; this is handled by the evaluation code
@@ -287,7 +339,7 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
         eager: bool = False,
         create_inverse_triples: bool = False,
         load_triples_kwargs: Mapping[str, Any] | None = None,
-        download_kwargs: Mapping[str, Any] | None = None,
+        download_kwargs: DownloadKwargs | None = None,
         version: str | None = None,
     ):
         """Initialize dataset.
@@ -307,35 +359,26 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductivePathDataset):
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
         :param version: accepts a string "v1" to "v4" to select among Teru et al inductive datasets
         """
-        self.cache_root = self._help_cache(cache_root, version, sep_train_inference=True)
+        self.cache_root = self._help_cache(cache_root, version)
 
         self.transductive_training_url = transductive_training_url
         self.inductive_inference_url = inductive_inference_url
         self.inductive_testing_url = inductive_testing_url
         self.inductive_validation_url = inductive_validation_url
 
-        transductive_training_path = self.cache_root.joinpath("training", name_from_url(self.transductive_training_url))
-        inductive_inference_path = self.cache_root.joinpath("inference", name_from_url(self.inductive_inference_url))
-        inductive_testing_path = self.cache_root.joinpath("inference", name_from_url(self.inductive_testing_url))
-        inductive_validation_path = self.cache_root.joinpath("inference", name_from_url(self.inductive_validation_url))
-
-        download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
-        download_kwargs.setdefault("backend", "urllib")
-
-        for url, path in [
-            (self.transductive_training_url, transductive_training_path),
-            (self.inductive_inference_url, inductive_inference_path),
-            (self.inductive_testing_url, inductive_testing_path),
-            (self.inductive_validation_url, inductive_validation_path),
-        ]:
-            if force or not path.is_file():
-                download(url, path, **download_kwargs)
-
         super().__init__(
-            transductive_training_path=transductive_training_path,
-            inductive_inference_path=inductive_inference_path,
-            inductive_testing_path=inductive_testing_path,
-            inductive_validation_path=inductive_validation_path,
+            source=RemoteSource(
+                # note: the transductive training graph and the inductive part are kept in separate directories
+                files=[
+                    RemoteFile(key="transductive_training", url=transductive_training_url, subdirectory="training"),
+                    RemoteFile(key="inductive_inference", url=inductive_inference_url, subdirectory="inference"),
+                    RemoteFile(key="inductive_testing", url=inductive_testing_url, subdirectory="inference"),
+                    RemoteFile(key="inductive_validation", url=inductive_validation_url, subdirectory="inference"),
+                ],
+                cache_root=self.cache_root,
+                force=force,
+                download_kwargs=download_kwargs,
+            ),
             eager=eager,
             create_inverse_triples=create_inverse_triples,
             load_triples_kwargs=load_triples_kwargs,

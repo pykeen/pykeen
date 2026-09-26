@@ -61,7 +61,7 @@ def main(
         if no_validation:
             click.secho("Can not load as dataset if --no-validation was flagged.", fg="red")
             return
-        d = PathDataset(
+        d = PathDataset.from_paths(
             training_path=directory.joinpath("train.txt"),
             testing_path=directory.joinpath("test.txt"),
             validation_path=directory.joinpath("valid.txt"),
