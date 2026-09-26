@@ -52,7 +52,7 @@ class PharMeBINet(TarFileSingleDataset):
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     from pykeen.datasets import get_dataset
 
     get_dataset(dataset=PharMeBINet).summarize()

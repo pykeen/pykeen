@@ -81,7 +81,7 @@ class WN18RR(TarFileRemoteDataset):
         )
 
 
-def _main():
+def _main() -> None:
     for cls in [WN18, WN18RR]:
         cls().summarize()
 

@@ -95,7 +95,7 @@ class CKGSimpleSource(RemoteSimpleSource):
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     from pykeen.datasets import get_dataset
 
     d = get_dataset(dataset=CKG)

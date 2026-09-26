@@ -56,7 +56,7 @@ class AristoV4(PackedZipRemoteDataset):
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     for cls in [AristoV4]:
         cls().summarize()
 

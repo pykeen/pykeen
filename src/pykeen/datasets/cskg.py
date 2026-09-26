@@ -54,7 +54,7 @@ class CSKG(SingleTabbedDataset):
         super().__init__(url=URL, **kwargs)
 
 
-def _main():
+def _main() -> None:
     from pykeen.datasets import get_dataset
 
     ds = get_dataset(dataset=CSKG)

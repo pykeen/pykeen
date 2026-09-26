@@ -78,7 +78,7 @@ def analyze(
     max_triples: int | None,
     force: bool,
     countplots: bool,
-    directory,
+    directory: pathlib.Path,
 ) -> None:
     """Generate analysis."""
     for name, dataset in iter_dataset_instances(

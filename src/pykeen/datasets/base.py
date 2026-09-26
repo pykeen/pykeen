@@ -6,7 +6,7 @@ import logging
 import pathlib
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Iterable, Mapping, Sequence
-from typing import Any, ClassVar, NotRequired, Self, TypedDict, Unpack, cast
+from typing import IO, Any, ClassVar, NotRequired, Self, TypedDict, Unpack, cast
 
 import click
 import docdata
@@ -206,31 +206,31 @@ class Dataset(ExtraReprMixin):
         return rv
 
     @property
-    def entity_to_id(self):  # noqa: D401
+    def entity_to_id(self) -> Mapping[str, int]:  # noqa: D401
         """The mapping of entity labels to IDs."""
         if not isinstance(self.training, TriplesFactory):
             raise AttributeError(f"{self.training.__class__} does not have labeling information.")
         return self.training.entity_to_id
 
     @property
-    def relation_to_id(self):  # noqa: D401
+    def relation_to_id(self) -> Mapping[str, int]:  # noqa: D401
         """The mapping of relation labels to IDs."""
         if not isinstance(self.training, TriplesFactory):
             raise AttributeError(f"{self.training.__class__} does not have labeling information.")
         return self.training.relation_to_id
 
     @property
-    def num_entities(self):  # noqa: D401
+    def num_entities(self) -> int:  # noqa: D401
         """The number of entities."""
         return self.training.num_entities
 
     @property
-    def num_relations(self):  # noqa: D401
+    def num_relations(self) -> int:  # noqa: D401
         """The number of relations."""
         return self.training.num_relations
 
     @property
-    def create_inverse_triples(self):
+    def create_inverse_triples(self) -> bool:
         """Return whether inverse triples are created *for the training factory*."""
         return self.training.create_inverse_triples
 
@@ -252,7 +252,7 @@ class Dataset(ExtraReprMixin):
         """Get the number of triples for sorting in an iterator context."""
         return cls.triples_sort_key(pair[1])
 
-    def _summary_rows(self):
+    def _summary_rows(self) -> list[tuple[str, Any, Any, int]]:
         return [
             (
                 label,
@@ -269,7 +269,7 @@ class Dataset(ExtraReprMixin):
             if triples_factory is not None
         ]
 
-    def summary_str(self, title: str | None = None, show_examples: int | None = 5, end="\n") -> str:
+    def summary_str(self, title: str | None = None, show_examples: int | None = 5, end: str = "\n") -> str:
         """Make a summary string of all of the factories."""
         rows = self._summary_rows()
         n_triples = sum(count for *_, count in rows)
@@ -286,7 +286,7 @@ class Dataset(ExtraReprMixin):
             rv += "\n" + examples
         return rv + end
 
-    def summarize(self, title: str | None = None, show_examples: int | None = 5, file=None) -> None:
+    def summarize(self, title: str | None = None, show_examples: int | None = 5, file: IO[str] | None = None) -> None:
         """Print a summary of the dataset."""
         print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T201
 
@@ -349,7 +349,7 @@ class Dataset(ExtraReprMixin):
 
         @click.command(help=f"{cls.__name__} Dataset CLI.")
         @verbose_option
-        def main():
+        def main() -> None:
             """Run the dataset CLI."""
             click.secho(f"Loading {cls.__name__}", fg="green", bold=True)
             click.echo(cls().summary_str())
@@ -394,7 +394,7 @@ class Dataset(ExtraReprMixin):
         """
         return dataset_similarity(self, other, metric=metric)
 
-    def _tup(self):
+    def _tup(self) -> tuple[CoreTriplesFactory, ...]:
         if self.validation is None:
             return self.training, self.testing
         return self.training, self.testing, self.validation

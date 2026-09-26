@@ -77,7 +77,7 @@ class ILPC2022Large(UnpackedRemoteDisjointInductiveDataset):
         )
 
 
-def _main():
+def _main() -> None:
     for cls in ILPC2022Small, ILPC2022Large:
         dataset = cls()
         dataset.summarize()

@@ -95,7 +95,7 @@ class OpenBioLinkLQ(PackedZipRemoteDataset):
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     for cls in [OpenBioLink, OpenBioLinkLQ]:
         cls().summarize()
 

@@ -8,7 +8,7 @@ import click
 import more_click
 import torch
 
-from pykeen.triples import TriplesFactory
+from pykeen.triples import CoreTriplesFactory
 from pykeen.typing import TorchRandomHint
 from pykeen.utils import ensure_torch_random_state
 
@@ -20,11 +20,11 @@ logger = logging.getLogger(__name__)
 
 
 def deteriorate(
-    reference: TriplesFactory,
-    *others: TriplesFactory,
+    reference: CoreTriplesFactory,
+    *others: CoreTriplesFactory,
     n: int | float,
     random_state: TorchRandomHint = None,
-) -> list[TriplesFactory]:
+) -> list[CoreTriplesFactory]:
     """Remove n triples from the reference set.
 
     :param reference: The reference triples factory

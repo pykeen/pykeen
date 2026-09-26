@@ -54,7 +54,7 @@ class ConceptNet(SingleTabbedDataset):
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     from pykeen.datasets import get_dataset
 
     ds = get_dataset(dataset=ConceptNet)

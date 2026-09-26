@@ -238,7 +238,7 @@ class InductiveNELL(UnpackedRemoteDisjointInductiveDataset):
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     for cls in [InductiveFB15k237, InductiveWN18RR, InductiveNELL]:
         click.secho(f"Loading {cls.__name__}", fg="green", bold=True)
         d = cls()
