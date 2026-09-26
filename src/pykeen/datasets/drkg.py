@@ -3,12 +3,13 @@
 Get a summary with ``python -m pykeen.datasets.drkg``
 """
 
+from typing import Unpack
+
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import TarFileSingleDataset
-from ..typing import TorchRandomHint
+from .base import CompressedSingleDatasetKwargs, TarFileSingleDataset
 
 __all__ = [
     "DRKG",
@@ -36,27 +37,15 @@ class DRKG(TarFileSingleDataset):
         validation: 587426
     """
 
-    def __init__(
-        self,
-        random_state: TorchRandomHint = 0,
-        **kwargs,
-    ):
-        """Initialize the `DRKG <https://github.com/gnn4dr/DRKG>`_ dataset.
-
-        :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
-        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileSingleDataset`.
-        """
-        super().__init__(
-            url=URL,
-            relative_path="drkg.tsv",
-            random_state=random_state,
-            **kwargs,
-        )
+    def __init__(self, **kwargs: Unpack[CompressedSingleDatasetKwargs]) -> None:
+        """Initialize the `DRKG <https://github.com/gnn4dr/DRKG>`_ dataset."""
+        kwargs.setdefault("random_state", 0)
+        super().__init__(url=URL, relative_path="drkg.tsv", **kwargs)
 
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     from pykeen.datasets import get_dataset
 
     ds = get_dataset(dataset=DRKG)

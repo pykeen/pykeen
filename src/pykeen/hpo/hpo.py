@@ -38,11 +38,11 @@ from ..utils import Result, ensure_ftp_directory, fix_dataclass_init_docs, get_d
 from ..version import get_git_hash, get_version
 
 __all__ = [
-    "hpo_pipeline_from_path",
-    "hpo_pipeline_from_config",
-    "hpo_pipeline",
-    "HpoPipelineResult",
     "Direction",
+    "HpoPipelineResult",
+    "hpo_pipeline",
+    "hpo_pipeline_from_config",
+    "hpo_pipeline_from_path",
 ]
 
 #: the direction of optimization, cf. :func:`optuna.study.create_study`
@@ -73,7 +73,7 @@ class ExtraKeysError(ValueError):
 class Objective:
     """A dataclass containing all of the information to make an objective function."""
 
-    dataset: None | str | Dataset | type[Dataset]  # 1.
+    dataset: str | Dataset | type[Dataset] | None  # 1.
     model: type[Model]  # 2.
     loss: type[Loss]  # 3.
     optimizer: type[Optimizer]  # 5.
@@ -123,7 +123,7 @@ class Objective:
     # 9. Trackers
     result_tracker_kwargs: Mapping[str, Any] | None = None
     # Misc.
-    device: None | str | torch.device = None
+    device: str | torch.device | None = None
     save_model_directory: str | pathlib.Path | None = None
 
     @staticmethod
@@ -314,11 +314,11 @@ class Objective:
                 use_testing_data=False,  # use validation set during HPO!
                 device=self.device,
             )
-        except (MemoryError, RuntimeError) as e:
+        except (MemoryError, RuntimeError):
             # close run in result tracker
             result_tracker.end_run(success=False)
             # raise the error again (which will be catched in study.optimize)
-            raise e
+            raise
         else:
             if self.save_model_directory:
                 model_directory = pathlib.Path(self.save_model_directory).joinpath(str(trial.number))
@@ -515,7 +515,7 @@ def hpo_pipeline_from_config(config: Mapping[str, Any], **kwargs) -> HpoPipeline
 def hpo_pipeline(
     *,
     # 1. Dataset
-    dataset: None | str | Dataset | type[Dataset] = None,
+    dataset: str | Dataset | type[Dataset] | None = None,
     dataset_kwargs: Mapping[str, Any] | None = None,
     training: Hint[CoreTriplesFactory] = None,
     testing: Hint[CoreTriplesFactory] = None,
@@ -994,7 +994,7 @@ def suggest_kwargs(
 def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, base: int = 2) -> int:
     """Suggest an integer in the given range [2^low, 2^high]."""
     if high <= low:
-        raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
+        raise ValueError(f"Upper bound {high} is not greater than lower bound {low}.")
     choices = [base**i for i in range(low, high + 1)]
     return cast(int, trial.suggest_categorical(name=name, choices=choices))
 
@@ -1002,10 +1002,10 @@ def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, bas
 def _set_study_dataset(
     study: Study,
     *,
-    dataset: None | str | Dataset | type[Dataset] = None,
-    training: None | str | CoreTriplesFactory = None,
-    testing: None | str | CoreTriplesFactory = None,
-    validation: None | str | CoreTriplesFactory = None,
+    dataset: str | Dataset | type[Dataset] | None = None,
+    training: str | CoreTriplesFactory | None = None,
+    testing: str | CoreTriplesFactory | None = None,
+    validation: str | CoreTriplesFactory | None = None,
 ):
     if dataset is not None:
         if training is not None or testing is not None or validation is not None:

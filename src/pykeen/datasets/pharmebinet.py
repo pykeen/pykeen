@@ -3,12 +3,13 @@
 Get a summary with ``python -m pykeen.datasets.pharmebinet``.
 """
 
+from typing import Unpack
+
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import TarFileSingleDataset
-from ..typing import TorchRandomHint
+from .base import CompressedSingleDatasetKwargs, TarFileSingleDataset
 
 __all__ = [
     "PharMeBINet",
@@ -38,32 +39,20 @@ class PharMeBINet(TarFileSingleDataset):
         validation: 1587777
     """
 
-    def __init__(
-        self,
-        random_state: TorchRandomHint = 0,
-        **kwargs,
-    ):
-        """Initialize the PharMeBINet dataset from [koenigs2022]_.
-
-        :param random_state: An optional random state to make the training/testing/validation split reproducible.
-        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileSingleDataset`.
-        """
-        super().__init__(
-            url=RAW_URL,
-            relative_path="edges.tsv",
-            random_state=random_state,
-            read_csv_kwargs={
-                "usecols": ["start_id", "type", "end_id"],
-                "sep": "\t",
-                "dtype": {"start_id": str, "end_id": str},
-            },
-            **kwargs,
-        )
+    def __init__(self, **kwargs: Unpack[CompressedSingleDatasetKwargs]) -> None:
+        """Initialize the PharMeBINet dataset from [koenigs2022]_."""
+        kwargs.setdefault("random_state", 0)
+        kwargs["read_csv_kwargs"] = {
+            "usecols": ["start_id", "type", "end_id"],
+            "sep": "\t",
+            "dtype": {"start_id": str, "end_id": str},
+        }
+        super().__init__(url=RAW_URL, relative_path="edges.tsv", **kwargs)
 
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     from pykeen.datasets import get_dataset
 
     get_dataset(dataset=PharMeBINet).summarize()

@@ -135,14 +135,13 @@ from .negative_sampler import GroupedNegatives, NegativeSampler, expand_corrupti
 from .pseudo_type import PseudoTypedNegativeSampler
 
 __all__ = [
-    "NegativeSampler",
     "BasicNegativeSampler",
     "BernoulliNegativeSampler",
-    "PseudoTypedNegativeSampler",
-    # Utils
-    "negative_sampler_resolver",
     "GroupedNegatives",
+    "NegativeSampler",
+    "PseudoTypedNegativeSampler",
     "expand_corruption",
+    "negative_sampler_resolver",
 ]
 
 #: A resolver for negative samplers

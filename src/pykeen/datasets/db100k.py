@@ -1,8 +1,10 @@
 """The DB100K dataset."""
 
+from typing import Unpack
+
 from docdata import parse_docdata
 
-from .base import UnpackedRemoteDataset
+from .base import UnpackedRemoteDataset, UnpackedRemoteDataSetKwargs
 
 BASE_URL = "https://raw.githubusercontent.com/iieir-km/ComplEx-NNE_AER/master/datasets/DB100K"
 
@@ -31,7 +33,7 @@ class DB100K(UnpackedRemoteDataset):
         triples: 697479
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[UnpackedRemoteDataSetKwargs]) -> None:
         """Initialize the DB100K small dataset.
 
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.

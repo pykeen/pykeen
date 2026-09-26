@@ -108,7 +108,7 @@ class BasicNegativeSampler(NegativeSampler):
         total_num_negatives = negative_batch.shape[0]
 
         # Equally corrupt all sides
-        split_idx = int(math.ceil(total_num_negatives / len(self._corruption_indices)))
+        split_idx = math.ceil(total_num_negatives / len(self._corruption_indices))
 
         # Do not detach, as no gradients should flow into the indices.
         for index, start in zip(self._corruption_indices, range(0, total_num_negatives, split_idx), strict=False):

@@ -16,16 +16,13 @@ from .typing import FloatTensor
 from .utils import lp_norm, powersum_norm
 
 __all__ = [
-    # Base Class
-    "Regularizer",
-    # Child classes
+    "CombinedRegularizer",
     "LpRegularizer",
     "NoRegularizer",
-    "CombinedRegularizer",
-    "PowerSumRegularizer",
-    "OrthogonalityRegularizer",
     "NormLimitRegularizer",
-    # Utils
+    "OrthogonalityRegularizer",
+    "PowerSumRegularizer",
+    "Regularizer",
     "regularizer_resolver",
 ]
 DEFAULT_REGULARIZER_WEIGHT_HPO_RANGE = {

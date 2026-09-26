@@ -21,8 +21,8 @@ from pykeen.utils import compact_mapping, get_connected_components
 
 __all__ = [
     "Sealant",
-    "unleak",
     "reindex",
+    "unleak",
 ]
 
 logger = logging.getLogger(__name__)
@@ -226,7 +226,7 @@ class Sealant:
 def unleak(
     train: CoreTriplesFactory,
     *triples_factories: CoreTriplesFactory,
-    n: None | int | float = None,
+    n: int | float | None = None,
     minimum_frequency: float | None = None,
 ) -> Iterable[CoreTriplesFactory]:
     """Unleak a train, test, and validate triples factory.

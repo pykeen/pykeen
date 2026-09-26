@@ -1,16 +1,17 @@
 """Get triples from the UMLS dataset."""
 
 import pathlib
+from typing import Unpack
 
 from docdata import parse_docdata
 
-from ..base import PathDataset
+from ..base import PathDataset, PathDatasetKwargs
 
 __all__ = [
-    "UMLS_TRAIN_PATH",
-    "UMLS_TEST_PATH",
-    "UMLS_VALIDATE_PATH",
     "UMLS",
+    "UMLS_TEST_PATH",
+    "UMLS_TRAIN_PATH",
+    "UMLS_VALIDATE_PATH",
 ]
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -39,7 +40,7 @@ class UMLS(PathDataset):
         github: ZhenfengLei/KGDatasets
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[PathDatasetKwargs]) -> None:
         """Initialize the UMLS dataset.
 
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PathDataset`.

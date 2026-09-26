@@ -16,7 +16,7 @@ from ..utils import needs_packages
 class NormalizationMixin:
     """Mixin for verification of unit length."""
 
-    def _verify_initialization(self, x: torch.FloatTensor) -> None:  # noqa: D102
+    def _verify_initialization(self, x: torch.FloatTensor) -> None:
         xn = x.norm(dim=-1)
         assert torch.allclose(xn, torch.ones_like(xn))
 
@@ -35,7 +35,7 @@ class PhasesTestCase(cases.InitializerTestCase):
     dtype = torch.cfloat
     interaction = ComplExInteraction
 
-    def _verify_initialization(self, x: torch.FloatTensor) -> None:  # noqa: D102
+    def _verify_initialization(self, x: torch.FloatTensor) -> None:
         # check value range
         assert (x >= -1.0).all()
         assert (x <= 1.0).all()
@@ -52,7 +52,7 @@ class PretrainedInitializerTestCase(cases.InitializerTestCase):
         self.pretrained = torch.rand(self.num_entities, *self.shape)
         self.initializer = pykeen.nn.init.PretrainedInitializer(tensor=self.pretrained)
 
-    def _verify_initialization(self, x: torch.FloatTensor) -> None:  # noqa: D102
+    def _verify_initialization(self, x: torch.FloatTensor) -> None:
         assert (x == self.pretrained).all()
 
 

@@ -49,11 +49,11 @@ from ..typing import COLUMN_RELATION, FloatTensor, InductiveMode, TargetColumn
 from ..utils import format_relative_comparison, get_batchnorm_modules, get_preferred_device, normalize_string
 
 __all__ = [
-    "TrainingLoop",
     "NonFiniteLossError",
-    "SubBatchingNotSupportedError",
-    "OptimizerNotRecreatableError",
     "OptimizerClearedError",
+    "OptimizerNotRecreatableError",
+    "SubBatchingNotSupportedError",
+    "TrainingLoop",
 ]
 
 logger = logging.getLogger(__name__)
@@ -99,7 +99,7 @@ class SubBatchingNotSupportedError(NotImplementedError):
         super().__init__(model)
         self.model = model
 
-    def __str__(self):  # noqa: D105
+    def __str__(self):
         return (
             f"No sub-batching support for {self.model.__class__.__name__} due to modules "
             f"{get_batchnorm_modules(self.model)}."
@@ -181,7 +181,7 @@ def _restore_state_after_probing(
             finally:
                 # restore one component at a time to limit the peak memory usage
                 for name, component in components.items():
-                    component.load_state_dict(torch.load(paths[name], **load_kwargs))  # noqa: S614
+                    component.load_state_dict(torch.load(paths[name], **load_kwargs))
 
     return wrapped
 
@@ -290,12 +290,12 @@ class TrainingLoop(Generic[BatchType], ABC):
         return normalize_string(cls.__name__, suffix=TrainingLoop.__name__)
 
     @property
-    def device(self):  # noqa: D401
+    def device(self):
         """The device used by the model."""
         return self.model.device
 
     @property
-    def loss(self):  # noqa: D401
+    def loss(self):
         """The loss used by the model."""
         return self.model.loss
 
@@ -315,9 +315,9 @@ class TrainingLoop(Generic[BatchType], ABC):
         self._optimizer_used = False
 
     @property
-    def checksum(self) -> str:  # noqa: D401
+    def checksum(self) -> str:
         """The checksum of the model and optimizer the training loop was configured with."""
-        h = md5()  # noqa: S303,S324
+        h = md5()  # noqa: S324
         h.update(str(self.model).encode("utf-8"))
         h.update(str(self.optimizer).encode("utf-8"))
         return h.hexdigest()
@@ -339,7 +339,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         sub_batch_size: int | None = None,
         num_workers: int | None = None,
         clear_optimizer: bool = False,
-        checkpoint_directory: None | str | pathlib.Path = None,
+        checkpoint_directory: str | pathlib.Path | None = None,
         checkpoint_name: str | None = None,
         checkpoint_frequency: int | None = None,
         checkpoint_on_failure: bool = False,
@@ -635,9 +635,9 @@ class TrainingLoop(Generic[BatchType], ABC):
         sub_batch_size: int | None = None,
         num_workers: int | None = None,
         save_checkpoints: bool = False,
-        checkpoint_path: None | str | pathlib.Path = None,
+        checkpoint_path: str | pathlib.Path | None = None,
         checkpoint_frequency: int | None = None,
-        checkpoint_on_failure_file_path: None | str | pathlib.Path = None,
+        checkpoint_on_failure_file_path: str | pathlib.Path | None = None,
         best_epoch_model_file_path: pathlib.Path | None = None,
         last_best_epoch: int | None = None,
         drop_last: bool | None = None,
@@ -840,9 +840,9 @@ class TrainingLoop(Generic[BatchType], ABC):
             except (MemoryError, RuntimeError) as e:
                 # During automatic memory optimization only the error message is of interest
                 if only_size_probing:
-                    raise e
+                    raise
 
-                logger.warning(f"The training loop just failed during epoch {epoch} due to error {str(e)}.")
+                logger.warning(f"The training loop just failed during epoch {epoch} due to error {e!s}.")
                 if checkpoint_on_failure_file_path:
                     # When there wasn't a best epoch the checkpoint path should be None
                     if last_best_epoch is not None and best_epoch_model_file_path is not None:
@@ -862,7 +862,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                 # Delete temporary best epoch model
                 if best_epoch_model_file_path:
                     best_epoch_model_file_path.unlink(missing_ok=True)
-                raise e
+                raise
 
             # Includes a call to result_tracker.log_metrics
             callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss)
@@ -1026,7 +1026,7 @@ class TrainingLoop(Generic[BatchType], ABC):
             except RuntimeError as runtime_error:
                 self._free_graph_and_cache()
                 if not is_oom_error(runtime_error):
-                    raise runtime_error
+                    raise
                 if batch_size == 1:
                     logger.debug(f"{batch_size=:_} does not fit into your memory with these parameters.")
                     break
@@ -1130,10 +1130,10 @@ class TrainingLoop(Generic[BatchType], ABC):
                     slice_size=slice_size,
                     only_size_probing=True,
                 )
-            except RuntimeError as runtime_error:  # noqa: PERF203
+            except RuntimeError as runtime_error:
                 self._free_graph_and_cache()
                 if not is_oom_error(runtime_error):
-                    raise runtime_error
+                    raise
                 if evaluated_once:
                     slice_size //= 2
                     logger.info(f"Concluded search with {slice_size=:_}.")
@@ -1197,7 +1197,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         except RuntimeError as runtime_error:
             self._free_graph_and_cache()
             if not is_oom_error(runtime_error):
-                raise runtime_error
+                raise
             logger.debug(f"The batch_size {batch_size=:_} was too big, sub_batching is required.")
             sub_batch_size //= 2
         else:
@@ -1230,7 +1230,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                     except RuntimeError as runtime_error:
                         self._free_graph_and_cache()
                         if not is_oom_error(runtime_error):
-                            raise runtime_error
+                            raise
                         if sub_batch_size == 1:
                             logger.info(f"Even {sub_batch_size=:_} does not fit in memory with these parameters")
                             break

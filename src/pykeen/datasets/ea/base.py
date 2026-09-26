@@ -2,7 +2,8 @@
 
 import logging
 from abc import abstractmethod
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
+from typing import Any
 
 import pandas
 from class_resolver import HintOrType, OptionalKwargs
@@ -29,13 +30,13 @@ class EADataset(EagerDataset):
     def __init__(
         self,
         *,
+        metadata: Mapping[str, Any] | None = None,
         side: EASide | None = EA_SIDE_LEFT,
         create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
         split_ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),
         combination: HintOrType[GraphPairCombinator] = None,
         combination_kwargs: OptionalKwargs = None,
-        **kwargs,
     ) -> None:
         """Initialize the dataset.
 
@@ -46,7 +47,6 @@ class EADataset(EagerDataset):
         :param split_ratios: the split ratios used to perform the train/test/validation split.
         :param combination: the graph combination. only effective if side is `None`
         :param combination_kwargs: additional keyword-based parameters for the graph combination
-        :param kwargs: any additional keyword-based parameters are passed to :meth:`EagerDataset.__init__`.
 
         :raises ValueError: if an invalid side is passed
         """
@@ -78,7 +78,7 @@ class EADataset(EagerDataset):
         training, testing, validation = tf.split(ratios=split_ratios, random_state=random_state)
         # create inverse triples only for training
         training.create_inverse_triples = create_inverse_triples
-        super().__init__(training=training, testing=testing, validation=validation, **kwargs)
+        super().__init__(training=training, testing=testing, validation=validation, metadata=metadata)
 
     @abstractmethod
     def _load_graph(self, side: EASide) -> TriplesFactory:

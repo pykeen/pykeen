@@ -93,7 +93,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
         batch_size: int,
         drop_last: bool,
         **kwargs,
-    ) -> DataLoader[SLCWABatch | GroupedSLCWABatch]:  # noqa: D102
+    ) -> DataLoader[SLCWABatch | GroupedSLCWABatch]:
         cls: type[BaseBatchedSLCWAInstances]
         match sampler:
             case None:
@@ -122,7 +122,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
         )
 
     @staticmethod
-    def _get_batch_size(batch: SLCWABatch | GroupedSLCWABatch) -> int:  # noqa: D102
+    def _get_batch_size(batch: SLCWABatch | GroupedSLCWABatch) -> int:
         return batch["positives"].shape[0]
 
     @classmethod
@@ -280,7 +280,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
         stop: int,
         label_smoothing: float = 0.0,
         slice_size: int | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         return self._process_batch_static(
             model=self.model,
             loss=self.loss,
@@ -299,7 +299,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
         batch_size: int,
         sub_batch_size: int,
         supports_sub_batching: bool,
-    ):  # noqa: D102
+    ):
         # Slicing is not possible for sLCWA
         if supports_sub_batching:
             report = "This model supports sub-batching, but it also requires slicing, which is not possible for sLCWA"

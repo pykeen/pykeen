@@ -31,15 +31,15 @@ from ..typing import (
 from ..utils import split_workload
 
 __all__ = [
-    "Instances",
-    "LCWAInstances",
     "BaseBatchedSLCWAInstances",
-    "BatchedSLCWAInstances",
-    "SubGraphSLCWAInstances",
-    "LCWABatch",
     "BatchCWABatch",
-    "SLCWABatch",
+    "BatchedSLCWAInstances",
     "GroupedSLCWABatch",
+    "Instances",
+    "LCWABatch",
+    "LCWAInstances",
+    "SLCWABatch",
+    "SubGraphSLCWAInstances",
 ]
 
 BatchType = TypeVar("BatchType")
@@ -371,7 +371,7 @@ class LCWAInstances(Instances[LCWABatch]):
         target: TargetHint = None,
         loss_weighter: HintOrType[LossWeighter] = None,
         loss_weighter_kwargs: OptionalKwargs = None,
-    ):
+    ) -> None:
         """Initialize the LCWA instances.
 
         :param pairs: The unique pairs
@@ -393,7 +393,8 @@ class LCWAInstances(Instances[LCWABatch]):
         num_entities: int,
         num_relations: int,
         target: TargetHint = None,
-        **kwargs,
+        loss_weighter: HintOrType[LossWeighter] = None,
+        loss_weighter_kwargs: OptionalKwargs = None,
     ) -> Self:
         """Create LCWA instances from triples.
 
@@ -401,7 +402,8 @@ class LCWAInstances(Instances[LCWABatch]):
         :param num_entities: The number of entities.
         :param num_relations: The number of relations.
         :param target: The column to predict
-        :param kwargs: Additional keyword-based parameters passed to :meth:`__init__`
+        :param loss_weighter: The method to determine sample weights.
+        :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
 
         :returns: The instances.
         """
@@ -418,16 +420,32 @@ class LCWAInstances(Instances[LCWABatch]):
         )
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
-        return cls(pairs=unique_pairs, compressed=compressed, target=target, **kwargs)
+        return cls(
+            pairs=unique_pairs,
+            compressed=compressed,
+            target=target,
+            loss_weighter=loss_weighter,
+            loss_weighter_kwargs=loss_weighter_kwargs,
+        )
 
     @classmethod
-    def from_triples_factory(cls, tf: CoreTriplesFactory, create_inverse_triples: bool | None = None, **kwargs) -> Self:
+    def from_triples_factory(
+        cls,
+        tf: CoreTriplesFactory,
+        *,
+        create_inverse_triples: bool | None = None,
+        target: TargetHint = None,
+        loss_weighter: HintOrType[LossWeighter] = None,
+        loss_weighter_kwargs: OptionalKwargs = None,
+    ) -> Self:
         """Create LCWA instances for triples factory.
 
         :param tf: The triples factory.
         :param create_inverse_triples:
             Whether to add inverse triples. If None, defaults to the triples factory's ``create_inverse_triples``.
-        :param kwargs: Additional keyword-based parameters passed to :meth:`from_triples`
+        :param target: The column to predict
+        :param loss_weighter: The method to determine sample weights.
+        :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
 
         :returns: The instances.
         """
@@ -435,17 +453,24 @@ class LCWAInstances(Instances[LCWABatch]):
             create_inverse_triples = tf.create_inverse_triples
         return cls.from_triples(
             mapped_triples=tf._add_inverse_triples_if_necessary(
-                mapped_triples=tf.mapped_triples, create_inverse_triples=create_inverse_triples
+                mapped_triples=tf.mapped_triples,
+                create_inverse_triples=create_inverse_triples,
             ),
             num_entities=tf.num_entities,
-            num_relations=2 * tf.real_num_relations if create_inverse_triples else tf.real_num_relations,
-            **kwargs,
+            num_relations=(
+                2 * tf.real_num_relations
+                if create_inverse_triples
+                else tf.real_num_relations
+            ),
+            target=target,
+            loss_weighter=loss_weighter,
+            loss_weighter_kwargs=loss_weighter_kwargs,
         )
 
-    def __len__(self) -> int:  # noqa: D105
+    def __len__(self) -> int:
         return self.pairs.shape[0]
 
-    def __getitem__(self, item: int) -> LCWABatch:  # noqa: D105
+    def __getitem__(self, item: int) -> LCWABatch:
         pairs = self.pairs[item]
         result = LCWABatch(pairs=pairs, target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :]))
         if self.loss_weighter is None:

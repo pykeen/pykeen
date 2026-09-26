@@ -12,10 +12,11 @@ Get a summary with ``python -m pykeen.datasets.wikidata5m``,
 """
 
 import pathlib
+from typing import Unpack
 
 from docdata import parse_docdata
 
-from .base import TarFileRemoteDataset
+from .base import PackedRemoteDataSetKwargs, TarFileRemoteDataset
 
 __all__ = [
     "Wikidata5M",
@@ -46,7 +47,7 @@ class Wikidata5M(TarFileRemoteDataset):
         link: https://arxiv.org/abs/1911.06136
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[PackedRemoteDataSetKwargs]) -> None:
         """Initialize the Wikidata5M dataset.
 
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileRemoteDataset`.

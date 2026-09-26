@@ -21,12 +21,11 @@ from ...utils import nested_get
 from ...version import get_version
 
 __all__ = [
-    "text_cache_resolver",
-    "TextCache",
-    # Concrete classes
     "IdentityCache",
     "PyOBOTextCache",
+    "TextCache",
     "WikidataTextCache",
+    "text_cache_resolver",
 ]
 
 

@@ -75,7 +75,7 @@ def test_normalize_invalid_ratio():
         [0.8, 0.1, 0.2],
     ]
     for ratios in cases:
-        with pytest.raises(ValueError, match="ratios sum to more than 1.0"):
+        with pytest.raises(ValueError, match=r"ratios sum to more than 1.0"):
             normalize_ratios(ratios=ratios)
 
 

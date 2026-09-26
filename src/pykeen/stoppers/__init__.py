@@ -30,10 +30,9 @@ from .early_stopping import EarlyStopper, StopperCallback  # noqa: F401
 from .stopper import NopStopper, Stopper
 
 __all__ = [
-    "Stopper",
-    "NopStopper",
     "EarlyStopper",
-    # Utils
+    "NopStopper",
+    "Stopper",
     "stopper_resolver",
 ]
 

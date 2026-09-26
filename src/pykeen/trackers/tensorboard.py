@@ -25,7 +25,7 @@ class TensorBoardResultTracker(ResultTracker):
 
     def __init__(
         self,
-        experiment_path: None | str | pathlib.Path = None,
+        experiment_path: str | pathlib.Path | None = None,
         experiment_name: str | None = None,
     ):
         """Initialize result tracking via Tensorboard.

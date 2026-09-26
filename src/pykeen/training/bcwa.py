@@ -244,7 +244,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
         batch_size: int,
         drop_last: bool,
         **kwargs: Any,
-    ) -> DataLoader[BatchCWABatch]:  # noqa: D102
+    ) -> DataLoader[BatchCWABatch]:
         mapped_triples = triples_factory._add_inverse_triples_if_necessary(
             mapped_triples=triples_factory.mapped_triples
         )
@@ -278,7 +278,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
                 raise ValueError(f"Invalid {sampler=}")
 
     @staticmethod
-    def _get_batch_size(batch: BatchCWABatch) -> int:  # noqa: D102
+    def _get_batch_size(batch: BatchCWABatch) -> int:
         # the batch cannot be split, cf. supports_sub_batching
         return 1
 
@@ -289,7 +289,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
         stop: int,
         label_smoothing: float = 0.0,
         slice_size: int | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         if "positives" not in batch:
             raise MissingBatchTargetsError(
                 f"{self.__class__.__name__} requires batches with positives, as created by {BatchCWACollator.__name__}."
@@ -327,7 +327,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
             + self.model.collect_regularization_term()
         )
 
-    def _get_initial_slice_size(self, batch_size: int) -> int:  # noqa: D102
+    def _get_initial_slice_size(self, batch_size: int) -> int:
         # slicing is along the batch's unique targets, of which there are at most batch_size
         num_targets = _get_num_targets(model=self.model, target=self.target, mode=self.mode)
         return ceil(min(batch_size, num_targets) / 2)

@@ -120,5 +120,5 @@ def final_checkpoints(
     # simulate cleanup
     remaining: list[int] = []
     for epoch in checkpoint_epochs:
-        remaining = sorted(keeper_instance(steps=remaining + [epoch]))
+        remaining = sorted(keeper_instance(steps=[*remaining, epoch]))
     return list(remaining)

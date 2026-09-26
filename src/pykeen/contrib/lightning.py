@@ -44,10 +44,10 @@ from pykeen.triples.triples_factory import CoreTriplesFactory
 from pykeen.typing import FloatTensor, InductiveMode, LongTensor, OneOrSequence
 
 __all__ = [
-    "LitModule",
-    "lit_module_resolver",
     "LCWALitModule",
+    "LitModule",
     "SLCWALitModule",
+    "lit_module_resolver",
 ]
 
 
@@ -179,7 +179,7 @@ class SLCWALitModule(LitModule):
         self.negative_sampler_kwargs = negative_sampler_kwargs
         self.grouped = grouped
 
-    def _step(self, batch, prefix: str):  # noqa: D102
+    def _step(self, batch, prefix: str):
         loss = SLCWATrainingLoop._process_batch_static(
             model=self.model,
             loss=self.loss,
@@ -194,7 +194,7 @@ class SLCWALitModule(LitModule):
         self.log(f"{prefix}_loss", loss)
         return loss
 
-    def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:  # noqa: D102
+    def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:
         return torch.utils.data.DataLoader(
             dataset=BatchedSLCWAInstances.from_triples_factory(
                 triples_factory,
@@ -223,7 +223,7 @@ class LCWALitModule(LitModule):
         https://github.com/pykeen/pykeen/pull/905
     """
 
-    def _step(self, batch, prefix: str):  # noqa: D102
+    def _step(self, batch, prefix: str):
         loss = LCWATrainingLoop._process_batch_static(
             model=self.model,
             score_method=self.model.score_t,
@@ -240,7 +240,7 @@ class LCWALitModule(LitModule):
         self.log(f"{prefix}_loss", loss)
         return loss
 
-    def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:  # noqa: D102
+    def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:
         return torch.utils.data.DataLoader(
             dataset=LCWAInstances.from_triples_factory(
                 triples_factory, create_inverse_triples=self.model.use_inverse_triples

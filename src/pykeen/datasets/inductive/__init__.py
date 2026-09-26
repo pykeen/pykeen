@@ -9,25 +9,24 @@ from .base import (
     InductiveDataset,
     LazyInductiveDataset,
     UnpackedRemoteDisjointInductiveDataset,
+    Version,
 )
 from .ilp_teru import InductiveFB15k237, InductiveNELL, InductiveWN18RR
 from .ilpc2022 import ILPC2022Large, ILPC2022Small
 
 __all__ = [
-    # Base class
-    "InductiveDataset",
-    # Mid-level classes
-    "EagerInductiveDataset",
-    "LazyInductiveDataset",
     "DisjointInductivePathDataset",
-    "UnpackedRemoteDisjointInductiveDataset",
     "DisjointInductiveSourceDataset",
-    # Datasets
-    "InductiveFB15k237",
-    "InductiveWN18RR",
-    "InductiveNELL",
+    "EagerInductiveDataset",
     "ILPC2022Large",
     "ILPC2022Small",
+    "InductiveDataset",
+    "InductiveFB15k237",
+    "InductiveNELL",
+    "InductiveWN18RR",
+    "LazyInductiveDataset",
+    "UnpackedRemoteDisjointInductiveDataset",
+    "Version",
 ]
 
 #: A resolver for inductive datasets

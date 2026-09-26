@@ -18,9 +18,9 @@ from ..utils import normalize_path, normalize_string, upgrade_to_sequence
 __all__ = [
     "ablation_pipeline",
     "ablation_pipeline_from_config",
+    "prepare_ablation",
     "prepare_ablation_from_config",
     "prepare_ablation_from_path",
-    "prepare_ablation",
 ]
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ def ablation_pipeline(
     *,
     epochs: int | None = None,
     create_inverse_triples: bool | list[bool] = False,
-    regularizers: None | str | list[str] = None,
+    regularizers: str | list[str] | None = None,
     negative_sampler: str | None = None,
     evaluator: str | None = None,
     stopper: str | None = "NopStopper",
@@ -333,7 +333,7 @@ def path_to_str(x: object) -> str:
     raise TypeError(x)
 
 
-def prepare_ablation(  # noqa:C901
+def prepare_ablation(
     datasets: OneOrSequence[str | SplitToPathDict],
     models: OneOrSequence[str],
     losses: OneOrSequence[str],
@@ -342,7 +342,7 @@ def prepare_ablation(  # noqa:C901
     directory: str | pathlib.Path,
     *,
     create_inverse_triples: OneOrSequence[bool] = False,
-    regularizers: OneOrSequence[None | str] = None,
+    regularizers: OneOrSequence[str | None] = None,
     epochs: int | None = None,
     negative_sampler: str | None = None,
     evaluator: str | None = None,
@@ -538,7 +538,7 @@ def prepare_ablation(  # noqa:C901
             hpo_config["testing"] = dataset["testing"]
             hpo_config["validation"] = dataset["validation"]
         else:
-            raise ValueError(
+            raise TypeError(
                 "Dataset must be either the dataset name, i.e., of type str, or a dictionary containing\n"
                 "the paths to the training, testing, and validation data.",
             )

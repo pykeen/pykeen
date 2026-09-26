@@ -5,10 +5,10 @@ from .ranking import RankBasedMetric, rank_based_metric_resolver
 from .utils import Metric, ValueRange
 
 __all__ = [
-    "Metric",
-    "ValueRange",
-    "RankBasedMetric",
-    "rank_based_metric_resolver",
     "ClassificationMetric",
+    "Metric",
+    "RankBasedMetric",
+    "ValueRange",
     "classification_metric_resolver",
+    "rank_based_metric_resolver",
 ]

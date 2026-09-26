@@ -20,15 +20,12 @@ from ...typing import DeviceHint, LongTensor, MappedTriples
 from ...utils import format_relative_comparison, get_edge_index, resolve_device
 
 __all__ = [
-    # Resolver
-    "tokenizer_resolver",
-    # Base classes
-    "Tokenizer",
-    # Concrete classes
-    "RelationTokenizer",
     "AnchorTokenizer",
     "MetisAnchorTokenizer",
     "PrecomputedPoolTokenizer",
+    "RelationTokenizer",
+    "Tokenizer",
+    "tokenizer_resolver",
 ]
 
 logger = logging.getLogger(__name__)

@@ -36,17 +36,17 @@ from ..utils import (
 )
 
 __all__ = [
-    "KGInfo",
+    "INVERSE_SUFFIX",
+    "AnyTriples",
     "CoreTriplesFactory",
+    "KGInfo",
     "TriplesFactory",
+    "cat_triples",
     "create_entity_mapping",
     "create_relation_mapping",
-    "INVERSE_SUFFIX",
-    "cat_triples",
-    "splits_steps",
-    "splits_similarity",
-    "AnyTriples",
     "get_mapped_triples",
+    "splits_similarity",
+    "splits_steps",
 ]
 
 logger = logging.getLogger(__name__)
@@ -550,7 +550,7 @@ class CoreTriplesFactory(KGInfo):
             metadata=metadata,
         )
 
-    def __eq__(self, __o: object) -> bool:  # noqa: D105
+    def __eq__(self, __o: object) -> bool:
         if not isinstance(__o, CoreTriplesFactory):
             return False
         return (
@@ -562,7 +562,7 @@ class CoreTriplesFactory(KGInfo):
         )
 
     @property
-    def num_triples(self) -> int:  # noqa: D401
+    def num_triples(self) -> int:
         """The number of triples."""
         return self.mapped_triples.shape[0]
 
@@ -906,7 +906,7 @@ class CoreTriplesFactory(KGInfo):
             for mapped_triples in evaluation
         ]
         # Make new triples factories for each group
-        return [training_tf, inference_tf] + evaluation_tfs
+        return [training_tf, inference_tf, *evaluation_tfs]
 
     def merge(self, *others: Self) -> Self:
         """Merge the triples factory with others.
@@ -1006,8 +1006,8 @@ class CoreTriplesFactory(KGInfo):
 
     def new_with_restriction(
         self,
-        entities: None | Collection[int] | Collection[str] = None,
-        relations: None | Collection[int] | Collection[str] = None,
+        entities: Collection[int] | Collection[str] | None = None,
+        relations: Collection[int] | Collection[str] | None = None,
         invert_entity_selection: bool = False,
         invert_relation_selection: bool = False,
     ) -> Self:
@@ -1068,7 +1068,7 @@ class CoreTriplesFactory(KGInfo):
     def from_path_binary(
         cls,
         path: str | pathlib.Path | IO[str],
-    ) -> Self:  # noqa: D102
+    ) -> Self:
         """
         Load triples factory from a binary file.
 
@@ -1329,7 +1329,7 @@ class TriplesFactory(CoreTriplesFactory):
             },
         )
 
-    def __eq__(self, __o: object) -> bool:  # noqa: D105
+    def __eq__(self, __o: object) -> bool:
         return (
             isinstance(__o, TriplesFactory)
             and super().__eq__(__o)
@@ -1450,7 +1450,7 @@ class TriplesFactory(CoreTriplesFactory):
         return self.relation_labeling.id_to_label
 
     @property
-    def triples(self) -> np.ndarray:  # noqa: D401
+    def triples(self) -> np.ndarray:
         """The labeled triples, a 3-column matrix where each row are the head label, relation label, then tail label."""
         logger.warning("Reconstructing all label-based triples. This is expensive and rarely needed.")
         return self.label_triples(self.mapped_triples)
@@ -1601,8 +1601,8 @@ class TriplesFactory(CoreTriplesFactory):
 
     def new_with_restriction(  # noqa: D102
         self,
-        entities: None | Collection[int] | Collection[str] = None,
-        relations: None | Collection[int] | Collection[str] = None,
+        entities: Collection[int] | Collection[str] | None = None,
+        relations: Collection[int] | Collection[str] | None = None,
         invert_entity_selection: bool = False,
         invert_relation_selection: bool = False,
     ) -> Self:
@@ -1675,7 +1675,7 @@ def get_mapped_triples(
     x: AnyTriples | None = None,
     *,
     mapped_triples: MappedTriples | None = None,
-    triples: None | LabeledTriples | tuple[str, str, str] | Sequence[tuple[str, str, str]] = None,
+    triples: LabeledTriples | tuple[str, str, str] | Sequence[tuple[str, str, str]] | None = None,
     factory: CoreTriplesFactory | None = None,
 ) -> MappedTriples:
     """

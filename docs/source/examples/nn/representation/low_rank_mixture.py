@@ -31,7 +31,7 @@ result = pipeline(dataset=dataset, model=model, training_kwargs={"num_epochs": 2
 
 # keys are Wikidata IDs, which are the "labels" in CoDEx, and values
 # are the concatenation of the Wikidata label + description
-wikidata_id_to_label = WikidataTextCache().get_texts_dict(dataset.relation_to_id)
+wikidata_id_to_label = WikidataTextCache().get_texts_dict(list(dataset.relation_to_id))
 
 # use the mixture weights
 relation_weights = relation_representation.weight().detach().cpu().numpy()

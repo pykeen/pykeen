@@ -26,9 +26,9 @@ from ..typing import LongTensor, Target
 from ..utils import broadcast_index_shapes, pad_trailing_dims
 
 __all__ = [
-    "ScoringBatch",
     "Indices",
     "OptionalIndices",
+    "ScoringBatch",
     "TargetScoringBatch",
     "TripleScoringBatch",
 ]

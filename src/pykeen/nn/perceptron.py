@@ -5,8 +5,8 @@ from torch import nn
 from ..typing import FloatTensor
 
 __all__ = [
-    "TwoLayerMLP",
     "ConcatMLP",
+    "TwoLayerMLP",
 ]
 
 

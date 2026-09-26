@@ -12,8 +12,8 @@ from .representation import CombinedRepresentation, Embedding, Representation, T
 from ..typing import FloatTensor
 
 __all__ = [
-    "MLPTransformedRepresentation",
     "FeatureEnrichedEmbedding",
+    "MLPTransformedRepresentation",
 ]
 
 
@@ -71,7 +71,7 @@ class FeatureEnrichedEmbedding(CombinedRepresentation):
     """
 
     def __init__(
-        self, tensor: FloatTensor | PretrainedInitializer, shape: None | int | Sequence[int] = None, **kwargs
+        self, tensor: FloatTensor | PretrainedInitializer, shape: int | Sequence[int] | None = None, **kwargs
     ) -> None:
         """Initialize the feature-enriched embedding.
 

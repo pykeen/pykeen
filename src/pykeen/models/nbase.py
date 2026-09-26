@@ -35,8 +35,8 @@ from ..typing import (
 from ..utils import check_shapes, get_batchnorm_modules, prefix_unsqueeze_target
 
 __all__ = [
-    "_NewAbstractModel",
     "ERModel",
+    "_NewAbstractModel",
 ]
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ class _NewAbstractModel(Model, ABC):
     #: The default parameters for the default regularizer class
     regularizer_default_kwargs: ClassVar[Mapping[str, Any] | None] = None
 
-    def _reset_parameters_(self):  # noqa: D401
+    def _reset_parameters_(self):
         """Reset all parameters of the model in-place."""
         # cf. https://github.com/mberr/ea-sota-comparison/blob/6debd076f93a329753d819ff4d01567a23053720/src/kgm/utils/torch_utils.py#L317-L372   # noqa:E501
         # Make sure that all modules with parameters do have a reset_parameters method.
@@ -143,7 +143,7 @@ class _NewAbstractModel(Model, ABC):
             if hasattr(module, "post_parameter_update"):
                 module.post_parameter_update()
 
-    def collect_regularization_term(self):  # noqa: D102
+    def collect_regularization_term(self):
         return sum(
             regularizer.pop_regularization_term()
             for regularizer in self.modules()
@@ -663,7 +663,7 @@ class ERModel(
             raise ValueError(f"{self.__class__.__name__} does not support inductive mode: {mode}")
         return self.entity_representations
 
-    def _get_entity_len(self, *, mode: InductiveMode | None) -> int:  # noqa:D105
+    def _get_entity_len(self, *, mode: InductiveMode | None) -> int:
         """
         Return the number of entities for the given inductive mode.
 

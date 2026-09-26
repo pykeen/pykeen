@@ -12,8 +12,8 @@ from ..constants import TARGET_TO_INDEX
 from ..typing import BoolTensor, LongTensor, MappedTriples, Target
 
 __all__ = [
-    "NegativeSampler",
     "GroupedNegatives",
+    "NegativeSampler",
     "expand_corruption",
 ]
 

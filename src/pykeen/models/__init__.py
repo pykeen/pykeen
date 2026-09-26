@@ -43,7 +43,7 @@ relations and tail entities as input and computes a scalar plausibility score fo
     The specific models from this module, e.g., :class:`RESCAL`, package given specific entity and relation
     representations with an interaction function. For more flexible combinations, consider using :class:`ERModel`
     directly.
-"""  # noqa: D205,D400
+"""
 
 from class_resolver import ClassResolver, get_subclasses
 
@@ -93,19 +93,15 @@ from .unimodal import (
 )
 
 __all__ = [
-    # Base Models
-    "Model",
-    "ERModel",
-    "InductiveERModel",
-    "LiteralModel",
-    "EvaluationOnlyModel",
-    # Scoring
-    "ScoringBatch",
-    "TargetScoringBatch",
-    "TripleScoringBatch",
-    "Indices",
-    "OptionalIndices",
-    # Concrete Models
+    "CP",
+    "ERMLP",
+    "ERMLPE",
+    "KG2E",
+    "NTN",
+    "RESCAL",
+    "RGCN",
+    "SE",
+    "UM",
     "AutoSF",
     "BoxE",
     "CompGCN",
@@ -113,48 +109,45 @@ __all__ = [
     "ComplExLiteral",
     "ConvE",
     "ConvKB",
-    "CP",
+    "CooccurrenceFilteredModel",
     "CrossE",
     "DistMA",
     "DistMult",
     "DistMultLiteral",
     "DistMultLiteralGated",
-    "ERMLP",
-    "ERMLPE",
-    "HolE",
-    "KG2E",
+    "ERModel",
+    "EvaluationOnlyModel",
     "FixedModel",
+    "HolE",
+    "Indices",
+    "InductiveERModel",
+    "InductiveNodePiece",
+    "InductiveNodePieceGNN",
+    "LiteralModel",
+    "MarginalDistributionBaseline",
+    "Model",
     "MuRE",
     "NodePiece",
-    "NTN",
+    "OptionalIndices",
     "PairRE",
     "ProjE",
     "QuatE",
-    "RESCAL",
-    "RGCN",
     "RotatE",
+    "ScoringBatch",
     "SimplE",
-    "SE",
+    "SoftInverseTripleBaseline",
+    "TargetScoringBatch",
     "TorusE",
     "TransD",
     "TransE",
     "TransF",
     "TransH",
     "TransR",
+    "TripleScoringBatch",
     "TuckER",
-    "UM",
-    # Inductive Models
-    "InductiveNodePiece",
-    "InductiveNodePieceGNN",
-    # Evaluation-only models
-    "SoftInverseTripleBaseline",
-    "MarginalDistributionBaseline",
-    # Meta Models
-    "CooccurrenceFilteredModel",
-    # Utils
-    "model_resolver",
     "make_model",
     "make_model_cls",
+    "model_resolver",
 ]
 
 #: A resolver for knowledge graph embedding models

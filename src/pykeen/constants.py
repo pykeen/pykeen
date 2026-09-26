@@ -21,14 +21,14 @@ from .typing import (
 )
 
 __all__ = [
-    "PYKEEN_HOME",
+    "AGGREGATIONS",
+    "PYKEEN_BENCHMARKS",
+    "PYKEEN_CHECKPOINTS",
     "PYKEEN_DATASETS",
     "PYKEEN_DATASETS_MODULE",
-    "PYKEEN_BENCHMARKS",
     "PYKEEN_EXPERIMENTS",
-    "PYKEEN_CHECKPOINTS",
+    "PYKEEN_HOME",
     "PYKEEN_LOGS",
-    "AGGREGATIONS",
 ]
 
 #: A manager around the PyKEEN data folder. It defaults to ``~/.data/pykeen``.

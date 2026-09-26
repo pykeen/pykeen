@@ -12,13 +12,10 @@ from class_resolver import ClassResolver
 from tqdm.auto import tqdm
 
 __all__ = [
-    # Resolver
-    "precomputed_tokenizer_loader_resolver",
-    # Base classes
-    "PrecomputedTokenizerLoader",
-    # Concrete classes
     "GalkinPrecomputedTokenizerLoader",
+    "PrecomputedTokenizerLoader",
     "TorchPrecomputedTokenizerLoader",
+    "precomputed_tokenizer_loader_resolver",
 ]
 
 logger = logging.getLogger(__name__)

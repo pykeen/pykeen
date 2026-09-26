@@ -54,7 +54,7 @@ class CooccurrenceFilteredModel(Model):
         self,
         *,
         triples_factory: CoreTriplesFactory,
-        additional_triples: None | MappedTriples | list[MappedTriples] = None,
+        additional_triples: MappedTriples | list[MappedTriples] | None = None,
         apply_in_training: bool = False,
         base: HintOrType[Model] = "rotate",
         training_fill_value: float = -1.0e03,

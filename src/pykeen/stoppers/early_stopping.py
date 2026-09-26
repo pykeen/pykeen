@@ -20,10 +20,10 @@ from ..triples import CoreTriplesFactory
 from ..utils import fix_dataclass_init_docs
 
 __all__ = [
-    "is_improvement",
     "EarlyStopper",
     "EarlyStoppingLogic",
     "StopperCallback",
+    "is_improvement",
 ]
 
 logger = logging.getLogger(__name__)
