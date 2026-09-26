@@ -7,7 +7,7 @@ import pathlib
 import tarfile
 import zipfile
 from collections.abc import Collection, Iterable, Mapping, Sequence
-from typing import Any, ClassVar, Self, cast
+from typing import Any, ClassVar, Literal, Self, cast
 
 import click
 import docdata
@@ -719,6 +719,7 @@ class UnpackedRemoteDataset(SourceDataSet):
         self.cache_root = self._help_cache(cache_root)
 
         download_kwargs = {} if download_kwargs is None else dict(download_kwargs)
+        download_kwargs["force"] = force
         download_kwargs.setdefault("backend", "urllib")
         training_source = RemoteSource(
             path=self.cache_root.joinpath(name_from_url(training_url)),
@@ -745,8 +746,10 @@ class UnpackedRemoteDataset(SourceDataSet):
         )
 
 
-class TarFileRemoteDataset(SourceDataSet):
-    """Contains a lazy reference to a remote dataset that is loaded if needed."""
+class PackedRemoteDataSet(SourceDataSet):
+    """An abstract base class for packed remote datasets."""
+
+    archive_type: ClassVar[Literal["zip", "tar"]]
 
     def __init__(
         self,
@@ -758,6 +761,7 @@ class TarFileRemoteDataset(SourceDataSet):
         cache_root: str | None = None,
         eager: bool = False,
         create_inverse_triples: bool = False,
+        load_triples_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize dataset.
 
@@ -775,16 +779,16 @@ class TarFileRemoteDataset(SourceDataSet):
         name = name_from_url(url)
         path = self.cache_root.joinpath(name)
         training_source = RemoteArchivedSource(
-            archive_type="tar", url=url, path=path, inner_path=str(pathlib.PurePath(relative_training_path))
+            archive_type=self.archive_type, url=url, path=path, inner_path=str(pathlib.PurePath(relative_training_path))
         )
         testing_source = RemoteArchivedSource(
-            archive_type="tar",
+            archive_type=self.archive_type,
             url=url,
             path=path,
             inner_path=str(pathlib.PurePath(relative_testing_path)),
         )
         validation_source = RemoteArchivedSource(
-            archive_type="tar",
+            archive_type=self.archive_type,
             url=url,
             path=path,
             inner_path=str(pathlib.PurePath(relative_validation_path)),
@@ -795,72 +799,20 @@ class TarFileRemoteDataset(SourceDataSet):
             validation_source=validation_source,
             eager=eager,
             create_inverse_triples=create_inverse_triples,
-            # load_triples_kwargs=load_triples_kwargs,
+            load_triples_kwargs=load_triples_kwargs,
         )
+
+
+class TarFileRemoteDataset(PackedRemoteDataSet):
+    """A remote dataset packed with a TAR archive."""
+
+    archive_type = "tar"
 
 
 class PackedZipRemoteDataset(SourceDataSet):
-    """Contains a lazy reference to a remote dataset that is loaded if needed."""
+    """A remote dataset packed with a ZIP archive."""
 
-    def __init__(
-        self,
-        relative_training_path: str | pathlib.PurePath,
-        relative_testing_path: str | pathlib.PurePath,
-        relative_validation_path: str | pathlib.PurePath,
-        url: str,
-        *,
-        name: str | None = None,
-        cache_root: str | None = None,
-        eager: bool = False,
-        create_inverse_triples: bool = False,
-    ) -> None:
-        """Initialize dataset.
-
-        :param relative_training_path: The path inside the zip file for the training data
-        :param relative_testing_path: The path inside the zip file for the testing data
-        :param relative_validation_path: The path inside the zip file for the validation data
-        :param url: The url where to download the dataset from
-        :param name: The name of the file. If not given, tries to get the name from the end of the URL
-        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
-            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
-            ``~/.pykeen``.
-        :param eager: Should the data be loaded eagerly? Defaults to false.
-        :param create_inverse_triples: Should inverse triples be created? Defaults to false.
-
-        :raises ValueError: if there's no URL specified and there is no data already at the calculated path
-        """
-        self.cache_root = self._help_cache(cache_root)
-
-        if name is None:
-            name = name_from_url(url)
-        path = self.cache_root.joinpath(name)
-        training_source = RemoteArchivedSource(
-            archive_type="zip",
-            path=path,
-            url=url,
-            # TODO update pystow to accept purepaths
-            inner_path=str(pathlib.PurePath(relative_training_path)),
-        )
-        testing_source = RemoteArchivedSource(
-            archive_type="zip",
-            path=path,
-            url=url,
-            inner_path=str(pathlib.PurePath(relative_testing_path)),
-        )
-        validation_source = RemoteArchivedSource(
-            archive_type="zip",
-            path=path,
-            url=url,
-            inner_path=str(pathlib.PurePath(relative_validation_path)),
-        )
-        super().__init__(
-            training_source=training_source,
-            testing_source=testing_source,
-            validation_source=validation_source,
-            eager=eager,
-            create_inverse_triples=create_inverse_triples,
-            # load_triples_kwargs=load_triples_kwargs,
-        )
+    archive_type = "zip"
 
 
 class CompressedSingleDataset(LazyDataset):
