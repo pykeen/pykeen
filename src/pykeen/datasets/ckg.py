@@ -17,7 +17,7 @@ __all__ = [
     "CKG",
 ]
 
-URL = "https://md-datasets-public-files-prod.s3.eu-west-1.amazonaws.com/d1e8d3df-2342-468a-91a9-97a981a479ad"
+URL = "https://prod-dcd-datasets-public-files-eu-west-1.s3.eu-west-1.amazonaws.com/d1e8d3df-2342-468a-91a9-97a981a479ad"
 COLUMNS = ["START_ID", "TYPE", "END_ID"]
 
 
