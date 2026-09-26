@@ -77,7 +77,7 @@ class FB15k237(PackedZipRemoteDataset):
         link: https://www.aclweb.org/anthology/W15-4007/
     """
 
-    def __init__(self, **kwargs: Unpack[PackedRemoteDataSetKwargs]):
+    def __init__(self, **kwargs: Unpack[PackedRemoteDataSetKwargs]) -> None:
         """Initialize the FreeBase 15K (237) dataset.
 
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PackedZipRemoteDataset`.
@@ -93,7 +93,7 @@ class FB15k237(PackedZipRemoteDataset):
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     for cls in [FB15k, FB15k237]:
         cls().summarize()
 

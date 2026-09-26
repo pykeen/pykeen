@@ -881,7 +881,7 @@ class TabbedDatasetKwargs(LazyDatasetKwargs):
     delimiter: NotRequired[str | None]
 
 
-class TabbedDataset(LazyDataset, ABC):
+class TabbedDataset(LazyDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
 
     ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
