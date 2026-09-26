@@ -314,11 +314,11 @@ class Objective:
                 use_testing_data=False,  # use validation set during HPO!
                 device=self.device,
             )
-        except (MemoryError, RuntimeError) as e:
+        except (MemoryError, RuntimeError):
             # close run in result tracker
             result_tracker.end_run(success=False)
             # raise the error again (which will be catched in study.optimize)
-            raise e
+            raise
         else:
             if self.save_model_directory:
                 model_directory = pathlib.Path(self.save_model_directory).joinpath(str(trial.number))

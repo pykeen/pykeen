@@ -303,8 +303,8 @@ class Evaluator(ABC, Generic[MetricKeyType]):
             )
         except MemoryError as error:
             if device.type == "cpu":
-                raise error
-            logger.error(
+                raise
+            logger.warning(
                 f"Memory error: {error}; falling back to evaluation on cpu. This will incur heavy runtime costs for "
                 f"reasonably sized datasets and models."
             )
