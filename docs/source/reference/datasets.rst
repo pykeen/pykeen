@@ -6,6 +6,8 @@ Datasets
 
 .. automodapi:: pykeen.datasets.base
 
+.. automodapi:: pykeen.datasets.source
+
 .. automodapi:: pykeen.datasets.analysis
 
 Inductive Datasets

@@ -388,16 +388,13 @@ class OptimizerTrainingCallback(TrainingCallback):
     """Use optimizer to update parameters."""
 
     # TODO: we may want to separate TrainingCallback from pre-step callbacks in the future
-    def __init__(self, only_size_probing: bool = False, pre_step_callbacks: Sequence[TrainingCallback] | None = None):
+    def __init__(self, pre_step_callbacks: Sequence[TrainingCallback] | None = None):
         """Initialize the callback.
 
-        :param only_size_probing:
-            whether this is during size probing, where we do not want to apply weight changes
         :param pre_step_callbacks:
             callbacks to apply before making the step, e.g., for gradient clipping.
         """
         super().__init__()
-        self.only_size_probing = only_size_probing
         self.pre_step_callbacks = tuple(pre_step_callbacks or [])
 
     def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
@@ -412,10 +409,9 @@ class OptimizerTrainingCallback(TrainingCallback):
         for cb in self.pre_step_callbacks:
             cb.pre_step(epoch=epoch, **kwargs)
 
-        # when called by batch_size_search(), the parameter update should not be applied.
-        if not self.only_size_probing:
-            # update parameters according to optimizer
-            self.optimizer.step()
+        # update parameters according to optimizer
+        # note: we also apply this during size probing to account for the optimizer's memory requirements
+        self.optimizer.step()
 
         # After changing applying the gradients to the embeddings, the model is notified that the forward
         # constraints are no longer applied

@@ -2,8 +2,6 @@
 
 import pathlib
 import unittest
-from io import BytesIO
-from urllib.request import urlopen
 
 from pykeen.datasets import EagerDataset, Kinships, Nations, dataset_resolver
 from pykeen.datasets.base import (
@@ -53,10 +51,12 @@ class MockSingleTabbedDataset(SingleTabbedDataset):
     """Mock downloading a single file."""
 
     def __init__(self, cache_root: str):  # noqa:D107
-        super().__init__(url=..., name=..., cache_root=cache_root)
-
-    def _get_path(self) -> str:
-        return NATIONS_TRAIN_PATH
+        super().__init__(
+            url=NATIONS_TRAIN_PATH.as_uri(),
+            cache_root=cache_root,
+            # for compatibility with local URI
+            download_kwargs={"backend": "urllib"},
+        )
 
 
 class MockTarFileSingleDataset(TarFileSingleDataset):
@@ -64,14 +64,10 @@ class MockTarFileSingleDataset(TarFileSingleDataset):
 
     def __init__(self, cache_root: str):  # noqa:D107
         super().__init__(
-            url=...,
-            name=...,
+            url=constants.RESOURCES.joinpath("nations.tar.gz").as_uri(),
             relative_path="nations/train.txt",
             cache_root=cache_root,
         )
-
-    def _get_path(self) -> str:
-        return constants.RESOURCES.joinpath("nations.tar.gz")
 
 
 class MockZipFileSingleDataset(ZipSingleDataset):
@@ -79,14 +75,10 @@ class MockZipFileSingleDataset(ZipSingleDataset):
 
     def __init__(self, cache_root: str):  # noqa:D107
         super().__init__(
-            url=...,
-            name=...,
+            url=constants.RESOURCES.joinpath("nations.zip").as_uri(),
             relative_path="nations/train.txt",
             cache_root=cache_root,
         )
-
-    def _get_path(self) -> pathlib.Path:
-        return constants.RESOURCES.joinpath("nations.zip")
 
 
 class MockTarFileRemoteDataset(TarFileRemoteDataset):
@@ -100,9 +92,6 @@ class MockTarFileRemoteDataset(TarFileRemoteDataset):
             relative_training_path=pathlib.PurePath("nations", "train.txt"),
             relative_validation_path=pathlib.PurePath("nations", "valid.txt"),
         )
-
-    def _get_bytes(self) -> BytesIO:
-        return BytesIO(urlopen(self.url).read())  # noqa:S310
 
 
 class MockUnpackedRemoteDataset(UnpackedRemoteDataset):

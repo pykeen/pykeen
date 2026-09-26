@@ -5,7 +5,8 @@ import logging
 import pathlib
 import re
 from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
-from typing import Any, ClassVar, Self, TextIO
+from io import TextIOWrapper
+from typing import IO, Any, ClassVar, Self
 
 import numpy as np
 import pandas as pd
@@ -1066,7 +1067,7 @@ class CoreTriplesFactory(KGInfo):
     @classmethod
     def from_path_binary(
         cls,
-        path: str | pathlib.Path | TextIO,
+        path: str | pathlib.Path | IO[str],
     ) -> Self:  # noqa: D102
         """
         Load triples factory from a binary file.
@@ -1098,7 +1099,7 @@ class CoreTriplesFactory(KGInfo):
 
     def to_path_binary(
         self,
-        path: str | pathlib.Path | TextIO,
+        path: str | pathlib.Path | IO[str],
     ) -> pathlib.Path:
         """
         Save triples factory to path in (PyTorch's .pt) binary format.
@@ -1276,7 +1277,7 @@ class TriplesFactory(CoreTriplesFactory):
     @classmethod
     def from_path(
         cls,
-        path: str | pathlib.Path | TextIO,
+        path: str | pathlib.Path | IO[str],
         *,
         create_inverse_triples: bool = False,
         entity_to_id: EntityMapping | None = None,
@@ -1311,7 +1312,7 @@ class TriplesFactory(CoreTriplesFactory):
         :return:
             A new triples factory.
         """
-        path = normalize_path(path)
+        path_name = pathlib.Path(path.name if isinstance(path, IO | TextIOWrapper) else path)
 
         # TODO: Check if lazy evaluation would make sense
         triples = load_triples(path, **(load_triples_kwargs or {}))
@@ -1323,7 +1324,7 @@ class TriplesFactory(CoreTriplesFactory):
             relation_to_id=relation_to_id,
             compact_id=compact_id,
             metadata={
-                "path": path,
+                "path": path_name,
                 **(metadata or {}),
             },
         )
@@ -1374,7 +1375,7 @@ class TriplesFactory(CoreTriplesFactory):
             metadata=self.metadata,
         )
 
-    def to_path_binary(self, path: str | pathlib.Path | TextIO) -> pathlib.Path:  # noqa: D102
+    def to_path_binary(self, path: str | pathlib.Path | IO[str]) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # store entity/relation to ID
         for name, data in (

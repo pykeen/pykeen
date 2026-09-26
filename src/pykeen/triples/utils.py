@@ -2,7 +2,7 @@
 
 import pathlib
 from collections.abc import Callable, Sequence
-from typing import TextIO
+from typing import IO
 
 import numpy as np
 import pandas
@@ -49,7 +49,7 @@ class InvalidRemappingLengthError(ValueError):
 
 
 def load_triples(
-    path: str | pathlib.Path | TextIO,
+    path: str | pathlib.Path | IO[str],
     delimiter: str = "\t",
     encoding: str | None = None,
     column_remapping: Sequence[int] | None = None,

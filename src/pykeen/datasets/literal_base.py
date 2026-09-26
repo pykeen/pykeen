@@ -1,7 +1,7 @@
 """Base classes for literal datasets."""
 
 import pathlib
-from typing import TextIO
+from typing import IO
 
 from .base import LazyDataset
 from ..triples import TriplesNumericLiteralsFactory
@@ -18,10 +18,10 @@ class NumericPathDataset(LazyDataset):
 
     def __init__(
         self,
-        training_path: str | pathlib.Path | TextIO,
-        testing_path: str | pathlib.Path | TextIO,
-        validation_path: str | pathlib.Path | TextIO,
-        literals_path: str | pathlib.Path | TextIO,
+        training_path: str | pathlib.Path | IO[str],
+        testing_path: str | pathlib.Path | IO[str],
+        validation_path: str | pathlib.Path | IO[str],
+        literals_path: str | pathlib.Path | IO[str],
         eager: bool = False,
         create_inverse_triples: bool = False,
     ) -> None:

@@ -305,6 +305,11 @@ class Loss(_Loss):
     #: The default strategy for optimizing the loss's hyper-parameters
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
+    #: Whether BCWA scoring rows, i.e., (head, relation)-pairs, without any positive tail are kept.
+    #: Rows which only contain negatives are informative for pointwise losses, but not for losses
+    #: which contrast positives against negatives.
+    bcwa_keep_rows_without_positives: ClassVar[bool] = False
+
     def __init__(self, reduction: Reduction = "mean"):
         """
         Initialize the loss.
@@ -385,9 +390,59 @@ class Loss(_Loss):
         """
         raise NotImplementedError
 
+    def process_bcwa_scores(
+        self,
+        predictions: FloatTensor,
+        positives: LongTensor,
+        label_smoothing: float | None = None,
+        weights: FloatTensor | None = None,
+    ) -> FloatTensor:
+        """
+        Process scores from the BCWA training loop.
+
+        The last dimension is the target, e.g., the tails for tail prediction. The scores are reshaped to
+        ``(n_1 * n_2, num_targets)``, i.e., each combination of the two other positions becomes one row which scores all
+        target candidates of the batch, and passed to :meth:`process_lcwa_scores`. Unless
+        :attr:`bcwa_keep_rows_without_positives` is set, rows without any positive target are dropped before.
+
+        :param predictions: shape: (n_1, n_2, num_targets)
+            The scores.
+        :param positives: shape: (num_positive_triples, 3)
+            The positive triples in batch-local indices, in the same order of positions as the predictions' dimensions.
+        :param label_smoothing:
+            An optional label smoothing parameter.
+        :param weights: shape: (n_1, n_2, num_targets)
+            Sample weights.
+
+        :return:
+            A scalar loss value.
+        """
+        labels = torch.zeros_like(predictions)
+        labels[positives.unbind(dim=-1)] = 1.0
+        num_targets = predictions.shape[-1]
+        predictions = predictions.reshape(-1, num_targets)
+        labels = labels.reshape(-1, num_targets)
+        if weights is not None:
+            weights = weights.reshape(-1, num_targets)
+        if not self.bcwa_keep_rows_without_positives:
+            mask = labels.any(dim=-1)
+            predictions = predictions[mask]
+            labels = labels[mask]
+            if weights is not None:
+                weights = weights[mask]
+        return self.process_lcwa_scores(
+            predictions=predictions,
+            labels=labels,
+            label_smoothing=label_smoothing,
+            num_entities=num_targets,
+            weights=weights,
+        )
+
 
 class PointwiseLoss(Loss):
     """Pointwise loss functions compute an independent loss term for each triple-label pair."""
+
+    bcwa_keep_rows_without_positives: ClassVar[bool] = True
 
     @abstractmethod
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor) -> FloatTensor:

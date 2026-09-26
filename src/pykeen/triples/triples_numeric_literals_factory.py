@@ -3,7 +3,7 @@
 import logging
 import pathlib
 from collections.abc import Iterable, Mapping, MutableMapping
-from typing import Any, ClassVar, TextIO
+from typing import IO, Any, ClassVar
 
 import numpy as np
 import pandas
@@ -68,9 +68,9 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     @classmethod
     def from_path(  # noqa: D102
         cls,
-        path: str | pathlib.Path | TextIO,
+        path: str | pathlib.Path | IO[str],
         *,
-        path_to_numeric_triples: None | str | pathlib.Path | TextIO = None,
+        path_to_numeric_triples: None | str | pathlib.Path | IO[str] = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":
         if path_to_numeric_triples is None:
@@ -137,7 +137,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             literals_to_id=self.literals_to_id,
         )
 
-    def to_path_binary(self, path: str | pathlib.Path | TextIO) -> pathlib.Path:  # noqa: D102
+    def to_path_binary(self, path: str | pathlib.Path | IO[str]) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # save literal-to-id mapping
         pandas.DataFrame(

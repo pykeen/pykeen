@@ -218,6 +218,9 @@ References
     <https://papers.nips.cc/paper/2017/hash/f22e4747da1aa27e363d86d40ff442fe-Abstract.html>`_. *Advances in Neural
     Information Processing Systems*, 2017-December(ii), 3392–3402.
 
+.. [zhai2023] Zhai, X., *et al.* (2023). `Sigmoid Loss for Language Image Pre-Training
+    <https://arxiv.org/abs/2303.15343>`_. *ICCV 2023*, 11975–11986.
+
 .. [zhang2017] Zhang, H., *et al*. (2017). `Visual Translation Embedding Network for Visual Relation Detection
     <http://arxiv.org/abs/1702.08319>`_. *arXiv*, 1702.08319.
 

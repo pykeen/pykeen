@@ -2,6 +2,7 @@
 
 import functools
 import gc
+import inspect
 import logging
 import pathlib
 import pickle
@@ -12,8 +13,9 @@ from collections.abc import Callable, Mapping
 from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
+from math import ceil
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import IO, Any, ClassVar, Generic, Literal, TypeVar
+from typing import IO, Any, ClassVar, Concatenate, Generic, Literal, ParamSpec, TypeVar
 
 import numpy as np
 import torch
@@ -43,7 +45,7 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker, tracker_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.weights import LossWeighter
-from ..typing import FloatTensor, InductiveMode
+from ..typing import COLUMN_RELATION, FloatTensor, InductiveMode, TargetColumn
 from ..utils import format_relative_comparison, get_batchnorm_modules, get_preferred_device, normalize_string
 
 __all__ = [
@@ -57,6 +59,11 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 BatchType = TypeVar("BatchType")
+P = ParamSpec("P")
+R = TypeVar("R")
+
+#: whether :func:`torch.load` supports memory-mapping, which was added in torch 2.1
+_TORCH_LOAD_SUPPORTS_MMAP = "mmap" in inspect.signature(torch.load).parameters
 
 
 class NonFiniteLossError(RuntimeError):
@@ -107,6 +114,20 @@ class OptimizerClearedError(ValueError):
     """An exception raised when the optimizer is required, but has been cleared."""
 
 
+def _get_num_targets(model: Model, target: TargetColumn, mode: InductiveMode | None) -> int:
+    """Get the number of candidates for the target column.
+
+    :param model: The model.
+    :param target: The target column.
+    :param mode: The inductive mode, or None in the transductive setting.
+
+    :returns: The number of relations for the relation column, and otherwise the number of entities in the given mode.
+    """
+    if target == COLUMN_RELATION:
+        return model.num_relations
+    return model._get_entity_len(mode=mode)
+
+
 def _make_optimizer_and_lr_scheduler(
     model: Model,
     *,
@@ -121,6 +142,48 @@ def _make_optimizer_and_lr_scheduler(
         return optimizer_instance, None
     lr_scheduler_instance = lr_scheduler_resolver.make(lr_scheduler, lr_scheduler_kwargs, optimizer=optimizer_instance)
     return optimizer_instance, lr_scheduler_instance
+
+
+def _restore_state_after_probing(
+    func: "Callable[Concatenate[TrainingLoop, P], R]",
+) -> "Callable[Concatenate[TrainingLoop, P], R]":
+    """Decorate a size probing method to restore the model, optimizer, and LR scheduler state afterwards.
+
+    Size probing runs actual training steps, including parameter updates, to also account for the memory required by
+    the optimizer step, e.g., for Adam's moment estimates. The state is stored in a temporary directory on disk, since
+    a copy in GPU memory would distort the memory estimates, and a copy in host memory may exhaust it, e.g., when GPU
+    memory spills over into host memory.
+    """
+
+    @functools.wraps(func)
+    def wrapped(self: "TrainingLoop", *args: P.args, **kwargs: P.kwargs) -> R:
+        components = {
+            name: component
+            for name, component in (
+                ("model", self.model),
+                ("optimizer", self.optimizer),
+                ("lr_scheduler", self.lr_scheduler),
+            )
+            if component is not None
+        }
+        device = self.device
+        load_kwargs: dict[str, Any] = {"map_location": device, "weights_only": False}
+        # memory-map the snapshot to avoid a full copy in host memory; we only do this when loading to an accelerator,
+        # since tensors loaded to CPU would keep referencing the (temporary) file, e.g., as part of the optimizer state
+        if _TORCH_LOAD_SUPPORTS_MMAP and device.type != "cpu":
+            load_kwargs["mmap"] = True
+        with TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            paths = {name: pathlib.Path(directory).joinpath(f"{name}.pt") for name in components}
+            for name, component in components.items():
+                torch.save(component.state_dict(), paths[name])
+            try:
+                return func(self, *args, **kwargs)
+            finally:
+                # restore one component at a time to limit the peak memory usage
+                for name, component in components.items():
+                    component.load_state_dict(torch.load(paths[name], **load_kwargs))  # noqa: S614
+
+    return wrapped
 
 
 class TrainingLoop(Generic[BatchType], ABC):
@@ -145,6 +208,8 @@ class TrainingLoop(Generic[BatchType], ABC):
     }
 
     supports_slicing: ClassVar[bool] = False
+    #: Whether the training loop can split a batch into sub-batches
+    supports_sub_batching: ClassVar[bool] = True
 
     @update_docstring_with_resolver_keys(
         ResolverKey("optimizer", "class_resolver.contrib.torch.optimizer_resolver"),
@@ -647,6 +712,8 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         if sub_batch_size is None or sub_batch_size == batch_size:  # by default do not split batches in sub-batches
             sub_batch_size = batch_size
+        elif not self.supports_sub_batching:
+            raise NotImplementedError(f"{self.__class__.__name__} does not support sub-batching.")
         elif get_batchnorm_modules(self.model):  # if there are any, this is truthy
             raise SubBatchingNotSupportedError(self.model)
 
@@ -709,7 +776,9 @@ class TrainingLoop(Generic[BatchType], ABC):
         if gradient_clipping_max_abs_value is not None:
             pre_step_callbacks.append(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
         callback.register_callback(
-            OptimizerTrainingCallback(only_size_probing=only_size_probing, pre_step_callbacks=pre_step_callbacks)
+            # note: we also apply parameter updates during size probing to account for the optimizer's memory
+            # requirements; the size probing methods restore the state afterwards
+            OptimizerTrainingCallback(pre_step_callbacks=pre_step_callbacks)
         )
         if self.lr_scheduler is not None:
             callback.register_callback(LearningRateSchedulerTrainingCallback())
@@ -911,6 +980,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         """Process a single batch and returns the loss."""
         raise NotImplementedError
 
+    @_restore_state_after_probing
     def batch_size_search(
         self,
         *,
@@ -980,6 +1050,7 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         return batch_size, evaluated_once
 
+    @_restore_state_after_probing
     def sub_batch_and_slice(
         self,
         *,
@@ -1005,7 +1076,17 @@ class TrainingLoop(Generic[BatchType], ABC):
         )
         return sub_batch_size, slice_size
 
-    @abstractmethod
+    def _get_initial_slice_size(self, batch_size: int) -> int:
+        """Get the slice size to start the slice size search with.
+
+        :param batch_size: The batch size to use.
+
+        :returns: The initial slice size. Defaults to half the number of entities.
+        """
+        # Since the batch_size search with size 1, i.e., one tuple scored on all entities,
+        # must have failed to start slice_size search, we start with trying half the entities.
+        return ceil(self.model._get_entity_len(mode=self.mode) / 2)
+
     def _slice_size_search(
         self,
         *,
@@ -1020,6 +1101,9 @@ class TrainingLoop(Generic[BatchType], ABC):
         and sub_batch size on the hardware at hand. If even the slice size 1 is too high, it will raise an error.
         Otherwise it will return the determined slice size.
 
+        The search starts at :meth:`_get_initial_slice_size`, and halves (or doubles) the slice size until it finds the
+        largest one which fits into memory.
+
         :param triples_factory: A triples factory
         :param batch_size: The batch size to use.
         :param sub_batch_size: The sub-batch size to use.
@@ -1029,8 +1113,48 @@ class TrainingLoop(Generic[BatchType], ABC):
         :returns: The slice_size that allows training the model with the given parameters on this hardware.
 
         :raises MemoryError: If it is not possible to train the model on the hardware at hand with the given parameters.
+        :raises RuntimeError: If a runtime error other than an out-of-memory error is raised during training.
         """
-        raise NotImplementedError
+        reached_max = False
+        evaluated_once = False
+        logger.info("Trying slicing now.")
+        slice_size = self._get_initial_slice_size(batch_size=batch_size)
+        while True:
+            try:
+                logger.debug(f"Trying {slice_size=:_} now.")
+                self._train(
+                    triples_factory=triples_factory,
+                    num_epochs=1,
+                    batch_size=batch_size,
+                    sub_batch_size=sub_batch_size,
+                    slice_size=slice_size,
+                    only_size_probing=True,
+                )
+            except RuntimeError as runtime_error:  # noqa: PERF203
+                self._free_graph_and_cache()
+                if not is_oom_error(runtime_error):
+                    raise runtime_error
+                if evaluated_once:
+                    slice_size //= 2
+                    logger.info(f"Concluded search with {slice_size=:_}.")
+                    break
+                if slice_size == 1:
+                    raise MemoryError(
+                        f"Even {slice_size=:_} doesn't fit into your memory with these parameters."
+                    ) from runtime_error
+
+                logger.debug(f"The {slice_size=:_} was too big, trying less now.")
+                slice_size //= 2
+                reached_max = True
+            else:
+                self._free_graph_and_cache()
+                if reached_max:
+                    logger.info(f"Concluded search with {slice_size=:_}.")
+                    break
+                slice_size *= 2
+                evaluated_once = True
+
+        return slice_size
 
     def _sub_batch_size_search(
         self,
@@ -1082,7 +1206,11 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         if not finished_search:
             logger.info("Starting sub_batch_size search for training now...")
-            if get_batchnorm_modules(self.model):  # if there are any, this is truthy
+            if not self.supports_sub_batching:
+                logger.info(f"{self.__class__.__name__} does not support sub-batching.")
+                supports_sub_batching = False
+                sub_batch_size = batch_size
+            elif get_batchnorm_modules(self.model):  # if there are any, this is truthy
                 logger.info("This model does not support sub-batching.")
                 supports_sub_batching = False
                 sub_batch_size = batch_size

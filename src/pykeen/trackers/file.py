@@ -6,7 +6,7 @@ import json
 import logging
 import pathlib
 from collections.abc import Mapping
-from typing import Any, ClassVar, TextIO
+from typing import IO, Any, ClassVar
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
@@ -42,7 +42,7 @@ class FileResultTracker(ResultTracker):
     extension: ClassVar[str]
 
     #: The file where the results are written to.
-    file: TextIO
+    file: IO[str]
 
     def __init__(
         self,
