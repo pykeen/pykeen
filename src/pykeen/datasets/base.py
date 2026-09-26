@@ -4,18 +4,15 @@ from __future__ import annotations
 
 import logging
 import pathlib
-import tarfile
-import zipfile
 from collections.abc import Collection, Iterable, Mapping, Sequence
-from typing import Any, ClassVar, Literal, Self, cast
+from typing import Any, ClassVar, Self, cast
 
 import click
 import docdata
 import pandas as pd
 import torch
 from more_click import verbose_option
-from pystow.utils import download, name_from_url
-from pystow.utils.download import DownloadKwargs
+from pystow.utils import ArchiveType, DownloadKwargs, download, name_from_url
 from tabulate import tabulate
 
 from .source import RemoteArchivedSource, RemoteSource, SimpleSource, Source
@@ -754,7 +751,7 @@ class UnpackedRemoteDataset(SourceDataSet):
 class PackedRemoteDataSet(SourceDataSet):
     """An abstract base class for packed remote datasets."""
 
-    archive_type: ClassVar[Literal["zip", "tar"]]
+    archive_type: ClassVar[ArchiveType]
 
     def __init__(
         self,
@@ -789,21 +786,21 @@ class PackedRemoteDataSet(SourceDataSet):
             url=url,
             force=force,
             path=path,
-            inner_path=str(pathlib.PurePath(relative_training_path)),
+            inner_path=relative_training_path,
         )
         testing_source = RemoteArchivedSource(
             archive_type=self.archive_type,
             url=url,
             force=force,
             path=path,
-            inner_path=str(pathlib.PurePath(relative_testing_path)),
+            inner_path=relative_testing_path,
         )
         validation_source = RemoteArchivedSource(
             archive_type=self.archive_type,
             url=url,
             force=force,
             path=path,
-            inner_path=str(pathlib.PurePath(relative_validation_path)),
+            inner_path=relative_validation_path,
         )
         super().__init__(
             training_source=training_source,
@@ -831,6 +828,7 @@ class CompressedSingleDataset(LazyDataset):
     """Loads a dataset that's a single file inside an archive."""
 
     ratios = (0.8, 0.1, 0.1)
+    archive_type: ClassVar[ArchiveType]
 
     def __init__(
         self,
@@ -860,14 +858,18 @@ class CompressedSingleDataset(LazyDataset):
         """
         self.cache_root = self._help_cache(cache_root)
 
-        self.name = name or name_from_url(url)
         self.random_state = random_state
         self.delimiter = delimiter or "\t"
-        self.url = url
         self._create_inverse_triples = create_inverse_triples
-        self._relative_path = pathlib.PurePosixPath(relative_path)
         self.read_csv_kwargs = read_csv_kwargs or {}
         self.read_csv_kwargs.setdefault("sep", self.delimiter)
+
+        self.source = RemoteArchivedSource(
+            archive_type=self.archive_type,
+            url=url,
+            path=self.cache_root.joinpath(name or name_from_url(url)),
+            inner_path=relative_path,
+        )
 
         if eager:
             self._load()
@@ -876,7 +878,10 @@ class CompressedSingleDataset(LazyDataset):
         return self.cache_root.joinpath(self.name)
 
     def _load(self) -> None:
-        df = self._get_df()
+        with self.source.open() as file:
+            df = pd.read_csv(file, **self.read_csv_kwargs)
+        df = _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
+
         tf_path = self._get_path()
         tf = TriplesFactory.from_labeled_triples(
             triples=df.values,
@@ -892,9 +897,6 @@ class CompressedSingleDataset(LazyDataset):
         )
         logger.info("[%s] done splitting data from %s", self.__class__.__name__, tf_path)
 
-    def _get_df(self) -> pd.DataFrame:
-        raise NotImplementedError
-
     def _load_validation(self) -> None:
         pass  # already loaded by _load()
 
@@ -902,38 +904,13 @@ class CompressedSingleDataset(LazyDataset):
 class ZipSingleDataset(CompressedSingleDataset):
     """Loads a dataset that's a single file inside a zip archive."""
 
-    def _get_df(self) -> pd.DataFrame:
-        path = self._get_path()
-        if not path.is_file():
-            download(self.url, self._get_path())  # noqa:S310
-
-        with zipfile.ZipFile(path) as zip_file, zip_file.open(self._relative_path.as_posix()) as file:
-            df = pd.read_csv(file, **self.read_csv_kwargs)
-        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
+    archive_type = "zip"
 
 
 class TarFileSingleDataset(CompressedSingleDataset):
     """Loads a dataset that's a single file inside a tar.gz archive."""
 
-    def _get_df(self) -> pd.DataFrame:
-        if not self._get_path().is_file():
-            download(self.url, self._get_path())  # noqa:S310
-
-        _actual_path = self.cache_root.joinpath(self._relative_path)
-        if not _actual_path.is_file():
-            logger.error(
-                "[%s] untaring from %s (%s) to %s",
-                self.__class__.__name__,
-                self._get_path(),
-                self._relative_path,
-                _actual_path,
-            )
-            with tarfile.open(self._get_path()) as tar_file:
-                # tarfile does not like pathlib
-                tar_file.extract(str(self._relative_path), self.cache_root)
-
-        df = pd.read_csv(_actual_path, **self.read_csv_kwargs)
-        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
+    archive_type = "tar"
 
 
 class TabbedDataset(LazyDataset):

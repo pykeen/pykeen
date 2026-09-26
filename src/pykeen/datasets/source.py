@@ -4,11 +4,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from pathlib import Path
-from typing import IO, Literal
+from pathlib import Path, PurePath
+from typing import IO
 
-from pystow.utils import download, open_tarfile, open_zipfile, safe_open
-from pystow.utils.download import DownloadKwargs
+from pystow.utils import ArchiveType, DownloadKwargs, download, open_archive, safe_open
 
 
 @dataclass
@@ -69,21 +68,14 @@ class RemoteSimpleSource(RemoteSource, SimpleSource):
 class ArchivedSource(Source):
     """A source for a file inside an archive."""
 
-    archive_type: Literal["zip", "tar"]
-    inner_path: str
+    archive_type: ArchiveType
+    inner_path: str | PurePath
 
     @contextmanager
     def open(self) -> Generator[IO[str]]:
         """Open the file from within a zip or tar archive."""
-        if self.archive_type == "zip":
-            with open_zipfile(self.path, inner_path=self.inner_path) as file:
-                yield file
-        elif self.archive_type == "tar":
-            with open_tarfile(self.path, inner_path=self.inner_path) as file:
-                # TODO make this read into IO[str] upstream in pystow
-                yield file  # type:ignore[misc]
-        else:
-            raise ValueError(f"unknown {self.archive_type=}")
+        with open_archive(self.path, self.inner_path, archive_type=self.archive_type, representation="text") as file:
+            yield file
 
 
 @dataclass
