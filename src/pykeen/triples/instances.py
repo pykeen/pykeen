@@ -359,7 +359,7 @@ class LCWAInstances(Instances[LCWABatch]):
         target: TargetHint = None,
         loss_weighter: HintOrType[LossWeighter] = None,
         loss_weighter_kwargs: OptionalKwargs = None,
-    ):
+    ) -> None:
         """Initialize the LCWA instances.
 
         :param pairs: The unique pairs
@@ -381,7 +381,8 @@ class LCWAInstances(Instances[LCWABatch]):
         num_entities: int,
         num_relations: int,
         target: TargetHint = None,
-        **kwargs,
+        loss_weighter: HintOrType[LossWeighter] = None,
+        loss_weighter_kwargs: OptionalKwargs = None,
     ) -> Self:
         """Create LCWA instances from triples.
 
@@ -389,7 +390,8 @@ class LCWAInstances(Instances[LCWABatch]):
         :param num_entities: The number of entities.
         :param num_relations: The number of relations.
         :param target: The column to predict
-        :param kwargs: Additional keyword-based parameters passed to :meth:`__init__`
+        :param loss_weighter: The method to determine sample weights.
+        :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
 
         :returns: The instances.
         """
@@ -406,14 +408,29 @@ class LCWAInstances(Instances[LCWABatch]):
         )
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
-        return cls(pairs=unique_pairs, compressed=compressed, target=target, **kwargs)
+        return cls(
+            pairs=unique_pairs,
+            compressed=compressed,
+            target=target,
+            loss_weighter=loss_weighter,
+            loss_weighter_kwargs=loss_weighter_kwargs,
+        )
 
     @classmethod
-    def from_triples_factory(cls, tf: CoreTriplesFactory, **kwargs) -> Self:
+    def from_triples_factory(
+        cls,
+        tf: CoreTriplesFactory,
+        *,
+        target: TargetHint = None,
+        loss_weighter: HintOrType[LossWeighter] = None,
+        loss_weighter_kwargs: OptionalKwargs = None,
+    ) -> Self:
         """Create LCWA instances for triples factory.
 
         :param tf: The triples factory.
-        :param kwargs: Additional keyword-based parameters passed to :meth:`from_triples`
+        :param target: The column to predict
+        :param loss_weighter: The method to determine sample weights.
+        :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
 
         :returns: The instances.
         """
@@ -421,7 +438,9 @@ class LCWAInstances(Instances[LCWABatch]):
             mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
             num_entities=tf.num_entities,
             num_relations=tf.num_relations,
-            **kwargs,
+            target=target,
+            loss_weighter=loss_weighter,
+            loss_weighter_kwargs=loss_weighter_kwargs,
         )
 
     def __len__(self) -> int:  # noqa: D105
