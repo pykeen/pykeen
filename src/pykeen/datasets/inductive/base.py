@@ -212,10 +212,10 @@ class DisjointInductiveSourceDataset(LazyInductiveDataset):
     ) -> None:
         """Initialize the dataset.
 
-        :param transductive_training_source: Path to the training triples file or training triples file.
-        :param inductive_inference_source: Path to the inductive inference triples file or training triples file.
-        :param inductive_testing_source: Path to the testing triples file or testing triples file.
-        :param inductive_validation_source: Path to the validation triples file or validation triples file.
+        :param transductive_training_source: The training triples source
+        :param inductive_inference_source: The inductive inference triples source
+        :param inductive_testing_source: The testing triples file source
+        :param inductive_validation_source: The validation triples source
         :param eager: Should the data be loaded eagerly? Defaults to false.
         :param create_inverse_triples: Should inverse triples be created? Defaults to false.
         :param load_triples_kwargs: Arguments to pass through to :func:`~pykeen.triples.TriplesFactory.from_path`
