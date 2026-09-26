@@ -186,7 +186,7 @@ def _restore_state_after_probing(
     return wrapped
 
 
-class TrainingLoop(Generic[BatchType], ABC):
+class TrainingLoop(ABC, Generic[BatchType]):
     """A training loop."""
 
     model: Model

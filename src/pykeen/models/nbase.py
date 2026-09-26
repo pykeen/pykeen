@@ -279,7 +279,8 @@ def iter_slices(
         yield from ids.split(split_size=slice_size, dim=dim)
 
 
-class ERModel(
+# FIXME fixing the order here breaks the generics usage
+class ERModel(  # noqa:PYI059
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
     _NewAbstractModel,
 ):

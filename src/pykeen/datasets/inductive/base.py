@@ -289,7 +289,7 @@ class DisjointInductivePathDataset(DisjointInductiveSourceDataset):
         transductive_training_path: str | pathlib.Path,
         inductive_inference_path: str | pathlib.Path,
         inductive_testing_path: str | pathlib.Path,
-        inductive_validation_path: str | str | pathlib.Path,
+        inductive_validation_path: str | pathlib.Path,
         **kwargs: Unpack[PathDatasetKwargs],
     ) -> None:
         """Initialize the dataset.
