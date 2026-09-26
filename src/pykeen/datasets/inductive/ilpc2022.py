@@ -4,9 +4,8 @@ from typing import Unpack
 
 from docdata import parse_docdata
 
-from pykeen.datasets.base import UnpackedRemoteDataSetKwargs
-
 from .base import UnpackedRemoteDisjointInductiveDataset
+from ..base import UnpackedRemoteDataSetKwargs
 
 __all__ = [
     "ILPC2022Small",
