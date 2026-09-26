@@ -306,11 +306,13 @@ select = [
     # Ruff-specific rules (RUF)
     # "RUF",
     # tryceratops (TRY)
-    # "TRY",
+    "TRY",
 ]
 ignore = [
     "D105", # Missing docstring in magic method
     "S101", # Use of assert detected, TODO remove
+    "RUF012", # FIXME
+    "TRY003", # long error messages (doesn't make sense)
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores

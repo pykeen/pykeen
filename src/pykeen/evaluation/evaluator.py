@@ -301,12 +301,12 @@ class Evaluator(ABC, Generic[MetricKeyType]):
                 targets=targets,
                 tqdm_kwargs=tqdm_kwargs,
             )
-        except MemoryError as error:
+        except MemoryError:
             if device.type == "cpu":
-                raise error
-            logger.error(
-                f"Memory error: {error}; falling back to evaluation on cpu. This will incur heavy runtime costs for "
-                f"reasonably sized datasets and models."
+                raise
+            logger.exception(
+                "Memory error: falling back to evaluation on cpu. This will incur heavy runtime costs for "
+                "reasonably sized datasets and models."
             )
             result = self._evaluate_on_device(
                 model=model,

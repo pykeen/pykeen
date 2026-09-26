@@ -1643,7 +1643,7 @@ def add_cudnn_error_hint(func: Callable[P, X]) -> Callable[P, X]:
             return func(*args, **kwargs)
         except RuntimeError as e:
             if not is_cudnn_error(e):
-                raise e
+                raise
             raise RuntimeError(
                 "\nThis code crash might have been caused by a CUDA bug, see "
                 "https://github.com/allenai/allennlp/issues/2888, "

@@ -840,7 +840,7 @@ class TrainingLoop(Generic[BatchType], ABC):
             except (MemoryError, RuntimeError) as e:
                 # During automatic memory optimization only the error message is of interest
                 if only_size_probing:
-                    raise e
+                    raise
 
                 logger.warning(f"The training loop just failed during epoch {epoch} due to error {str(e)}.")
                 if checkpoint_on_failure_file_path:
@@ -862,7 +862,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                 # Delete temporary best epoch model
                 if best_epoch_model_file_path:
                     best_epoch_model_file_path.unlink(missing_ok=True)
-                raise e
+                raise
 
             # Includes a call to result_tracker.log_metrics
             callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss)
@@ -1026,7 +1026,7 @@ class TrainingLoop(Generic[BatchType], ABC):
             except RuntimeError as runtime_error:
                 self._free_graph_and_cache()
                 if not is_oom_error(runtime_error):
-                    raise runtime_error
+                    raise
                 if batch_size == 1:
                     logger.debug(f"{batch_size=:_} does not fit into your memory with these parameters.")
                     break
@@ -1133,7 +1133,7 @@ class TrainingLoop(Generic[BatchType], ABC):
             except RuntimeError as runtime_error:  # noqa: PERF203
                 self._free_graph_and_cache()
                 if not is_oom_error(runtime_error):
-                    raise runtime_error
+                    raise
                 if evaluated_once:
                     slice_size //= 2
                     logger.info(f"Concluded search with {slice_size=:_}.")
@@ -1197,7 +1197,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         except RuntimeError as runtime_error:
             self._free_graph_and_cache()
             if not is_oom_error(runtime_error):
-                raise runtime_error
+                raise
             logger.debug(f"The batch_size {batch_size=:_} was too big, sub_batching is required.")
             sub_batch_size //= 2
         else:
@@ -1230,7 +1230,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                     except RuntimeError as runtime_error:
                         self._free_graph_and_cache()
                         if not is_oom_error(runtime_error):
-                            raise runtime_error
+                            raise
                         if sub_batch_size == 1:
                             logger.info(f"Even {sub_batch_size=:_} does not fit in memory with these parameters")
                             break

@@ -118,9 +118,9 @@ def _in_jupyter() -> bool:
     try:
         get_ipython = sys.modules["IPython"].get_ipython
         if "IPKernelApp" not in get_ipython().config:
-            raise ImportError("console")
+            raise ImportError("console")  # noqa:TRY301
         if "VSCODE_PID" in os.environ:
-            raise ImportError("vscode")
+            raise ImportError("vscode")  # noqa:TRY301
     except Exception:
         return False
     else:

@@ -314,11 +314,11 @@ class Objective:
                 use_testing_data=False,  # use validation set during HPO!
                 device=self.device,
             )
-        except (MemoryError, RuntimeError) as e:
+        except (MemoryError, RuntimeError):
             # close run in result tracker
             result_tracker.end_run(success=False)
             # raise the error again (which will be catched in study.optimize)
-            raise e
+            raise
         else:
             if self.save_model_directory:
                 model_directory = pathlib.Path(self.save_model_directory).joinpath(str(trial.number))
@@ -994,7 +994,7 @@ def suggest_kwargs(
 def suggest_discrete_power_int(trial: Trial, name: str, low: int, high: int, base: int = 2) -> int:
     """Suggest an integer in the given range [2^low, 2^high]."""
     if high <= low:
-        raise Exception(f"Upper bound {high} is not greater than lower bound {low}.")
+        raise ValueError(f"Upper bound {high} is not greater than lower bound {low}.")
     choices = [base**i for i in range(low, high + 1)]
     return cast(int, trial.suggest_categorical(name=name, choices=choices))
 
