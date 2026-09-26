@@ -4,6 +4,7 @@ import copy
 import logging
 import math
 import pathlib
+import sys
 
 import click
 import more_click
@@ -73,7 +74,7 @@ def tokenize(
         logger.warning(f"Output path exists: {output_path}")
         if not force:
             logger.info("Existing file will not be overwritten. To enforce this, pass `--force`")
-            quit()
+            sys.exit()
 
     # create anchor selection instance
     selection_config = configuration.pop("selection", {})

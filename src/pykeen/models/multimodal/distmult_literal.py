@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
-import torch.nn as nn
+from torch import nn
 
 from .base import LiteralModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE

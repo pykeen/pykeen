@@ -265,7 +265,7 @@ def validate() -> None:
         for error in errors:
             click.secho(error, err=True, color=True)
             has_error = True
-    exit(-1 if has_error else 0)
+    sys.exit(-1 if has_error else 0)
 
 
 def _iter_configurations() -> Iterable[pathlib.Path]:

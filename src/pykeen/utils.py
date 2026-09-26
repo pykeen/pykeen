@@ -1743,7 +1743,7 @@ def merge_kwargs(kwargs: OneOrManyOptionalKwargs, **extra_kwargs: Any | None) ->
         if value is None:
             continue
         if key in kwargs and kwargs[key] is not None and kwargs[key] != value:
-            raise ValueError(f"Found inconsistency for {key=} : {extra_kwargs[key]=} vs. {kwargs[key]=}")
+            raise ValueError(f"Found inconsistency for {key=} : {value=} vs. {kwargs[key]=}")
         kwargs[key] = value
     return kwargs
 

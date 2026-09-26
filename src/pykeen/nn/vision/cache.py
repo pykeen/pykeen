@@ -119,9 +119,8 @@ class WikidataImageCache(WikidataTextCache):
                     name=f"{wikidata_id}.{ext}",
                     download_kwargs={"backend": "requests", "headers": self.HEADERS},
                 )
-            else:
-                # did not break -> no image
-                logger.warning(f"No image for {wikidata_id}")
+            # did not break -> no image
+            logger.warning(f"No image for {wikidata_id}")
 
         id_to_path = self._discover_images(extensions=extensions)
         return [id_to_path.get(i) for i in ids]

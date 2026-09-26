@@ -58,14 +58,14 @@ class SubtractionCompositionModule(FunctionalCompositionModule):
     """Composition by element-wise subtraction."""
 
     #: Subtracts with :func:`torch.sub`
-    func: ClassVar[Composition] = lambda a, b: torch.sub(a, b)
+    func: ClassVar[Composition] = torch.sub
 
 
 class MultiplicationCompositionModule(FunctionalCompositionModule):
     """Composition by element-wise multiplication."""
 
     #: Multiplies with :func:`torch.mul`
-    func: ClassVar[Composition] = lambda a, b: torch.mul(a, b)
+    func: ClassVar[Composition] = torch.mul
 
 
 class CircularCorrelationCompositionModule(FunctionalCompositionModule):

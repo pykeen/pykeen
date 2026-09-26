@@ -1025,7 +1025,6 @@ def predict_target(
     head: int | str | None = None,
     relation: int | str | None = None,
     tail: int | str | None = None,
-    #
     triples_factory: TriplesFactory | None = None,
     targets: LongTensor | Sequence[int | str] | None = None,
     mode: InductiveMode | None = None,
