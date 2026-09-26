@@ -6,11 +6,13 @@
 Get a summary with ``python -m pykeen.datasets.wd50k``,
 """
 
+from typing import Unpack
+
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import UnpackedRemoteDataset
+from .base import UnpackedRemoteDataset, UnpackedRemoteDataSetKwargs
 
 BASE_URL = "https://raw.githubusercontent.com/migalkin/StarE/master/data/clean/wd50k/"
 TRIPLES_VALID_URL = f"{BASE_URL}/triples/valid.txt"
@@ -39,23 +41,20 @@ class WD50KT(UnpackedRemoteDataset):
         triples: 232344
     """
 
-    def __init__(self, **kwargs):
-        """Initialize the WD50K (triples) dataset from [galkin2020]_.
-
-        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
-        """
+    def __init__(self, **kwargs: Unpack[UnpackedRemoteDataSetKwargs]) -> None:
+        """Initialize the WD50K (triples) dataset from [galkin2020]_."""
+        kwargs["load_triples_kwargs"] = {"delimiter": ","}
         super().__init__(
             training_url=TRIPLES_TRAIN_URL,
             testing_url=TRIPLES_TEST_URL,
             validation_url=TRIPLES_VALID_URL,
-            load_triples_kwargs={"delimiter": ","},
             **kwargs,
         )
 
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     for cls in [WD50KT]:
         click.secho(f"Loading {cls.__name__}", fg="green", bold=True)
         d = cls()

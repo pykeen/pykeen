@@ -150,7 +150,7 @@ class OpenEA(EADataset):
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     for size, version, graph_pair, side in itertools.product(
         GRAPH_SIZES, GRAPH_VERSIONS, GRAPH_PAIRS, EA_SIDES + (None,)
     ):

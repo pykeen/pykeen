@@ -3,12 +3,18 @@
 Get a summary with ``python -m pykeen.datasets.pharmkg``.
 """
 
+from typing import Unpack
+
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import SingleTabbedDataset, UnpackedRemoteDataset
-from ..typing import TorchRandomHint
+from .base import (
+    SingleTabbedDataset,
+    SingleTabbedDatasetKwargs,
+    UnpackedRemoteDataset,
+    UnpackedRemoteDataSetKwargs,
+)
 
 __all__ = [
     "PharmKG8k",
@@ -44,10 +50,7 @@ class PharmKG8k(UnpackedRemoteDataset):
         triples: 485787
     """
 
-    def __init__(
-        self,
-        **kwargs,
-    ):
+    def __init__(self, **kwargs: Unpack[UnpackedRemoteDataSetKwargs]) -> None:
         """Initialize the PharmKG8k dataset from [zheng2020]_.
 
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
@@ -81,34 +84,23 @@ class PharmKG(SingleTabbedDataset):
         validation: 109324
     """
 
-    def __init__(
-        self,
-        random_state: TorchRandomHint = 0,
-        **kwargs,
-    ):
-        """Initialize the PharmKG dataset from [zheng2020]_.
-
-        :param random_state: An optional random state to make the training/testing/validation split reproducible.
-        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
-        """
-        super().__init__(
-            url=RAW_URL,
-            random_state=random_state,
-            read_csv_kwargs={
-                "usecols": ["Entity1_name", "relationship_type", "Entity2_name"],
-                "sep": ",",
-            },
-            **kwargs,
-        )
+    def __init__(self, **kwargs: Unpack[SingleTabbedDatasetKwargs]) -> None:
+        """Initialize the PharmKG dataset from [zheng2020]_."""
+        kwargs.setdefault("random_state", 0)
+        kwargs["read_csv_kwargs"] = {
+            "usecols": ["Entity1_name", "relationship_type", "Entity2_name"],
+            "sep": ",",
+        }
+        super().__init__(url=RAW_URL, **kwargs)
 
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     from pykeen.datasets import get_dataset
 
     for cls in [PharmKG8k, PharmKG]:
-        get_dataset(dataset=cls).summarize()
+        get_dataset(dataset=cls).summarize()  # type:ignore[arg-type]
 
 
 if __name__ == "__main__":

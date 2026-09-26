@@ -280,7 +280,15 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
             axis=-1,
         )
 
-    def _load_data_dict_for_split(self, dataset, which):  # noqa: D102
+    @overload
+    def _load_data_dict_for_split(self, dataset: LinkPropPredDataset, which: TrainKey) -> BioKGTrainDict: ...
+
+    @overload
+    def _load_data_dict_for_split(self, dataset: LinkPropPredDataset, which: EvalKey) -> BioKGEvalDict: ...
+
+    def _load_data_dict_for_split(
+        self, dataset: LinkPropPredDataset, which: SplitKey
+    ) -> BioKGTrainDict | BioKGEvalDict:  # noqa: D102
         data_dict = torch.load(
             pathlib.Path(dataset.root).joinpath("split", dataset.meta_info["split"], which).with_suffix(".pt"),
             weights_only=False,
@@ -309,9 +317,9 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     for _cls in [OGBBioKG, OGBWikiKG2]:
-        _cls().summarize()
+        _cls().summarize()  # type:ignore[attr-defined]
 
 
 if __name__ == "__main__":

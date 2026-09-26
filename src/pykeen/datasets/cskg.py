@@ -6,11 +6,11 @@
 """
 
 import logging
+from typing import Unpack
 
 from docdata import parse_docdata
 
-from .base import SingleTabbedDataset
-from ..typing import TorchRandomHint
+from .base import SingleTabbedDataset, SingleTabbedDatasetKwargs
 
 __all__ = [
     "CSKG",
@@ -41,23 +41,20 @@ class CSKG(SingleTabbedDataset):
         validation: 574842
     """
 
-    def __init__(self, random_state: TorchRandomHint = 0, **kwargs):
+    def __init__(self, **kwargs: Unpack[SingleTabbedDatasetKwargs]) -> None:
         """Initialize the `CSKG <https://github.com/usc-isi-i2/cskg>`_ dataset from [ilievski2020]_.
 
         :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.SingleTabbedDataset`.
         """
-        super().__init__(
-            url=URL,
-            random_state=random_state,
-            read_csv_kwargs={
-                "usecols": ["node1", "relation", "node2"],
-            },
-            **kwargs,
-        )
+        kwargs.setdefault("random_state", 0)
+        kwargs["read_csv_kwargs"] = {
+            "usecols": ["node1", "relation", "node2"],
+        }
+        super().__init__(url=URL, **kwargs)
 
 
-def _main():
+def _main() -> None:
     from pykeen.datasets import get_dataset
 
     ds = get_dataset(dataset=CSKG)

@@ -1,10 +1,11 @@
 """Get triples from the Kinships dataset."""
 
 import pathlib
+from typing import Unpack
 
 from docdata import parse_docdata
 
-from ..base import PathDataset
+from ..base import PathDataset, PathDatasetKwargs
 
 __all__ = [
     "KINSHIPS_TRAIN_PATH",
@@ -39,7 +40,7 @@ class Kinships(PathDataset):
         link: https://www.aaai.org/Papers/AAAI/2006/AAAI06-061.pdf
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[PathDatasetKwargs]) -> None:
         """Initialize the Kinships dataset.
 
         :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PathDataset`.

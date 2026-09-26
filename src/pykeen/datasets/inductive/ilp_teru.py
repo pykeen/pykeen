@@ -4,11 +4,14 @@
 - Paper: https://arxiv.org/abs/1911.06962
 """
 
+from typing import Unpack
+
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import UnpackedRemoteDisjointInductiveDataset
+from .base import UnpackedRemoteDisjointInductiveDataset, Version
+from ..base import UnpackedRemoteDataSetKwargs
 
 __all__ = [
     "InductiveFB15k237",
@@ -87,7 +90,7 @@ class InductiveFB15k237(UnpackedRemoteDisjointInductiveDataset):
         inductive test triples: 1424
     """
 
-    def __init__(self, version: str = "v1", **kwargs):
+    def __init__(self, version: Version = "v1", **kwargs: Unpack[UnpackedRemoteDataSetKwargs]) -> None:
         """Initialize a particular version of a dataset (out of 4) from [teru2020]_.
 
         :param version: v1 / v2 / v3 / v4 , differ in the sizes of train and inductive inference graphs
@@ -99,7 +102,6 @@ class InductiveFB15k237(UnpackedRemoteDisjointInductiveDataset):
             inductive_validation_url=FB_INDUCTIVE_VALIDATION_URL.format(base_url=BASE_URL, version=version),
             inductive_testing_url=FB_INDUCTIVE_TEST_URL.format(base_url=BASE_URL, version=version),
             version=version,
-            eager=True,
             **kwargs,
         )
 
@@ -153,7 +155,7 @@ class InductiveWN18RR(UnpackedRemoteDisjointInductiveDataset):
         inductive test triples: 1429
     """
 
-    def __init__(self, version: str = "v1", **kwargs):
+    def __init__(self, version: Version = "v1", **kwargs: Unpack[UnpackedRemoteDataSetKwargs]) -> None:
         """Initialize a particular version of a dataset (out of 4) from [teru2020]_.
 
         :param version: v1 / v2 / v3 / v4 , differ in the sizes of train and inductive inference graphs
@@ -165,7 +167,6 @@ class InductiveWN18RR(UnpackedRemoteDisjointInductiveDataset):
             inductive_validation_url=WN_INDUCTIVE_VALIDATION_URL.format(base_url=BASE_URL, version=version),
             inductive_testing_url=WN_INDUCTIVE_TEST_URL.format(base_url=BASE_URL, version=version),
             version=version,
-            eager=True,
             **kwargs,
         )
 
@@ -219,7 +220,7 @@ class InductiveNELL(UnpackedRemoteDisjointInductiveDataset):
         inductive test triples: 731
     """
 
-    def __init__(self, version: str = "v1", **kwargs):
+    def __init__(self, version: Version = "v1", **kwargs: Unpack[UnpackedRemoteDataSetKwargs]) -> None:
         """Initialize a particular version of a dataset (out of 4) from [teru2020]_.
 
         :param version: v1 / v2 / v3 / v4 , differ in the sizes of train and inductive inference graphs
@@ -231,14 +232,13 @@ class InductiveNELL(UnpackedRemoteDisjointInductiveDataset):
             inductive_validation_url=NELL_INDUCTIVE_VALIDATION_URL.format(base_url=BASE_URL, version=version),
             inductive_testing_url=NELL_INDUCTIVE_TEST_URL.format(base_url=BASE_URL, version=version),
             version=version,
-            eager=True,
             **kwargs,
         )
 
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     for cls in [InductiveFB15k237, InductiveWN18RR, InductiveNELL]:
         click.secho(f"Loading {cls.__name__}", fg="green", bold=True)
         d = cls()

@@ -4,7 +4,7 @@ import tarfile
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Unpack
 
 import click
 import pandas as pd
@@ -12,9 +12,8 @@ from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import download
 
-from .base import TabbedDataset
+from .base import TabbedDataset, TabbedDatasetKwargs
 from .source import RemoteSimpleSource
-from ..typing import TorchRandomHint
 
 __all__ = [
     "CKG",
@@ -45,21 +44,16 @@ class CKG(TabbedDataset):
         validation: 2669153
     """
 
-    def __init__(
-        self, *, random_state: TorchRandomHint = 0, cache_root: str | None = None, force: bool = False, **kwargs: Any
-    ) -> None:
-        """Initialize the `CKG <https://github.com/MannLabs/CKG>`_ dataset from [santos2020]_.
-
-        :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
-        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TabbedDataset`.
-        """
-        cache_root_ = self._help_cache(cache_root)
+    def __init__(self, *, force: bool = False, **kwargs: Unpack[TabbedDatasetKwargs]) -> None:
+        """Initialize the `CKG <https://github.com/MannLabs/CKG>`_ dataset from [santos2020]_."""
+        kwargs.setdefault("random_state", 0)
+        cache_root_ = self._help_cache(None)
         source = CKGSimpleSource(
             path=cache_root_.joinpath("preloaded.tsv.gz"),
             url=URL,
             force=force,
         )
-        super().__init__(random_state=random_state, source=source, **kwargs)
+        super().__init__(source, **kwargs)
 
 
 @dataclass
@@ -101,7 +95,7 @@ class CKGSimpleSource(RemoteSimpleSource):
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     from pykeen.datasets import get_dataset
 
     d = get_dataset(dataset=CKG)
