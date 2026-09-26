@@ -597,6 +597,8 @@ class LazyDataset(Dataset):
 
 
 class SourceDataSet(LazyDataset):
+    """A lazy dataset for arbitrary sources."""
+
     def __init__(
         self,
         training_source: Source,
