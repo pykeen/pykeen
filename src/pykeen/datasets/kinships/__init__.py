@@ -8,8 +8,8 @@ from docdata import parse_docdata
 from ..base import PathDataset, PathDatasetKwargs
 
 __all__ = [
-    "KINSHIPS_TRAIN_PATH",
     "KINSHIPS_TEST_PATH",
+    "KINSHIPS_TRAIN_PATH",
     "KINSHIPS_VALIDATE_PATH",
     "Kinships",
 ]

@@ -12,12 +12,12 @@ from .utils import MetricSelection, ResultListenerAdapter
 from ..trackers.base import ResultTracker
 
 __all__ = [
+    "BestCheckpointSchedule",
     "CheckpointSchedule",
-    "schedule_resolver",
     "EveryCheckpointSchedule",
     "ExplicitCheckpointSchedule",
-    "BestCheckpointSchedule",
     "UnionCheckpointSchedule",
+    "schedule_resolver",
 ]
 
 

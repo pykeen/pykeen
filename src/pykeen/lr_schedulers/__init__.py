@@ -19,8 +19,8 @@ from torch.optim.lr_scheduler import (
 
 __all__ = [
     "LRScheduler",
-    "lr_schedulers_hpo_defaults",
     "lr_scheduler_resolver",
+    "lr_schedulers_hpo_defaults",
 ]
 
 

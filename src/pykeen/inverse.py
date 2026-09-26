@@ -8,9 +8,9 @@ from class_resolver import Resolver
 from .typing import BoolTensor, LongTensor
 
 __all__ = [
+    "DefaultRelationInverter",
     "RelationID",
     "RelationInverter",
-    "DefaultRelationInverter",
     "relation_inverter_resolver",
 ]
 

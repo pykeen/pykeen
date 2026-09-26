@@ -13,8 +13,8 @@ from ..constants import PYKEEN_LOGS
 from ..utils import flatten_dictionary, normalize_path
 
 __all__ = [
-    "FileResultTracker",
     "CSVResultTracker",
+    "FileResultTracker",
     "JSONResultTracker",
 ]
 
@@ -46,7 +46,7 @@ class FileResultTracker(ResultTracker):
 
     def __init__(
         self,
-        path: None | str | pathlib.Path = None,
+        path: str | pathlib.Path | None = None,
         name: str | None = None,
     ):
         """Initialize the tracker.
@@ -82,7 +82,7 @@ class CSVResultTracker(FileResultTracker):
 
     def __init__(
         self,
-        path: None | str | pathlib.Path = None,
+        path: str | pathlib.Path | None = None,
         name: str | None = None,
         **kwargs,
     ):
@@ -105,7 +105,7 @@ class CSVResultTracker(FileResultTracker):
         label: str,
         step: int | None,
         prefix: str | None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         dictionary = flatten_dictionary(dictionary=dictionary, prefix=prefix)
         self.csv_writer.writerows((label, step, key, value) for key, value in dictionary.items())
         self.file.flush()
@@ -139,7 +139,7 @@ class JSONResultTracker(FileResultTracker):
     extension = "jsonl"
 
     def _write(self, obj) -> None:
-        print(json.dumps(obj), file=self.file, flush=True)  # noqa:T201
+        print(json.dumps(obj), file=self.file, flush=True)
 
     def log_params(  # noqa: D102
         self,

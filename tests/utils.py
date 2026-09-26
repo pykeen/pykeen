@@ -6,8 +6,8 @@ import unittest
 import torch
 
 __all__ = [
-    "rand",
     "needs_packages",
+    "rand",
 ]
 
 

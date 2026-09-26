@@ -131,7 +131,7 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     cls = SampledRankBasedEvaluator
     kwargs = {"num_negatives": 3}
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["evaluation_factory"] = self.factory
         kwargs["additional_filter_triples"] = self.dataset.training.mapped_triples
@@ -145,7 +145,7 @@ class OGBEvaluatorTests(RankBasedEvaluatorTests):
     cls = OGBEvaluator
     kwargs = {"num_negatives": 3}
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["evaluation_factory"] = self.factory
         kwargs["batch_size"] = 1
@@ -250,7 +250,7 @@ class EvaluatorUtilsTests(unittest.TestCase):
         # check that all found positives are positive
         for batch_id, entity_id in sparse_positives:
             same = batch[batch_id, 1:]
-            assert (int(entity_id),) + tuple(map(int, same)) in triples
+            assert (int(entity_id), *tuple(map(int, same))) in triples
 
     def test_create_dense_positive_mask_(self):
         """Test method create_dense_positive_mask_."""
@@ -378,7 +378,7 @@ class DummyMetricResults(MetricResults[Target]):
     """Dummy metric results."""
 
     @classmethod
-    def key_from_string(cls, s: str | None) -> Target:  # noqa: D102
+    def key_from_string(cls, s: str | None) -> Target:
         return normalize_target(s)
 
 
@@ -397,13 +397,13 @@ class DummyEvaluator(Evaluator[Target]):
         scores: torch.FloatTensor,
         true_scores: torch.FloatTensor | None = None,
         dense_positive_mask: torch.FloatTensor | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self.counter.update((target,))
 
-    def clear(self) -> None:  # noqa: D102
+    def clear(self) -> None:
         self.counter.clear()
 
-    def finalize(self) -> MetricResults[Target]:  # noqa: D102
+    def finalize(self) -> MetricResults[Target]:
         return DummyMetricResults(data={target: float(count) for target, count in self.counter.items()})
 
 
@@ -590,7 +590,7 @@ class CandidateSetSizeTests(unittest.TestCase):
         mapped_triples: MappedTriples,
         restrict_entities_to: Collection[int] | None,
         restrict_relations_to: Collection[int] | None,
-        additional_filter_triples: None | MappedTriples | list[MappedTriples],
+        additional_filter_triples: MappedTriples | list[MappedTriples] | None,
         num_entities: int | None,
     ):
         """Test get_candidate_set_size."""
@@ -774,7 +774,7 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
         kwargs["data"] = RankBasedMetricResults.create_random().data
         return kwargs
 
-    def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):  # noqa: D102
+    def _verify_flat_dict(self, flat_dict: Mapping[str, Any]):
         for metric_cls in rank_based_metric_resolver:
             metric = metric_cls()
             metric_name = metric.key

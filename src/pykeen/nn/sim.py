@@ -11,10 +11,10 @@ from ..typing import FloatTensor, GaussianDistribution
 from ..utils import at_least_eps, batched_dot, tensor_sum
 
 __all__ = [
-    "KG2ESimilarity",
-    "kg2e_similarity_resolver",
     "ExpectedLikelihood",
+    "KG2ESimilarity",
     "NegativeKullbackLeiblerDivergence",
+    "kg2e_similarity_resolver",
 ]
 
 

@@ -4,15 +4,13 @@ from .cache import IdentityCache, PyOBOTextCache, TextCache, WikidataTextCache, 
 from .encoder import CharacterEmbeddingTextEncoder, TextEncoder, TransformerTextEncoder, text_encoder_resolver
 
 __all__ = [
-    # Text Cache
-    "text_cache_resolver",
-    "TextCache",
+    "CharacterEmbeddingTextEncoder",
     "IdentityCache",
     "PyOBOTextCache",
-    "WikidataTextCache",
-    # Text Encoder
-    "text_encoder_resolver",
+    "TextCache",
     "TextEncoder",
-    "CharacterEmbeddingTextEncoder",
     "TransformerTextEncoder",
+    "WikidataTextCache",
+    "text_cache_resolver",
+    "text_encoder_resolver",
 ]

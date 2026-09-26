@@ -12,14 +12,11 @@ from ..typing import FloatTensor
 from ..utils import circular_correlation
 
 __all__ = [
-    # Base
-    "CompositionModule",
-    # Concrete
-    "FunctionalCompositionModule",
-    "SubtractionCompositionModule",
-    "MultiplicationCompositionModule",
     "CircularCorrelationCompositionModule",
-    # Resolver
+    "CompositionModule",
+    "FunctionalCompositionModule",
+    "MultiplicationCompositionModule",
+    "SubtractionCompositionModule",
     "composition_resolver",
 ]
 

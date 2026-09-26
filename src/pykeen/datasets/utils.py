@@ -24,7 +24,7 @@ min_triples_option = click.option("--min-triples", type=int)
 
 
 def iter_dataset_classes(
-    regex_name_filter: None | str | Pattern = None,
+    regex_name_filter: str | Pattern | None = None,
     *,
     max_triples: int | None = None,
     min_triples: int | None = None,
@@ -65,7 +65,7 @@ def iter_dataset_classes(
 
 
 def iter_dataset_instances(
-    regex_name_filter: None | str | Pattern = None,
+    regex_name_filter: str | Pattern | None = None,
     *,
     max_triples: int | None = None,
     min_triples: int | None = None,
@@ -92,11 +92,11 @@ def iter_dataset_instances(
 
 def get_dataset(
     *,
-    dataset: None | str | pathlib.Path | Dataset | type[Dataset] = None,
+    dataset: str | pathlib.Path | Dataset | type[Dataset] | None = None,
     dataset_kwargs: Mapping[str, Any] | None = None,
-    training: None | str | pathlib.Path | CoreTriplesFactory = None,
-    testing: None | str | pathlib.Path | CoreTriplesFactory = None,
-    validation: None | str | pathlib.Path | CoreTriplesFactory = None,
+    training: str | pathlib.Path | CoreTriplesFactory | None = None,
+    testing: str | pathlib.Path | CoreTriplesFactory | None = None,
+    validation: str | pathlib.Path | CoreTriplesFactory | None = None,
 ) -> Dataset:
     """Get a dataset, cached based on the given kwargs.
 

@@ -60,38 +60,32 @@ from .tokenization import (
 )
 
 __all__ = [
-    # Anchor Searchers
-    "anchor_searcher_resolver",
     "AnchorSearcher",
-    "ScipySparseAnchorSearcher",
-    "SparseBFSSearcher",
-    "CSGraphAnchorSearcher",
-    "PersonalizedPageRankAnchorSearcher",
-    # Anchor Selection
-    "anchor_selection_resolver",
     "AnchorSelection",
-    "SingleSelection",
-    "DegreeAnchorSelection",
-    "MixtureAnchorSelection",
-    "PageRankAnchorSelection",
-    "RandomAnchorSelection",
-    # Tokenizers
-    "tokenizer_resolver",
-    "Tokenizer",
-    "RelationTokenizer",
     "AnchorTokenizer",
-    "MetisAnchorTokenizer",
-    "PrecomputedPoolTokenizer",
-    # Token Loaders
-    "precomputed_tokenizer_loader_resolver",
-    "PrecomputedTokenizerLoader",
+    "CSGraphAnchorSearcher",
+    "DegreeAnchorSelection",
     "GalkinPrecomputedTokenizerLoader",
-    "TorchPrecomputedTokenizerLoader",
-    # Representations
-    "TokenizationRepresentation",
-    "NodePieceRepresentation",
-    # Data containers
     "HashDiversityInfo",
+    "MetisAnchorTokenizer",
+    "MixtureAnchorSelection",
+    "NodePieceRepresentation",
+    "PageRankAnchorSelection",
+    "PersonalizedPageRankAnchorSearcher",
+    "PrecomputedPoolTokenizer",
+    "PrecomputedTokenizerLoader",
+    "RandomAnchorSelection",
+    "RelationTokenizer",
+    "ScipySparseAnchorSearcher",
+    "SingleSelection",
+    "SparseBFSSearcher",
+    "TokenizationRepresentation",
+    "Tokenizer",
+    "TorchPrecomputedTokenizerLoader",
+    "anchor_searcher_resolver",
+    "anchor_selection_resolver",
+    "precomputed_tokenizer_loader_resolver",
+    "tokenizer_resolver",
 ]
 
 # TODO: use graph library, such as igraph, graph-tool, or networkit

@@ -10,8 +10,8 @@ import torch
 from ..models.base import Model
 
 __all__ = [
-    "save_model",
     "load_state_torch",
+    "save_model",
 ]
 
 

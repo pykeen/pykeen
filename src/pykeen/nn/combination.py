@@ -22,13 +22,12 @@ from ..utils import ExtraReprMixin, combine_complex, split_complex
 
 __all__ = [
     "Combination",
-    "combination_resolver",
-    # Concrete classes
     "ComplexSeparatedCombination",
-    "ConcatCombination",
     "ConcatAggregationCombination",
+    "ConcatCombination",
     "ConcatProjectionCombination",
     "GatedCombination",
+    "combination_resolver",
 ]
 
 logger = logging.getLogger(__name__)

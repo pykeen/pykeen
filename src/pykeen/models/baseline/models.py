@@ -38,15 +38,15 @@ class EvaluationOnlyModel(Model):
         """Non-parametric models do not implement :meth:`Model._reset_parameters_`."""
         raise RuntimeError
 
-    def collect_regularization_term(self):  # noqa: D102
+    def collect_regularization_term(self):
         """Non-parametric models do not implement :meth:`Model.collect_regularization_term`."""
         raise RuntimeError
 
-    def score_hrt(self, hrt_batch: LongTensor, **kwargs):  # noqa: D102
+    def score_hrt(self, hrt_batch: LongTensor, **kwargs):
         """Non-parametric models do not implement :meth:`Model.score_hrt`."""
         raise RuntimeError
 
-    def score_r(self, ht_batch: LongTensor, **kwargs):  # noqa: D102
+    def score_r(self, ht_batch: LongTensor, **kwargs):
         """Non-parametric models do not implement :meth:`Model.score_r`."""
         raise RuntimeError
 

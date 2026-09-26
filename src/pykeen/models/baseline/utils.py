@@ -12,10 +12,10 @@ from ...triples.leakage import jaccard_similarity_scipy, triples_factory_to_spar
 from ...typing import FloatTensor, LongTensor
 
 __all__ = [
-    "get_csr_matrix",
-    "marginal_score",
-    "get_relation_similarity",
     "VectorNormalizationMethod",
+    "get_csr_matrix",
+    "get_relation_similarity",
+    "marginal_score",
 ]
 
 #: Methods allowed for vector normalization in :func:`sklearn.preprocessing.normalize`

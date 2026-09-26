@@ -66,26 +66,25 @@ from ..utils import (
 )
 
 __all__ = [
-    "MaxIDMismatchError",
-    "Representation",
-    "Embedding",
-    "LowRankRepresentation",
-    "CompGCNLayer",
-    "CombinedCompGCNRepresentations",
-    "PartitionRepresentation",
     "BackfillRepresentation",
+    "BiomedicalCURIERepresentation",
+    "CachedTextRepresentation",
+    "CombinedCompGCNRepresentations",
+    "CombinedRepresentation",
+    "CompGCNLayer",
+    "Embedding",
+    "EmbeddingBagRepresentation",
+    "LowRankRepresentation",
+    "MaxIDMismatchError",
+    "MultiBackfillRepresentation",
+    "PartitionRepresentation",
+    "Representation",
     "SingleCompGCNRepresentation",
     "SubsetRepresentation",
-    "CombinedRepresentation",
     "TensorTrainRepresentation",
-    "MultiBackfillRepresentation",
-    "TransformedRepresentation",
     "TextRepresentation",
-    "CachedTextRepresentation",
+    "TransformedRepresentation",
     "WikidataTextRepresentation",
-    "BiomedicalCURIERepresentation",
-    "EmbeddingBagRepresentation",
-    # Utils
     "constrainer_resolver",
     "normalizer_resolver",
 ]
@@ -322,7 +321,7 @@ class SubsetRepresentation(Representation):
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         if indices is None:
             indices = torch.arange(self.max_id, device=self.device)
         return self.base._plain_forward(indices=indices)
@@ -367,7 +366,7 @@ class Embedding(Representation):
         max_id: int | None = None,
         num_embeddings: int | None = None,
         embedding_dim: int | None = None,
-        shape: None | int | Sequence[int] = None,
+        shape: int | Sequence[int] | None = None,
         initializer: Hint[Initializer] = None,
         initializer_kwargs: Mapping[str, Any] | None = None,
         constrainer: Hint[Constrainer] = None,
@@ -431,7 +430,7 @@ class Embedding(Representation):
         self.is_complex = dtype.is_complex
         _shape = shape
         if self.is_complex:
-            _shape = tuple(shape[:-1]) + (shape[-1], 2)
+            _shape = (*tuple(shape[:-1]), shape[-1], 2)
             _embedding_dim = _embedding_dim * 2
             # note: this seems to work, as finfo returns the datatype of the underlying floating
             # point dtype, rather than the combined complex one
@@ -486,7 +485,7 @@ class Embedding(Representation):
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         if indices is None:
             prefix_shape = (self.max_id,)
             x = self._embeddings.weight
@@ -639,7 +638,7 @@ class LowRankRepresentation(Representation):
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         # get all base representations, shape: (num_bases, *shape)
         bases = self.base(indices=None)
         # get base weights, shape: (*batch_dims, num_bases)
@@ -650,7 +649,7 @@ class LowRankRepresentation(Representation):
 
 def process_shape(
     dim: int | None,
-    shape: None | int | Sequence[int],
+    shape: int | Sequence[int] | None,
 ) -> tuple[int, Sequence[int]]:
     """Make a shape pack."""
     if shape is None and dim is None:
@@ -936,7 +935,7 @@ class CombinedCompGCNRepresentations(nn.Module):
         relation_representations: HintOrType[Representation] = None,
         relation_representations_kwargs: OptionalKwargs = None,
         num_layers: int | None = 1,
-        dims: None | int | Sequence[int] = None,
+        dims: int | Sequence[int] | None = None,
         layer_kwargs: Mapping[str, Any] | None = None,
     ):
         """
@@ -1114,7 +1113,7 @@ class SingleCompGCNRepresentation(Representation):
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         x = self.combined()[self.position]
         if indices is not None:
             x = x[indices.to(self.device)]
@@ -1254,7 +1253,7 @@ class TextRepresentation(Representation):
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         labels = self.labels if indices is None else [self.labels[i] for i in indices.tolist()]
         return self.encoder(labels=labels)
 
@@ -1384,7 +1383,7 @@ class CombinedRepresentation(Representation):
     def _plain_forward(
         self,
         indices: LongTensor | None = None,
-    ) -> FloatTensor:  # noqa: D102
+    ) -> FloatTensor:
         return self._combine(combination=self.combination, base=self.base, indices=indices)
 
 
@@ -1561,7 +1560,7 @@ class PartitionRepresentation(Representation):
         self.bases = nn.ModuleList(bases)
         self.register_buffer(name="assignment", tensor=assignment)
 
-    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:
         assignment = self.assignment
         if indices is not None:
             assignment = assignment[indices]
@@ -1857,7 +1856,7 @@ class TransformedRepresentation(Representation):
         """
         return transformation(base(indices=indices))
 
-    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:
         return self._help_forward(base=self.base, transformation=self.transformation, indices=indices)
 
 
@@ -1924,8 +1923,8 @@ class TensorTrainRepresentation(Representation):
                 M \leq \prod \limits_{m_i \in \textit{ms}} m_i \quad
                 N \leq \prod \limits_{n_i \in \textit{ns}} n_i
         """
-        m_k = int(math.ceil(max_id ** (1 / num_cores)))
-        n_k = int(math.ceil(numpy.prod(shape) ** (1 / num_cores)))
+        m_k = math.ceil(max_id ** (1 / num_cores))
+        n_k = math.ceil(numpy.prod(shape) ** (1 / num_cores))
         return [m_k] * num_cores, [n_k] * num_cores
 
     @staticmethod
@@ -2130,7 +2129,7 @@ class TensorTrainRepresentation(Representation):
         yield f"num_cores={len(self.bases)}"
         yield f"eq='{self.eq}'"
 
-    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:
         assignment = self.assignment
         if indices is not None:
             assignment = assignment[indices]
@@ -2220,7 +2219,7 @@ class EmbeddingBagRepresentation(Representation):
         # set-up embedding bag
         self.embedding_bag = nn.EmbeddingBag(num_embeddings=num_components + 1, embedding_dim=embedding_dim, mode=mode)
 
-    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:
         if indices is None:
             indices = unique_indices = inverse = torch.arange(self.max_id)
         else:

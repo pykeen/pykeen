@@ -16,11 +16,11 @@ except ImportError:
     torch_scatter = None
 
 __all__ = [
+    "AttentionEdgeWeighting",
     "EdgeWeighting",
     "InverseInDegreeEdgeWeighting",
     "InverseOutDegreeEdgeWeighting",
     "SymmetricEdgeWeighting",
-    "AttentionEdgeWeighting",
     "edge_weight_resolver",
 ]
 
@@ -28,7 +28,7 @@ __all__ = [
 def softmax(
     src: torch.Tensor,
     index: LongTensor,
-    num_nodes: None | int | torch.Tensor = None,
+    num_nodes: int | torch.Tensor | None = None,
     dim: int = 0,
 ) -> torch.Tensor:
     r"""Compute a sparsely evaluated softmax.

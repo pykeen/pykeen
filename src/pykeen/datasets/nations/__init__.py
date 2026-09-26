@@ -10,10 +10,10 @@ from ..literal_base import NumericPathDataset
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
-    "NATIONS_TRAIN_PATH",
-    "NATIONS_TEST_PATH",
-    "NATIONS_VALIDATE_PATH",
     "NATIONS_LITERALS_PATH",
+    "NATIONS_TEST_PATH",
+    "NATIONS_TRAIN_PATH",
+    "NATIONS_VALIDATE_PATH",
     "Nations",
     "NationsLiteral",
 ]

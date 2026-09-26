@@ -848,13 +848,13 @@ class FileResultTrackerTests(ResultTrackerTests):
         self.path = pathlib.Path(self.temporary_directory.name).joinpath("test.log")
         super().setUp()
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         # prepare a temporary test directory
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["path"] = self.path
         return kwargs
 
-    def tearDown(self) -> None:  # noqa: D102
+    def tearDown(self) -> None:
         # check that file was created
         assert self.path.is_file()
         # make sure to close file before trying to delete it
@@ -1010,7 +1010,7 @@ class LpRegularizerTest(RegularizerTestCase):
 
     cls = LpRegularizer
 
-    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:
         kwargs = self.kwargs
         if kwargs is None:
             kwargs = {}
@@ -1071,12 +1071,12 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     #: the inductive mode
     mode: ClassVar[InductiveMode | None] = None
 
-    def pre_setup_hook(self) -> None:  # noqa: D102
+    def pre_setup_hook(self) -> None:
         # for reproducible testing
         _, self.generator, _ = set_random_seed(42)
         self.device = resolve_device()
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         dataset = Nations(create_inverse_triples=self.create_inverse_triples)
         self.factory = dataset.training
@@ -1085,7 +1085,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         kwargs["embedding_dim"] = self.embedding_dim
         return kwargs
 
-    def post_instantiation_hook(self) -> None:  # noqa: D102
+    def post_instantiation_hook(self) -> None:
         # move model to correct device
         self.instance = self.instance.to(self.device)
 
@@ -1319,7 +1319,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     @pytest.mark.slow
     def test_cli_training_nations(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(["-t", NATIONS_TRAIN_PATH] + self._cli_extras)
+        self._help_test_cli(["-t", NATIONS_TRAIN_PATH, *self._cli_extras])
 
     @pytest.mark.slow
     def test_pipeline_nations_early_stopper(self):
@@ -1344,12 +1344,12 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     @pytest.mark.slow
     def test_cli_training_kinships(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(["-t", KINSHIPS_TRAIN_PATH] + self._cli_extras)
+        self._help_test_cli(["-t", KINSHIPS_TRAIN_PATH, *self._cli_extras])
 
     @pytest.mark.slow
     def test_cli_training_nations_testing(self):
         """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(["-t", NATIONS_TRAIN_PATH, "-q", NATIONS_TEST_PATH] + self._cli_extras)
+        self._help_test_cli(["-t", NATIONS_TRAIN_PATH, "-q", NATIONS_TEST_PATH, *self._cli_extras])
 
     def _help_test_cli(self, args):
         """Test running the pipeline on all models."""
@@ -1480,7 +1480,7 @@ class BaseNodePieceTest(ModelTestCase):
     cls = pykeen.models.NodePiece
     create_inverse_triples = True
 
-    def _help_test_cli(self, args):  # noqa: D102
+    def _help_test_cli(self, args):
         if self.instance_kwargs.get("tokenizers_kwargs"):
             raise SkipTest("No support for tokenizers_kwargs via CLI.")
         return super()._help_test_cli(args)
@@ -1497,7 +1497,7 @@ class InductiveModelTestCase(ModelTestCase):
     num_triples_inference: ClassVar[int] = 31
     num_triples_testing: ClassVar[int] = 37
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         dataset = create_inductive_dataset(
             num_relations=self.num_relations,
             num_entities_transductive=self.num_entities_transductive,
@@ -1515,10 +1515,10 @@ class InductiveModelTestCase(ModelTestCase):
         kwargs["inference_factory"] = dataset.inductive_inference
         return kwargs
 
-    def _help_test_cli(self, args):  # noqa: D102
+    def _help_test_cli(self, args):
         raise SkipTest("Inductive models are not compatible the CLI.")
 
-    def test_pipeline_nations_early_stopper(self):  # noqa: D102
+    def test_pipeline_nations_early_stopper(self):
         raise SkipTest("Inductive models are not compatible the pipeline.")
 
 
@@ -1602,7 +1602,7 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
     num_triples: ClassVar[int] = 31
     create_inverse_triples: bool = False
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         self.num_entities = self.max_id
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = generation.generate_triples_factory(
@@ -1645,7 +1645,7 @@ class EdgeWeightingTestCase(GenericTestCase[pykeen.nn.weighting.EdgeWeighting]):
     #: the message dim
     message_dim: int = 3
 
-    def post_instantiation_hook(self):  # noqa: D102
+    def post_instantiation_hook(self):
         self.source, self.target = torch.randint(self.num_entities, size=(2, self.num_triples))
         self.message = torch.rand(self.num_triples, self.message_dim, requires_grad=True)
         # TODO: separation message vs. entity dim?
@@ -1687,7 +1687,7 @@ class DecompositionTestCase(GenericTestCase[pykeen.nn.message_passing.Decomposit
     #: the output dimension
     output_dim: int = 4
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         self.factory = Nations().training
         self.source, self.edge_type, self.target = self.factory.mapped_triples.t()
@@ -1764,7 +1764,7 @@ class InitializerTestCase(unittest.TestCase):
         """Test whether the initializer returns a modified tensor."""
         shape = (self.num_entities, *self.shape)
         if self.dtype.is_complex:
-            shape = shape + (2,)
+            shape = (*shape, 2)
         x = torch.rand(size=shape)
         # initializers *may* work in-place => clone
         y = self.initializer(x.clone())
@@ -1851,7 +1851,7 @@ class CleanerTestCase(GenericTestCase[Cleaner]):
 
     def test_call(self):
         """Test call."""
-        triples_groups = [self.reference] + list(torch.split(self.other, split_size_or_sections=3, dim=0))
+        triples_groups = [self.reference, *list(torch.split(self.other, split_size_or_sections=3, dim=0))]
         clean_groups = self.instance(triples_groups=triples_groups, random_state=42)
         assert all(torch.is_tensor(triples) and triples.dtype for triples in clean_groups)
 
@@ -1891,7 +1891,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     batch_size: int = 8
     embedding_dim: int = 7
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         self.dataset = Nations()
         return super()._pre_instantiation_hook(kwargs=kwargs)
 
@@ -1900,7 +1900,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
         """Return the evaluation factory."""
         return self.dataset.validation
 
-    def post_instantiation_hook(self) -> None:  # noqa: D102
+    def post_instantiation_hook(self) -> None:
         # Use small model (untrained)
         self.model = TransE(triples_factory=self.factory, embedding_dim=self.embedding_dim)
 
@@ -2109,7 +2109,7 @@ class NodePieceTestCase(RepresentationTestCase):
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = generation.generate_triples_factory(
             num_entities=self.max_id,
@@ -2153,7 +2153,7 @@ class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.mode
     #: The batch size
     batch_size: int = 3
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         dataset = Nations()
         self.factory = kwargs["triples_factory"] = dataset.training
@@ -2369,7 +2369,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 class ZRankBasedMetricTestCase(RankBasedMetricTestCase):
     """Test cases for z-normalized metrics."""
 
-    def test_weights_coherence(self):  # noqa: D102
+    def test_weights_coherence(self):
         raise unittest.SkipTest("Z-normalized metrics do not work well with the sampling weight interpretation.")
 
 
@@ -2394,7 +2394,7 @@ class MetricResultTestCase(unittest_templates.GenericTestCase[MetricResults]):
 class TrainingInstancesTestCase(unittest_templates.GenericTestCase[Instances]):
     """Test for training instances."""
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         self.factory = Nations().training
         return kwargs
 
@@ -2416,7 +2416,7 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
         },
     }
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         self.factory = Nations().training
         kwargs["mapped_triples"] = self.factory.mapped_triples
         return kwargs
@@ -2450,7 +2450,7 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
 class TrainingCallbackTestCase(unittest_templates.GenericTestCase[TrainingCallback]):
     """Base test case for training callbacks."""
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
         self.dataset = Nations()
         return kwargs
@@ -2652,7 +2652,7 @@ class CombinationTestCase(unittest_templates.GenericTestCase[pykeen.nn.combinati
         """Iterate over test input shapes."""
         for prefix_shape in [(), (2,), (2, 3)]:
             for input_dims in self.input_dims:
-                yield [prefix_shape + (input_dim,) for input_dim in input_dims]
+                yield [(*prefix_shape, input_dim) for input_dim in input_dims]
 
     def _create_input(self, input_shapes: Sequence[tuple[int, ...]]) -> Sequence[torch.FloatTensor]:
         return [torch.empty(size=size) for size in input_shapes]

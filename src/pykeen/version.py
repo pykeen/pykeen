@@ -4,14 +4,14 @@ import os
 import pathlib
 import sys
 from functools import lru_cache
-from subprocess import CalledProcessError, check_output  # noqa: S404
+from subprocess import CalledProcessError, check_output
 
 __all__ = [
     "VERSION",
-    "get_version",
-    "get_git_hash",
-    "get_git_branch",
     "env",
+    "get_git_branch",
+    "get_git_hash",
+    "get_version",
 ]
 
 VERSION = "1.11.2-dev"
@@ -46,8 +46,8 @@ def get_git_branch() -> str | None:
 def _run(*args: str) -> str | None:
     with pathlib.Path(os.devnull).open("w") as devnull:
         try:
-            ret = check_output(  # noqa: S603,S607
-                args,  # noqa:S603
+            ret = check_output(  # noqa: S603
+                args,
                 cwd=pathlib.Path(__file__).parent,
                 stderr=devnull,
             )
@@ -110,7 +110,7 @@ def env(file=None):
     """
     if _in_jupyter():
         return env_html()
-    print(env_table(), file=file)  # noqa:T201
+    print(env_table(), file=file)
     return None
 
 

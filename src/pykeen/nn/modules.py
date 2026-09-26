@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import itertools as itt
 import logging
 import math
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, Sequence
-from operator import itemgetter
+from operator import iadd, itemgetter
 from typing import Any, ClassVar, Generic, Self, cast, overload
 
 import more_itertools
@@ -65,33 +66,29 @@ from ..utils import (
 # TODO: split file into multiple smaller ones?
 
 __all__ = [
-    "interaction_resolver",
-    # Base Classes
-    "Interaction",
-    "NormBasedInteraction",
-    # Adapter classes
-    "MonotonicAffineTransformationInteraction",
-    "ClampedInteraction",
-    "DirectionAverageInteraction",
-    # Concrete Classes
     "AutoSFInteraction",
     "BoxEInteraction",
+    "CPInteraction",
+    "ClampedInteraction",
     "ComplExInteraction",
     "ConvEInteraction",
     "ConvEShapeInformation",
     "ConvKBInteraction",
-    "CPInteraction",
     "CrossEInteraction",
+    "DirectionAverageInteraction",
     "DistMAInteraction",
     "DistMultInteraction",
     "ERMLPEInteraction",
     "ERMLPInteraction",
     "HolEInteraction",
+    "Interaction",
     "KG2EInteraction",
     "LineaREInteraction",
-    "MultiLinearTuckerInteraction",
+    "MonotonicAffineTransformationInteraction",
     "MuREInteraction",
+    "MultiLinearTuckerInteraction",
     "NTNInteraction",
+    "NormBasedInteraction",
     "PairREInteraction",
     "ProjEInteraction",
     "QuatEInteraction",
@@ -103,12 +100,13 @@ __all__ = [
     "TransDInteraction",
     "TransEInteraction",
     "TransFInteraction",
-    "TransformerInteraction",
     "TransHInteraction",
     "TransRInteraction",
+    "TransformerInteraction",
     "TripleREInteraction",
     "TuckERInteraction",
     "UMInteraction",
+    "interaction_resolver",
 ]
 
 logger = logging.getLogger(__name__)
@@ -135,9 +133,9 @@ def parallel_slice_batches(
     rs: Sequence[Sequence[FloatTensor]] = ensure_tuple(*representations)
     # get number of head/relation/tail representations
     length = list(map(len, rs))
-    splits = numpy.cumsum([0] + length)
+    splits = numpy.cumsum([0, *length])
     # flatten list
-    rsl: Sequence[FloatTensor] = sum(map(list, rs), [])
+    rsl: Sequence[FloatTensor] = functools.reduce(iadd, map(list, rs), [])
     # split tensors
     parts = [r.split(split_size, dim=dim) for r in rsl]
     # broadcasting
@@ -146,7 +144,7 @@ def parallel_slice_batches(
     # yield batches
     for batch in zip(*parts, strict=False):
         # complex typing
-        yield unpack_singletons(*(batch[start:stop] for start, stop in zip(splits, splits[1:], strict=False)))  # type: ignore[misc]
+        yield unpack_singletons(*(batch[start:stop] for start, stop in itt.pairwise(splits)))  # type: ignore[misc]
 
 
 @overload

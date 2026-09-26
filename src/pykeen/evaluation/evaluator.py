@@ -42,8 +42,8 @@ __all__ = [
     "Evaluator",
     "MetricResults",
     "filter_scores_",
-    "prepare_filter_triples",
     "normalize_flattened_metric_results",
+    "prepare_filter_triples",
 ]
 
 logger = logging.getLogger(__name__)
@@ -199,7 +199,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         restrict_entities_to: Collection[int] | None = None,
         restrict_relations_to: Collection[int] | None = None,
         do_time_consuming_checks: bool = True,
-        additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
+        additional_filter_triples: MappedTriples | list[MappedTriples] | None = None,
         pre_filtered_triples: bool = True,
         targets: Collection[Target] = (LABEL_HEAD, LABEL_TAIL),
     ) -> MetricResults[MetricKeyType]:
@@ -643,7 +643,7 @@ def get_candidate_set_size(
     mapped_triples: MappedTriples,
     restrict_entities_to: Collection[int] | None = None,
     restrict_relations_to: Collection[int] | None = None,
-    additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
+    additional_filter_triples: MappedTriples | list[MappedTriples] | None = None,
     num_entities: int | None = None,
 ) -> pandas.DataFrame:
     """Calculate the candidate set sizes for head/tail prediction for the given triples.

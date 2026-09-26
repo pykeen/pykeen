@@ -107,52 +107,43 @@ from .utils import (
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
 
 __all__ = [
-    "rank_based_metric_resolver",
-    # Base classes
-    "RankBasedMetric",
-    "DerivedRankBasedMetric",
-    "ExpectationNormalizedMetric",
-    "ReindexedMetric",
-    "ZMetric",
-    # Concrete classes
-    "ArithmeticMeanRank",
-    "AdjustedArithmeticMeanRank",
-    "AdjustedArithmeticMeanRankIndex",
-    "ZArithmeticMeanRank",
-    "InverseArithmeticMeanRank",
-    #
-    "GeometricMeanRank",
-    "AdjustedGeometricMeanRankIndex",
-    "ZGeometricMeanRank",
-    "InverseGeometricMeanRank",
-    #
-    "HarmonicMeanRank",
-    "InverseHarmonicMeanRank",
-    "AdjustedInverseHarmonicMeanRank",
-    "ZInverseHarmonicMeanRank",
-    #
-    "MedianRank",
-    "InverseMedianRank",
-    #
-    "HitsAtK",
-    "AdjustedHitsAtK",
-    "ZHitsAtK",
-    #
-    "StandardDeviation",
-    "Variance",
-    "Count",
-    # Misc
-    "NoClosedFormError",
-    "generate_ranks",
-    "generate_num_candidates_and_ranks",
-    "generalized_harmonic_numbers",
-    "AffineTransformationParameters",
-    "harmonic_variances",
-    #
+    "EPSILON",
     "HITS_METRICS",
     "WEIGHTED_MEDIAN_SCALE",
-    "EPSILON",
+    "AdjustedArithmeticMeanRank",
+    "AdjustedArithmeticMeanRankIndex",
+    "AdjustedGeometricMeanRankIndex",
+    "AdjustedHitsAtK",
+    "AdjustedInverseHarmonicMeanRank",
+    "AffineTransformationParameters",
+    "ArithmeticMeanRank",
+    "Count",
+    "DerivedRankBasedMetric",
+    "ExpectationNormalizedMetric",
+    "GeometricMeanRank",
+    "HarmonicMeanRank",
+    "HitsAtK",
+    "InverseArithmeticMeanRank",
+    "InverseGeometricMeanRank",
+    "InverseHarmonicMeanRank",
+    "InverseMedianRank",
+    "MedianRank",
+    "NoClosedFormError",
     "NoWeightSupportError",
+    "RankBasedMetric",
+    "ReindexedMetric",
+    "StandardDeviation",
+    "Variance",
+    "ZArithmeticMeanRank",
+    "ZGeometricMeanRank",
+    "ZHitsAtK",
+    "ZInverseHarmonicMeanRank",
+    "ZMetric",
+    "generalized_harmonic_numbers",
+    "generate_num_candidates_and_ranks",
+    "generate_ranks",
+    "harmonic_variances",
+    "rank_based_metric_resolver",
 ]
 
 #: A small value to help avoid dividing by zero
@@ -166,7 +157,7 @@ WEIGHTED_MEDIAN_SCALE = 0.67449
 def generate_ranks(
     num_candidates: np.ndarray,
     prefix_shape: tuple[int, ...] = (),
-    seed: None | int | np.random.Generator = None,
+    seed: int | np.random.Generator | None = None,
     dtype: type[np.number] | None = None,
 ) -> np.ndarray:
     """
@@ -1636,7 +1627,7 @@ class MedianAbsoluteDeviation(RankBasedMetric):
 
     def __call__(
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
-    ) -> float:  # noqa: D102
+    ) -> float:
         if weights is None:
             return stats.median_abs_deviation(ranks, scale="normal").item()
 

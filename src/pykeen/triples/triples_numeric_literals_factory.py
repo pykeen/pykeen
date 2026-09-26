@@ -70,7 +70,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
         cls,
         path: str | pathlib.Path | IO[str],
         *,
-        path_to_numeric_triples: None | str | pathlib.Path | IO[str] = None,
+        path_to_numeric_triples: str | pathlib.Path | IO[str] | None = None,
         **kwargs,
     ) -> "TriplesNumericLiteralsFactory":
         if path_to_numeric_triples is None:

@@ -22,21 +22,19 @@ from ..typing import FloatTensor, Initializer, LongTensor, MappedTriples, OneOrS
 from ..utils import compose, get_edge_index, iter_weisfeiler_lehman, upgrade_to_sequence
 
 __all__ = [
-    "xavier_uniform_",
-    "xavier_uniform_norm_",
-    "xavier_normal_",
-    "xavier_normal_norm_",
+    "LabelBasedInitializer",
+    "PretrainedInitializer",
+    "RandomWalkPositionalEncodingInitializer",
+    "WeisfeilerLehmanInitializer",
+    "init_phases",
+    "initializer_resolver",
+    "normal_norm_",
     "uniform_norm_",
     "uniform_norm_p1_",
-    "normal_norm_",
-    "init_phases",
-    # Classes
-    "PretrainedInitializer",
-    "LabelBasedInitializer",
-    "WeisfeilerLehmanInitializer",
-    "RandomWalkPositionalEncodingInitializer",
-    # Resolver
-    "initializer_resolver",
+    "xavier_normal_",
+    "xavier_normal_norm_",
+    "xavier_uniform_",
+    "xavier_uniform_norm_",
 ]
 
 logger = logging.getLogger(__name__)

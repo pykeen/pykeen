@@ -304,7 +304,7 @@ select = [
     # refurb (FURB)
     "FURB",
     # Ruff-specific rules (RUF)
-    # "RUF",
+    "RUF",
     # tryceratops (TRY)
     "TRY",
 ]

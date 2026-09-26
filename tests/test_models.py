@@ -55,7 +55,7 @@ class TestCompGCN(cases.ModelTestCase):
     num_constant_init = 3  # BN(2) + Bias
     cli_extras = ["--create-inverse-triples"]
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         dim = kwargs.pop("embedding_dim")
         kwargs["encoder_kwargs"] = {
@@ -252,7 +252,7 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
         ],
     }
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["num_tokens"] = self.num_tokens
         kwargs["tokenizers_kwargs"][0]["selection_kwargs"] = {"num_anchors": self.num_anchors}
@@ -723,7 +723,7 @@ def _remove_non_models(elements: Iterable[str | type[Model]]) -> set[type[Model]
     for element in elements:
         try:
             model_cls = model_resolver.lookup(element)
-        except KeyError:  # invalid model name - aka not actually a model  # noqa: PERF203
+        except KeyError:  # invalid model name - aka not actually a model
             continue
         else:
             rv.add(model_cls)
@@ -767,14 +767,14 @@ class ERModelTests(cases.ModelTestCase):
         "interaction": "distmult",  # use name to test interaction resolution
     }
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         shape = (kwargs.pop("embedding_dim"),)
         kwargs["entity_representations_kwargs"] = {"shape": shape}
         kwargs["relation_representations_kwargs"] = {"shape": shape}
         return kwargs
 
-    def test_has_hpo_defaults(self):  # noqa: D102
+    def test_has_hpo_defaults(self):
         raise unittest.SkipTest(f"Base class {self.cls} does not provide HPO defaults.")
 
     def test_multi_t_and_slicing(self):

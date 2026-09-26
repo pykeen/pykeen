@@ -19,10 +19,10 @@ class NoRegularizerTest(cases.RegularizerTestCase):
 
     cls = pykeen.regularizers.NoRegularizer
 
-    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:
         return torch.zeros(1, device=x.device, dtype=x.dtype)
 
-    def test_apply_only_once(self):  # noqa: D102
+    def test_apply_only_once(self):
         raise unittest.SkipTest
 
 
@@ -66,7 +66,7 @@ class CombinedRegularizerTest(cases.RegularizerTestCase):
         ]
     }
 
-    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:
         assert isinstance(self.instance, pykeen.regularizers.CombinedRegularizer)
         regularizers = self.instance.regularizers
         return sum(r.weight * r(x) for r in regularizers) / sum(r.weight for r in regularizers)
@@ -80,7 +80,7 @@ class PowerSumRegularizerTest(cases.RegularizerTestCase):
         "apply_only_once": True,
     }
 
-    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:
         kwargs = self.instance_kwargs
         p = kwargs.get("p", 2.0)
         value = x.pow(p).sum(dim=-1).mean()
@@ -94,7 +94,7 @@ class NormLimitRegularizerTest(cases.RegularizerTestCase):
 
     cls = pykeen.regularizers.NormLimitRegularizer
 
-    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:  # noqa: D102
+    def _expected_penalty(self, x: torch.FloatTensor) -> torch.FloatTensor:
         kwargs = self.instance_kwargs
         p = kwargs.get("p", 2.0)
         power_norm = kwargs.get("power_norm", True)
@@ -114,21 +114,21 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
         "apply_only_once": False,
     }
 
-    def _generate_update_input(self, requires_grad: bool = False) -> Sequence[torch.FloatTensor]:  # noqa: D102
+    def _generate_update_input(self, requires_grad: bool = False) -> Sequence[torch.FloatTensor]:
         # same size tensors
         return (
             rand(self.batch_size, 12, generator=self.generator, device=self.device).requires_grad_(requires_grad),
             rand(self.batch_size, 12, generator=self.generator, device=self.device).requires_grad_(requires_grad),
         )
 
-    def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:  # noqa: D102
+    def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
         assert len(inputs) == 2
         return functional.cosine_similarity(*inputs).pow(2).subtract(self.instance_kwargs["epsilon"]).relu().sum()
 
-    def test_forward(self) -> None:  # noqa: D102
+    def test_forward(self) -> None:
         raise unittest.SkipTest(f"{self.cls.__name__} cannot be applied to a single tensor.")
 
-    def test_model(self) -> None:  # noqa: D102
+    def test_model(self) -> None:
         raise unittest.SkipTest(f"{self.cls.__name__} is not supported by all models.")
 
     def test_update_error(self):

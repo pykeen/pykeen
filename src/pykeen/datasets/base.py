@@ -31,30 +31,28 @@ from ..utils import (
 )
 
 __all__ = [
-    # Base classes
+    "CompressedSingleDataset",
+    "CompressedSingleDatasetKwargs",
     "Dataset",
     "EagerDataset",
     "LazyDataset",
-    "SourceDataSet",
-    "PathDataset",
-    "UnpackedRemoteDataset",
-    "TarFileRemoteDataset",
-    "PackedZipRemoteDataset",
-    "CompressedSingleDataset",
-    "TarFileSingleDataset",
-    "ZipSingleDataset",
-    "TabbedDataset",
-    "SingleTabbedDataset",
-    "PackedRemoteDataSet",
-    # Utilities
-    "dataset_similarity",
-    "PathDatasetKwargs",
     "LazyDatasetKwargs",
-    "TabbedDatasetKwargs",
-    "CompressedSingleDatasetKwargs",
+    "PackedRemoteDataSet",
     "PackedRemoteDataSetKwargs",
+    "PackedZipRemoteDataset",
+    "PathDataset",
+    "PathDatasetKwargs",
+    "SingleTabbedDataset",
     "SingleTabbedDatasetKwargs",
+    "SourceDataSet",
+    "TabbedDataset",
+    "TabbedDatasetKwargs",
+    "TarFileRemoteDataset",
+    "TarFileSingleDataset",
     "UnpackedRemoteDataSetKwargs",
+    "UnpackedRemoteDataset",
+    "ZipSingleDataset",
+    "dataset_similarity",
 ]
 
 logger = logging.getLogger(__name__)
@@ -185,7 +183,7 @@ class Dataset(ExtraReprMixin):
     metadata_file_name: ClassVar[str] = "metadata.pth"
     triples_factory_cls: ClassVar[type[CoreTriplesFactory]] = TriplesFactory
 
-    def __eq__(self, __o: object) -> bool:  # noqa: D105
+    def __eq__(self, __o: object) -> bool:
         return (
             isinstance(__o, Dataset)
             and (self.training == __o.training)
@@ -206,26 +204,26 @@ class Dataset(ExtraReprMixin):
         return rv
 
     @property
-    def entity_to_id(self) -> Mapping[str, int]:  # noqa: D401
+    def entity_to_id(self) -> Mapping[str, int]:
         """The mapping of entity labels to IDs."""
         if not isinstance(self.training, TriplesFactory):
             raise TypeError(f"{self.training.__class__} does not have labeling information.")
         return self.training.entity_to_id
 
     @property
-    def relation_to_id(self) -> Mapping[str, int]:  # noqa: D401
+    def relation_to_id(self) -> Mapping[str, int]:
         """The mapping of relation labels to IDs."""
         if not isinstance(self.training, TriplesFactory):
             raise TypeError(f"{self.training.__class__} does not have labeling information.")
         return self.training.relation_to_id
 
     @property
-    def num_entities(self) -> int:  # noqa: D401
+    def num_entities(self) -> int:
         """The number of entities."""
         return self.training.num_entities
 
     @property
-    def num_relations(self) -> int:  # noqa: D401
+    def num_relations(self) -> int:
         """The number of relations."""
         return self.training.num_relations
 
@@ -288,7 +286,7 @@ class Dataset(ExtraReprMixin):
 
     def summarize(self, title: str | None = None, show_examples: int | None = 5, file: IO[str] | None = None) -> None:
         """Print a summary of the dataset."""
-        print(self.summary_str(title=title, show_examples=show_examples), file=file)  # noqa:T201
+        print(self.summary_str(title=title, show_examples=show_examples), file=file)
 
     def iter_extra_repr(self) -> Iterable[str]:
         """Yield extra entries for the instance's string representation."""
@@ -401,8 +399,8 @@ class Dataset(ExtraReprMixin):
 
     def restrict(
         self,
-        entities: None | Collection[int] | Collection[str] = None,
-        relations: None | Collection[int] | Collection[str] = None,
+        entities: Collection[int] | Collection[str] | None = None,
+        relations: Collection[int] | Collection[str] | None = None,
         invert_entity_selection: bool = False,
         invert_relation_selection: bool = False,
     ) -> EagerDataset | Self:
@@ -581,7 +579,7 @@ class LazyDataset(Dataset, ABC):
     cache_root: pathlib.Path
 
     @property
-    def training(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
+    def training(self) -> TriplesFactory:  # type: ignore[override]
         """The training triples factory."""
         if not self._loaded:
             self._load()
@@ -589,7 +587,7 @@ class LazyDataset(Dataset, ABC):
         return self._training
 
     @property
-    def testing(self) -> TriplesFactory:  # type: ignore[override]  # noqa: D401
+    def testing(self) -> TriplesFactory:  # type: ignore[override]
         """The testing triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
@@ -597,7 +595,7 @@ class LazyDataset(Dataset, ABC):
         return self._testing
 
     @property
-    def validation(self) -> TriplesFactory | None:  # type: ignore[override]  # noqa: D401
+    def validation(self) -> TriplesFactory | None:  # type: ignore[override]
         """The validation triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
@@ -621,7 +619,7 @@ class LazyDataset(Dataset, ABC):
     def _load_validation(self) -> None:
         """Load the validation triples factory."""
 
-    def _help_cache(self, cache_root: None | str | pathlib.Path) -> pathlib.Path:
+    def _help_cache(self, cache_root: str | pathlib.Path | None) -> pathlib.Path:
         """Get the appropriate cache root directory.
 
         :param cache_root: If none is passed, defaults to a subfolder of the PyKEEN home directory defined in
@@ -700,7 +698,7 @@ class SourceDataSet(LazyDataset):
                     load_triples_kwargs=self.load_triples_kwargs,
                 )
 
-    def __repr__(self) -> str:  # noqa: D105
+    def __repr__(self) -> str:
         return (
             f'{self.__class__.__name__}(training_path="{self.training_source.path}",'
             f' testing_path="{self.testing_source.path}",'
@@ -715,7 +713,7 @@ class PathDataset(SourceDataSet):
         self,
         training_path: str | pathlib.Path,
         testing_path: str | pathlib.Path,
-        validation_path: None | str | pathlib.Path,
+        validation_path: str | pathlib.Path | None,
         **kwargs: Unpack[PathDatasetKwargs],
     ) -> None:
         """Initialize the dataset.

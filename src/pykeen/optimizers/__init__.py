@@ -13,8 +13,8 @@ from torch.optim.sgd import SGD
 
 __all__ = [
     "Optimizer",
-    "optimizers_hpo_defaults",
     "optimizer_resolver",
+    "optimizers_hpo_defaults",
 ]
 
 #: The default strategy for optimizing the optimizers' hyper-parameters (yo dawg)
