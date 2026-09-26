@@ -550,7 +550,7 @@ class CoreTriplesFactory(KGInfo):
             metadata=metadata,
         )
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o: object, /) -> bool:
         if not isinstance(__o, CoreTriplesFactory):
             return False
         return (
@@ -630,7 +630,7 @@ class CoreTriplesFactory(KGInfo):
             ]
         )
 
-    def get_most_frequent_relations(self, n: int | float) -> set[int]:
+    def get_most_frequent_relations(self, n: float) -> set[int]:
         """Get the IDs of the n most frequent relations.
 
         :param n:
@@ -1315,7 +1315,7 @@ class TriplesFactory(CoreTriplesFactory):
             },
         )
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o: object, /) -> bool:
         return (
             isinstance(__o, TriplesFactory)
             and super().__eq__(__o)

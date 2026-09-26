@@ -226,7 +226,7 @@ class Sealant:
 def unleak(
     train: CoreTriplesFactory,
     *triples_factories: CoreTriplesFactory,
-    n: int | float | None = None,
+    n: float | None = None,
     minimum_frequency: float | None = None,
 ) -> Iterable[CoreTriplesFactory]:
     """Unleak a train, test, and validate triples factory.

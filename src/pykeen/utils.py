@@ -640,7 +640,7 @@ def tensor_product(*tensors: FloatTensor) -> FloatTensor:
 
 def negative_norm_of_sum(
     *x: FloatTensor,
-    p: str | int | float = 2,
+    p: str | float = 2,
     power_norm: bool = False,
 ) -> FloatTensor:
     """Evaluate negative norm of a sum of vectors on already broadcasted representations.
@@ -660,7 +660,7 @@ def negative_norm_of_sum(
 
 def negative_norm(
     x: FloatTensor,
-    p: str | int | float = 2,
+    p: str | float = 2,
     power_norm: bool = False,
 ) -> FloatTensor:
     """Evaluate negative norm of a vector.
@@ -899,7 +899,7 @@ def check_shapes(
 
 @functools.lru_cache(maxsize=1)
 def get_expected_norm(
-    p: int | float | str,
+    p: float | str,
     d: int,
 ) -> float:
     r"""Compute the expected value of the L_p norm.

@@ -32,7 +32,7 @@ class MLPTransformedRepresentation(TransformedRepresentation):
         base_kwargs: OptionalKwargs = None,
         output_dim: int | None = None,
         mlp_dropout: float = 0.1,
-        ratio: int | float = 2,
+        ratio: float = 2,
         **kwargs,
     ) -> None:
         """Initialize the representation.

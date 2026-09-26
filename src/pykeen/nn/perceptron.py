@@ -18,7 +18,7 @@ class TwoLayerMLP(nn.Sequential):
         input_dim: int,
         output_dim: int | None = None,
         dropout: float = 0.1,
-        ratio: int | float = 2,
+        ratio: float = 2,
     ) -> None:
         """Initialize the module.
 
@@ -53,7 +53,7 @@ class ConcatMLP(TwoLayerMLP):
         input_dim: int,
         output_dim: int | None = None,
         dropout: float = 0.1,
-        ratio: int | float = 2,
+        ratio: float = 2,
         flatten_dims: int = 2,
     ):
         """Initialize the module.

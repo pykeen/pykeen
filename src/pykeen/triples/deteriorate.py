@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def deteriorate(
     reference: CoreTriplesFactory,
     *others: CoreTriplesFactory,
-    n: int | float,
+    n: float,
     random_state: TorchRandomHint = None,
 ) -> list[CoreTriplesFactory]:
     """Remove n triples from the reference set.

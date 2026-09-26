@@ -135,7 +135,7 @@ class Objective:
     ) -> None:
         """Make a subclass of the EarlyStopper that reports to the trial."""
 
-        def _result_callback(_early_stopper: EarlyStopper, result: float | int, epoch: int) -> None:
+        def _result_callback(_early_stopper: EarlyStopper, result: float, epoch: int) -> None:
             trial.report(result, step=epoch)
             if trial.should_prune():
                 # log pruning
@@ -146,7 +146,7 @@ class Objective:
                 logger.info(f"Pruned trial: {trial} at epoch {epoch} due to {metric}={result}")
                 raise TrialPruned
 
-        def _stopped_callback(_early_stopper: EarlyStopper, _result: float | int, epoch: int) -> None:
+        def _stopped_callback(_early_stopper: EarlyStopper, _result: float, epoch: int) -> None:
             trial.set_user_attr(STOPPED_EPOCH_KEY, epoch)
 
         for key, callback in zip(

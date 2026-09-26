@@ -183,7 +183,7 @@ class Dataset(ExtraReprMixin):
     metadata_file_name: ClassVar[str] = "metadata.pth"
     triples_factory_cls: ClassVar[type[CoreTriplesFactory]] = TriplesFactory
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o: object, /) -> bool:
         return (
             isinstance(__o, Dataset)
             and (self.training == __o.training)
@@ -368,7 +368,7 @@ class Dataset(ExtraReprMixin):
             ),
         )
 
-    def deteriorate(self, n: int | float, random_state: TorchRandomHint = None) -> Dataset:
+    def deteriorate(self, n: float, random_state: TorchRandomHint = None) -> Dataset:
         """Deteriorate n triples from the dataset's training with :func:`~pykeen.triples.deteriorate.deteriorate`."""
         return EagerDataset(
             *deteriorate(
