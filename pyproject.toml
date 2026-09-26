@@ -73,7 +73,7 @@ dependencies = [
     "tabulate",
     "more_click",
     "more_itertools",
-    "pystow>=0.8.4",
+    "pystow>=0.9.6",
     "docdata>=0.0.5",
     "class_resolver>=0.8.1",
     "pyyaml",
@@ -97,8 +97,8 @@ lightning = [
     # cf. https://github.com/Lightning-AI/lightning/pull/14117
     "pytorch_lightning>=1.7.2",
 ]
-biomedicine = ["bioregistry", "pyobo>=0.8.7"]
-tests = ["unittest-templates>=0.0.5", "coverage", "pytest", "pytest-xdist"]
+biomedicine = ["bioregistry>=0.14.8", "pyobo>=0.14.1"]
+tests = ["unittest-templates>=0.1.1", "coverage", "pytest", "pytest-xdist"]
 docs = [
     "sphinx>=8.0",
     "sphinx-rtd-theme>=3.0",
