@@ -1103,24 +1103,31 @@ def make_ones_like(prefix: Sequence) -> Sequence[int]:
     return [1 for _ in prefix]
 
 
-def logcumsumexp(a: np.ndarray) -> np.ndarray:
-    """Compute ``log(cumsum(exp(a)))``.
+def logcumsumexp(a: np.ndarray, axis: int | None = None) -> np.ndarray:
+    """Compute ``log(cumsum(exp(a), axis=axis))`` in a numerically stable way.
+
+    The computation uses :data:`numpy.logaddexp` via :meth:`numpy.ufunc.accumulate`, i.e., each prefix is reduced
+    stably on its own. Hence, there is no underflow for prefixes whose values are much smaller than the global maximum,
+    and ``-inf`` entries (``exp(-inf) = 0``) are handled correctly.
+
+    The ``axis`` semantics follow :func:`numpy.cumsum`.
 
     :param a: shape: s
         the array
+    :param axis: the axis along which to accumulate. If ``None`` (the default), the array is flattened first, like for
+        :func:`numpy.cumsum`.
 
-    :return: shape s
+    :return: shape: ``(prod(s),)`` if ``axis`` is ``None``, else ``s``
         the log-cumsum-exp of the array
 
     .. seealso ::
         :func:`scipy.special.logsumexp` and :func:`torch.logcumsumexp`
     """
-    a_max = np.amax(a)
-    tmp = np.exp(a - a_max)
-    s = np.cumsum(tmp)
-    out = np.log(s)
-    out += a_max
-    return out
+    a = np.asarray(a)
+    if axis is None:
+        a = a.ravel()
+        axis = 0
+    return np.logaddexp.accumulate(a, axis=axis)
 
 
 def find(x: X, parent: MutableMapping[X, X]) -> X:

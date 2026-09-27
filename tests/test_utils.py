@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 import scipy.sparse
 import scipy.sparse.csgraph
+import scipy.special
 import torch
 
 from pykeen.utils import (
@@ -33,6 +34,7 @@ from pykeen.utils import (
     get_optimal_sequence,
     get_until_first_blank,
     iter_weisfeiler_lehman,
+    logcumsumexp,
     merge_kwargs,
     project_entity,
     resolve_device,
@@ -530,3 +532,51 @@ def test_find_path_compression() -> None:
     assert parent == dict.fromkeys(range(5), 0)
     with pytest.raises(ValueError, match="Unknown element"):
         find(x=5, parent=parent)
+class LogCumSumExpTests(unittest.TestCase):
+    """Tests for :func:`pykeen.utils.logcumsumexp`."""
+
+    def setUp(self) -> None:
+        """Set up the random number generator."""
+        self.generator = numpy.random.default_rng(seed=42)
+
+    def test_large_spread(self):
+        """Test that small prefixes do not underflow when a much larger value follows."""
+        numpy.testing.assert_allclose(logcumsumexp(numpy.asarray([-1000.0, 0.0])), [-1000.0, 0.0])
+
+    def test_prefix_logsumexp(self):
+        """Test agreement with :func:`scipy.special.logsumexp` on prefixes."""
+        for scale, ascending in itertools.product((1.0, 100.0, 1000.0), (False, True)):
+            a = scale * self.generator.normal(size=(17,))
+            if ascending:
+                # early prefixes are far below the global maximum
+                a = numpy.sort(a)
+            result = logcumsumexp(a)
+            expected = numpy.asarray([scipy.special.logsumexp(a[: i + 1]) for i in range(len(a))])
+            with self.subTest(scale=scale, ascending=ascending):
+                assert numpy.isfinite(result).all()
+                numpy.testing.assert_allclose(result, expected)
+
+    def test_all_neg_inf(self):
+        """Test that all ``-inf`` input yields ``-inf`` output (and not nan)."""
+        numpy.testing.assert_array_equal(logcumsumexp(numpy.full(shape=(3,), fill_value=-numpy.inf)), -numpy.inf)
+
+    def test_shape(self):
+        """Test the output shape for ND input."""
+        a = self.generator.normal(size=(2, 3, 4))
+        # default: flatten, like numpy.cumsum
+        numpy.testing.assert_allclose(logcumsumexp(a), logcumsumexp(a.ravel()))
+        assert logcumsumexp(a).shape == (a.size,)
+        for axis in (0, 1, 2, -1):
+            with self.subTest(axis=axis):
+                result = logcumsumexp(a, axis=axis)
+                assert result.shape == a.shape
+                expected = numpy.log(numpy.cumsum(numpy.exp(a), axis=axis))
+                numpy.testing.assert_allclose(result, expected)
+
+    def test_torch(self):
+        """Test agreement with :func:`torch.logcumsumexp`."""
+        a = 100.0 * self.generator.normal(size=(5, 7))
+        for axis in (0, 1):
+            with self.subTest(axis=axis):
+                expected = torch.logcumsumexp(torch.as_tensor(a), dim=axis).numpy()
+                numpy.testing.assert_allclose(logcumsumexp(a, axis=axis), expected)
