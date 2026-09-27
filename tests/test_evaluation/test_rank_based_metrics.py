@@ -3,7 +3,6 @@
 import unittest
 from collections.abc import Callable, Sequence
 
-import numpy
 import numpy as np
 import pytest
 import unittest_templates
@@ -190,29 +189,29 @@ class BaseExpectationTests(unittest.TestCase):
 
     def setUp(self) -> None:
         """Prepare ranks."""
-        self.ranks = numpy.arange(1, self.n + 1).astype(float)
+        self.ranks = np.arange(1, self.n + 1).astype(float)
 
     def test_rank_mean(self):
         """Verify expectation of individual ranks."""
         # expectation = (1 + n) / 2
         mean = self.ranks.mean()
-        numpy.testing.assert_allclose(mean, 0.5 * (1 + self.n))
+        np.testing.assert_allclose(mean, 0.5 * (1 + self.n))
 
     def test_rank_var(self):
         """Verify variance of individual ranks."""
         # variance = (n**2 - 1) / 12
         variance = self.ranks.var()
-        numpy.testing.assert_allclose(variance, (self.n**2 - 1) / 12.0)
+        np.testing.assert_allclose(variance, (self.n**2 - 1) / 12.0)
 
     def test_inverse_rank_mean(self):
         """Verify the expectation of the inverse rank."""
         mean = np.reciprocal(self.ranks).mean()
-        numpy.testing.assert_allclose(mean, generalized_harmonic_numbers(n=self.n, p=-1)[-1] / self.n)
+        np.testing.assert_allclose(mean, generalized_harmonic_numbers(n=self.n, p=-1)[-1] / self.n)
 
     def test_inverse_rank_var(self):
         """Verify the variance of the inverse rank."""
         var = np.reciprocal(self.ranks).var()
-        numpy.testing.assert_allclose(var, harmonic_variances(n=self.n)[-1])
+        np.testing.assert_allclose(var, harmonic_variances(n=self.n)[-1])
 
 
 class WeightedTests(unittest.TestCase):
@@ -223,7 +222,7 @@ class WeightedTests(unittest.TestCase):
         generator = np.random.default_rng()
         self.array = generator.random(size=(10,))
 
-    def _test_equal_weights(self, func: Callable[[numpy.ndarray, numpy.ndarray | None], numpy.ndarray]):
+    def _test_equal_weights(self, func: Callable[[np.ndarray, np.ndarray | None], np.ndarray]):
         """Verify that equal weights lead to unweighted results."""
         weights = np.full_like(self.array, fill_value=2.0)
         assert func(self.array, None).item() == pytest.approx(func(self.array, weights).item())
@@ -238,22 +237,22 @@ class WeightedTests(unittest.TestCase):
 
     def _test_weighted_mean_moment(
         self,
-        closed_form: Callable[[numpy.ndarray, numpy.ndarray | None], numpy.ndarray],
-        statistic: Callable[[numpy.ndarray], numpy.ndarray],
+        closed_form: Callable[[np.ndarray, np.ndarray | None], np.ndarray],
+        statistic: Callable[[np.ndarray], np.ndarray],
         key: str,
     ):
         """Check the analytic expectation / variance of weighted mean against bootstrapped confidence intervals."""
-        generator = numpy.random.default_rng(seed=0)
+        generator = np.random.default_rng(seed=0)
         individual = generator.random(size=(13,))
         # x_i ~ N(mu_i, 1)
-        value = individual if key == "loc" else numpy.sqrt(individual)
+        value = individual if key == "loc" else np.sqrt(individual)
         samples = generator.normal(size=(1000, *individual.shape), **{key: value})
 
         for weights in (None, generator.random(size=individual.shape)):
             # closed-form solution
             closed = closed_form(individual, weights)
             # sampled confidence interval
-            result = numpy.average(samples, weights=weights, axis=-1)
+            result = np.average(samples, weights=weights, axis=-1)
             low, high = bootstrap((result,), statistic=statistic).confidence_interval
             # check that closed-form is in confidence interval of sampled
             assert low <= closed
@@ -261,11 +260,11 @@ class WeightedTests(unittest.TestCase):
 
     def test_weighted_mean_expectation(self):
         """Test weighted mean expectation."""
-        self._test_weighted_mean_moment(closed_form=weighted_mean_expectation, statistic=numpy.mean, key="loc")
+        self._test_weighted_mean_moment(closed_form=weighted_mean_expectation, statistic=np.mean, key="loc")
 
     def test_weighted_mean_variance(self):
         """Test weighted mean variance."""
-        self._test_weighted_mean_moment(closed_form=weighted_mean_variance, statistic=numpy.var, key="scale")
+        self._test_weighted_mean_moment(closed_form=weighted_mean_variance, statistic=np.var, key="scale")
 
 
 def _compute_log_expected_power_reference_single(k: int, p: float) -> float:
@@ -376,7 +375,7 @@ def test_median_survival_function_single_candidate():
     # For single variable, median is just that variable
     # P(X > x) = (k - x) / k for x in [0, k]
     expected = np.linspace(1.0, 0.0, 11)
-    numpy.testing.assert_allclose(sf, expected, atol=1e-10)
+    np.testing.assert_allclose(sf, expected, atol=1e-10)
 
 
 @pytest.mark.parametrize(
@@ -396,7 +395,7 @@ def test_median_survival_function_basic_properties(num_candidates: np.ndarray):
 
 def test_median_survival_function_against_simulation():
     """Test against empirical simulation for validation."""
-    generator = numpy.random.default_rng(seed=42)
+    generator = np.random.default_rng(seed=42)
     num_candidates = np.array([10, 15, 20])
 
     # Compute analytical survival function
@@ -410,4 +409,4 @@ def test_median_survival_function_against_simulation():
     empirical_sf = np.array([(samples > x).mean() for x in range(len(sf))])
 
     # The analytical result should be close to empirical (with some tolerance)
-    numpy.testing.assert_allclose(sf, empirical_sf, rtol=0.05)
+    np.testing.assert_allclose(sf, empirical_sf, rtol=0.05)

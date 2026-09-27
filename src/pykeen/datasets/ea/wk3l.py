@@ -11,7 +11,7 @@ from collections.abc import Iterable, Mapping
 from typing import ClassVar, Literal
 
 import click
-import pandas
+import pandas as pd
 from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import read_zipfile_csv
@@ -91,7 +91,7 @@ class MTransEDataset(EADataset, ABC):
             cls.FILE_NAMES[graph_pair, key],
         )
 
-    def _load_df(self, key: EASide | tuple[EASide, EASide] | None, **kwargs) -> pandas.DataFrame:
+    def _load_df(self, key: EASide | tuple[EASide, EASide] | None, **kwargs) -> pd.DataFrame:
         return read_zipfile_csv(
             path=self.zip_path,
             inner_path=str(self._relative_path(graph_pair=self.graph_pair, key=key)),
@@ -112,7 +112,7 @@ class MTransEDataset(EADataset, ABC):
             triples=df.values, metadata={"graph_pair": self.graph_pair, "side": side}
         )
 
-    def _load_alignment(self) -> pandas.DataFrame:
+    def _load_alignment(self) -> pd.DataFrame:
         """Load entity alignment information for the given graph pair."""
         logger.info("Loading alignment information")
         # load mappings for both sides
@@ -125,7 +125,7 @@ class MTransEDataset(EADataset, ABC):
             part = df.loc[:, [(EA_SIDE_LEFT, column), (EA_SIDE_RIGHT, column)]].copy()
             part.columns = list(EA_SIDES)
             dfs.append(part)
-        return pandas.concat(dfs)
+        return pd.concat(dfs)
 
 
 @parse_docdata

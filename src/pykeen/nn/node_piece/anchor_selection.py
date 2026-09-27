@@ -9,7 +9,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 
-import numpy
+import numpy as np
 import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 from torch_ppr import page_rank
@@ -44,9 +44,9 @@ class AnchorSelection(ExtraReprMixin, ABC):
     @abstractmethod
     def __call__(
         self,
-        edge_index: numpy.ndarray,
-        known_anchors: numpy.ndarray | None = None,
-    ) -> numpy.ndarray:
+        edge_index: np.ndarray,
+        known_anchors: np.ndarray | None = None,
+    ) -> np.ndarray:
         """Select anchor nodes.
 
         .. note::
@@ -67,9 +67,9 @@ class AnchorSelection(ExtraReprMixin, ABC):
 
     def filter_unique(
         self,
-        anchor_ranking: numpy.ndarray,
-        known_anchors: numpy.ndarray | None,
-    ) -> numpy.ndarray:
+        anchor_ranking: np.ndarray,
+        known_anchors: np.ndarray | None,
+    ) -> np.ndarray:
         """Filter out already known anchors, and select from remaining ones afterwards.
 
         .. note::
@@ -86,9 +86,9 @@ class AnchorSelection(ExtraReprMixin, ABC):
             return anchor_ranking[: self.num_anchors]
 
         # isin() preserves the sorted order
-        unique_anchors = anchor_ranking[~numpy.isin(anchor_ranking, known_anchors)]
+        unique_anchors = anchor_ranking[~np.isin(anchor_ranking, known_anchors)]
         unique_anchors = unique_anchors[: self.num_anchors]
-        return numpy.concatenate([known_anchors, unique_anchors])
+        return np.concatenate([known_anchors, unique_anchors])
 
 
 class SingleSelection(AnchorSelection, ABC):
@@ -96,9 +96,9 @@ class SingleSelection(AnchorSelection, ABC):
 
     def __call__(
         self,
-        edge_index: numpy.ndarray,
-        known_anchors: numpy.ndarray | None = None,
-    ) -> numpy.ndarray:
+        edge_index: np.ndarray,
+        known_anchors: np.ndarray | None = None,
+    ) -> np.ndarray:
         """Select anchor nodes.
 
         .. note::
@@ -114,7 +114,7 @@ class SingleSelection(AnchorSelection, ABC):
         return self.filter_unique(anchor_ranking=self.rank(edge_index=edge_index), known_anchors=known_anchors)
 
     @abstractmethod
-    def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:
+    def rank(self, edge_index: np.ndarray) -> np.ndarray:
         """Rank nodes.
 
         :param edge_index: shape: (m, 2) the edge_index, i.e., adjacency list.
@@ -127,10 +127,10 @@ class SingleSelection(AnchorSelection, ABC):
 class DegreeAnchorSelection(SingleSelection):
     """Select entities according to their (undirected) degree."""
 
-    def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
-        unique, counts = numpy.unique(edge_index, return_counts=True)
+    def rank(self, edge_index: np.ndarray) -> np.ndarray:  # noqa: D102
+        unique, counts = np.unique(edge_index, return_counts=True)
         # sort by decreasing degree
-        ids = numpy.argsort(counts)[::-1]
+        ids = np.argsort(counts)[::-1]
         return unique[ids]
 
 
@@ -161,9 +161,9 @@ class PageRankAnchorSelection(SingleSelection):
             yield f"{key}={value}"
 
     @torch.inference_mode()
-    def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
+    def rank(self, edge_index: np.ndarray) -> np.ndarray:  # noqa: D102
         # sort by decreasing page rank
-        return numpy.argsort(page_rank(edge_index=torch.as_tensor(edge_index), **self.kwargs).cpu().numpy())[::-1]
+        return np.argsort(page_rank(edge_index=torch.as_tensor(edge_index), **self.kwargs).cpu().numpy())[::-1]
 
 
 class RandomAnchorSelection(SingleSelection):
@@ -180,9 +180,9 @@ class RandomAnchorSelection(SingleSelection):
         :param random_seed: the random seed to use.
         """
         super().__init__(num_anchors=num_anchors)
-        self.generator: numpy.random.Generator = numpy.random.default_rng(random_seed)
+        self.generator: np.random.Generator = np.random.default_rng(random_seed)
 
-    def rank(self, edge_index: numpy.ndarray) -> numpy.ndarray:  # noqa: D102
+    def rank(self, edge_index: np.ndarray) -> np.ndarray:  # noqa: D102
         return self.generator.permutation(edge_index.max())
 
 
@@ -230,14 +230,14 @@ class MixtureAnchorSelection(AnchorSelection):
 
     def __call__(  # noqa: D102
         self,
-        edge_index: numpy.ndarray,
-        known_anchors: numpy.ndarray | None = None,
-    ) -> numpy.ndarray:
+        edge_index: np.ndarray,
+        known_anchors: np.ndarray | None = None,
+    ) -> np.ndarray:
         # split this up into first and rest, because once
         # we apply one selection, even to a none value for `known_anchors`,
         # we are guaranteed to have a non-none anchor
         first, *rest = self.selections
-        anchor: numpy.ndarray = first(edge_index=edge_index, known_anchors=known_anchors)
+        anchor: np.ndarray = first(edge_index=edge_index, known_anchors=known_anchors)
         for selection in rest:
             anchor = selection(edge_index=edge_index, known_anchors=anchor)
         return anchor

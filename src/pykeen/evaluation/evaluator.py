@@ -17,7 +17,7 @@ from typing import (
     cast,
 )
 
-import pandas
+import pandas as pd
 import torch
 from torch_max_mem import maximize_memory_utilization
 from tqdm.autonotebook import tqdm
@@ -110,14 +110,14 @@ class MetricResults(Generic[MetricKeyType]):
             partial_result[str(compound_key[-1])] = metric_value
         return result
 
-    def to_df(self) -> pandas.DataFrame:
+    def to_df(self) -> pd.DataFrame:
         """Output the metrics as a pandas dataframe."""
         one_key = next(iter(self.data.keys()))
         # assert isinstance(one_key, NamedTuple)
         # TODO: should we enforce this?
         one_key_nt = cast(NamedTuple, one_key)
         columns = [field.capitalize() for field in one_key_nt._fields] + ["Value"]
-        return pandas.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
+        return pd.DataFrame([(*key, value) for key, value in self.data.items()], columns=columns)
 
 
 class Evaluator(ABC, Generic[MetricKeyType]):
@@ -645,7 +645,7 @@ def get_candidate_set_size(
     restrict_relations_to: Collection[int] | None = None,
     additional_filter_triples: MappedTriples | list[MappedTriples] | None = None,
     num_entities: int | None = None,
-) -> pandas.DataFrame:
+) -> pd.DataFrame:
     """Calculate the candidate set sizes for head/tail prediction for the given triples.
 
     :param mapped_triples: shape: (n, 3) the evaluation triples
@@ -668,7 +668,7 @@ def get_candidate_set_size(
     )
 
     # evaluation triples as dataframe
-    df_eval = pandas.DataFrame(
+    df_eval = pd.DataFrame(
         data=mapped_triples.numpy(),
         columns=COLUMN_LABELS,
     ).reset_index()
@@ -692,7 +692,7 @@ def get_candidate_set_size(
         entities=restrict_entities_to,
         relations=restrict_relations_to,
     )
-    df_filter = pandas.DataFrame(
+    df_filter = pd.DataFrame(
         data=filter_triples.numpy(),
         columns=COLUMN_LABELS,
     )
@@ -706,7 +706,7 @@ def get_candidate_set_size(
         column = f"{target}_candidates"
         df_count[column] = total - df_count[target]
         df_count = df_count.drop(columns=target)
-        df_eval = pandas.merge(df_eval, df_count, on=group_keys, how="left")
+        df_eval = df_eval.merge(df_count, on=group_keys, how="left")
         df_eval[column] = df_eval[column].fillna(value=total)
 
     return df_eval

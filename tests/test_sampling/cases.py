@@ -4,7 +4,7 @@ import unittest
 from collections.abc import MutableMapping
 from typing import Any
 
-import numpy
+import numpy as np
 import torch
 import unittest_templates
 
@@ -51,7 +51,7 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
         """Set up the test case with a triples factory, training instances, and a default positive batch."""
         self.triples_factory = Nations().training
         self.training_instances = BatchedSLCWAInstances.from_triples_factory(self.triples_factory)
-        random_state = numpy.random.RandomState(seed=self.seed)
+        random_state = np.random.RandomState(seed=self.seed)
         batch_indices = random_state.randint(low=0, high=len(self.training_instances), size=(self.batch_size,))
         self.positive_batch = self.training_instances.mapped_triples[batch_indices]
 

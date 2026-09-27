@@ -3,8 +3,8 @@
 from collections.abc import Collection, Iterable, MutableMapping, Sequence
 from typing import Any
 
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 import pytest
 import torch
 import unittest_templates
@@ -44,7 +44,7 @@ class TargetPredictionsTests(cases.PredictionTestCase):
         kwargs = super()._pre_instantiation_hook(kwargs)
         generator = torch.manual_seed(seed=42)
         target = kwargs["target"]
-        self.df = kwargs["df"] = pandas.DataFrame(
+        self.df = kwargs["df"] = pd.DataFrame(
             data={
                 f"{target}_id": range(self.dataset.num_entities),
                 "score": torch.rand(size=(self.dataset.num_entities,), generator=generator),
@@ -71,7 +71,7 @@ class TriplePredictionsTest(cases.PredictionTestCase):
             )
         }
         data["score"] = torch.rand(size=(5,), generator=generator).numpy()
-        self.df = kwargs["df"] = pandas.DataFrame(data=data)
+        self.df = kwargs["df"] = pd.DataFrame(data=data)
         return kwargs
 
 
@@ -192,7 +192,7 @@ def test_predict_top_k_consistency():
     ]
     assert set(dfs[0].columns) == set(dfs[0].columns)
     for column in dfs[0].columns:
-        numpy.testing.assert_equal(dfs[0][column].values, dfs[1][column].values)
+        np.testing.assert_equal(dfs[0][column].values, dfs[1][column].values)
 
 
 def _iter_predict_triples_inputs() -> Iterable[
@@ -233,7 +233,7 @@ def test_predict_triples(
     pack = pykeen.predict.predict_triples(
         model=model, triples=triples, triples_factory=triples_factory, batch_size=batch_size
     )
-    if not isinstance(triples, torch.Tensor | numpy.ndarray) and isinstance(triples[0], str):
+    if not isinstance(triples, torch.Tensor | np.ndarray) and isinstance(triples[0], str):
         num_triples = 1
     else:
         num_triples = len(triples)

@@ -7,7 +7,6 @@ from collections import defaultdict
 from collections.abc import Iterable, Mapping, MutableMapping
 from typing import NamedTuple, cast
 
-import numpy
 import numpy as np
 
 from .evaluator import Evaluator, MetricResults
@@ -32,8 +31,8 @@ class ScorePack(NamedTuple):
     """A pack of scores for aggregation."""
 
     target: ExtendedTarget
-    y_true: numpy.ndarray
-    y_score: numpy.ndarray
+    y_true: np.ndarray
+    y_score: np.ndarray
 
 
 class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
@@ -63,8 +62,8 @@ class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
 
 
 def _iter_scores(
-    all_scores: Mapping[Target, Mapping[tuple[int, int], numpy.ndarray]],
-    all_positives: Mapping[Target, Mapping[tuple[int, int], numpy.ndarray]],
+    all_scores: Mapping[Target, Mapping[tuple[int, int], np.ndarray]],
+    all_positives: Mapping[Target, Mapping[tuple[int, int], np.ndarray]],
 ) -> Iterable[ScorePack]:
     sides = sorted(all_scores.keys())
     y_score_for_side = {}

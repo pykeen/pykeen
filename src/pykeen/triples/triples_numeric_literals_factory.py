@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping, MutableMapping
 from typing import IO, Any, ClassVar
 
 import numpy as np
-import pandas
+import pandas as pd
 import torch
 
 from .triples_factory import TriplesFactory
@@ -140,7 +140,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def to_path_binary(self, path: str | pathlib.Path | IO[str]) -> pathlib.Path:  # noqa: D102
         path = super().to_path_binary(path=path)
         # save literal-to-id mapping
-        pandas.DataFrame(
+        pd.DataFrame(
             data=self.literals_to_id.items(),
             columns=["label", "id"],
         ).sort_values(by="id").set_index("id").to_csv(
@@ -155,7 +155,7 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
     def _from_path_binary(cls, path: pathlib.Path) -> MutableMapping[str, Any]:
         data = super()._from_path_binary(path)
         # load literal-to-id
-        df = pandas.read_csv(
+        df = pd.read_csv(
             path.joinpath(f"{cls.file_name_literal_to_id}.tsv.gz"),
             sep="\t",
         )

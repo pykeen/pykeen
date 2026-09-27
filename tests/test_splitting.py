@@ -1,6 +1,6 @@
 """Tests for splitting of triples."""
 
-import numpy
+import numpy as np
 import pytest
 import torch
 
@@ -26,7 +26,7 @@ def test_get_absolute_split_sizes():
         strict=False,
     ):
         # generate random ratios
-        rng = numpy.random.default_rng(seed=42)
+        rng = np.random.default_rng(seed=42)
         ratios = rng.uniform(size=(num_splits,))
         ratios = ratios / ratios.sum()
         sizes = get_absolute_split_sizes(n_total=n_total, ratios=ratios)
@@ -40,10 +40,10 @@ def test_get_absolute_split_sizes():
         assert sum(sizes) == n_total
 
         # check consistency with ratios
-        rel_size = numpy.asarray(sizes) / n_total
+        rel_size = np.asarray(sizes) / n_total
         # the number of decimal digits equivalent to 1 / n_total
-        decimal = numpy.floor(numpy.log10(n_total))
-        numpy.testing.assert_almost_equal(rel_size, ratios, decimal=decimal)
+        decimal = np.floor(np.log10(n_total))
+        np.testing.assert_almost_equal(rel_size, ratios, decimal=decimal)
 
 
 def test_normalize_ratios():
@@ -60,10 +60,10 @@ def test_normalize_ratios():
         # check values
         assert len(output) >= 2
         assert all(0 <= ratio <= 1 for ratio in output)
-        output_np = numpy.asarray(output)
-        numpy.testing.assert_almost_equal(output_np.sum(), numpy.ones(1))
+        output_np = np.asarray(output)
+        np.testing.assert_almost_equal(output_np.sum(), np.ones(1))
         # compare against expected
-        numpy.testing.assert_almost_equal(output_np, numpy.asarray(exp_output))
+        np.testing.assert_almost_equal(output_np, np.asarray(exp_output))
 
 
 def test_normalize_invalid_ratio():

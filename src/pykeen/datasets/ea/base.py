@@ -5,7 +5,7 @@ from abc import abstractmethod
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-import pandas
+import pandas as pd
 from class_resolver import HintOrType, OptionalKwargs
 
 from .combination import GraphPairCombinator, graph_combinator_resolver
@@ -86,7 +86,7 @@ class EADataset(EagerDataset):
         raise NotImplementedError
 
     @abstractmethod
-    def _load_alignment(self) -> pandas.DataFrame:
+    def _load_alignment(self) -> pd.DataFrame:
         """Load the entity alignment."""
         raise NotImplementedError
 

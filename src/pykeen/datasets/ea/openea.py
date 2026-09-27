@@ -9,7 +9,7 @@ import pathlib
 from typing import Literal
 
 import click
-import pandas
+import pandas as pd
 from docdata import parse_docdata
 from more_click import verbose_option
 from pystow.utils import read_zipfile_csv
@@ -136,7 +136,7 @@ class OpenEA(EADataset):
             metadata={"path": self.zip_path},
         )
 
-    def _load_alignment(self) -> pandas.DataFrame:
+    def _load_alignment(self) -> pd.DataFrame:
         return read_zipfile_csv(
             path=self.zip_path,
             inner_path=str(self.inner_path.joinpath("ent_links")),

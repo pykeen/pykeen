@@ -3,7 +3,7 @@
 from collections.abc import MutableMapping
 from typing import Any
 
-import numpy
+import numpy as np
 import pytest
 import torch
 
@@ -79,7 +79,7 @@ class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
             ["e1", "a.", "e5"],
             ["e1", "a", "e2"],
         ]
-        t = numpy.array(t, dtype=str)
+        t = np.array(t, dtype=str)
         factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
         instances = BatchedSLCWAInstances.from_triples_factory(factory)
         assert len(instances) == 4
