@@ -1122,10 +1122,16 @@ def find(x: X, parent: MutableMapping[X, X]) -> X:
     # check validity
     if x not in parent:
         raise ValueError(f"Unknown element: {x}.")
-    # path compression
-    while parent[x] != x:
-        x, parent[x] = parent[x], parent[parent[x]]
-    return x
+    # find root
+    root = x
+    while parent[root] != root:
+        root = parent[root]
+    # path compression: make every node on the path point directly to the root
+    while x != root:
+        next_x = parent[x]
+        parent[x] = root
+        x = next_x
+    return root
 
 
 def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collection[X]]:
@@ -1156,7 +1162,7 @@ def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collect
             x, y = y, x
         # merge
         parent[y] = x
-    # extract partitions
+    # extract partitions; note: parent[k] is not necessarily the root, hence we need to use find
     result = defaultdict(list)
     for k in parent:
         result[find(x=k, parent=parent)].append(k)

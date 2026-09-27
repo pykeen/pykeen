@@ -14,6 +14,8 @@ from unittest import mock
 
 import numpy as np
 import pytest
+import scipy.sparse
+import scipy.sparse.csgraph
 import torch
 
 from pykeen.utils import (
@@ -25,6 +27,7 @@ from pykeen.utils import (
     compact_mapping,
     compose,
     estimate_cost_of_sequence,
+    find,
     flatten_dictionary,
     get_connected_components,
     get_optimal_sequence,
@@ -455,3 +458,46 @@ def test_get_connected_components(pairs: list[tuple[int, int]], expected: list[l
     """Test calculation of connected components."""
     components = get_connected_components(pairs)
     assert sorted(sorted(component) for component in components) == expected
+
+
+def _normalize_components(components: Iterable[Iterable[int]]) -> set[frozenset[int]]:
+    """Convert components to a set of frozensets, and verify that there are no duplicates."""
+    components = [list(component) for component in components]
+    result = {frozenset(component) for component in components}
+    # no duplicate nodes, neither within nor across components
+    assert sum(map(len, components)) == sum(map(len, result))
+    assert len(result) == len(components)
+    return result
+
+
+def _reference_connected_components(pairs: list[tuple[int, int]]) -> set[frozenset[int]]:
+    """Calculate connected components with scipy."""
+    nodes = sorted({node for pair in pairs for node in pair})
+    node_to_id = {node: i for i, node in enumerate(nodes)}
+    row, col = np.asarray([(node_to_id[x], node_to_id[y]) for x, y in pairs]).T
+    matrix = scipy.sparse.coo_matrix((np.ones_like(row), (row, col)), shape=(len(nodes), len(nodes)))
+    _, labels = scipy.sparse.csgraph.connected_components(matrix, directed=False)
+    result: dict[int, set[int]] = {}
+    for node, label in zip(nodes, labels, strict=True):
+        result.setdefault(label, set()).add(node)
+    return {frozenset(component) for component in result.values()}
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_get_connected_components_random(seed: int) -> None:
+    """Compare get_connected_components against scipy on random graphs."""
+    generator = np.random.default_rng(seed=seed)
+    num_nodes = int(generator.integers(2, 50))
+    num_edges = int(generator.integers(1, 2 * num_nodes))
+    pairs = [(int(x), int(y)) for x, y in generator.integers(num_nodes, size=(num_edges, 2))]
+    assert _normalize_components(get_connected_components(pairs)) == _reference_connected_components(pairs)
+
+
+def test_find_path_compression() -> None:
+    """Test that find compresses the path to the root."""
+    # chain 4 -> 3 -> 2 -> 1 -> 0
+    parent = {0: 0, 1: 0, 2: 1, 3: 2, 4: 3}
+    assert find(x=4, parent=parent) == 0
+    assert parent == dict.fromkeys(range(5), 0)
+    with pytest.raises(ValueError, match="Unknown element"):
+        find(x=5, parent=parent)
