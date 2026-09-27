@@ -1,5 +1,7 @@
 """Tests for training instances."""
 
+import copy
+import itertools
 from collections.abc import MutableMapping
 from typing import Any
 from unittest import mock
@@ -85,20 +87,67 @@ class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
         instances = BatchedSLCWAInstances.from_triples_factory(factory)
         assert len(instances) == 4
 
+    @staticmethod
+    def _iter_triple_ids_multiple_workers(
+        workers: list[BatchedSLCWAInstances], base_seed: int
+    ) -> list[list[list[int]]]:
+        """Collect the batches of triple IDs of each simulated data loader worker."""
+        result = []
+        for worker_id, worker in enumerate(workers):
+            worker_info = mock.Mock(id=worker_id, num_workers=len(workers), seed=base_seed + worker_id)
+            with mock.patch("torch.utils.data.get_worker_info", return_value=worker_info):
+                result.append([[int(i) for i in batch] for batch in worker.iter_triple_ids()])
+        return result
+
     def test_iter_triple_ids_multiple_workers(self):
-        """Test that, across all data loader workers, each triple ID is used exactly once."""
-        # do not drop incomplete batches, since each worker may have an incomplete last batch
+        """Test that multi-worker iteration yields the same number of batches and triple IDs as single-process."""
+        for num_triples, batch_size, num_workers, drop_last in itertools.product(
+            (1, 13, 14, 50), (1, 3, 7), (1, 2, 3, 5, 11), (False, True)
+        ):
+            with self.subTest(
+                num_triples=num_triples, batch_size=batch_size, num_workers=num_workers, drop_last=drop_last
+            ):
+                instance = BatchedSLCWAInstances(
+                    mapped_triples=self.factory.mapped_triples[:num_triples],
+                    batch_size=batch_size,
+                    drop_last=drop_last,
+                )
+                # each worker process operates on its own copy of the dataset
+                workers = [copy.deepcopy(instance) for _ in range(num_workers)]
+                # simulate multiple epochs with persistent workers, as well as a new base seed
+                for epoch, base_seed in enumerate((42, 42, 43)):
+                    batches = [
+                        batch
+                        for worker_batches in self._iter_triple_ids_multiple_workers(workers, base_seed=base_seed)
+                        for batch in worker_batches
+                    ]
+                    # same number of batches as single-process
+                    assert len(batches) == len(instance), epoch
+                    # at most one incomplete batch, which is dropped iff drop_last
+                    sizes = sorted(len(batch) for batch in batches)
+                    assert all(size == batch_size for size in sizes[1:])
+                    if drop_last and sizes:
+                        assert sizes[0] == batch_size
+                    triple_ids = sorted(i for batch in batches for i in batch)
+                    # no duplicates
+                    assert len(triple_ids) == len(set(triple_ids))
+                    assert set(triple_ids).issubset(range(num_triples))
+                    if drop_last:
+                        assert num_triples - len(triple_ids) < batch_size
+                    else:
+                        assert triple_ids == list(range(num_triples))
+
+    def test_iter_triple_ids_multiple_workers_randomness(self):
+        """Test that the shared permutation is random, and changes between epochs."""
         instance = BatchedSLCWAInstances(mapped_triples=self.factory.mapped_triples, batch_size=7, drop_last=False)
-        num_triples = instance.mapped_triples.shape[0]
-        for num_workers in (1, 2, 3, 11):
-            with self.subTest(num_workers=num_workers):
-                triple_ids: list[int] = []
-                for worker_id in range(num_workers):
-                    worker_info = mock.Mock(id=worker_id, num_workers=num_workers)
-                    with mock.patch("torch.utils.data.get_worker_info", return_value=worker_info):
-                        for batch in instance.iter_triple_ids():
-                            triple_ids.extend(int(i) for i in batch)
-                assert sorted(triple_ids) == list(range(num_triples))
+        workers = [copy.deepcopy(instance) for _ in range(3)]
+        first, second, third = (
+            self._iter_triple_ids_multiple_workers(workers, base_seed=base_seed) for base_seed in (42, 42, 43)
+        )
+        assert first != second  # persistent workers: same base seed, but next epoch
+        assert first != third  # new base seed
+        # not in natural order
+        assert first[0][0] != list(range(7))
 
     def test_grouped(self):
         """Test that grouped instances emit the expected keys and shapes."""

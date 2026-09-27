@@ -281,13 +281,36 @@ class BaseBatchedSLCWAInstances(
 class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
     """Random pre-batched training instances for the sLCWA training loop."""
 
+    #: the number of iterations started in this (worker) process; used to vary the shared permutation across epochs
+    #: when the data loader's workers are persistent (and thus their base seed does not change between epochs)
+    _num_worker_iterations: int = 0
+
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
-        yield from data.BatchSampler(
-            # note: RandomSampler would yield positions within the workload, rather than the triple IDs themselves
-            sampler=data.SubsetRandomSampler(indices=split_workload(len(self.mapped_triples))),
-            batch_size=self.batch_size,
-            drop_last=self.drop_last,
-        )
+        worker_info = data.get_worker_info()
+        if worker_info is None:
+            # single-process data loading
+            yield from data.BatchSampler(
+                sampler=data.RandomSampler(data_source=range(len(self.mapped_triples))),
+                batch_size=self.batch_size,
+                drop_last=self.drop_last,
+            )
+            return
+
+        # multi-process data loading: to obtain the same batches (in particular, the same number of batches, and at
+        # most one incomplete batch) as for single-process loading, all workers generate the same random permutation
+        # of *all* triple IDs, split it into batches, and each worker only yields its share of these batches.
+        # The workers' seeds are `base_seed + worker_id`, where `base_seed` is drawn anew for each epoch, cf.
+        # https://docs.pytorch.org/docs/stable/data.html#randomness-in-multi-process-data-loading
+        base_seed = worker_info.seed - worker_info.id
+        generator = np.random.default_rng([base_seed, self._num_worker_iterations])
+        self._num_worker_iterations += 1
+        permutation = generator.permutation(len(self.mapped_triples))
+        # batch b consists of the triple IDs permutation[b * batch_size : (b + 1) * batch_size]; __len__ already
+        # accounts for dropping an incomplete last batch.
+        # note: the data loader fetches from the workers in a round-robin fashion; hence assigning batches
+        # round-robin, too, retains the batch order of the shared permutation
+        for batch_id in range(worker_info.id, len(self), worker_info.num_workers):
+            yield permutation[batch_id * self.batch_size : (batch_id + 1) * self.batch_size].tolist()
 
 
 class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
