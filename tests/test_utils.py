@@ -633,11 +633,11 @@ class LogCumSumExpTests(unittest.TestCase):
 
     def setUp(self) -> None:
         """Set up the random number generator."""
-        self.generator = numpy.random.default_rng(seed=42)
+        self.generator = np.random.default_rng(seed=42)
 
     def test_large_spread(self):
         """Test that small prefixes do not underflow when a much larger value follows."""
-        numpy.testing.assert_allclose(logcumsumexp(numpy.asarray([-1000.0, 0.0])), [-1000.0, 0.0])
+        np.testing.assert_allclose(logcumsumexp(np.asarray([-1000.0, 0.0])), [-1000.0, 0.0])
 
     def test_prefix_logsumexp(self):
         """Test agreement with :func:`scipy.special.logsumexp` on prefixes."""
@@ -645,29 +645,29 @@ class LogCumSumExpTests(unittest.TestCase):
             a = scale * self.generator.normal(size=(17,))
             if ascending:
                 # early prefixes are far below the global maximum
-                a = numpy.sort(a)
+                a = np.sort(a)
             result = logcumsumexp(a)
-            expected = numpy.asarray([scipy.special.logsumexp(a[: i + 1]) for i in range(len(a))])
+            expected = np.asarray([scipy.special.logsumexp(a[: i + 1]) for i in range(len(a))])
             with self.subTest(scale=scale, ascending=ascending):
-                assert numpy.isfinite(result).all()
-                numpy.testing.assert_allclose(result, expected)
+                assert np.isfinite(result).all()
+                np.testing.assert_allclose(result, expected)
 
     def test_all_neg_inf(self):
         """Test that all ``-inf`` input yields ``-inf`` output (and not nan)."""
-        numpy.testing.assert_array_equal(logcumsumexp(numpy.full(shape=(3,), fill_value=-numpy.inf)), -numpy.inf)
+        np.testing.assert_array_equal(logcumsumexp(np.full(shape=(3,), fill_value=-np.inf)), -np.inf)
 
     def test_shape(self):
         """Test the output shape for ND input."""
         a = self.generator.normal(size=(2, 3, 4))
-        # default: flatten, like numpy.cumsum
-        numpy.testing.assert_allclose(logcumsumexp(a), logcumsumexp(a.ravel()))
+        # default: flatten, like np.cumsum
+        np.testing.assert_allclose(logcumsumexp(a), logcumsumexp(a.ravel()))
         assert logcumsumexp(a).shape == (a.size,)
         for axis in (0, 1, 2, -1):
             with self.subTest(axis=axis):
                 result = logcumsumexp(a, axis=axis)
                 assert result.shape == a.shape
-                expected = numpy.log(numpy.cumsum(numpy.exp(a), axis=axis))
-                numpy.testing.assert_allclose(result, expected)
+                expected = np.log(np.cumsum(np.exp(a), axis=axis))
+                np.testing.assert_allclose(result, expected)
 
     def test_torch(self):
         """Test agreement with :func:`torch.logcumsumexp`."""
@@ -675,7 +675,7 @@ class LogCumSumExpTests(unittest.TestCase):
         for axis in (0, 1):
             with self.subTest(axis=axis):
                 expected = torch.logcumsumexp(torch.as_tensor(a), dim=axis).numpy()
-                numpy.testing.assert_allclose(logcumsumexp(a, axis=axis), expected)
+                np.testing.assert_allclose(logcumsumexp(a, axis=axis), expected)
 
 
 class TestNormalizePath(unittest.TestCase):
