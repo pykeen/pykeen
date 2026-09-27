@@ -21,6 +21,7 @@ from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import (
     INVERSE_SUFFIX,
     InvalidMappedTriplesShapeError,
+    Labeling,
     _map_triples_elements_to_ids,
     get_mapped_triples,
     valid_triple_id_range,
@@ -721,3 +722,49 @@ def test_condense(tf_one_hole: CoreTriplesFactory, entities: bool, relations: bo
     assert tf_new.num_entities == expected_num_entities
     expected_num_relations = tf_one_hole.num_relations - 1 if relations else tf_one_hole.num_relations
     assert tf_new.num_relations == expected_num_relations
+
+
+_LABELED_TRIPLES = np.array([["a", "r", "b"], ["b", "s", "c"]], dtype=str)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match", "compact_id"),
+    [
+        # non-injective mappings are rejected, also with compaction (which preserves collisions)
+        *(
+            (kwargs, match, compact_id)
+            for kwargs, match in [
+                ({"entity_to_id": {"a": 0, "b": 0, "c": 1}}, r"not injective.*\d+, \['a', 'b'\]"),
+                ({"relation_to_id": {"r": 3, "s": 3}}, r"not injective.*\d+, \['r', 's'\]"),
+            ]
+            for compact_id in (False, True)
+        ),
+        # negative / non-integer IDs; without compaction, since compaction re-assigns IDs
+        ({"entity_to_id": {"a": 0, "b": -1, "c": 1}}, r"non-negative.*'b', -1", False),
+        ({"entity_to_id": {"a": 0, "b": 1.5, "c": 1}}, r"integers.*'b', 1\.5", False),
+    ],
+)
+def test_invalid_label_to_id(kwargs: dict[str, Any], match: str, compact_id: bool) -> None:
+    """Test that invalid label-to-ID mappings are rejected."""
+    with pytest.raises(ValueError, match=match):
+        TriplesFactory.from_labeled_triples(triples=_LABELED_TRIPLES, compact_id=compact_id, **kwargs)
+
+
+def test_non_injective_labeling_truncated_message() -> None:
+    """Test that the error message for many collisions is truncated."""
+    with pytest.raises(ValueError, match=r"100 IDs are shared.*\.\.\. \(95 more\)"):
+        Labeling(label_to_id={f"{prefix}{i}": i for i in range(100) for prefix in "xy"})
+
+
+def test_non_contiguous_label_to_id() -> None:
+    """Test that valid, but non-contiguous, label-to-ID mappings are accepted."""
+    entity_to_id = {"a": 0, "b": 7, "c": np.int64(3)}
+    relation_to_id = {"r": 5, "s": 1}
+    tf = TriplesFactory.from_labeled_triples(
+        triples=_LABELED_TRIPLES, entity_to_id=entity_to_id, relation_to_id=relation_to_id, compact_id=False
+    )
+    assert tf.entity_to_id == entity_to_id
+    assert tf.relation_to_id == relation_to_id
+    assert tf.entity_id_to_label == {0: "a", 7: "b", 3: "c"}
+    assert tf.num_entities == 8
+    assert tf.num_relations == 6

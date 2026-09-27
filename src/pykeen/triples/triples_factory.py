@@ -30,7 +30,6 @@ from ..utils import (
     compact_mapping,
     format_relative_comparison,
     get_edge_index,
-    invert_mapping,
     normalize_path,
     triple_tensor_to_set,
 )
@@ -164,6 +163,58 @@ def _ensure_ids(
     return [label_to_id[l_or_i] if isinstance(l_or_i, str) else l_or_i for l_or_i in labels_or_ids]
 
 
+def _format_truncated(items: Sequence[Any], max_items: int = 5) -> str:
+    """Format a sequence of items for an error message, truncating if necessary."""
+    text = ", ".join(map(repr, items[:max_items]))
+    if len(items) > max_items:
+        text += f", ... ({len(items) - max_items} more)"
+    return text
+
+
+def _validate_and_invert_label_to_id(label_to_id: Mapping[str, int]) -> dict[int, str]:
+    """Validate a label-to-ID mapping and return its inverse.
+
+    The IDs have to be non-negative integers, and the mapping has to be injective, i.e., no two labels may share the
+    same ID. The IDs are *not* required to be contiguous.
+
+    :param label_to_id:
+        The mapping from labels to IDs.
+
+    :return:
+        The inverse mapping, from IDs to labels.
+
+    :raises ValueError:
+        if any ID is not a non-negative integer, or if multiple labels are mapped to the same ID.
+    """
+    # check the ID types; this is cheap since we only check the (few) distinct types
+    invalid_types = {t for t in set(map(type, label_to_id.values())) if not issubclass(t, int | np.integer)}
+    if invalid_types:
+        offending = [(label, i) for label, i in label_to_id.items() if type(i) in invalid_types]
+        raise ValueError(
+            f"All IDs have to be integers, but {len(offending)} labels have non-integer IDs: "
+            f"{_format_truncated(offending)}",
+        )
+    id_to_label = {i: label for label, i in label_to_id.items()}
+    if id_to_label and min(id_to_label.keys()) < 0:
+        offending = [(label, i) for label, i in label_to_id.items() if i < 0]
+        raise ValueError(
+            f"All IDs have to be non-negative, but {len(offending)} labels have negative IDs: "
+            f"{_format_truncated(offending)}",
+        )
+    if len(id_to_label) < len(label_to_id):
+        # slow path: only executed in the error case
+        id_to_labels: dict[int, list[str]] = {}
+        for label, i in label_to_id.items():
+            id_to_labels.setdefault(i, []).append(label)
+        collisions = [(i, labels) for i, labels in id_to_labels.items() if len(labels) > 1]
+        raise ValueError(
+            f"The label-to-ID mapping is not injective: {len(collisions)} IDs are shared by multiple labels "
+            f"(only {len(id_to_label)} unique IDs for {len(label_to_id)} labels). Offending ID -> labels: "
+            f"{_format_truncated(collisions)}",
+        )
+    return id_to_label
+
+
 @dataclasses.dataclass
 class Labeling:
     """A mapping between labels and IDs."""
@@ -181,8 +232,12 @@ class Labeling:
     _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
 
     def __post_init__(self):
-        """Precompute inverse mappings."""
-        self.id_to_label = invert_mapping(mapping=self.label_to_id)
+        """Validate the mapping and precompute inverse mappings.
+
+        :raises ValueError:
+            if the IDs are not non-negative integers, or the mapping is not injective
+        """
+        self.id_to_label = _validate_and_invert_label_to_id(self.label_to_id)
         self._vectorized_mapper = np.vectorize(self.label_to_id.get, otypes=[int])
         self._vectorized_labeler = np.vectorize(self.id_to_label.get, otypes=[str])
 
