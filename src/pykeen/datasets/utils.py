@@ -197,7 +197,7 @@ def _cached_get_dataset(
     force = force or dataset_kwargs.pop("force", False)
 
     # hash kwargs
-    digest = _digest_kwargs(dataset_kwargs, ignore={"create_inverse_triples"})
+    digest = _digest_kwargs(dataset_kwargs)
 
     # normalize dataset name
     dataset_cls = dataset_resolver.lookup(dataset)

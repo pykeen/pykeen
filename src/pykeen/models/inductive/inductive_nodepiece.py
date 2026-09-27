@@ -164,10 +164,10 @@ class InductiveNodePiece(InductiveERModel):
             a new NodePiece entity representation with shared relation tokenization and aggregation.
 
         :raises ValueError:
-            if the triples factory does not request inverse triples, or the number of relations differs.
+            if the number of relations differs.
         """
-        if triples_factory.num_relations != self.num_relations:
-            raise ValueError(f"{self.num_relations=} != {triples_factory.num_relations=} !")
+        if triples_factory.real_num_relations != self.num_real_relations:
+            raise ValueError(f"{self.num_real_relations=} != {triples_factory.real_num_relations=} !")
         # note: we cannot ensure the mapping also matches...
 
         # get relation representations

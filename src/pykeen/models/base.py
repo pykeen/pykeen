@@ -138,7 +138,6 @@ class Model(nn.Module, ABC):
 
         self.use_inverse_triples = use_inverse_triples
         self.num_entities = triples_factory.num_entities
-        # note: the factory's num_relations may differ, if its create_inverse_triples does not match
         self.num_relations = (
             2 * triples_factory.real_num_relations if use_inverse_triples else triples_factory.real_num_relations
         )

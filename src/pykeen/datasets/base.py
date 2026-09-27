@@ -276,7 +276,7 @@ class Dataset(ExtraReprMixin):
         n_triples = sum(count for *_, count in rows)
         rows.append(("Total", "-", "-", n_triples))
         t = tabulate(rows, headers=["Name", "Entities", "Relations", "Triples"])
-        rv = f"{title or self.__class__.__name__} ()\n{t}"
+        rv = f"{title or self.__class__.__name__}\n{t}"
         if show_examples:
             if not isinstance(self.training, TriplesFactory):
                 raise AttributeError(f"{self.training.__class__} does not have labeling information.")

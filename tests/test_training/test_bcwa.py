@@ -115,8 +115,8 @@ def test_collator_weights() -> None:
 
 def test_inverse_triples() -> None:
     """Test that the data loader uses internal relation IDs, including the inverse relations."""
-    triples_factory = Nations(create_inverse_triples=True).training
-    model = DistMult(triples_factory=triples_factory)
+    triples_factory = Nations().training
+    model = DistMult(triples_factory=triples_factory, use_inverse_triples=True)
     loop = bcwa.BatchCWATrainingLoop(model=model, triples_factory=triples_factory)
     loader = loop._create_training_data_loader(
         triples_factory, sampler=None, batch_size=len(triples_factory.mapped_triples) * 2, drop_last=False

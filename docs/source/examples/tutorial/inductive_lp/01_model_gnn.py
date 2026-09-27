@@ -14,5 +14,5 @@ model = InductiveNodePieceGNN(
     loss=NSSALoss(margin=15),  # dummy loss
     random_seed=42,
     gnn_encoder=None,  # defaults to a 2-layer CompGCN with DistMult composition function
-    create_inverse_triples=True,
+    use_inverse_triples=True,
 )

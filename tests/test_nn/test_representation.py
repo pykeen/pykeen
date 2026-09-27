@@ -81,7 +81,6 @@ class TestSingleCompGCNRepresentationTests(cases.TriplesFactoryRepresentationTes
 
     cls = pykeen.nn.representation.SingleCompGCNRepresentation
     dim: ClassVar[int] = 3
-    create_inverse_triples = True
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)

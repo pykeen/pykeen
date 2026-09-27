@@ -295,6 +295,9 @@ class KGInfo(ExtraReprMixin):
         """Restore from a pickled state, tolerating states written before the properties were introduced."""
         # num_relations is derived nowadays
         state.pop("num_relations", None)
+        # the inverse triples flag is owned by the model nowadays
+        state.pop("create_inverse_triples", None)
+        state.pop("_create_inverse_triples", None)
         self.__dict__.update(state)
 
     def iter_extra_repr(self) -> Iterable[str]:
@@ -578,11 +581,12 @@ class CoreTriplesFactory(KGInfo):
             The relation ID as used by this factory's triples, i.e., in ``0 ... real_num_relations - 1``.
 
         :raises ValueError:
-            If no inverse triples are created, or the relation ID is out of range.
+            If the relation ID is out of range.
 
         :return:
             The *internal* ID of the corresponding inverse relation, i.e., in
-            ``0 ... num_relations - 1``, as used by models trained on this factory.
+            ``0 ... 2 * real_num_relations - 1``, as used by models trained on this factory with
+            ``use_inverse_triples=True``.
         """
         if not (0 <= relation < self.real_num_relations):
             raise ValueError(f"Invalid {relation=}; must be in [0, {self.real_num_relations})")
@@ -772,14 +776,12 @@ class CoreTriplesFactory(KGInfo):
         # Make new triples factories for each group
         return [
             self.clone_and_exchange_triples(mapped_triples=triples)
-            for i, triples in enumerate(
-                split(
-                    mapped_triples=self.mapped_triples,
-                    ratios=ratios,
-                    random_state=random_state,
-                    randomize_cleanup=randomize_cleanup,
-                    method=method,
-                )
+            for triples in split(
+                mapped_triples=self.mapped_triples,
+                ratios=ratios,
+                random_state=random_state,
+                randomize_cleanup=randomize_cleanup,
+                method=method,
             )
         ]
 
@@ -811,8 +813,8 @@ class CoreTriplesFactory(KGInfo):
         # Make new triples factories for each group
         return [
             self.clone_and_exchange_triples(triples)
-            for i, triples in enumerate(
-                split_semi_inductive(mapped_triples=self.mapped_triples, ratios=ratios, random_state=random_state)
+            for triples in split_semi_inductive(
+                mapped_triples=self.mapped_triples, ratios=ratios, random_state=random_state
             )
         ]
 
@@ -852,7 +854,6 @@ class CoreTriplesFactory(KGInfo):
         training_tf = self.clone_and_exchange_triples(mapped_triples=training).condense(entities=True, relations=False)
         condenser = TripleCondenser.make(inference, entities=True, relations=False)
         inference_tf = self.clone_and_exchange_triples(mapped_triples=inference).apply_condenser(condenser)
-        # do not explicitly create inverse triples for testing; this is handled by the evaluation code
         evaluation_tfs = [
             self.clone_and_exchange_triples(mapped_triples).apply_condenser(condenser) for mapped_triples in evaluation
         ]
@@ -1036,6 +1037,8 @@ class CoreTriplesFactory(KGInfo):
         # load base
         # TODO: consider restricting metadata to JSON
         data = dict(torch.load(path.joinpath(cls.base_file_name), weights_only=False))
+        # files written by older versions may still contain the flag, which is now owned by the model
+        data.pop("create_inverse_triples", None)
         # load numeric triples
         data["mapped_triples"] = torch.as_tensor(
             pd.read_csv(path.joinpath(cls.triples_file_name), sep="\t", dtype=int).values,
@@ -1167,7 +1170,7 @@ class TriplesFactory(CoreTriplesFactory):
         """
         # Check if the triples are inverted already
         # We re-create them pure index based to ensure that _all_ inverse triples are present and that they are
-        # contained if and only if create_inverse_triples is True.
+        # contained if and only if the model uses inverse relations.
         if filter_out_candidate_inverse_relations:
             unique_relations, inverse = np.unique(triples[:, 1], return_inverse=True)
             suspected_to_be_inverse_relations = {r for r in unique_relations if r.endswith(INVERSE_SUFFIX)}
