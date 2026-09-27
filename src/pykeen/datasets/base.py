@@ -22,7 +22,7 @@ from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
-from ..typing import MappedTriples, TorchRandomHint
+from ..typing import MappedTriples, TorchRandomHint, TransductiveRatiosHint
 from ..utils import (
     ExtraReprMixin,
     format_relative_comparison,
@@ -45,6 +45,7 @@ __all__ = [
     "SingleTabbedDataset",
     "SingleTabbedDatasetKwargs",
     "SourceDataSet",
+    "SplittingLazyDataset",
     "SplittingLazyDatasetKwargs",
     "TabbedDataset",
     "TabbedDatasetKwargs",
@@ -58,7 +59,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-TransductiveRatiosHint = tuple[float, float] | tuple[float, float, float]
 DEFAULT_RATIOS: tuple[float, float, float] = (0.8, 0.1, 0.1)
 
 

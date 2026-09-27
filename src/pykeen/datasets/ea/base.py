@@ -9,9 +9,9 @@ import pandas
 from class_resolver import HintOrType, OptionalKwargs
 
 from .combination import GraphPairCombinator, graph_combinator_resolver
-from ..base import SplittingLazyDataset, SplittingLazyDatasetKwargs, TransductiveRatiosHint
+from ..base import SplittingLazyDataset, SplittingLazyDatasetKwargs
 from ...triples import TriplesFactory
-from ...typing import EA_SIDE_LEFT, EA_SIDES, EASide, TorchRandomHint
+from ...typing import EA_SIDE_LEFT, EA_SIDES, EASide, TorchRandomHint, TransductiveRatiosHint
 from ...utils import format_relative_comparison
 
 __all__ = [
