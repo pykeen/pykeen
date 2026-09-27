@@ -1042,7 +1042,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     #: The embedding dimensionality
     embedding_dim: int = 3
 
-    #: Whether to create inverse triples (needed e.g. by ConvE)
+    #: Whether the model uses inverse relations (needed e.g. by ConvE)
     create_inverse_triples: bool = False
 
     #: The sampler to use for sLCWA (different e.g. for R-GCN)
@@ -1310,7 +1310,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         ]
         extras.extend(self.cli_extras)
 
-        # Make sure that inverse triples are created if create_inverse_triples=True
+        # Make sure that the model uses inverse relations if create_inverse_triples=True
         if self.create_inverse_triples:
             extras.append("--create-inverse-triples")
 
@@ -1331,7 +1331,6 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             model=self.cls,
             model_kwargs=model_kwargs,
             dataset="nations",
-            dataset_kwargs={"create_inverse_triples": self.create_inverse_triples},
             stopper="early",
             training_loop_kwargs=self.training_loop_kwargs,
             stopper_kwargs={"frequency": 1},
@@ -1509,7 +1508,6 @@ class InductiveModelTestCase(ModelTestCase):
         training_loop_kwargs = dict(self.training_loop_kwargs or {})
         training_loop_kwargs["mode"] = self.mode
         InductiveModelTestCase.training_loop_kwargs = training_loop_kwargs
-        # dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
         kwargs["triples_factory"] = self.factory = dataset.transductive_training
         kwargs["inference_factory"] = dataset.inductive_inference
         kwargs["use_inverse_triples"] = self.create_inverse_triples

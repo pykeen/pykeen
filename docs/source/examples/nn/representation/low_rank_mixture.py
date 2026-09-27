@@ -9,7 +9,7 @@ from pykeen.nn.text.cache import WikidataTextCache
 from pykeen.pipeline import pipeline
 from pykeen.typing import FloatTensor
 
-dataset = get_dataset(dataset="CoDExSmall", dataset_kwargs={"create_inverse_triples": True})
+dataset = get_dataset(dataset="CoDExSmall")
 
 # set up relation representations as a mixture (~soft clustering) with 5 components
 embedding_dim = 32

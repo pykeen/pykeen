@@ -557,10 +557,19 @@ class TestUtils(unittest.TestCase):
         tf1 = Nations().training.to_core_triples_factory()
         self.assert_binary_io(tf1, CoreTriplesFactory)
 
-    def test_core_binary_inverse_relations(self):
-        """Test binary i/o on core triples factory with inverse relations."""
-        tf1 = Nations().training.to_core_triples_factory()
-        self.assert_binary_io(tf1, CoreTriplesFactory)
+    def test_binary_legacy_inverse_flag(self):
+        """Test that binary files written with the (removed) inverse triples flag can still be loaded."""
+        for tf1 in (Nations().training, Nations().training.to_core_triples_factory()):
+            with self.subTest(cls=tf1.__class__.__name__), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory)
+                tf1.to_path_binary(path)
+                # emulate the state as written by an older PyKEEN
+                base_path = path.joinpath(tf1.base_file_name)
+                state = torch.load(base_path, weights_only=False)
+                state["create_inverse_triples"] = True
+                torch.save(state, base_path)
+                tf2 = tf1.__class__.from_path_binary(path)
+                self.assert_tf_equal(tf1, tf2)
 
     def test_pickle_roundtrip(self):
         """Test that a triples factory survives being pickled."""
@@ -573,16 +582,21 @@ class TestUtils(unittest.TestCase):
     def test_unpickle_legacy_state(self):
         """Test that states pickled before num_relations & co. became properties still load."""
         tf1 = Nations().training
-        # emulate the instance state as written by an older PyKEEN, where both were plain attributes
-        state = dict(tf1.__dict__)
-        state["num_relations"] = tf1.num_relations
+        # the inverse triples flag was stored as a plain attribute first, and then behind a property
+        for key in ("create_inverse_triples", "_create_inverse_triples"):
+            with self.subTest(key=key):
+                # emulate the instance state as written by an older PyKEEN
+                state = dict(tf1.__dict__)
+                state["num_relations"] = tf1.num_relations
+                state[key] = True
 
-        tf2 = tf1.__class__.__new__(tf1.__class__)
-        tf2.__setstate__(state)
-        self.assert_tf_equal(tf1, tf2)
-        assert tf2.num_relations == tf1.num_relations
-        # the stale copy must not shadow the derived property
-        assert "num_relations" not in tf2.__dict__
+                tf2 = tf1.__class__.__new__(tf1.__class__)
+                tf2.__setstate__(state)
+                self.assert_tf_equal(tf1, tf2)
+                assert tf2.num_relations == tf1.num_relations
+                # the stale copies must not linger
+                assert "num_relations" not in tf2.__dict__
+                assert key not in tf2.__dict__
 
     def assert_binary_io(self, tf, tf_cls):
         """Check the triples factory can be written and reloaded properly."""

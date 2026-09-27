@@ -13,5 +13,5 @@ model = InductiveNodePiece(
     aggregation="mlp",  # aggregation function, defaults to an MLP, can be any PyTorch function
     loss=NSSALoss(margin=15),  # dummy loss
     random_seed=42,
-    create_inverse_triples=True,
+    use_inverse_triples=True,
 )
