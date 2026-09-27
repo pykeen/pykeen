@@ -182,35 +182,32 @@ class TestTriplesFactory(unittest.TestCase):
             "burma",
             "china",
         }
-        for inverse_triples in (True, False):
-            original_triples_factory = Nations(
-                create_inverse_triples=inverse_triples,
-            ).training
-            # Test different combinations of restrictions
-            for (
-                (entity_restriction, invert_entity_selection),
-                (relation_restriction, invert_relation_selection),
-            ) in itt.product(
-                ((None, None), (entity_restrictions, False), (entity_restrictions, True)),
-                ((None, None), (relation_restrictions, False), (relation_restrictions, True)),
+        original_triples_factory = Nations().training
+        # Test different combinations of restrictions
+        for (
+            (entity_restriction, invert_entity_selection),
+            (relation_restriction, invert_relation_selection),
+        ) in itt.product(
+            ((None, None), (entity_restrictions, False), (entity_restrictions, True)),
+            ((None, None), (relation_restrictions, False), (relation_restrictions, True)),
+        ):
+            with self.subTest(
+                entity_restriction=entity_restriction,
+                invert_entity_selection=invert_entity_selection,
+                relation_restriction=relation_restriction,
+                invert_relation_selection=invert_relation_selection,
             ):
-                with self.subTest(
+                self._test_restriction(
+                    original_triples_factory=original_triples_factory,
                     entity_restriction=entity_restriction,
                     invert_entity_selection=invert_entity_selection,
                     relation_restriction=relation_restriction,
                     invert_relation_selection=invert_relation_selection,
-                ):
-                    self._test_restriction(
-                        original_triples_factory=original_triples_factory,
-                        entity_restriction=entity_restriction,
-                        invert_entity_selection=invert_entity_selection,
-                        relation_restriction=relation_restriction,
-                        invert_relation_selection=invert_relation_selection,
-                    )
+                )
 
     def test_num_relations_preserved_with_inverse_triples(self):
         """Test that derived factories do not re-double the number of relations."""
-        factory = Nations(create_inverse_triples=True).training
+        factory = Nations().training
         real_num_relations = factory.real_num_relations
         assert factory.num_relations == 2 * real_num_relations
 
@@ -453,7 +450,7 @@ class TestLiterals(unittest.TestCase):
 
     def test_inverse_triples(self):
         """Test that the right number of entities and triples exist after inverting them."""
-        triples_factory = TriplesFactory.from_labeled_triples(triples=triples, create_inverse_triples=True)
+        triples_factory = TriplesFactory.from_labeled_triples(triples=triples)
         assert triples_factory.num_relations == 4
         assert set(range(triples_factory.num_entities)) == set(triples_factory.entity_to_id.values()), (
             "wrong number entities"
@@ -466,7 +463,7 @@ class TestLiterals(unittest.TestCase):
         entities = set(triples[:, 0]).union(triples[:, 2])
         assert len(entities) == triples_factory.num_entities, "wrong number entities"
         assert len(relations) == 2, "Wrong number of relations in set"
-        assert 2 * len(relations) == triples_factory.num_relations, "Wrong number of relations in factory"
+        assert len(relations) == triples_factory.num_relations, "Wrong number of relations in factory"
 
     def test_metadata(self):
         """Test metadata passing for triples factories."""
@@ -562,35 +559,30 @@ class TestUtils(unittest.TestCase):
 
     def test_core_binary_inverse_relations(self):
         """Test binary i/o on core triples factory with inverse relations."""
-        tf1 = Nations(create_inverse_triples=True).training.to_core_triples_factory()
+        tf1 = Nations().training.to_core_triples_factory()
         self.assert_binary_io(tf1, CoreTriplesFactory)
 
     def test_pickle_roundtrip(self):
         """Test that a triples factory survives being pickled."""
-        for create_inverse_triples in (False, True):
-            with self.subTest(create_inverse_triples=create_inverse_triples):
-                tf1 = Nations(create_inverse_triples=create_inverse_triples).training
-                tf2 = pickle.loads(pickle.dumps(tf1))  # noqa: S301
-                self.assert_tf_equal(tf1, tf2)
-                assert tf2.num_relations == tf1.num_relations
-                assert tf2.real_num_relations == tf1.real_num_relations
+        tf1 = Nations().training
+        tf2 = pickle.loads(pickle.dumps(tf1))  # noqa: S301
+        self.assert_tf_equal(tf1, tf2)
+        assert tf2.num_relations == tf1.num_relations
+        assert tf2.real_num_relations == tf1.real_num_relations
 
     def test_unpickle_legacy_state(self):
         """Test that states pickled before num_relations & co. became properties still load."""
-        for create_inverse_triples in (False, True):
-            with self.subTest(create_inverse_triples=create_inverse_triples):
-                tf1 = Nations(create_inverse_triples=create_inverse_triples).training
-                # emulate the instance state as written by an older PyKEEN, where both were plain attributes
-                state = dict(tf1.__dict__)
-                state["create_inverse_triples"] = state.pop("_create_inverse_triples")
-                state["num_relations"] = tf1.num_relations
+        tf1 = Nations().training
+        # emulate the instance state as written by an older PyKEEN, where both were plain attributes
+        state = dict(tf1.__dict__)
+        state["num_relations"] = tf1.num_relations
 
-                tf2 = tf1.__class__.__new__(tf1.__class__)
-                tf2.__setstate__(state)
-                self.assert_tf_equal(tf1, tf2)
-                assert tf2.num_relations == tf1.num_relations
-                # the stale copy must not shadow the derived property
-                assert "num_relations" not in tf2.__dict__
+        tf2 = tf1.__class__.__new__(tf1.__class__)
+        tf2.__setstate__(state)
+        self.assert_tf_equal(tf1, tf2)
+        assert tf2.num_relations == tf1.num_relations
+        # the stale copy must not shadow the derived property
+        assert "num_relations" not in tf2.__dict__
 
     def assert_binary_io(self, tf, tf_cls):
         """Check the triples factory can be written and reloaded properly."""

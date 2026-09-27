@@ -192,10 +192,8 @@ class TestNodePiece(cases.BaseNodePieceTest):
         edges = torch.tensor(
             [[0, 0, 1], [1, 1, 0], [3, 1, 0], [3, 2, 1]], dtype=torch.long
         )  # node ID 2 is missing as a disconnected node
-        factory = CoreTriplesFactory.create(
-            mapped_triples=edges, num_entities=4, num_relations=3, create_inverse_triples=True
-        )
-        pykeen.models.NodePiece(triples_factory=factory, num_tokens=2)
+        factory = CoreTriplesFactory.create(mapped_triples=edges, num_entities=4, num_relations=3)
+        pykeen.models.NodePiece(triples_factory=factory, num_tokens=2, use_inverse_triples=True)
 
 
 class TestNodePieceMLP(cases.BaseNodePieceTest):

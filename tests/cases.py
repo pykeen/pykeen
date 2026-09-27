@@ -1077,11 +1077,12 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        dataset = Nations(create_inverse_triples=self.create_inverse_triples)
+        dataset = Nations()
         self.factory = dataset.training
         # insert shared parameters
         kwargs["triples_factory"] = self.factory
         kwargs["embedding_dim"] = self.embedding_dim
+        kwargs["use_inverse_triples"] = self.create_inverse_triples
         return kwargs
 
     def post_instantiation_hook(self) -> None:
@@ -1504,7 +1505,6 @@ class InductiveModelTestCase(ModelTestCase):
             num_triples_training=self.num_triples_training,
             num_triples_inference=self.num_triples_inference,
             num_triples_testing=self.num_triples_testing,
-            create_inverse_triples=self.create_inverse_triples,
         )
         training_loop_kwargs = dict(self.training_loop_kwargs or {})
         training_loop_kwargs["mode"] = self.mode
@@ -1512,6 +1512,7 @@ class InductiveModelTestCase(ModelTestCase):
         # dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
         kwargs["triples_factory"] = self.factory = dataset.transductive_training
         kwargs["inference_factory"] = dataset.inductive_inference
+        kwargs["use_inverse_triples"] = self.create_inverse_triples
         return kwargs
 
     def _help_test_cli(self, args):
@@ -1596,10 +1597,9 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
     """Tests for representations requiring triples factories."""
 
-    num_entities: ClassVar[int]
+    num_entities: int
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
-    create_inverse_triples: bool = False
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         self.num_entities = self.max_id
@@ -1608,7 +1608,6 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
             num_entities=self.max_id,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
-            create_inverse_triples=self.create_inverse_triples,
         )
         return kwargs
 
@@ -2111,10 +2110,7 @@ class NodePieceTestCase(RepresentationTestCase):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = generation.generate_triples_factory(
-            num_entities=self.max_id,
-            num_relations=self.num_relations,
-            num_triples=self.num_triples,
-            create_inverse_triples=False,
+            num_entities=self.max_id, num_relations=self.num_relations, num_triples=self.num_triples
         )
         # inferred from triples factory
         kwargs.pop("max_id")
