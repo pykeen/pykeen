@@ -1,16 +1,14 @@
 """Base classes for entity alignment datasets."""
 
 import logging
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
-from typing import Any
 from typing import Any, NotRequired, TypedDict, Unpack
 
 import pandas
 from class_resolver import HintOrType, OptionalKwargs
 
 from .combination import GraphPairCombinator, graph_combinator_resolver
-from ..base import EagerDataset
 from ..base import SplittingLazyDataset, SplittingLazyDatasetKwargs
 from ...triples import TriplesFactory
 from ...typing import EA_SIDE_LEFT, EA_SIDES, EASide, TorchRandomHint
@@ -18,6 +16,7 @@ from ...utils import format_relative_comparison
 
 __all__ = [
     "EADataset",
+    "EADatasetKwargs",
 ]
 
 logger = logging.getLogger(__name__)
@@ -40,6 +39,9 @@ class EADatasetKwargs(TypedDict):
 
 class EADataset(SplittingLazyDataset, ABC):
     """Base class for entity alignment datasets."""
+
+    side: EASide | None
+    combination: GraphPairCombinator
 
     def __init__(
         self,
@@ -83,22 +85,29 @@ class EADataset(SplittingLazyDataset, ABC):
                     f"due to being duplicates.",
                 )
             tf, self.alignment = self.combination(left=left, right=right, alignment=alignment)
-            return tf
-        if self.side in EA_SIDES:
-            return self._load_graph(side=self.side)
-        raise ValueError(f"side must be one of {EA_SIDES} or None")
+        elif self.side in EA_SIDES:
+            tf = self._load_graph(side=self.side)
+        else:
+            raise ValueError(f"side must be one of {EA_SIDES} or None")
+
+        self._training, self._testing, self._validation = tf.split(
+            ratios=self.split_ratios, random_state=self.random_state
+        )
+        # create inverse triples only for training
+        self._training.create_inverse_triples = self._create_inverse_triples
 
     @abstractmethod
     def _load_graph(self, side: EASide) -> TriplesFactory:
         """Load the graph for one side."""
-        raise NotImplementedError
 
     @abstractmethod
     def _load_alignment(self) -> pandas.DataFrame:
         """Load the entity alignment."""
-        raise NotImplementedError
 
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
         yield f"self.side={self.side}"
-        yield f"self.combination={self.combination}"
+        if self.side is None:
+            yield "self.combination=None"
+        else:
+            yield f"self.combination={self.combination}"
