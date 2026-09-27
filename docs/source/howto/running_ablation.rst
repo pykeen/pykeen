@@ -44,8 +44,8 @@ performance. Therefore, we extend the ablation study by including the ``use_inve
 
 .. note::
 
-    Unlike ``models``, ``datasets``, ``losses``, ``training_loops``, and ``optimizers``, ``use_inverse_triples`` has
-    a default value, which is ``False``.
+    Unlike ``models``, ``datasets``, ``losses``, ``training_loops``, and ``optimizers``, ``use_inverse_triples`` has a
+    default value, which is ``False``.
 
 If there is only one value for either the ``models``, ``datasets``, ``losses``, ``training_loops``, ``optimizers``, or
 ``use_inverse_triples`` argument, it can be given as a single value instead of the list.
