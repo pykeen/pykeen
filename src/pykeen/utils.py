@@ -1158,8 +1158,8 @@ def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collect
         parent[y] = x
     # extract partitions
     result = defaultdict(list)
-    for k, v in parent.items():
-        result[v].append(k)
+    for k in parent:
+        result[find(x=k, parent=parent)].append(k)
     return list(result.values())
 
 

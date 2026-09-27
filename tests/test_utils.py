@@ -26,6 +26,7 @@ from pykeen.utils import (
     compose,
     estimate_cost_of_sequence,
     flatten_dictionary,
+    get_connected_components,
     get_optimal_sequence,
     get_until_first_blank,
     iter_weisfeiler_lehman,
@@ -431,3 +432,26 @@ def test_resolve_device(device: str | None, cuda_available: bool, mps_available:
         mock.patch("torch.backends.mps.is_available", return_value=mps_available),
     ):
         assert resolve_device(device).type == expected
+
+
+@pytest.mark.parametrize(
+    ("pairs", "expected"),
+    [
+        # empty graph
+        ([], []),
+        # single edge
+        ([(1, 2)], [[1, 2]]),
+        # two disjoint components
+        ([(1, 2), (3, 4)], [[1, 2], [3, 4]]),
+        # the last edge merges two components, leaving node 1 as root only reachable via an intermediate node
+        ([(1, 2), (3, 4), (2, 3)], [[1, 2, 3, 4]]),
+        # chain in reverse order
+        ([(4, 3), (3, 2), (2, 1)], [[1, 2, 3, 4]]),
+        # self-loop and cycle
+        ([(1, 1), (2, 3), (3, 5), (5, 2)], [[1], [2, 3, 5]]),
+    ],
+)
+def test_get_connected_components(pairs: list[tuple[int, int]], expected: list[list[int]]) -> None:
+    """Test calculation of connected components."""
+    components = get_connected_components(pairs)
+    assert sorted(sorted(component) for component in components) == expected
