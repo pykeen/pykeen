@@ -105,6 +105,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
         return DataLoader(
             dataset=cls.from_triples_factory(
                 triples_factory,
+                create_inverse_triples=self.model.use_inverse_triples,
                 batch_size=batch_size,
                 shuffle=kwargs.pop("shuffle", True),
                 drop_last=drop_last,

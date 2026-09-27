@@ -59,13 +59,14 @@ class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         relation_normalizer: Hint[Normalizer] = None,
         relation_constrainer: Hint[Constrainer] = None,
         relation_regularizer: Hint[Regularizer] = None,
+        use_inverse_triples: bool = True,
         **kwargs,
     ) -> None:
         """
         Initialize the model.
 
         :param triples_factory:
-            the triples factory. Must have create_inverse_triples set to True.
+            the triples factory.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
             :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation`.
@@ -107,16 +108,18 @@ class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
             a hint for constraining relation embeddings
         :param relation_regularizer:
             a hint for regularizing relation embeddings
+        :param use_inverse_triples:
+            whether to use inverse relations. Must be True, since the node piece representations require them.
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
 
         :raises ValueError:
-            if the triples factory does not create inverse triples
+            if ``use_inverse_triples`` is False
         """
-        if not triples_factory.create_inverse_triples:
+        if not use_inverse_triples:
             raise ValueError(
-                "The provided triples factory does not create inverse triples. However, for the node piece "
-                "representations inverse relation representations are required.",
+                "Node piece representations require inverse relation representations. Hence, the model has to be "
+                "created with use_inverse_triples=True.",
             )
 
         # always create representations for normal and inverse relations and padding
@@ -152,6 +155,7 @@ class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
 
         super().__init__(
             triples_factory=triples_factory,
+            use_inverse_triples=use_inverse_triples,
             interaction=interaction,
             entity_representations=NodePieceRepresentation,
             entity_representations_kwargs={
