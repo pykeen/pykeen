@@ -57,6 +57,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_RATIO: tuple[float, float, float] = (0.8, 0.1, 0.1)
 
 class LazyDatasetKwargs(TypedDict):
     """Keyword arguments for a lazy dataset."""
@@ -333,11 +334,11 @@ class Dataset(ExtraReprMixin):
         torch.save(metadata, path.joinpath(self.metadata_file_name))
 
     @staticmethod
-    def from_tf(tf: TriplesFactory, ratios: list[float] | None = None) -> Dataset:
+    def from_tf(tf: TriplesFactory, ratios: tuple[float, float, float] | None = None) -> Dataset:
         """Create a dataset from a single triples factory by splitting it in 3."""
         training, testing, validation = cast(
             tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(ratios or [0.8, 0.1, 0.1]),
+            tf.split(ratios or DEFAULT_RATIO),
         )
         return EagerDataset(training=training, testing=testing, validation=validation)
 
@@ -936,9 +937,6 @@ class TabbedDataset(SplittingLazyDataset):
         self.read_csv_kwargs.setdefault("sep", delimiter or "\t")
         super().__init__(**kwargs)
 
-        if kwargs.get("eager"):
-            self._load()
-
     def _get_path(self) -> pathlib.Path | None:
         """Get the path of the data if there's a single file."""
         return self.source.path
@@ -1031,8 +1029,6 @@ class SingleTabbedDatasetKwargs(TabbedDatasetKwargs):
 
 class SingleTabbedDataset(TabbedDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
-
-    ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
 
     def __init__(
         self,
