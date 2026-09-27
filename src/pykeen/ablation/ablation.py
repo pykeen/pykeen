@@ -484,7 +484,7 @@ def prepare_ablation(
     directories = []
     for counter, (
         dataset,
-        this_create_inverse_triples,
+        use_inverse_triples,
         model,
         loss,
         regularizer,
@@ -548,9 +548,9 @@ def prepare_ablation(
         hpo_config["model"] = model
         hpo_config["model_kwargs"] = {
             **model_to_model_kwargs.get(model, {}),
-            "create_inverse_triples": this_create_inverse_triples,
+            "use_inverse_triples": use_inverse_triples,
         }
-        logger.info(f"Use inverse triples: {this_create_inverse_triples}")
+        logger.info(f"Use inverse triples: {use_inverse_triples}")
         hpo_config["model_kwargs_ranges"] = model_to_model_kwargs_ranges.get(model, {})
         logger.info(f"Model: {model}")
 

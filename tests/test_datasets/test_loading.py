@@ -183,6 +183,7 @@ class TestPathDatasetTriples(cases.LocalDatasetTestCase):
     exp_num_triples = 1992
     dataset_cls = Nations
 
+
 class TestPathDataset(cases.LocalDatasetTestCase):
     """Test the :class:`pykeen.datasets.PathDataset` without inverse triples."""
 

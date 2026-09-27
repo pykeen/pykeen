@@ -7,7 +7,7 @@ from pykeen.datasets import Nations
 from pykeen.inverse import DefaultRelationInverter, RelationInverter, relation_inverter_resolver
 from pykeen.models import CompGCN, ConvE, CooccurrenceFilteredModel, Model, NodePiece, TransE
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
-from pykeen.triples.instances import BatchedSLCWAInstances, LCWAInstances
+from pykeen.triples.instances import LCWAInstances
 
 
 @pytest.fixture(params=relation_inverter_resolver.lookup_dict.values())
@@ -114,7 +114,6 @@ def test_get_inverse_relation_id_errors():
         factory.get_inverse_relation_id(factory.real_num_relations)
     with pytest.raises(ValueError, match="they have not been created"):
         Nations().training.get_inverse_relation_id(0)
-
 
 
 @pytest.mark.parametrize("factory_flag", [False, True])
