@@ -7,10 +7,20 @@ from dataclasses import dataclass
 from pathlib import Path, PurePath
 from typing import IO
 
-from pystow.utils import ArchiveType, DownloadKwargs, download, open_archive, safe_open
+from pystow.utils import (
+    ArchiveType,
+    DownloadKwargs,
+    download,
+    download_from_google,
+    open_archive,
+    safe_open,
+)
 
 __all__ = [
     "ArchivedSource",
+    "EnsuredSource",
+    "GoogleArchivedSource",
+    "GoogleSource",
     "RemoteArchivedSource",
     "RemoteSimpleSource",
     "RemoteSource",
@@ -33,8 +43,23 @@ class Source(ABC):
         raise NotImplementedError
 
 
+class EnsuredSource(Source, ABC):
+    """A source that needs to be ensured before opening."""
+
+    @abstractmethod
+    def ensure(self) -> None:
+        """Ensure the remote dataset is downloaded."""
+
+    @contextmanager
+    def open(self) -> Generator[IO[str]]:
+        """Download the file and open it using polymorphism."""
+        self.ensure()
+        with super().open() as file:  # type: ignore[safe-super]
+            yield file
+
+
 @dataclass
-class RemoteSource(Source):
+class RemoteSource(EnsuredSource):
     """A mixin source for remote sources that must be downloaded before opening."""
 
     #: The remove location of the file.
@@ -46,12 +71,17 @@ class RemoteSource(Source):
         """Ensure the remote dataset is downloaded."""
         download(self.url, self.path, force=self.force, **(self.download_kwargs or {}))
 
-    @contextmanager
-    def open(self) -> Generator[IO[str]]:
-        """Download the file and open it using polymorphism."""
-        self.ensure()
-        with super().open() as file:  # type:ignore[safe-super]
-            yield file
+
+@dataclass
+class GoogleSource(EnsuredSource):
+    """A mixin source for remote sources that must be downloaded before opening."""
+
+    google_file_id: str
+    force: bool = False
+
+    def ensure(self) -> None:
+        """Ensure the remote dataset is downloaded."""
+        download_from_google(self.google_file_id, self.path, force=self.force)
 
 
 @dataclass
@@ -83,10 +113,20 @@ class ArchivedSource(Source):
     @contextmanager
     def open(self) -> Generator[IO[str]]:
         """Open the file from within a zip or tar archive."""
-        with open_archive(self.path, self.inner_path, archive_type=self.archive_type, representation="text") as file:
+        with open_archive(
+            self.path,
+            self.inner_path,
+            archive_type=self.archive_type,
+            representation="text",
+        ) as file:
             yield file
 
 
 @dataclass
 class RemoteArchivedSource(RemoteSource, ArchivedSource):
     """An archived source that is remote."""
+
+
+@dataclass
+class GoogleArchivedSource(GoogleSource, ArchivedSource):
+    """An archived source that is remote on Google."""

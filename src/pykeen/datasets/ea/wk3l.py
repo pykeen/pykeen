@@ -7,16 +7,16 @@ import itertools
 import logging
 import pathlib
 from abc import ABC
-from collections.abc import Iterable, Mapping
-from typing import ClassVar, Literal
+from collections.abc import Hashable, Mapping, Sequence
+from typing import ClassVar, Literal, TypeAlias
 
 import click
 import pandas
 from docdata import parse_docdata
 from more_click import verbose_option
-from pystow.utils import read_zipfile_csv
 
 from .base import EADataset
+from ..source import GoogleArchivedSource, Source
 from ...constants import COLUMN_LABELS, PYKEEN_DATASETS_MODULE
 from ...triples import TriplesFactory
 from ...typing import EA_SIDE_LEFT, EA_SIDE_RIGHT, EA_SIDES, LABEL_HEAD, LABEL_TAIL, EASide
@@ -38,23 +38,27 @@ GRAPH_PAIRS = (EN_DE, EN_FR)
 WK3L_MODULE = PYKEEN_DATASETS_MODULE.module("wk3l")
 EA_SIDES_R: tuple[EASide, EASide] = (EA_SIDE_RIGHT, EA_SIDE_LEFT)
 
+Key: TypeAlias = EASide | tuple[EASide, EASide] | None
+
 
 class MTransEDataset(EADataset, ABC):
     """Base class for WK3l datasets (WK3l-15k, WK3l-120k, CN3l)."""
 
     #: The mapping from (graph-pair, side) to triple file name
-    FILE_NAMES: ClassVar[Mapping[tuple[GraphPair, EASide | tuple[EASide, EASide] | None], str]]
+    FILE_NAMES: ClassVar[Mapping[tuple[GraphPair, Key], str]]
 
     #: The internal dataset name
     DATASET_NAME: ClassVar[str]
 
     #: The hex digest for the zip file
-    SHA512: str = (
+    SHA512: ClassVar[str] = (
         "b5b64db8acec2ef83a418008e8ff6ddcd3ea1db95a0a158825ea9cffa5a3c34a"
         "9aba6945674304f8623ab21c7248fed900028e71ad602883a307364b6e3681dc"
     )
 
-    def __init__(self, graph_pair: GraphPair = EN_DE, **kwargs):
+    graph_pair: GraphPair
+
+    def __init__(self, graph_pair: GraphPair = EN_DE, **kwargs) -> None:
         """
         Initialize the dataset.
 
@@ -71,15 +75,23 @@ class MTransEDataset(EADataset, ABC):
             raise ValueError(f"Invalid graph pair: Allowed are: {GRAPH_PAIRS}")
         # store *before* calling super to have it available when loading the graphs
         self.graph_pair = graph_pair
-        # ensure zip file is present
-        self.zip_path = WK3L_MODULE.ensure_from_google(
-            name="data.zip", file_id=GOOGLE_DRIVE_ID, download_kwargs={"hexdigests": {"sha512": self.SHA512}}
-        )
         super().__init__(**kwargs)
 
-    def _cache_sub_directories(self) -> Iterable[str]:
-        # shared directory for multiple datasets.
-        yield "wk3l"
+    @classmethod
+    def _get_source(cls, graph_pair: GraphPair, key: Key) -> Source:
+        """Get the source."""
+        inner_path = pathlib.PurePosixPath(
+            "data",
+            cls.DATASET_NAME,
+            graph_pair,
+            cls.FILE_NAMES[graph_pair, key],
+        )
+        return GoogleArchivedSource(
+            archive_type="zip",
+            google_file_id=GOOGLE_DRIVE_ID,
+            path=WK3L_MODULE.join(name="wk3l.zip"),
+            inner_path=inner_path,
+        )
 
     @classmethod
     def _relative_path(cls, graph_pair: GraphPair, key: EASide | tuple[EASide, EASide] | None) -> pathlib.PurePath:
@@ -91,18 +103,19 @@ class MTransEDataset(EADataset, ABC):
             cls.FILE_NAMES[graph_pair, key],
         )
 
-    def _load_df(self, key: EASide | tuple[EASide, EASide] | None, **kwargs) -> pandas.DataFrame:
-        return read_zipfile_csv(
-            path=self.zip_path,
-            inner_path=str(self._relative_path(graph_pair=self.graph_pair, key=key)),
-            header=None,
-            sep="@@@",
-            engine="python",
-            encoding="utf8",
-            dtype=str,
-            keep_default_na=False,
-            **kwargs,
-        )
+    def _load_df(self, key: EASide | tuple[EASide, EASide] | None, names: Sequence[Hashable]) -> pandas.DataFrame:
+        source = self._get_source(self.graph_pair, key)
+        with source.open() as file:
+            return pandas.read_csv(
+                file,
+                header=None,
+                sep="@@@",
+                engine="python",
+                encoding="utf8",
+                dtype=str,
+                keep_default_na=False,
+                names=list(names),
+            )
 
     def _load_graph(self, side: EASide) -> TriplesFactory:
         logger.info(f"Loading graph for side: {side}")
@@ -116,7 +129,10 @@ class MTransEDataset(EADataset, ABC):
         """Load entity alignment information for the given graph pair."""
         logger.info("Loading alignment information")
         # load mappings for both sides
-        dfs = [self._load_df(key=key, names=list(key)) for key in (EA_SIDES, EA_SIDES_R)]
+        dfs = [
+            self._load_df(key=key, names=list(key))
+            for key in (EA_SIDES, EA_SIDES_R)
+        ]
         # load triple alignments
         df = self._load_df(key=None, names=[(side, column) for side in EA_SIDES for column in COLUMN_LABELS])
         # extract entity alignments
