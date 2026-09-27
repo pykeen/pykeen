@@ -2143,7 +2143,7 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
         """Test equivalence between Evaluator.evaluate and evaluation loop."""
         result = self.instance.evaluator.evaluate(model=self.instance.model, mapped_triples=self.factory.mapped_triples)
         result2 = self.instance.evaluate()
-        self.assertEqual(result.to_flat_dict(), result2.to_flat_dict())
+        assert result.to_flat_dict() == result2.to_flat_dict()
 
 
 class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.models.EvaluationOnlyModel]):
