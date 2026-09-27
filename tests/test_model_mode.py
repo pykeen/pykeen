@@ -123,5 +123,5 @@ class MinimalTriplesFactory:
     """A triples factory with minial attributes to allow the model to initiate."""
 
     num_entities = 2
-    num_relations = 2
+    num_relations = real_num_relations = 2
     create_inverse_triples: bool = False
