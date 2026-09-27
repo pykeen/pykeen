@@ -2,16 +2,16 @@
 
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Mapping
-from typing import Any, NotRequired, TypedDict, Unpack
+from collections.abc import Iterable
+from typing import NotRequired, Unpack
 
 import pandas
 from class_resolver import HintOrType, OptionalKwargs
 
 from .combination import GraphPairCombinator, graph_combinator_resolver
-from ..base import SplittingLazyDataset, SplittingLazyDatasetKwargs
+from ..base import LazyDatasetKwargs, SplittingLazyDataset, SplittingLazyDatasetKwargs
 from ...triples import TriplesFactory
-from ...typing import EA_SIDE_LEFT, EA_SIDES, EASide, TorchRandomHint, TransductiveRatiosHint
+from ...typing import EA_SIDE_LEFT, EA_SIDES, EASide
 from ...utils import format_relative_comparison
 
 __all__ = [
@@ -25,14 +25,10 @@ logger = logging.getLogger(__name__)
 # TODO: support ID-only graphs
 
 
-class EADatasetKwargs(TypedDict):
+class EADatasetKwargs(LazyDatasetKwargs):
     """Keyword arguments for an entity alignment dataset."""
 
-    metadata: NotRequired[Mapping[str, Any] | None]
     side: NotRequired[EASide | None]
-    create_inverse_triples: NotRequired[bool]
-    random_state: NotRequired[TorchRandomHint]
-    ratios: NotRequired[TransductiveRatiosHint | None]
     combination: NotRequired[HintOrType[GraphPairCombinator]]
     combination_kwargs: NotRequired[OptionalKwargs]
 
@@ -46,7 +42,6 @@ class EADataset(SplittingLazyDataset, ABC):
     def __init__(
         self,
         *,
-        metadata: Mapping[str, Any] | None = None,
         side: EASide | None = EA_SIDE_LEFT,
         combination: HintOrType[GraphPairCombinator] = None,
         combination_kwargs: OptionalKwargs = None,
@@ -56,7 +51,6 @@ class EADataset(SplittingLazyDataset, ABC):
 
         :param side: the side, if only a single graph should be considered, or `None` to combine the two graphs into a
             single one, using `combination`.
-        :param create_inverse_triples: whether to create inverse triples.
         :param random_state: the random state to use for reproducible splits
         :param ratios: the split ratios used to perform the train/test/validation split.
         :param combination: the graph combination. only effective if side is `None`
@@ -66,7 +60,6 @@ class EADataset(SplittingLazyDataset, ABC):
         """
         self.side = side
         self.combination = graph_combinator_resolver.make(combination, pos_kwargs=combination_kwargs)
-        self.metadata = metadata
         self.alignment = None
         super().__init__(**kwargs)
 
