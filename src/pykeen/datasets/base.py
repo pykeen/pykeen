@@ -355,6 +355,7 @@ class Dataset(ExtraReprMixin):
     @staticmethod
     def from_tf(
         tf: TriplesFactory,
+        *,
         ratios: TransductiveRatiosHint | None = None,
         metadata: Metadata | None = None,
     ) -> Dataset:
@@ -905,24 +906,21 @@ class SplittingLazyDataset(LazyDataset, ABC):
         *,
         random_state: TorchRandomHint = None,
         ratios: TransductiveRatiosHint | None = None,
-        create_inverse_triples: bool = False,
-        eager: bool = False,
+        **kwargs: Unpack[LazyDatasetKwargs],
     ) -> None:
         """Initialize the dataset."""
         self.random_state = random_state
         self.ratios = ratios or DEFAULT_RATIOS
-        self._create_inverse_triples = create_inverse_triples
-        if eager:
-            self._load()
+        super().__init__(**kwargs)
 
     @abstractmethod
     def _get_triples_factory(self) -> TriplesFactory:
-        raise NotImplementedError
+        """Get the triples factory that will be split."""
 
     def _load(self) -> None:
         tf = self._get_triples_factory()
         self._training, self._testing, self._validation = tf.split(ratios=self.ratios, random_state=self.random_state)
-        self._training.create_inverse_triples = self._create_inverse_triples
+        self._training.create_inverse_triples = self.create_inverse_triples
 
     def _load_validation(self) -> None:
         pass  # already loaded by _load()
@@ -946,10 +944,7 @@ class TabbedDataset(SplittingLazyDataset):
         delimiter: str | None = None,
         **kwargs: Unpack[SplittingLazyDatasetKwargs],
     ) -> None:
-        """Initialize dataset.
-
-        :param random_state: An optional random state to make the training/testing/validation split reproducible.
-        """
+        """Initialize dataset."""
         self.source = source
         self.read_csv_kwargs = read_csv_kwargs or {}
         self.read_csv_kwargs.setdefault("sep", delimiter or "\t")
