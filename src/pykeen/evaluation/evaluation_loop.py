@@ -393,7 +393,6 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
     def get_collator(self):  # noqa: D102
         return LCWAEvaluationDataset.collate
 
-    # docstr-coverage: inherited
     def process_batch(self, batch: Mapping[Target, MappedTriples], slice_size: int | None = None) -> None:  # noqa: D102
         # note: most of the time, this loop will only make a single iteration, since the evaluation dataset typically is
         #       not shuffled, and contains evaluation ranking tasks sorted by target
