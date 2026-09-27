@@ -1596,11 +1596,27 @@ def einsum(*args, **kwargs):
 
 
 def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> BoolTensor:
-    """Return whether elements are contained in test elements."""
-    inverse, counts = torch.cat([elements, test_elements], dim=dim).unique(
-        return_counts=True, return_inverse=True, dim=dim
-    )[1:]
-    return counts[inverse[: elements.shape[dim]]] > 1
+    """Return whether elements are contained in test elements.
+
+    :param elements:
+        the elements to check
+    :param test_elements:
+        the test elements; must have the same shape as `elements` except along `dim`
+    :param dim:
+        the dimension along which the individual elements are stacked
+
+    :return: shape: (elements.shape[dim],)
+        a boolean mask indicating for each element whether it occurs in `test_elements`.
+        Duplicates in either input are handled correctly.
+    """
+    num_elements = elements.shape[dim]
+    if num_elements == 0 or test_elements.shape[dim] == 0:
+        return torch.zeros(num_elements, dtype=torch.bool, device=elements.device)
+    unique, inverse = torch.cat([elements, test_elements], dim=dim).unique(return_inverse=True, dim=dim)
+    # mark each unique group which contains (at least) one test element; duplicates just re-set the same flag
+    contains_test = torch.zeros(unique.shape[dim], dtype=torch.bool, device=elements.device)
+    contains_test[inverse[num_elements:]] = True
+    return contains_test[inverse[:num_elements]]
 
 
 def determine_maximum_batch_size(batch_size: int | None, device: torch.device, maximum_batch_size: int) -> int:

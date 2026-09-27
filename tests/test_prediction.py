@@ -33,6 +33,57 @@ def test_isin_many_dim(size: tuple[int, ...]):
     assert mask[:3].all()
 
 
+def _isin_reference(elements: torch.Tensor, test_elements: torch.Tensor, dim: int) -> list[bool]:
+    """Compute a set-based reference for :func:`isin_many_dim`."""
+    elements, test_elements = (x.movedim(dim, 0).flatten(start_dim=1) for x in (elements, test_elements))
+    test_set = {tuple(row) for row in test_elements.tolist()}
+    return [tuple(row) in test_set for row in elements.tolist()]
+
+
+@pytest.mark.parametrize(
+    ("elements", "test_elements", "expected"),
+    [
+        # duplicates in elements, not contained in test elements
+        ([[1, 1, 1], [1, 1, 1], [2, 2, 2]], [[9, 9, 9]], [False, False, False]),
+        # duplicates in elements, contained in test elements
+        ([[1, 1, 1], [1, 1, 1], [2, 2, 2]], [[1, 1, 1]], [True, True, False]),
+        # duplicates in test elements
+        ([[1, 1, 1], [2, 2, 2]], [[2, 2, 2], [2, 2, 2], [3, 3, 3]], [False, True]),
+        # duplicates in both
+        ([[1, 2, 3], [1, 2, 3], [4, 5, 6]], [[4, 5, 6], [4, 5, 6], [1, 2, 4]], [False, False, True]),
+    ],
+)
+def test_isin_many_dim_duplicates(
+    elements: list[list[int]], test_elements: list[list[int]], expected: list[bool]
+) -> None:
+    """Test isin_many_dim with duplicate rows."""
+    mask = pykeen.predict.isin_many_dim(
+        elements=torch.as_tensor(elements), test_elements=torch.as_tensor(test_elements)
+    )
+    assert mask.tolist() == expected
+    # transposed variant
+    mask = pykeen.predict.isin_many_dim(
+        elements=torch.as_tensor(elements).t(), test_elements=torch.as_tensor(test_elements).t(), dim=1
+    )
+    assert mask.tolist() == expected
+
+
+@pytest.mark.parametrize("dim", [0, 1])
+@pytest.mark.parametrize(("num_elements", "num_test_elements"), [(0, 5), (5, 0), (0, 0), (30, 5), (5, 30), (40, 40)])
+def test_isin_many_dim_random(dim: int, num_elements: int, num_test_elements: int) -> None:
+    """Compare isin_many_dim against a set-based reference on random data with many duplicates."""
+    generator = torch.manual_seed(seed=42)
+    width = 2
+    elements = torch.randint(4, size=(num_elements, width), generator=generator)
+    test_elements = torch.randint(4, size=(num_test_elements, width), generator=generator)
+    if dim == 1:
+        elements, test_elements = elements.t(), test_elements.t()
+    mask = pykeen.predict.isin_many_dim(elements=elements, test_elements=test_elements, dim=dim)
+    assert mask.shape == (num_elements,)
+    assert mask.dtype == torch.bool
+    assert mask.tolist() == _isin_reference(elements=elements, test_elements=test_elements, dim=dim)
+
+
 # prediction post-processing
 class TargetPredictionsTests(cases.PredictionTestCase):
     """Tests for target prediction post-processing."""
