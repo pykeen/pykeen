@@ -100,7 +100,7 @@ class Model(nn.Module, ABC):
         loss_kwargs: Mapping[str, Any] | None = None,
         predict_with_sigmoid: bool = False,
         random_seed: int | None = None,
-        use_inverse_triples: bool | None = None,
+        use_inverse_triples: bool = False,
     ) -> None:
         """Initialize the module.
 
@@ -118,7 +118,7 @@ class Model(nn.Module, ABC):
             A random seed to use for initialising the model's weights. **Should** be set when aiming at reproducibility.
         :param use_inverse_triples:
             Whether to model inverse relations, i.e., to add an artificial inverse relation for each relation, and
-            train on the inverse triples, too. If None, defaults to the triples factory's ``create_inverse_triples``.
+            train on the inverse triples, too.
         """
         super().__init__()
 
@@ -136,8 +136,6 @@ class Model(nn.Module, ABC):
         else:
             self.loss = loss_resolver.make(loss, pos_kwargs=loss_kwargs)
 
-        if use_inverse_triples is None:
-            raise ValueError
         self.use_inverse_triples = use_inverse_triples
         self.num_entities = triples_factory.num_entities
         # note: the factory's num_relations may differ, if its create_inverse_triples does not match

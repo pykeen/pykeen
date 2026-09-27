@@ -131,17 +131,6 @@ def test_model_flag(factory_flag: bool, model_flag: bool | None):
 
 
 @pytest.mark.parametrize("flag", [False, True])
-def test_slcwa_instances_flag(flag: bool):
-    """Test that an explicit sLCWA instances flag gives the same instances as the factory's flag."""
-    expected = BatchedSLCWAInstances.from_triples_factory(Nations(create_inverse_triples=flag).training, batch_size=8)
-    actual = BatchedSLCWAInstances.from_triples_factory(
-        Nations(create_inverse_triples=not flag).training, create_inverse_triples=flag, batch_size=8
-    )
-    assert torch.equal(actual.mapped_triples, expected.mapped_triples)
-    assert actual.negative_sampler.num_relations == expected.negative_sampler.num_relations
-
-
-@pytest.mark.parametrize("flag", [False, True])
 def test_lcwa_instances_flag(flag: bool):
     """Test that an explicit LCWA instances flag gives the same instances as the factory's flag."""
     expected = LCWAInstances.from_triples_factory(Nations(create_inverse_triples=flag).training)

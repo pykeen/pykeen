@@ -291,11 +291,6 @@ class KGInfo(ExtraReprMixin):
         """The number of relations, including the "artificial" inverse relations."""
         return self.real_num_relations
 
-    @property
-    def create_inverse_triples(self) -> bool:
-        """Whether to create inverse triples."""
-        raise NotImplementedError
-
     def __setstate__(self, state: MutableMapping[str, Any]) -> None:
         """Restore from a pickled state, tolerating states written before the properties were introduced."""
         # num_relations is derived nowadays

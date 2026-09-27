@@ -147,7 +147,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:
         silent: bool,
         create_inverse_triples: bool,
         **model_kwargs,
-    ):
+    ) -> None:
         """CLI for PyKEEN."""
         click.echo(
             f"Training {model.__name__} with "
@@ -170,7 +170,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:
         def _triples_factory(path: str | None) -> TriplesFactory | None:
             if path is None:
                 return None
-            return TriplesFactory.from_path(path=path, create_inverse_triples=create_inverse_triples)
+            return TriplesFactory.from_path(path=path)
 
         training = _triples_factory(training_triples_factory)
         testing = _triples_factory(testing_triples_factory)
@@ -179,9 +179,8 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:
         pipeline_result = pipeline(
             device=device,
             model=model,
-            model_kwargs=model_kwargs,
+            model_kwargs={**model_kwargs, "use_inverse_triples": create_inverse_triples},
             dataset=dataset,
-            dataset_kwargs={"create_inverse_triples": create_inverse_triples},
             training=training,
             testing=testing or training,
             validation=validation,
@@ -217,6 +216,6 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:
             json.dump(pipeline_result.metric_results.to_dict(), sys.stdout, indent=2)
             click.echo("")
 
-        return sys.exit(0)
+        sys.exit(0)
 
     return main

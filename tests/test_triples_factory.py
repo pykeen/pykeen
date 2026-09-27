@@ -93,15 +93,12 @@ class TestTriplesFactory(unittest.TestCase):
             ["e1", "a.", "e5"],
         ]
         t = np.array(t, dtype=str)
-        for create_inverse_triples in (False, True):
-            with patch("pykeen.triples.triples_factory.logger.warning") as warning:
-                factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=create_inverse_triples)
-                # check for warning
-                warning.assert_called()
-                # check for filtered triples
-                assert factory.num_triples == 2
-                # check for correct inverse triples flag
-                assert factory.create_inverse_triples == create_inverse_triples
+        with patch("pykeen.triples.triples_factory.logger.warning") as warning:
+            factory = TriplesFactory.from_labeled_triples(triples=t)
+            # check for warning
+            warning.assert_called()
+            # check for filtered triples
+            assert factory.num_triples == 2
 
     def test_id_to_label(self):
         """Test ID-to-label conversion."""
@@ -231,11 +228,10 @@ class TestTriplesFactory(unittest.TestCase):
 
     def test_fully_inductive_split_with_inverse_triples(self):
         """Test that a fully inductive split does not re-double the number of relations."""
-        factory = Nations(create_inverse_triples=True).training
+        factory = Nations().training
         real_num_relations = factory.real_num_relations
         training, inference, *evaluation = factory.split_fully_inductive(random_state=0)
         for part in (training, inference):
-            assert part.create_inverse_triples
             assert part.real_num_relations == real_num_relations
             assert part.num_relations == 2 * real_num_relations
         # inverse triples for evaluation are handled by the evaluation code

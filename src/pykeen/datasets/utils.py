@@ -209,8 +209,7 @@ def _cached_get_dataset(
     # try to use cached dataset
     if path.is_dir() and not force:
         logger.info(f"Loading cached preprocessed dataset from {path.as_uri()}")
-        dataset_instance = dataset_cls.from_directory_binary(path)
-        return dataset_instance
+        return dataset_cls.from_directory_binary(path)
 
     # load dataset without cache
     dataset_instance = dataset_resolver.make(dataset, dataset_kwargs)

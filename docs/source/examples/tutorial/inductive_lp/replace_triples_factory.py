@@ -41,7 +41,6 @@ tf_new = generate_triples_factory(
     num_entities=13,
     num_relations=tf_training.real_num_relations,
     random_state=42,
-    create_inverse_triples=False,
 )
 model: InductiveNodePiece = result.model
 model.replace_entity_representations_(
