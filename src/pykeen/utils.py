@@ -395,22 +395,37 @@ def split_complex(
 def view_complex(x: FloatTensor) -> torch.Tensor:
     """Convert a PyKEEN complex tensor representation into a torch one.
 
-    PyKEEN stores complex tensors of shape ``(..., d)`` as real tensors of shape ``(..., 2 * d)``, where the last
+    PyKEEN stores complex tensors of shape ``(*, d)`` as real tensors of shape ``(*, 2 * d)``, where the last
     dimension contains interleaved pairs of real and imaginary part, i.e., the layout of :func:`torch.view_as_real`
     after flattening the last two dimensions.
 
-    :param x: shape: ``(..., 2 * d)``
+    :param x: shape: ``(*, 2 * d)``
         the real-valued tensor. If it is already complex, it is returned unchanged.
 
-    :return: shape: ``(..., d)``
+    :return: shape: ``(*, d)``
         the complex tensor. It shares memory with ``x`` whenever the strides permit it; otherwise, it is a copy.
 
     :raises ValueError:
         if the last dimension of a real-valued input is not even.
+    :raises TypeError:
+        if a real-valued input's dtype is not supported, cf. :func:`view_complex_native`.
     """
     if x.is_complex():
         return x
     return _real_to_complex(x)
+
+
+#: the real dtypes supported by :func:`torch.view_as_complex`
+_VIEW_AS_COMPLEX_DTYPES = frozenset({torch.float16, torch.float32, torch.float64})
+
+
+def _is_complex_viewable(x: torch.Tensor) -> bool:
+    """Check whether :func:`torch.view_as_complex` can view a tensor of shape ``(*, 2)`` without copying.
+
+    This mirrors the checks performed by :func:`torch.view_as_complex`: the last dimension needs stride 1, and all
+    other strides as well as the storage offset have to be divisible by 2 (irrespective of the dimensions' sizes).
+    """
+    return x.stride(-1) == 1 and x.storage_offset() % 2 == 0 and all(s % 2 == 0 for s in x.stride()[:-1])
 
 
 def _real_to_complex(x: FloatTensor) -> torch.Tensor:
@@ -422,9 +437,17 @@ def _real_to_complex(x: FloatTensor) -> torch.Tensor:
     :return: shape: ``(*, d)``
         The complex tensor. It shares memory with ``x`` whenever the strides permit it; otherwise, it is a copy.
 
+    :raises TypeError:
+        If the dtype of ``x`` is not one of ``float16``, ``float32``, or ``float64``, which are the dtypes supported by
+        :func:`torch.view_as_complex`.
     :raises ValueError:
         If the last dimension of ``x`` is not even.
     """
+    if x.dtype not in _VIEW_AS_COMPLEX_DTYPES:
+        raise TypeError(
+            f"Cannot interpret a tensor of dtype {x.dtype} as interleaved real and imaginary parts; only "
+            f"{', '.join(sorted(map(str, _VIEW_AS_COMPLEX_DTYPES)))} are supported.",
+        )
     if x.ndim == 0 or x.shape[-1] % 2:
         raise ValueError(
             f"Cannot interpret a real tensor of shape {tuple(x.shape)} as complex: the last dimension must be even, "
@@ -432,15 +455,29 @@ def _real_to_complex(x: FloatTensor) -> torch.Tensor:
         )
     # reshape only copies if a view is impossible
     x = x.reshape(*x.shape[:-1], x.shape[-1] // 2, 2)
-    try:
-        return torch.view_as_complex(x)
-    except RuntimeError:
-        # view_as_complex requires stride 1 in the last dimension, and all other strides divisible by 2
-        return torch.view_as_complex(x.contiguous())
+    if not _is_complex_viewable(x):
+        x = x.contiguous()
+    return torch.view_as_complex(x)
 
 
 def view_complex_native(x: FloatTensor) -> torch.Tensor:
-    """Convert a PyKEEN complex tensor representation into a torch one using :func:`torch.view_as_complex`."""
+    """Convert a PyKEEN complex tensor representation into a torch one using :func:`torch.view_as_complex`.
+
+    In contrast to :func:`view_complex`, the input has to be real-valued.
+
+    :param x: shape: ``(*, 2 * d)``
+        the real-valued tensor, where the last dimension contains ``d`` interleaved pairs of real and imaginary parts.
+
+    :return: shape: ``(*, d)``
+        the complex tensor. It shares memory with ``x`` whenever the strides permit it; otherwise, e.g., for some
+        non-contiguous inputs, it is a copy.
+
+    :raises TypeError:
+        if the dtype of ``x`` is not one of ``float16``, ``float32``, or ``float64``, which are the dtypes supported by
+        :func:`torch.view_as_complex`. In particular, complex inputs are rejected.
+    :raises ValueError:
+        if the last dimension of ``x`` is not even.
+    """
     return _real_to_complex(x)
 
 
@@ -1331,6 +1368,8 @@ def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
 
     :raises ValueError:
         if a real tensor's last dimension is not even
+    :raises TypeError:
+        if a real tensor's dtype is not supported, cf. :func:`view_complex_native`
     """
     for x in xs:
         if x.is_complex():
