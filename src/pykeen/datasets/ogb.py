@@ -50,7 +50,7 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
     #: The name of the dataset to download
     name: ClassVar[str]
 
-    def __init__(self, *, cache_root: str | None = None, **kwargs: Unpack[LazyDatasetKwargs]) -> None:
+    def __init__(self, *, cache_root: str | pathlib.Path | None = None, **kwargs: Unpack[LazyDatasetKwargs]) -> None:
         """Initialize the OGB loader."""
         self._cache_root = cache_root
         super().__init__(**kwargs)

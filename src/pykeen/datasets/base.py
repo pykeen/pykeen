@@ -186,7 +186,7 @@ class Dataset(ExtraReprMixin):
     #: A factory wrapping the validation triples, that share indices with the training triples
     validation: CoreTriplesFactory | None
     #: the dataset's name
-    metadata: Metadata | None = None
+    metadata: Metadata | None
 
     metadata_file_name: ClassVar[str] = "metadata.pth"
     triples_factory_cls: ClassVar[type[CoreTriplesFactory]] = TriplesFactory
@@ -577,11 +577,7 @@ class EagerDataset(Dataset):
         self.testing = testing
         self.validation = validation
         self.metadata = metadata
-
-    @property
-    def create_inverse_triples(self) -> bool:
-        """Get if the training factory has the create_inverse_triples flag."""
-        return self.training.create_inverse_triples
+        self.create_inverse_triples = training.create_inverse_triples
 
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
@@ -769,6 +765,7 @@ class PathDataset(SourceDataSet):
 class UnpackedRemoteDataSetKwargs(PathDatasetKwargs):
     """Keyword arguments for an unpacked remote dataset."""
 
+    cache_root: NotRequired[str | pathlib.Path | None]
     force: NotRequired[bool]
     download_kwargs: NotRequired[DownloadKwargs | None]
 
@@ -782,9 +779,9 @@ class UnpackedRemoteDataset(SourceDataSet):
         testing_url: str,
         validation_url: str | None = None,
         *,
+        cache_root: str | pathlib.Path | None = None,
         force: bool = False,
         download_kwargs: DownloadKwargs | None = None,
-        cache_root: str | None = None,
         **kwargs: Unpack[PathDatasetKwargs],
     ) -> None:
         """Initialize dataset.
@@ -820,6 +817,7 @@ class PackedRemoteDataSetKwargs(PathDatasetKwargs):
     """Keyword arguments for a packed remote dataset."""
 
     force: NotRequired[bool]
+    cache_root: NotRequired[str | pathlib.Path | None]
 
 
 class PackedRemoteDataSet(SourceDataSet):
@@ -835,7 +833,7 @@ class PackedRemoteDataSet(SourceDataSet):
         relative_validation_path: str | pathlib.PurePath,
         *,
         force: bool = False,
-        cache_root: str | None = None,
+        cache_root: str | pathlib.Path | None = None,
         **kwargs: Unpack[PathDatasetKwargs],
     ) -> None:
         """Initialize dataset.
@@ -942,6 +940,7 @@ class CompressedSingleDatasetKwargs(TabbedDatasetKwargs):
     """Keyword arguments for a compressed single file dataset."""
 
     name: NotRequired[str | None]
+    cache_root: NotRequired[str | pathlib.Path | None]
     download_kwargs: NotRequired[DownloadKwargs | None]
 
 
@@ -956,9 +955,9 @@ class CompressedSingleDataset(TabbedDataset):
         relative_path: str | pathlib.PurePosixPath,
         *,
         name: str | None = None,
+        cache_root: str | pathlib.Path | None = None,
         download_kwargs: DownloadKwargs | None = None,
         force: bool = False,
-        cache_root: str | None = None,
         **kwargs: Unpack[TabbedDatasetKwargs],
     ) -> None:
         """Initialize dataset.
@@ -1017,7 +1016,7 @@ class SingleTabbedDataset(TabbedDataset):
         name: str | None = None,
         download_kwargs: DownloadKwargs | None = None,
         force: bool = False,
-        cache_root: str | None = None,
+        cache_root: str | pathlib.Path | None = None,
         **kwargs: Unpack[TabbedDatasetKwargs],
     ) -> None:
         """Initialize dataset.
