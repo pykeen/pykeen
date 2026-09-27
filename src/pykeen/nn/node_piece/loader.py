@@ -6,7 +6,7 @@ import pickle
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping
 
-import numpy
+import numpy as np
 import torch
 from class_resolver import ClassResolver
 from tqdm.auto import tqdm
@@ -58,7 +58,7 @@ class TorchPrecomputedTokenizerLoader(PrecomputedTokenizerLoader):
     """A loader via torch.load."""
 
     @staticmethod
-    def save(path: pathlib.Path, order: numpy.ndarray, anchor_ids: numpy.ndarray) -> None:
+    def save(path: pathlib.Path, order: np.ndarray, anchor_ids: np.ndarray) -> None:
         """Save tokenization to path.
 
         :param path: the output path

@@ -8,10 +8,8 @@ from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, MutableMapping
 from typing import Any
 
-import numpy
-import numpy.random
-import numpy.testing
-import pandas
+import numpy as np
+import pandas as pd
 import pytest
 import torch
 import unittest_templates
@@ -62,10 +60,10 @@ from tests import cases, mocks
 from tests.utils import needs_packages
 
 
-@pytest.mark.parametrize(("estimator", "ci"), [(numpy.mean, 60), ("mean", "std"), (numpy.mean, numpy.var)])
+@pytest.mark.parametrize(("estimator", "ci"), [(np.mean, 60), ("mean", "std"), (np.mean, np.var)])
 def test_summarize_values(estimator, ci):
     """Test value summarization."""
-    gen = numpy.random.default_rng(seed=42)
+    gen = np.random.default_rng(seed=42)
     vs = gen.random(size=(17,)).tolist()
     r = summarize_values(vs=vs, estimator=estimator, ci=ci)
     assert isinstance(r, tuple)
@@ -602,7 +600,7 @@ class CandidateSetSizeTests(unittest.TestCase):
             num_entities=num_entities,
         )
         # return type
-        assert isinstance(df, pandas.DataFrame)
+        assert isinstance(df, pd.DataFrame)
         # columns
         assert set(df.columns) == {
             "index",
@@ -614,11 +612,11 @@ class CandidateSetSizeTests(unittest.TestCase):
         }
         # value range
         if not restrict_entities_to and not restrict_relations_to:
-            numpy.testing.assert_array_equal(df["index"], numpy.arange(mapped_triples.shape[0]))
-            numpy.testing.assert_array_equal(df[list(COLUMN_LABELS)].values, mapped_triples.numpy())
+            np.testing.assert_array_equal(df["index"], np.arange(mapped_triples.shape[0]))
+            np.testing.assert_array_equal(df[list(COLUMN_LABELS)].values, mapped_triples.numpy())
         for candidate_column in (f"{LABEL_HEAD}_candidates", f"{LABEL_TAIL}_candidates"):
-            numpy.testing.assert_array_less(-1, df[candidate_column])
-            numpy.testing.assert_array_less(df[candidate_column], self.dataset.num_entities)
+            np.testing.assert_array_less(-1, df[candidate_column])
+            np.testing.assert_array_less(df[candidate_column], self.dataset.num_entities)
 
     def test_simple(self):
         """Test the simple case: nothing to restrict or filter or infer."""
@@ -694,7 +692,7 @@ class CandidateSetSizeTests(unittest.TestCase):
             num_entities=None,
         )
         for column in df.columns:
-            numpy.testing.assert_array_equal(df[column], df2[column])
+            np.testing.assert_array_equal(df[column], df2[column])
 
 
 class ExpectedMetricsTests(unittest.TestCase):
@@ -702,7 +700,7 @@ class ExpectedMetricsTests(unittest.TestCase):
 
     def _iter_num_candidates(self) -> Iterable[tuple[tuple[int, ...], int]]:
         """Generate number of ranking candidate arrays of different shapes."""
-        generator: numpy.random.Generator = numpy.random.default_rng(seed=42)
+        generator: np.random.Generator = np.random.default_rng(seed=42)
         # test different shapes
         for shape, total in (
             ((), 20),
@@ -800,7 +798,7 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
             increasing = rank_based_metric_resolver.lookup(norm_metric_name).increasing
             exp_sort_indices = [0, 1, 2] if increasing else [2, 1, 0]
             for target in targets:
-                values = numpy.asarray(
+                values = np.asarray(
                     [
                         self.instance.get_metric(
                             name=RankBasedMetricKey(side=target, rank_type=rank_type, metric=metric_name)
@@ -814,7 +812,7 @@ class RankBasedMetricResultTests(cases.MetricResultTestCase):
     def test_to_df(self):
         """Test to_df."""
         df = self.instance.to_df()
-        assert isinstance(df, pandas.DataFrame)
+        assert isinstance(df, pd.DataFrame)
 
 
 class ClassificationMetricResultsTests(cases.MetricResultTestCase):

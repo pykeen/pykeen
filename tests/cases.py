@@ -20,9 +20,8 @@ from unittest.case import SkipTest
 from unittest.mock import Mock, patch
 
 import more_itertools
-import numpy
-import numpy.random
-import pandas
+import numpy as np
+import pandas as pd
 import pytest
 import torch
 import torch.utils.data
@@ -748,7 +747,7 @@ class InteractionTestCase(
     def test_forward(self):
         """Test forward."""
         for hs, rs, ts in self._get_test_shapes():
-            if get_batchnorm_modules(self.instance) and any(numpy.prod(s) == 1 for s in (hs, rs, ts)):
+            if get_batchnorm_modules(self.instance) and any(np.prod(s) == 1 for s in (hs, rs, ts)):
                 logger.warning(
                     f"Skipping test for shapes {hs}, {rs}, {ts} because too small batch size for batch norm",
                 )
@@ -2018,7 +2017,7 @@ class AnchorSelectionTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSelecti
     num_anchors: int = 7
     num_entities: int = 33
     num_triples: int = 101
-    edge_index: numpy.ndarray
+    edge_index: np.ndarray
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         """Prepare kwargs."""
@@ -2028,7 +2027,7 @@ class AnchorSelectionTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSelecti
 
     def post_instantiation_hook(self) -> None:
         """Prepare edge index."""
-        generator = numpy.random.default_rng(seed=42)
+        generator = np.random.default_rng(seed=42)
         self.edge_index = generator.integers(low=0, high=self.num_entities, size=(2, self.num_triples))
 
     def test_call(self):
@@ -2048,16 +2047,16 @@ class AnchorSearcherTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSearcher
 
     num_entities = 33
     k: int = 2
-    edge_index: numpy.ndarray
-    anchors: numpy.ndarray
+    edge_index: np.ndarray
+    anchors: np.ndarray
 
     def post_instantiation_hook(self) -> None:
         """Prepare circular edge index."""
-        self.edge_index = numpy.stack(
-            [numpy.arange(self.num_entities), (numpy.arange(self.num_entities) + 1) % self.num_entities],
+        self.edge_index = np.stack(
+            [np.arange(self.num_entities), (np.arange(self.num_entities) + 1) % self.num_entities],
             axis=0,
         )
-        self.anchors = numpy.arange(0, self.num_entities, 10)
+        self.anchors = np.arange(0, self.num_entities, 10)
 
     def test_call(self):
         """Test __call__."""
@@ -2190,10 +2189,10 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     num_samples: int = 1_000
 
     #: the number of candidates for each individual ranking task
-    num_candidates: numpy.ndarray
+    num_candidates: np.ndarray
 
     #: the ranks for each individual ranking task
-    ranks: numpy.ndarray
+    ranks: np.ndarray
 
     def post_instantiation_hook(self) -> None:
         """Generate a coherent rank & candidate pair."""
@@ -2213,7 +2212,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         assert getattr_or_docdata(self.cls, "description") is not None
         assert self.instance.key is not None
 
-    def _test_call(self, ranks: numpy.ndarray, num_candidates: numpy.ndarray | None):
+    def _test_call(self, ranks: np.ndarray, num_candidates: np.ndarray | None):
         """Verify call."""
         x = self.instance(ranks=ranks, num_candidates=num_candidates)
         # data type
@@ -2227,7 +2226,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
     def test_call_best(self):
         """Test __call__ with optimal ranks."""
-        self._test_call(ranks=numpy.ones(shape=(self.num_ranks,)), num_candidates=self.num_candidates)
+        self._test_call(ranks=np.ones(shape=(self.num_ranks,)), num_candidates=self.num_candidates)
 
     def test_call_worst(self):
         """Test __call__ with worst ranks."""
@@ -2248,7 +2247,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
                 # original ranks
                 self.ranks,
                 # better ranks
-                numpy.clip(self.ranks - 1, a_min=1, a_max=None),
+                np.clip(self.ranks - 1, a_min=1, a_max=None),
             ]
         )
         if self.instance.increasing:
@@ -2256,14 +2255,14 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         else:
             assert y <= x
 
-    def _test_expectation(self, weights: numpy.ndarray | None):
+    def _test_expectation(self, weights: np.ndarray | None):
         """Test the numeric expectation is close to the closed form one."""
         try:
             closed = self.instance.expected_value(num_candidates=self.num_candidates, weights=weights)
         except NoClosedFormError as error:
             raise SkipTest("no implementation of closed-form expectation") from error
 
-        generator = numpy.random.default_rng(seed=0)
+        generator = np.random.default_rng(seed=0)
         low, _simulated, high = self.instance.numeric_expected_value_with_ci(
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
@@ -2281,7 +2280,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         """Test for weighted expectation."""
         self._test_expectation(weights=self._generate_weights())
 
-    def _test_variance(self, weights: numpy.ndarray | None):
+    def _test_variance(self, weights: np.ndarray | None):
         """Test the numeric variance is close to the closed form one."""
         try:
             closed = self.instance.variance(num_candidates=self.num_candidates, weights=weights)
@@ -2291,7 +2290,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         # variances are non-negative
         assert closed >= 0
 
-        generator = numpy.random.default_rng(seed=0)
+        generator = np.random.default_rng(seed=0)
         low, _simulated, high = self.instance.numeric_variance_with_ci(
             num_candidates=self.num_candidates,
             num_samples=self.num_samples,
@@ -2314,7 +2313,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
         if not self.instance.supports_weights:
             raise SkipTest(f"{self.instance} does not support weights")
         # generate random weights such that sum = n
-        generator = numpy.random.default_rng(seed=21)
+        generator = np.random.default_rng(seed=21)
         weights = generator.random(size=self.num_candidates.shape)
         return self.num_ranks * weights / weights.sum()
 
@@ -2336,7 +2335,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
 
         # for sanity checking: give the largest weight to best rank => should improve
         idx = self.ranks.argmin()
-        weights = numpy.ones_like(self.ranks, dtype=float)
+        weights = np.ones_like(self.ranks, dtype=float)
         weights[idx] = 2.0
         weighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights)
         unweighted = self.instance(ranks=self.ranks, num_candidates=self.num_candidates, weights=None)
@@ -2351,12 +2350,12 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
             raise SkipTest(f"{self.instance} does not support weights")
 
         # generate two versions
-        generator = numpy.random.default_rng(seed=21)
+        generator = np.random.default_rng(seed=21)
         repeats = generator.integers(low=1, high=10, size=self.ranks.shape)
 
         # 1. repeat each rank/candidate pair a random number of times
-        repeated_ranks = numpy.repeat(self.ranks, repeats=repeats)
-        repeated_num_candidates = numpy.repeat(self.num_candidates, repeats=repeats)
+        repeated_ranks = np.repeat(self.ranks, repeats=repeats)
+        repeated_num_candidates = np.repeat(self.num_candidates, repeats=repeats)
         value_repeat = self.instance(ranks=repeated_ranks, num_candidates=repeated_num_candidates, weights=None)
 
         # 2. do not repeat, but assign a corresponding weight
@@ -2490,7 +2489,7 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
             left_idx = [left.entity_id_to_label[i] for i in left_idx]
             right_idx = [right.entity_id_to_label[i] for i in right_idx]
         # prepare alignment data frame
-        alignment = pandas.DataFrame(data={EA_SIDE_LEFT: left_idx, EA_SIDE_RIGHT: right_idx})
+        alignment = pd.DataFrame(data={EA_SIDE_LEFT: left_idx, EA_SIDE_RIGHT: right_idx})
         # call
         tf_both, alignment_t = self.instance(left=left, right=right, alignment=alignment)
         # check
@@ -2513,7 +2512,7 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
         cf. https://github.com/pykeen/pykeen/pull/893#discussion_r861553903
         """
         left_tf = TriplesFactory.from_labeled_triples(
-            pandas.DataFrame(
+            pd.DataFrame(
                 [
                     ["la", "0", "lb"],
                     ["lb", "0", "lc"],
@@ -2524,7 +2523,7 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
             ).values
         )
         right_tf = TriplesFactory.from_labeled_triples(
-            pandas.DataFrame(
+            pd.DataFrame(
                 [
                     ["ra", "2", "rb"],
                     ["ra", "2", "rc"],
@@ -2534,7 +2533,7 @@ class GraphPairCombinatorTestCase(unittest_templates.GenericTestCase[GraphPairCo
                 ],
             ).values
         )
-        test_links = pandas.DataFrame(
+        test_links = pd.DataFrame(
             [
                 ["ld", "rd"],
                 ["le", "re"],
@@ -2694,7 +2693,7 @@ class PredictionTestCase(unittest_templates.GenericTestCase[pykeen.predict.Predi
     """Tests for prediction post-processing."""
 
     # to be initialized in subclass
-    df: pandas.DataFrame
+    df: pd.DataFrame
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)

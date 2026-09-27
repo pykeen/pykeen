@@ -12,7 +12,7 @@ from collections.abc import Iterable
 from typing import Any
 from unittest import mock
 
-import numpy
+import numpy as np
 import pytest
 import torch
 
@@ -276,10 +276,10 @@ class TestUtils(unittest.TestCase):
             n_samples, time = timeit.Timer(stmt="sum(arrays)", globals={"arrays": arrays}).autorange()
             consumption = time / n_samples
             data.append((cost, consumption))
-        a = numpy.asarray(data)
+        a = np.asarray(data)
 
         # check for strong correlation between estimated costs and measured execution time
-        assert (numpy.corrcoef(x=a[:, 0], y=a[:, 1])[0, 1]) > 0.8
+        assert (np.corrcoef(x=a[:, 0], y=a[:, 1])[0, 1]) > 0.8
 
     @pytest.mark.slow
     def test_get_optimal_sequence_caching(self):

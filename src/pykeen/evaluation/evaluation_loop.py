@@ -7,8 +7,8 @@ from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping
 from typing import Any, Generic, TypeAlias, TypeVar
 
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 import torch
 from class_resolver import HintOrType, OptionalKwargs
 from torch.utils.data import Dataset
@@ -184,16 +184,16 @@ class FilterIndex:
     """An index structure for filtering (roughly following CSR)."""
 
     # The key-id for each triple, shape: (num_triples,)
-    triple_id_to_key_id: numpy.ndarray
+    triple_id_to_key_id: np.ndarray
 
     #: the number of targets for each key, shape: (num_unique_keys + 1,)
-    bounds: numpy.ndarray
+    bounds: np.ndarray
 
     #: the concatenation of unique targets for each key (use bounds to select appropriate sub-array)
     indices: LongTensor
 
     @classmethod
-    def from_df(cls, df: pandas.DataFrame, target: Target) -> "FilterIndex":
+    def from_df(cls, df: pd.DataFrame, target: Target) -> "FilterIndex":
         """Create index from dataframe.
 
         :param df: the dataframe, comprising columns [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
@@ -211,7 +211,7 @@ class FilterIndex:
         # group key = everything except the prediction target
         key = [c for c in df.columns if c != target]
         # initialize data structure
-        triple_id_to_key_id = numpy.empty_like(df.index)
+        triple_id_to_key_id = np.empty_like(df.index)
         indices = []
         bounds = [0]
         # group by key
@@ -223,9 +223,9 @@ class FilterIndex:
         # convert lists to arrays
         indices = torch.as_tensor(indices)
         # instantiate
-        return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=numpy.asarray(bounds), indices=indices)
+        return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=np.asarray(bounds), indices=indices)
 
-    def __getitem__(self, item: int) -> numpy.ndarray:
+    def __getitem__(self, item: int) -> np.ndarray:
         # return indices corresponding to the `item`-th triple
         key_id = self.triple_id_to_key_id[item]
         low, high = self.bounds[key_id : key_id + 2]
@@ -274,7 +274,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, torch.T
         if filtered:
             if not additional_filter_triples:
                 logger.warning("Enabled filtered evaluation, but not additional filter triples are passed.")
-            df = pandas.DataFrame(
+            df = pd.DataFrame(
                 data=torch.cat([mapped_triples, *(get_mapped_triples(x) for x in additional_filter_triples)]),
                 columns=COLUMN_LABELS,
             )

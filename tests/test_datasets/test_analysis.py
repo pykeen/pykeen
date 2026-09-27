@@ -5,7 +5,7 @@ import unittest
 from collections.abc import Iterable, Mapping
 
 import numpy as np
-import pandas
+import pandas as pd
 
 from pykeen.datasets import Dataset, Nations
 from pykeen.datasets import analysis as dataset_analysis
@@ -37,14 +37,14 @@ class TestUtils(unittest.TestCase):
 
 def _test_count_dataframe(
     dataset: Dataset,
-    df: pandas.DataFrame,
+    df: pd.DataFrame,
     labels: bool = True,
     merge_subsets: bool = True,
     merge_sides: bool = True,
 ):
     """Check the general structure of a count dataframe."""
     # check correct output type
-    assert isinstance(df, pandas.DataFrame)
+    assert isinstance(df, pd.DataFrame)
 
     expected_columns = {triple_analysis.COUNT_COLUMN_NAME}
     expected_columns.update(
@@ -96,7 +96,7 @@ def _test_count_dataframe(
 
 
 def _check_labels(
-    df: pandas.DataFrame,
+    df: pd.DataFrame,
     labels: bool,
     id_column_name: str,
     label_column_name: str,
@@ -176,7 +176,7 @@ class DatasetAnalysisTests(unittest.TestCase):
         )
 
         # check correct type
-        assert isinstance(df, pandas.DataFrame)
+        assert isinstance(df, pd.DataFrame)
 
         # check relation_id value range
         assert df[triple_analysis.RELATION_ID_COLUMN_NAME].isin(self.dataset.relation_to_id.values()).all()
@@ -200,7 +200,7 @@ class DatasetAnalysisTests(unittest.TestCase):
         )
 
         # check correct type
-        assert isinstance(df, pandas.DataFrame)
+        assert isinstance(df, pd.DataFrame)
 
         # check relation_id value range
         assert df[triple_analysis.RELATION_ID_COLUMN_NAME].isin(self.dataset.relation_to_id.values()).all()
@@ -215,7 +215,7 @@ class DatasetAnalysisTests(unittest.TestCase):
         )
 
         # check correct type
-        assert isinstance(df, pandas.DataFrame)
+        assert isinstance(df, pd.DataFrame)
 
         assert {
             triple_analysis.RELATION_ID_COLUMN_NAME,

@@ -17,7 +17,7 @@ from collections.abc import Hashable, Mapping, Sequence
 from typing import ClassVar, Literal, TypeAlias, Unpack
 
 import click
-import pandas
+import pandas as pd
 from docdata import parse_docdata
 from more_click import verbose_option
 
@@ -109,10 +109,10 @@ class MTransEDataset(EADataset, ABC):
             cls.FILE_NAMES[graph_pair, key],
         )
 
-    def _load_df(self, key: EASide | tuple[EASide, EASide] | None, names: Sequence[Hashable]) -> pandas.DataFrame:
+    def _load_df(self, key: EASide | tuple[EASide, EASide] | None, names: Sequence[Hashable]) -> pd.DataFrame:
         source = self._get_source(self.graph_pair, key)
         with source.open() as file:
-            return pandas.read_csv(
+            return pd.read_csv(
                 file,
                 header=None,
                 sep="@@@",
@@ -131,7 +131,7 @@ class MTransEDataset(EADataset, ABC):
             triples=df.values, metadata={"graph_pair": self.graph_pair, "side": side}
         )
 
-    def _load_alignment(self) -> pandas.DataFrame:
+    def _load_alignment(self) -> pd.DataFrame:
         """Load entity alignment information for the given graph pair."""
         logger.info("Loading alignment information")
         # load mappings for both sides
@@ -144,7 +144,7 @@ class MTransEDataset(EADataset, ABC):
             part = df.loc[:, [(EA_SIDE_LEFT, column), (EA_SIDE_RIGHT, column)]].copy()
             part.columns = list(EA_SIDES)
             dfs.append(part)
-        return pandas.concat(dfs)
+        return pd.concat(dfs)
 
 
 @parse_docdata

@@ -14,7 +14,7 @@ from operator import iadd, itemgetter
 from typing import Any, ClassVar, Generic, Self, cast, overload
 
 import more_itertools
-import numpy
+import numpy as np
 import torch
 from class_resolver import (
     ClassResolver,
@@ -133,7 +133,7 @@ def parallel_slice_batches(
     rs: Sequence[Sequence[FloatTensor]] = ensure_tuple(*representations)
     # get number of head/relation/tail representations
     length = list(map(len, rs))
-    splits = numpy.cumsum([0, *length])
+    splits = np.cumsum([0, *length])
     # flatten list
     rsl: Sequence[FloatTensor] = functools.reduce(iadd, map(list, rs), [])
     # split tensors
@@ -3362,7 +3362,7 @@ class MultiLinearTuckerInteraction(Interaction[FloatTensor, FloatTensor, FloatTe
         nn.init.normal_(
             self.core_tensor,
             mean=0,
-            std=numpy.sqrt(numpy.prod(numpy.reciprocal(numpy.asarray(self.core_tensor.shape)))),
+            std=np.sqrt(np.prod(np.reciprocal(np.asarray(self.core_tensor.shape)))),
         )
 
     def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:

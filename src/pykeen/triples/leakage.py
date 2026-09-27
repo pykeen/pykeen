@@ -10,7 +10,7 @@ from collections.abc import Collection, Iterable, Mapping
 from typing import TypeVar, cast
 
 import click
-import numpy
+import numpy as np
 import scipy.sparse
 import torch
 
@@ -45,7 +45,7 @@ def _select_by_most_pairs(
 def jaccard_similarity_scipy(
     a: scipy.sparse.spmatrix,
     b: scipy.sparse.spmatrix,
-) -> numpy.ndarray:
+) -> np.ndarray:
     r"""Compute the Jaccard similarity between sets represented as sparse matrices.
 
     The similarity is computed as
@@ -62,10 +62,10 @@ def jaccard_similarity_scipy(
 
     :returns: shape: (m, n) The pairwise Jaccard similarity.
     """
-    sum_size = numpy.asarray(a.sum(axis=1) + b.sum(axis=1).T)
-    intersection_size = numpy.asarray((a @ b.T).todense())
+    sum_size = np.asarray(a.sum(axis=1) + b.sum(axis=1).T)
+    intersection_size = np.asarray((a @ b.T).todense())
     # safe division for empty sets
-    divisor = numpy.clip(sum_size - intersection_size, a_min=1, a_max=None)
+    divisor = np.clip(sum_size - intersection_size, a_min=1, a_max=None)
     return intersection_size / divisor
 
 
@@ -96,11 +96,11 @@ def _to_one_hot(
 ) -> scipy.sparse.spmatrix:
     """Create a one-hot matrix given indices of non-zero elements (potentially containing duplicates)."""
     rows, cols = torch.stack([rows, cols], dim=0).unique(dim=1).numpy()
-    values = numpy.ones(rows.shape[0], dtype=numpy.int32)
+    values = np.ones(rows.shape[0], dtype=np.int32)
     return scipy.sparse.coo_matrix(
         (values, (rows, cols)),
         shape=shape,
-        dtype=numpy.int32,
+        dtype=np.int32,
     )
 
 
@@ -161,7 +161,7 @@ def get_candidate_pairs(
     if no_self:
         # we are not interested in self-similarity
         num = sim.shape[0]
-        idx = numpy.arange(num)
+        idx = np.arange(num)
         sim[idx, idx] = 0
     return set(zip(*(sim >= threshold).nonzero(), strict=False))
 

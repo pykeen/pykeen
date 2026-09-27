@@ -13,8 +13,8 @@ from collections.abc import Sequence
 from typing import ClassVar, Generic, Literal, TypedDict, TypeVar, Unpack, cast, overload
 
 import click
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 import torch
 from docdata import parse_docdata
 from more_click import verbose_option
@@ -116,7 +116,7 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
         raise NotImplementedError
 
     @abc.abstractmethod
-    def _compose_mapped_triples(self, data_dict: PreprocessedTrainDictType | PreprocessedEvalDictType) -> numpy.ndarray:
+    def _compose_mapped_triples(self, data_dict: PreprocessedTrainDictType | PreprocessedEvalDictType) -> np.ndarray:
         """Compose the mapped triples tensor for the given dataset and split."""
         raise NotImplementedError
 
@@ -128,17 +128,17 @@ class WikiKG2TrainDict(TypedDict):
     #       (which happens to coincide with ours)
 
     # dtype: numpy.int64, shape: (m,)
-    head: numpy.ndarray
-    relation: numpy.ndarray
-    tail: numpy.ndarray
+    head: np.ndarray
+    relation: np.ndarray
+    tail: np.ndarray
 
 
 class WikiKG2EvalDict(WikiKG2TrainDict):
     """A type hint for dictionaries of OGB preprocessed evaluation triples for WikiKG2."""
 
     # dtype: numpy.int64, shape: (n, k)
-    head_neg: numpy.ndarray
-    tail_neg: numpy.ndarray
+    head_neg: np.ndarray
+    tail_neg: np.ndarray
 
 
 @parse_docdata
@@ -166,9 +166,9 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
     name = "ogbl-wikikg2"
 
     def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:
-        df_ent = pandas.read_csv(mapping_root.joinpath("nodeidx2entityid.csv.gz"))
+        df_ent = pd.read_csv(mapping_root.joinpath("nodeidx2entityid.csv.gz"))
         entity_to_id = dict(zip(df_ent["entity id"].tolist(), df_ent["node idx"].tolist(), strict=False))
-        df_rel = pandas.read_csv(mapping_root.joinpath("reltype2relid.csv.gz"))
+        df_rel = pd.read_csv(mapping_root.joinpath("reltype2relid.csv.gz"))
         relation_to_id = dict(zip(df_rel["rel id"].tolist(), df_rel["reltype"].tolist(), strict=False))
         return entity_to_id, relation_to_id
 
@@ -179,8 +179,8 @@ class OGBWikiKG2(OGBLoader[WikiKG2TrainDict, WikiKG2EvalDict]):
         )
         return cast(WikiKG2TrainDict, data_dict) if which == "train" else cast(WikiKG2EvalDict, data_dict)
 
-    def _compose_mapped_triples(self, data_dict: WikiKG2TrainDict | WikiKG2EvalDict) -> numpy.ndarray:
-        return numpy.stack([data_dict["head"], data_dict["relation"], data_dict["tail"]], axis=-1)
+    def _compose_mapped_triples(self, data_dict: WikiKG2TrainDict | WikiKG2EvalDict) -> np.ndarray:
+        return np.stack([data_dict["head"], data_dict["relation"], data_dict["tail"]], axis=-1)
 
 
 #: the node types
@@ -200,11 +200,11 @@ class BioKGEvalDict(BioKGTrainDict):
     """A type hint for dictionaries of OGB preprocessed evaluation triples for BioKG."""
 
     # dtype: numpy.int64, shape: (n, k)
-    head_neg: numpy.ndarray
-    tail_neg: numpy.ndarray
+    head_neg: np.ndarray
+    tail_neg: np.ndarray
 
 
-def load_partial_entity_mapping(mapping_root: pathlib.Path, node_type: OGBBioKGNodeType) -> pandas.DataFrame:
+def load_partial_entity_mapping(mapping_root: pathlib.Path, node_type: OGBBioKGNodeType) -> pd.DataFrame:
     """Load a partial entity mapping for a single node type."""
     # disease: UMLS CUI (https://www.nlm.nih.gov/research/umls/index.html).
     # drug: STITCH ID (http://stitch.embl.de/).
@@ -212,7 +212,7 @@ def load_partial_entity_mapping(mapping_root: pathlib.Path, node_type: OGBBioKGN
     # protein: Proteins: Entrez Gene ID (https://www.genenames.org/).
     # side effects: UMLS CUI (https://www.nlm.nih.gov/research/umls/index.html).
     # todo(@cthoyt): proper prefixing?
-    df = pandas.read_csv(mapping_root.joinpath(f"{node_type}_entidx2name.csv.gz"))
+    df = pd.read_csv(mapping_root.joinpath(f"{node_type}_entidx2name.csv.gz"))
     df = df.rename(columns={"ent name": "entity_name", "ent idx": "local_entity_id"})
     df["entity_type"] = node_type
     return df
@@ -242,12 +242,12 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
     name = "ogbl-biokg"
 
     def _load_mappings(self, mapping_root: pathlib.Path) -> tuple[EntityMapping, RelationMapping]:
-        df_rel = pandas.read_csv(mapping_root.joinpath("relidx2relname.csv.gz"))
+        df_rel = pd.read_csv(mapping_root.joinpath("relidx2relname.csv.gz"))
         LOGGER.info(f"Loaded relation mapping for {len(df_rel)} relations.")
         relation_to_id = dict(zip(df_rel["rel name"].tolist(), df_rel["rel idx"].tolist(), strict=False))
 
         # entity mappings are separate for each node type -> combine
-        entity_mapping_df = pandas.concat(
+        entity_mapping_df = pd.concat(
             [load_partial_entity_mapping(mapping_root=mapping_root, node_type=node_type) for node_type in NODE_TYPES],
             ignore_index=True,
         ).sort_values(by=["entity_type", "entity_name"])
@@ -264,8 +264,8 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
 
         return entity_to_id, relation_to_id
 
-    def _compose_mapped_triples(self, data_dict: BioKGTrainDict | BioKGEvalDict) -> numpy.ndarray:
-        return numpy.stack(
+    def _compose_mapped_triples(self, data_dict: BioKGTrainDict | BioKGEvalDict) -> np.ndarray:
+        return np.stack(
             [
                 self._map_entity_column(local_entity_id=data_dict["head"], entity_type=data_dict["head_type"]),
                 data_dict["relation"],
@@ -289,19 +289,17 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
         )
         return cast(BioKGTrainDict, data_dict) if which == "train" else cast(BioKGEvalDict, data_dict)
 
-    def _map_entity_column(
-        self, local_entity_id: numpy.ndarray, entity_type: Sequence[OGBBioKGNodeType]
-    ) -> numpy.ndarray:
+    def _map_entity_column(self, local_entity_id: np.ndarray, entity_type: Sequence[OGBBioKGNodeType]) -> np.ndarray:
         """Convert node-type local entity IDs with their types to globally unique IDs."""
         # compose temporary df
-        df = pandas.DataFrame({"local_entity_id": local_entity_id, "entity_type": entity_type})
+        df = pd.DataFrame({"local_entity_id": local_entity_id, "entity_type": entity_type})
         # add extra column with old index to revert sort order change by merge
         df.index.name = "old_index"
         df = df.reset_index(drop=False)
         # convert to categorical dtype
         df["entity_type"] = df["entity_type"].astype(self.df_ent["entity_type"].dtype)
         # join with entity mapping
-        df = pandas.merge(df, self.df_ent, on=["local_entity_id", "entity_type"])
+        df = df.merge(self.df_ent, on=["local_entity_id", "entity_type"])
         assert len(df) == len(local_entity_id)
         # revert change in order
         df = df.sort_values(by="old_index")

@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import NotRequired, Unpack
 
-import pandas
+import pandas as pd
 from class_resolver import HintOrType, OptionalKwargs
 
 from .combination import GraphPairCombinator, graph_combinator_resolver
@@ -89,7 +89,7 @@ class EADataset(SplittingLazyDataset, ABC):
         """Load the graph for one side."""
 
     @abstractmethod
-    def _load_alignment(self) -> pandas.DataFrame:
+    def _load_alignment(self) -> pd.DataFrame:
         """Load the entity alignment."""
 
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102

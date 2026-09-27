@@ -7,7 +7,7 @@ from collections import defaultdict
 from collections.abc import Collection, Mapping
 
 import more_itertools
-import numpy
+import numpy as np
 import torch
 from class_resolver import ClassResolver, HintOrType, OptionalKwargs
 
@@ -126,8 +126,8 @@ class AnchorTokenizer(Tokenizer):
         # select anchors
         logger.info(f"Selecting anchors according to {self.anchor_selection}")
         anchors = self.anchor_selection(edge_index=edge_index)
-        if len(numpy.unique(anchors)) < len(anchors):
-            logger.warning(f"Only {len(numpy.unique(anchors))} out of {len(anchors)} anchors are unique")
+        if len(np.unique(anchors)) < len(anchors):
+            logger.warning(f"Only {len(np.unique(anchors))} out of {len(anchors)} anchors are unique")
         # find closest anchors
         logger.info(f"Searching closest anchors with {self.searcher}")
         tokens = self.searcher(edge_index=edge_index, anchors=anchors, k=num_tokens, num_entities=num_entities)

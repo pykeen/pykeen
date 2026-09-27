@@ -272,8 +272,8 @@ from collections.abc import Collection, Iterable, Mapping, Sequence
 from operator import itemgetter
 from typing import TypeAlias
 
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 import torch
 import torch.utils.data
 from torch_max_mem import maximize_memory_utilization
@@ -324,7 +324,7 @@ class Predictions(ABC):
     """Base class for predictions."""
 
     #: the dataframe; has to have a column named "score"
-    df: pandas.DataFrame
+    df: pd.DataFrame
 
     #: an optional factory to use for labeling
     factory: CoreTriplesFactory | None
@@ -334,12 +334,12 @@ class Predictions(ABC):
         if "score" not in self.df.columns:
             raise ValueError(f"df must have a column named 'score', but df.columns={self.df.columns}")
 
-    def exchange_df(self, df: pandas.DataFrame) -> "Predictions":
+    def exchange_df(self, df: pd.DataFrame) -> "Predictions":
         """Create a copy of the object with its dataframe exchanged."""
         return self.__class__(**collections.ChainMap({"df": df}, dataclasses.asdict(self)))
 
     @abstractmethod
-    def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
+    def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> np.ndarray:
         """
         Return which of the rows of the given data frame are contained in the ID-based triples.
 
@@ -355,7 +355,7 @@ class Predictions(ABC):
         """
         raise NotImplementedError
 
-    def filter_triples(self, *triples: AnyTriples | None) -> pandas.DataFrame:
+    def filter_triples(self, *triples: AnyTriples | None) -> pd.DataFrame:
         """Filter out known triples."""
         df = self.df
         for mapped_triples in triples:
@@ -368,7 +368,7 @@ class Predictions(ABC):
             ]
         return self.exchange_df(df=df)
 
-    def add_membership_columns(self, **filter_triples: AnyTriples | None) -> pandas.DataFrame:
+    def add_membership_columns(self, **filter_triples: AnyTriples | None) -> pd.DataFrame:
         """Add columns indicating whether the triples are known."""
         df = self.df.copy()
         for key, mapped_triples in filter_triples.items():
@@ -390,7 +390,7 @@ class TriplePredictions(Predictions):
         if not columns.issubset(self.df.columns):
             raise ValueError(f"df must have a columns named {columns}, but df.columns={self.df.columns}")
 
-    def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
+    def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> np.ndarray:
         contained = (
             isin_many_dim(
                 elements=torch.as_tensor(
@@ -422,7 +422,7 @@ class TargetPredictions(Predictions):
         if f"{self.target}_id" not in self.df.columns:
             raise ValueError(f"df must have a column named '{self.target}_id', but df.columns={self.df.columns}")
 
-    def _contains(self, df: pandas.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> numpy.ndarray:
+    def _contains(self, df: pd.DataFrame, mapped_triples: MappedTriples, invert: bool = False) -> np.ndarray:
         col = TARGET_TO_INDEX[self.target]
         other_cols = sorted(set(range(mapped_triples.shape[1])).difference({col}))
         device = mapped_triples.device
@@ -1079,7 +1079,7 @@ def predict_target(
     data = {f"{target}_id": ids, "score": scores.tolist()}
     if labels is not None:
         data[f"{target}_label"] = labels
-    df = pandas.DataFrame(data=data).sort_values("score", ascending=False)
+    df = pd.DataFrame(data=data).sort_values("score", ascending=False)
     return TargetPredictions(df=df, factory=triples_factory, target=target, other_columns_fixed_ids=other_col_ids)
 
 

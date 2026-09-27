@@ -18,7 +18,7 @@ import warnings
 from collections.abc import Collection
 from typing import ClassVar, Literal
 
-import numpy
+import numpy as np
 from class_resolver import ClassResolver
 from docdata import parse_docdata
 from sklearn import metrics
@@ -56,7 +56,7 @@ def safe_divide(numerator: float, denominator: float, zero_division: ZeroDivisio
     return zero_division
 
 
-def construct_indicator(*, y_score: numpy.ndarray, y_true: numpy.ndarray) -> numpy.ndarray:
+def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     """Construct binary indicators from a list of scores.
 
     If there are $n$ positively labeled entries in ``y_true``, this function assigns the top $n$ highest scores in
@@ -81,17 +81,17 @@ def construct_indicator(*, y_score: numpy.ndarray, y_true: numpy.ndarray) -> num
         https://github.com/xptree/NetMF/blob/77286b826c4af149055237cef65e2a500e15631a/predict.py#L25-L33
     """
     # TODO: re-consider threshold
-    number_pos = numpy.sum(y_true, dtype=int)
-    y_sort = numpy.flip(numpy.argsort(y_score))
-    y_pred = numpy.zeros_like(y_true, dtype=int)
-    y_pred[y_sort[numpy.arange(number_pos)]] = 1
+    number_pos = np.sum(y_true, dtype=int)
+    y_sort = np.flip(np.argsort(y_score))
+    y_pred = np.zeros_like(y_true, dtype=int)
+    y_pred[y_sort[np.arange(number_pos)]] = 1
     return y_pred
 
 
 class ClassificationMetric(Metric, abc.ABC):
     """A base class for classification metrics."""
 
-    def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
+    def __call__(self, y_true: np.ndarray, y_score: np.ndarray, weights: np.ndarray | None = None) -> float:
         """Evaluate the metric.
 
         :param y_true: shape: (num_samples,) the true labels, either 0 or 1.
@@ -114,9 +114,7 @@ class ClassificationMetric(Metric, abc.ABC):
         return self.forward(y_true=y_true, y_score=y_score, sample_weight=weights)
 
     @abc.abstractmethod
-    def forward(
-        self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
-    ) -> float:
+    def forward(self, y_true: np.ndarray, y_score: np.ndarray, sample_weight: np.ndarray | None = None) -> float:
         """Calculate the metric.
 
         :param y_true: shape: (num_samples,) the true label, either 0 or 1.
@@ -145,7 +143,7 @@ class NumScores(ClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("score_count",)
 
-    def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
+    def forward(self, y_true: np.ndarray, y_score: np.ndarray, weights: np.ndarray | None = None) -> float:
         return y_score.size
 
 
@@ -154,7 +152,7 @@ class BinarizedClassificationMetric(ClassificationMetric, abc.ABC):
 
     binarize: ClassVar[bool] = True
 
-    def __call__(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
+    def __call__(self, y_true: np.ndarray, y_score: np.ndarray, weights: np.ndarray | None = None) -> float:
         return super().__call__(
             y_true=y_true, y_score=construct_indicator(y_score=y_score, y_true=y_true), weights=weights
         )
@@ -175,9 +173,7 @@ class BalancedAccuracyScore(BinarizedClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("b-acc", "bas")
     supports_weights: ClassVar[bool] = True
 
-    def forward(
-        self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
-    ) -> float:
+    def forward(self, y_true: np.ndarray, y_score: np.ndarray, sample_weight: np.ndarray | None = None) -> float:
         return float(metrics.balanced_accuracy_score(y_true=y_true, y_pred=y_score, sample_weight=sample_weight))
 
 
@@ -203,9 +199,7 @@ class AveragePrecisionScore(ClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("aps", "ap")
     supports_weights: ClassVar[bool] = True
 
-    def forward(
-        self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
-    ) -> float:
+    def forward(self, y_true: np.ndarray, y_score: np.ndarray, sample_weight: np.ndarray | None = None) -> float:
         return float(metrics.average_precision_score(y_true=y_true, y_score=y_score, sample_weight=sample_weight))
 
 
@@ -224,9 +218,7 @@ class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("roc-auc",)
     supports_weights: ClassVar[bool] = True
 
-    def forward(
-        self, y_true: numpy.ndarray, y_score: numpy.ndarray, sample_weight: numpy.ndarray | None = None
-    ) -> float:
+    def forward(self, y_true: np.ndarray, y_score: np.ndarray, sample_weight: np.ndarray | None = None) -> float:
         return float(metrics.roc_auc_score(y_true=y_true, y_score=y_score, sample_weight=sample_weight))
 
 
@@ -260,7 +252,7 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
         """
         # todo: it would make sense to have a separate evaluator which constructs the confusion matrix only once
 
-    def forward(self, y_true: numpy.ndarray, y_score: numpy.ndarray, weights: numpy.ndarray | None = None) -> float:
+    def forward(self, y_true: np.ndarray, y_score: np.ndarray, weights: np.ndarray | None = None) -> float:
         y_pred = construct_indicator(y_score=y_score, y_true=y_true)
         matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred, sample_weight=weights, normalize=None)
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html
@@ -592,8 +584,8 @@ class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
         fpr = FalsePositiveRate().extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
         tpr = TruePositiveRate().extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
         return safe_divide(
-            numerator=numpy.sqrt(fpr).item(),
-            denominator=(numpy.sqrt(fpr) + numpy.sqrt(tpr)).item(),
+            numerator=np.sqrt(fpr).item(),
+            denominator=(np.sqrt(fpr) + np.sqrt(tpr)).item(),
             zero_division=self.zero_division,
         )
 

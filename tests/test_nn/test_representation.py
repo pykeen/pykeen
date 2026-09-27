@@ -7,7 +7,7 @@ from collections.abc import MutableMapping
 from typing import Any, ClassVar
 from unittest.mock import MagicMock
 
-import numpy
+import numpy as np
 import pytest
 import torch
 import unittest_templates
@@ -37,7 +37,7 @@ class EmbeddingTests(cases.RepresentationTestCase):
     def test_backwards_compatibility(self):
         """Test shape and num_embeddings."""
         assert self.instance.max_id == self.instance_kwargs["num_embeddings"]
-        embedding_dim = int(numpy.prod(self.instance.shape))
+        embedding_dim = int(np.prod(self.instance.shape))
         assert self.instance.shape == (embedding_dim,)
 
 
