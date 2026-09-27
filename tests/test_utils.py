@@ -12,6 +12,7 @@ import string
 import tempfile
 import timeit
 import unittest
+import warnings
 from collections.abc import Iterable
 from typing import Any
 from unittest import mock
@@ -30,7 +31,9 @@ from pykeen.utils import (
     clamp_norm,
     combine_complex,
     compact_mapping,
+    complex_normalize,
     compose,
+    ensure_complex,
     estimate_cost_of_sequence,
     find,
     flatten_dictionary,
@@ -623,6 +626,8 @@ def test_find_path_compression() -> None:
     assert parent == dict.fromkeys(range(5), 0)
     with pytest.raises(ValueError, match="Unknown element"):
         find(x=5, parent=parent)
+
+
 class LogCumSumExpTests(unittest.TestCase):
     """Tests for :func:`pykeen.utils.logcumsumexp`."""
 
@@ -671,6 +676,8 @@ class LogCumSumExpTests(unittest.TestCase):
             with self.subTest(axis=axis):
                 expected = torch.logcumsumexp(torch.as_tensor(a), dim=axis).numpy()
                 numpy.testing.assert_allclose(logcumsumexp(a, axis=axis), expected)
+
+
 class TestNormalizePath(unittest.TestCase):
     """Tests for :func:`pykeen.utils.normalize_path`."""
 
@@ -726,6 +733,8 @@ class TestNormalizePath(unittest.TestCase):
         fd = os.open(self.file_path, os.O_RDONLY)
         with os.fdopen(fd) as file, pytest.raises(TypeError, match="file handle"):
             normalize_path(file)
+
+
 @pytest.mark.parametrize("shape", [(6,), (3, 4), (2, 3, 8)])
 def test_view_complex(shape: tuple[int, ...]) -> None:
     """Test converting real-valued tensors with interleaved real/imaginary parts to complex ones."""
@@ -763,3 +772,103 @@ def test_view_complex_odd_dimension() -> None:
     """Test that an odd last dimension raises an error."""
     with pytest.raises(ValueError, match="even"):
         view_complex(torch.rand(2, 5))
+
+
+@pytest.mark.parametrize(
+    ("shape", "expected_shape"),
+    [
+        ((3, 2), (3, 1)),
+        ((3, 4), (3, 2)),
+        ((2, 3, 6), (2, 3, 3)),
+        ((2,), (1,)),
+    ],
+)
+def test_ensure_complex_shape(shape: tuple[int, ...], expected_shape: tuple[int, ...]) -> None:
+    """Test that a real tensor of shape ``(*, 2d)`` is mapped to a complex one of shape ``(*, d)``."""
+    x = torch.rand(*shape)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        (y,) = ensure_complex(x)
+    assert y.is_complex()
+    assert y.shape == expected_shape
+    # interleaved layout
+    assert torch.equal(y.real, x[..., 0::2])
+    assert torch.equal(y.imag, x[..., 1::2])
+
+
+def test_ensure_complex_passthrough() -> None:
+    """Test that complex tensors are passed through unchanged and without warning."""
+    x = torch.rand(3, 4, dtype=torch.cfloat)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("default")
+        (y,) = ensure_complex(x)
+    assert y is x
+    assert not caught
+
+
+def _call_ensure_complex(*xs: torch.Tensor) -> list[torch.Tensor]:
+    return list(ensure_complex(*xs))
+
+
+def test_ensure_complex_warns_once_per_site() -> None:
+    """Test that repeated conversions from the same call site only warn once."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("default")
+        # clear the once-per-location registry of the calling module
+        _call_ensure_complex.__globals__.pop("__warningregistry__", None)
+        for batch_size in (2, 3, 5):
+            _call_ensure_complex(torch.rand(batch_size, 4), torch.rand(batch_size, 6))
+    assert len(caught) == 1
+
+
+def test_ensure_complex_odd_dim() -> None:
+    """Test that an odd last dimension raises a clear error."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        with pytest.raises(ValueError, match="even"):
+            list(ensure_complex(torch.rand(3, 5)))
+
+
+def test_ensure_complex_non_contiguous() -> None:
+    """Test that non-contiguous input is converted correctly."""
+    x = torch.rand(4, 6).t()  # shape (6, 4), non-contiguous
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        (y,) = ensure_complex(x)
+    assert y.shape == (6, 2)
+    assert torch.equal(y.real, x[..., 0::2])
+    assert torch.equal(y.imag, x[..., 1::2])
+
+
+@pytest.mark.parametrize("shape", [(3, 2), (3, 8), (2, 3, 4)])
+def test_complex_normalize_real(shape: tuple[int, ...]) -> None:
+    """Test complex normalization on real input."""
+    x = torch.rand(*shape) + 0.1
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        y = complex_normalize(x)
+    assert len(caught) == 1
+    assert y.shape == x.shape
+    assert not y.is_complex()
+    pairs = y.view(*shape[:-1], -1, 2)
+    assert torch.allclose(pairs.norm(dim=-1), torch.ones(pairs.shape[:-1]))
+    # directions are preserved
+    assert torch.allclose(pairs, torch.nn.functional.normalize(x.view(*shape[:-1], -1, 2), dim=-1))
+
+
+def test_view_complex_native() -> None:
+    """Test view_complex_native."""
+    x = torch.rand(3, 4)
+    y = view_complex_native(x)
+    assert y.shape == (3, 2)
+    assert torch.equal(y.real, x[..., 0::2])
+    # (n, 2) -> (n, 1)
+    assert view_complex_native(torch.rand(3, 2)).shape == (3, 1)
+    # non-contiguous
+    x = torch.rand(4, 6).t()
+    y = view_complex_native(x)
+    assert y.shape == (6, 2)
+    assert torch.equal(y.imag, x[..., 1::2])
+    # odd dimension
+    with pytest.raises(ValueError, match="even"):
+        view_complex_native(torch.rand(3, 5))

@@ -419,9 +419,35 @@ def view_complex(x: FloatTensor) -> torch.Tensor:
     return torch.complex(real=x[..., 0], imag=x[..., 1])
 
 
+def _real_to_complex(x: FloatTensor) -> torch.Tensor:
+    """View a real tensor with interleaved real/imaginary parts as a complex tensor.
+
+    :param x: shape: ``(*, 2 * d)``
+        The real tensor, where the last dimension contains ``d`` interleaved pairs of real and imaginary parts.
+
+    :return: shape: ``(*, d)``
+        The complex tensor. It shares memory with ``x`` whenever the strides permit it; otherwise, it is a copy.
+
+    :raises ValueError:
+        If the last dimension of ``x`` is not even.
+    """
+    if x.ndim == 0 or x.shape[-1] % 2:
+        raise ValueError(
+            f"Cannot interpret a real tensor of shape {tuple(x.shape)} as complex: the last dimension must be even, "
+            f"since it holds interleaved pairs of real and imaginary parts.",
+        )
+    # reshape only copies if a view is impossible
+    x = x.reshape(*x.shape[:-1], -1, 2)
+    try:
+        return torch.view_as_complex(x)
+    except RuntimeError:
+        # view_as_complex requires stride 1 in the last dimension, and all other strides divisible by 2
+        return torch.view_as_complex(x.contiguous())
+
+
 def view_complex_native(x: FloatTensor) -> torch.Tensor:
     """Convert a PyKEEN complex tensor representation into a torch one using :func:`torch.view_as_complex`."""
-    return torch.view_as_complex(x.view(*x.shape[:-1], -1, 2))
+    return _real_to_complex(x)
 
 
 def combine_complex(
@@ -1073,8 +1099,7 @@ def complex_normalize(x: torch.Tensor) -> torch.Tensor:
         "root cause.",
         stacklevel=2,
     )
-    (x_complex,) = ensure_complex(x)
-    x_complex = complex_normalize(x_complex)
+    x_complex = complex_normalize(_real_to_complex(x))
     x_real = torch.view_as_real(x_complex)
     return x_real.view(x.shape)
 
@@ -1302,21 +1327,28 @@ def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
     """
     Ensure that all tensors are of complex dtype.
 
-    Reshape and convert if necessary.
+    Real tensors of shape ``(*, 2 * d)`` are interpreted as ``d`` interleaved pairs of real and imaginary parts, and
+    converted to complex tensors of shape ``(*, d)``.
 
     :param xs:
         the tensors
 
     :yields: complex tensors.
+
+    :raises ValueError:
+        if a real tensor's last dimension is not even
     """
     for x in xs:
         if x.is_complex():
             yield x
             continue
-        warnings.warn(f"{x=} is not complex, but will be viewed as such", stacklevel=2)
-        if x.shape[-1] != 2:
-            x = x.view(*x.shape[:-1], -1, 2)
-        yield torch.view_as_complex(x)
+        # note: keep the message constant, such that the default warning filter only shows it once per call site
+        warnings.warn(
+            "Received a non-complex tensor; it will be viewed as complex by interpreting its last dimension as "
+            "interleaved pairs of real and imaginary parts.",
+            stacklevel=2,
+        )
+        yield _real_to_complex(x)
 
 
 def _weisfeiler_lehman_iteration(
