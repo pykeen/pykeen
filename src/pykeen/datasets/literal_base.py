@@ -35,18 +35,13 @@ class NumericPathDataset(LazyDataset):
         self.testing_path = testing_path
         self.validation_path = validation_path
         self.literals_path = literals_path
-
-        self._create_inverse_triples = kwargs.get("create_inverse_triples") or False
-
-        if kwargs.get("eager"):
-            self._load()
-            self._load_validation()
+        super().__init__(**kwargs)
 
     def _load(self) -> None:
         self._training = self.triples_factory_cls.from_path(
             path=self.training_path,
             path_to_numeric_triples=self.literals_path,
-            create_inverse_triples=self._create_inverse_triples,
+            create_inverse_triples=self.create_inverse_triples,
         )
         self._testing = self.triples_factory_cls.from_path(
             path=self.testing_path,
