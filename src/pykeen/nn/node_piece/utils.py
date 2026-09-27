@@ -45,8 +45,8 @@ def random_sample_no_replacement(
     # TODO: vectorization?
     for idx, this_pool in tqdm(pool.items(), desc="sampling", leave=False, unit_scale=True):
         this_pool_t = torch.as_tensor(data=list(this_pool), dtype=torch.long)
-        this_pool = this_pool_t[torch.randperm(this_pool_t.shape[0])[:num_tokens]]
-        assignment[idx, : len(this_pool_t)] = this_pool
+        sampled_pool = this_pool_t[torch.randperm(this_pool_t.shape[0])[:num_tokens]]
+        assignment[idx, : len(this_pool_t)] = sampled_pool
     return assignment
 
 

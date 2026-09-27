@@ -869,10 +869,7 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
                 continue
             if restriction is None:
                 raise NotImplementedError("Requires size info")
-            if isinstance(restriction, int):
-                restriction = [restriction]
-            restriction = torch.as_tensor(restriction)
-            parts.append(restriction)
+            parts.append(torch.as_tensor([restriction] if isinstance(restriction, int) else restriction))
         assert len(parts) == 2
         self.parts = (parts[0], parts[1])  # for mypy
 
@@ -926,8 +923,8 @@ def consume_scores(
         raise ValueError("Did not receive any consumer")
 
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
-    for batch in tqdm(data_loader, desc="scoring", unit="batch", unit_scale=True, leave=False):
-        batch = batch.to(model.device)
+    for raw_batch in tqdm(data_loader, desc="scoring", unit="batch", unit_scale=True, leave=False):
+        batch = raw_batch.to(model.device)
         # calculate batch scores onces
         scores = model.predict(batch, target=dataset.target, full_batch=False, mode=mode)
         # consume by all consumers

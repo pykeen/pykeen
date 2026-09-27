@@ -260,8 +260,8 @@ class Cleaner:
         reference, *others = triples_groups
         result = []
         for other in others:
-            reference, other = self.cleanup_pair(reference=reference, other=other, random_state=random_state)
-            result.append(other)
+            reference, cleaned_other = self.cleanup_pair(reference=reference, other=other, random_state=random_state)
+            result.append(cleaned_other)
         return reference, *result
 
 

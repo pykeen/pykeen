@@ -203,6 +203,9 @@ class Dataset(ExtraReprMixin):
             and (self.create_inverse_triples == __o.create_inverse_triples)
         )
 
+    # defining __eq__ implicitly sets __hash__ to None; make this explicit
+    __hash__ = None
+
     @property
     def factory_dict(self) -> Mapping[str, CoreTriplesFactory]:
         """Return a dictionary of the three factories."""
@@ -247,9 +250,9 @@ class Dataset(ExtraReprMixin):
         return rv
 
     @staticmethod
-    def triples_sort_key(cls: type[Dataset]) -> int:
+    def triples_sort_key(dataset_cls: type[Dataset]) -> int:
         """Get the number of triples for sorting."""
-        return cls.docdata("statistics", "triples")
+        return dataset_cls.docdata("statistics", "triples")
 
     @classmethod
     def triples_pair_sort_key(cls, pair: tuple[str, type[Dataset]]) -> int:

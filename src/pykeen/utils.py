@@ -880,9 +880,8 @@ def check_shapes(
     """
     dims: dict[str, tuple[int, ...]] = {}
     errors = []
-    for actual_shape, shape in x:
-        if isinstance(actual_shape, torch.Tensor):
-            actual_shape = actual_shape.shape
+    for tensor_or_shape, shape in x:
+        actual_shape = tensor_or_shape.shape if isinstance(tensor_or_shape, torch.Tensor) else tensor_or_shape
         if len(actual_shape) != len(shape):
             errors.append(f"Invalid number of dimensions: {actual_shape} vs. {shape}")
             continue
@@ -1146,16 +1145,16 @@ def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collect
         parent.setdefault(x, x)
         parent.setdefault(y, y)
         # get representatives
-        x = find(x=x, parent=parent)
-        y = find(x=y, parent=parent)
+        root_x = find(x=x, parent=parent)
+        root_y = find(x=y, parent=parent)
         # already merged
-        if x == y:
+        if root_x == root_y:
             continue
-        # make x the smaller one
-        if y < x:  # type: ignore[operator]
-            x, y = y, x
+        # make root_x the smaller one
+        if root_y < root_x:  # type: ignore[operator]
+            root_x, root_y = root_y, root_x
         # merge
-        parent[y] = x
+        parent[root_y] = root_x
     # extract partitions
     result = defaultdict(list)
     for k, v in parent.items():
@@ -1234,9 +1233,8 @@ def ensure_complex(*xs: torch.Tensor) -> Iterable[torch.Tensor]:
             yield x
             continue
         warnings.warn(f"{x=} is not complex, but will be viewed as such", stacklevel=2)
-        if x.shape[-1] != 2:
-            x = x.view(*x.shape[:-1], -1, 2)
-        yield torch.view_as_complex(x)
+        x_pairs = x if x.shape[-1] == 2 else x.view(*x.shape[:-1], -1, 2)
+        yield torch.view_as_complex(x_pairs)
 
 
 def _weisfeiler_lehman_iteration(

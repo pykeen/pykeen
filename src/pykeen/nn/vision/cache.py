@@ -119,7 +119,7 @@ class WikidataImageCache(WikidataTextCache):
                     name=f"{wikidata_id}.{ext}",
                     download_kwargs={"backend": "requests", "headers": self.HEADERS},
                 )
-            else:
+            else:  # noqa: PLW0120  # FIXME: the loop never breaks, so this always runs
                 # did not break -> no image
                 logger.warning(f"No image for {wikidata_id}")
 

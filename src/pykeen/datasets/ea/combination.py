@@ -61,12 +61,13 @@ def cat_shift_triples(*triples: CoreTriplesFactory | MappedTriples) -> tuple[Map
         if isinstance(x, CoreTriplesFactory):
             e_offset = x.num_entities
             r_offset = x.num_relations
-            x = x.mapped_triples
+            mapped_triples = x.mapped_triples
         else:
             e_offset = get_num_ids(x[:, [0, 2]])
             r_offset = get_num_ids(x[:, 1])
+            mapped_triples = x
         # append shifted mapped triples
-        res.append(x + offsets[None, i, [0, 1, 0]])
+        res.append(mapped_triples + offsets[None, i, [0, 1, 0]])
         # update offsets
         offsets[i + 1 :, 0] += e_offset
         offsets[i + 1 :, 1] += r_offset
@@ -104,14 +105,14 @@ def merge_label_to_id_mapping(
     value_to_keys: defaultdict[int, set[str]] = defaultdict(set)
     for i, (prefix, mapping) in enumerate(pairs):
         for key, value in mapping.items():
-            key = f"{prefix}:{key}"
+            prefixed_key = f"{prefix}:{key}"
             if offsets is None:
                 # for mypy
                 assert mappings is not None
-                value = mappings[i][value]
+                new_value = mappings[i][value]
             else:
-                value = value + offsets[i].item()
-            value_to_keys[value].add(key)
+                new_value = value + offsets[i].item()
+            value_to_keys[new_value].add(prefixed_key)
     if extra:
         for k, v in extra.items():
             value_to_keys[v].add(k)
@@ -462,8 +463,8 @@ class CollapseGraphPairCombinator(GraphPairCombinator[FactoryType]):
         # determine connected components regarding the same-as relation (i.e., applies transitivity)
         entity_id_mapping = torch.arange(get_num_ids(mapped_triples[:, 0::2]))
         for cc in get_connected_components(pairs=alignment.t().tolist()):
-            cc = list(cc)
-            entity_id_mapping[cc] = min(cc)
+            cc_list = list(cc)
+            entity_id_mapping[cc_list] = min(cc_list)
         # apply id mapping
         h, r, t = mapped_triples.t()
         h_new, t_new = entity_id_mapping[h], entity_id_mapping[t]

@@ -405,19 +405,18 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: s
             path = f"{pykeen_prefix}.{cls.__qualname__}"
 
         docdata = get_docdata(cls)
-        if docdata is not None:
-            name = docdata.get("name", name)
+        display_name = name if docdata is None else docdata.get("name", name)
 
         if tablefmt == "rst":
-            yield name, f":class:`{path}`"
+            yield display_name, f":class:`{path}`"
         elif tablefmt == "github":
             doc = cls.__doc__
             reference = f"[`{path}`]({link_fmt.format(path)})" if link_fmt else f"`{path}`"
 
-            yield name, reference, get_until_first_blank(doc)
+            yield display_name, reference, get_until_first_blank(doc)
         else:
             doc = cls.__doc__
-            yield name, path, get_until_first_blank(doc)
+            yield display_name, path, get_until_first_blank(doc)
 
 
 @ls.command()
@@ -556,7 +555,7 @@ def _get_dataset_lines(tablefmt, link_fmt: str | None = None) -> Iterable[tuple[
             yield name, reference, "", "", "", ""
             continue
 
-        name = docdata["name"]
+        display_name = docdata["name"]
         statistics = docdata["statistics"]
         entities = statistics["entities"]
         relations = statistics["relations"]
@@ -575,7 +574,7 @@ def _get_dataset_lines(tablefmt, link_fmt: str | None = None) -> Iterable[tuple[
             elif github:
                 link = f"https://github.com/{github}"
                 citation_str = _link(github if tablefmt == "rst" else f"`{github}`", link, tablefmt)
-        yield name, reference, citation_str, entities, relations, triples
+        yield display_name, reference, citation_str, entities, relations, triples
 
 
 def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Iterable[tuple[str, ...]]:
@@ -593,7 +592,7 @@ def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Itera
             yield name, reference, "", "", "", ""
             continue
 
-        name = docdata["name"]
+        display_name = docdata["name"]
 
         citation_str = ""
         citation = docdata.get("citation")
@@ -608,7 +607,7 @@ def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Itera
             elif github:
                 link = f"https://github.com/{github}"
                 citation_str = _link(github if tablefmt == "rst" else f"`{github}`", link, tablefmt)
-        yield name, reference, citation_str
+        yield display_name, reference, citation_str
 
 
 def _link(text: str, link: str, fmt: str) -> str:
