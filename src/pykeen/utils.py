@@ -347,7 +347,10 @@ def is_cudnn_error(runtime_error: RuntimeError) -> bool:
 def compact_mapping(
     mapping: Mapping[X, int],
 ) -> tuple[Mapping[X, int], Mapping[int, int]]:
-    """Update a mapping (key -> id) such that the IDs range from 0 to len(mappings) - 1.
+    """Update a mapping (key -> id) such that the IDs range from 0 to (number of unique IDs) - 1.
+
+    The relative order of IDs is preserved, i.e., if ``old_i < old_j`` then ``new_i < new_j``. The mapping does not
+    need to be injective; keys sharing the same old ID will share the same new ID.
 
     :param mapping:
         The mapping to compact.
@@ -355,7 +358,7 @@ def compact_mapping(
     :return: A pair (translated, translation)
         where translated is the updated mapping, and translation a dictionary from old to new ids.
     """
-    translation = {old_id: new_id for new_id, old_id in enumerate(sorted(mapping.values()))}
+    translation = {old_id: new_id for new_id, old_id in enumerate(sorted(set(mapping.values())))}
     translated = {k: translation[v] for k, v in mapping.items()}
     return translated, translation
 

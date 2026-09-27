@@ -222,6 +222,40 @@ class TestUtils(unittest.TestCase):
         assert set(id_remapping.keys()) == set(mapping.values())
         assert set(id_remapping.values()) == set(compacted_mapping.values())
 
+    def test_compact_mapping_injective(self):
+        """Test ``compact_mapping()`` on an injective mapping."""
+        compacted_mapping, id_remapping = compact_mapping(mapping={"a": 7, "b": 3, "c": 10})
+        assert compacted_mapping == {"a": 1, "b": 0, "c": 2}
+        assert id_remapping == {3: 0, 7: 1, 10: 2}
+
+    def test_compact_mapping_non_injective(self):
+        """Test ``compact_mapping()`` on a non-injective mapping."""
+        compacted_mapping, id_remapping = compact_mapping(mapping={"a": 0, "b": 0, "c": 5})
+        assert compacted_mapping == {"a": 0, "b": 0, "c": 1}
+        assert id_remapping == {0: 0, 5: 1}
+
+        mapping = {letter: i // 3 * 2 + 1 for i, letter in enumerate(string.ascii_letters)}
+        compacted_mapping, id_remapping = compact_mapping(mapping=mapping)
+        num_unique = len(set(mapping.values()))
+        assert set(compacted_mapping.values()) == set(range(num_unique))
+        assert set(id_remapping.keys()) == set(mapping.values())
+        assert set(id_remapping.values()) == set(range(num_unique))
+        # keys sharing an old ID share the new ID
+        for key, old_id in mapping.items():
+            assert compacted_mapping[key] == id_remapping[old_id]
+
+    def test_compact_mapping_empty(self):
+        """Test ``compact_mapping()`` on an empty mapping."""
+        assert compact_mapping(mapping={}) == ({}, {})
+
+    def test_compact_mapping_order_preserving(self):
+        """Test that ``compact_mapping()`` preserves the relative order of IDs."""
+        mapping = {letter: (i * 7) % 11 * 3 for i, letter in enumerate(string.ascii_letters)}
+        _, id_remapping = compact_mapping(mapping=mapping)
+        old_ids = sorted(id_remapping.keys())
+        new_ids = [id_remapping[old_id] for old_id in old_ids]
+        assert new_ids == list(range(len(old_ids)))
+
     def test_clamp_norm(self):
         """Test clamp_norm() ."""
         max_norm = 1.0
