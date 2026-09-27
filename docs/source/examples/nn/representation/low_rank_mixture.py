@@ -1,6 +1,6 @@
 """Use the (generalized) low-rank approximation to create a mixture model representation."""
 
-import pandas
+import pandas as pd
 
 from pykeen.datasets import get_dataset
 from pykeen.models import ERModel
@@ -40,7 +40,7 @@ rows = [
     for wikidata_id, relation_index in dataset.relation_to_id.items()
     for component, weight in enumerate(relation_weights[relation_index])
 ]
-df = pandas.DataFrame(data=rows, columns=["relation_index", "wikidata-id", "text", "component_index", "weight"])
+df = pd.DataFrame(data=rows, columns=["relation_index", "wikidata-id", "text", "component_index", "weight"])
 
 
 # For each component, look at the relations that are most assigned to it

@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Collection, Mapping
 
-import numpy
+import numpy as np
 import torch
 from tqdm.auto import tqdm
 
@@ -50,7 +50,7 @@ def random_sample_no_replacement(
     return assignment
 
 
-def ensure_num_entities(edge_index: numpy.ndarray, num_entities: int | None = None) -> int:
+def ensure_num_entities(edge_index: np.ndarray, num_entities: int | None = None) -> int:
     """Calculate the number of entities from the edge index if not given."""
     if num_entities is not None:
         return num_entities

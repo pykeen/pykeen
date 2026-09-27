@@ -9,7 +9,7 @@ import pathlib
 from typing import Literal, Unpack
 
 import click
-import pandas
+import pandas as pd
 from docdata import parse_docdata
 from more_click import verbose_option
 
@@ -133,7 +133,7 @@ class OpenEA(EADataset):
         # left side has files ending with 1, right side with 2
         source = self.left_source if side == EA_SIDE_LEFT else self.right_source
         with source.open() as file:
-            df = pandas.read_csv(
+            df = pd.read_csv(
                 file,
                 header=None,
                 names=COLUMN_LABELS,
@@ -146,9 +146,9 @@ class OpenEA(EADataset):
             metadata={"path": source.path},
         )
 
-    def _load_alignment(self) -> pandas.DataFrame:
+    def _load_alignment(self) -> pd.DataFrame:
         with self.alignment_source.open() as file:
-            return pandas.read_csv(
+            return pd.read_csv(
                 file,
                 header=None,
                 names=list(EA_SIDES),

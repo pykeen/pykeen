@@ -12,7 +12,7 @@ from collections.abc import Iterable
 from typing import Any
 from unittest import mock
 
-import numpy
+import numpy as np
 import pytest
 import torch
 
@@ -26,6 +26,7 @@ from pykeen.utils import (
     compose,
     estimate_cost_of_sequence,
     flatten_dictionary,
+    get_connected_components,
     get_optimal_sequence,
     get_until_first_blank,
     iter_weisfeiler_lehman,
@@ -275,10 +276,10 @@ class TestUtils(unittest.TestCase):
             n_samples, time = timeit.Timer(stmt="sum(arrays)", globals={"arrays": arrays}).autorange()
             consumption = time / n_samples
             data.append((cost, consumption))
-        a = numpy.asarray(data)
+        a = np.asarray(data)
 
         # check for strong correlation between estimated costs and measured execution time
-        assert (numpy.corrcoef(x=a[:, 0], y=a[:, 1])[0, 1]) > 0.8
+        assert (np.corrcoef(x=a[:, 0], y=a[:, 1])[0, 1]) > 0.8
 
     @pytest.mark.slow
     def test_get_optimal_sequence_caching(self):
@@ -431,3 +432,26 @@ def test_resolve_device(device: str | None, cuda_available: bool, mps_available:
         mock.patch("torch.backends.mps.is_available", return_value=mps_available),
     ):
         assert resolve_device(device).type == expected
+
+
+@pytest.mark.parametrize(
+    ("pairs", "expected"),
+    [
+        # empty graph
+        ([], []),
+        # single edge
+        ([(1, 2)], [[1, 2]]),
+        # two disjoint components
+        ([(1, 2), (3, 4)], [[1, 2], [3, 4]]),
+        # the last edge merges two components, leaving node 1 as root only reachable via an intermediate node
+        ([(1, 2), (3, 4), (2, 3)], [[1, 2, 3, 4]]),
+        # chain in reverse order
+        ([(4, 3), (3, 2), (2, 1)], [[1, 2, 3, 4]]),
+        # self-loop and cycle
+        ([(1, 1), (2, 3), (3, 5), (5, 2)], [[1], [2, 3, 5]]),
+    ],
+)
+def test_get_connected_components(pairs: list[tuple[int, int]], expected: list[list[int]]) -> None:
+    """Test calculation of connected components."""
+    components = get_connected_components(pairs)
+    assert sorted(sorted(component) for component in components) == expected

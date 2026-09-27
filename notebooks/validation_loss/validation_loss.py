@@ -1,8 +1,8 @@
 # %%
 """Validation loss notebook."""
 
-import pandas
-import seaborn
+import pandas as pd
+import seaborn as sns
 
 from pykeen.datasets import get_dataset
 from pykeen.pipeline import pipeline
@@ -30,8 +30,8 @@ result = pipeline(
 # ## Evaluation with seaborn
 
 # %%
-grid = seaborn.relplot(
-    data=pandas.DataFrame(
+grid = sns.relplot(
+    data=pd.DataFrame(
         data=[
             [step, step_metrics.get("loss"), step_metrics.get("validation.loss")]
             for step, step_metrics in result_tracker.metrics.items()

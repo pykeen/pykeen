@@ -7,8 +7,8 @@ from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, ClassVar, Generic, NamedTuple, TypeVar
 
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 import torch
 from class_resolver import ClassResolver
 from pandas.api.types import is_numeric_dtype, is_string_dtype
@@ -170,7 +170,7 @@ def merge_label_to_id_mappings(
 
 
 def filter_map_alignment(
-    alignment: pandas.DataFrame,
+    alignment: pd.DataFrame,
     left: CoreTriplesFactory,
     right: CoreTriplesFactory,
     entity_offsets: LongTensor,
@@ -205,7 +205,7 @@ def filter_map_alignment(
 
     # filter alignment
     invalid_mask = (alignment.to_numpy() < 0).any(axis=1) | (
-        alignment.to_numpy() >= numpy.reshape(numpy.asarray([left.num_entities, right.num_entities]), (1, 2))
+        alignment.to_numpy() >= np.reshape(np.asarray([left.num_entities, right.num_entities]), (1, 2))
     ).any(axis=1)
     if invalid_mask.any():
         logger.warning(
@@ -270,7 +270,7 @@ class GraphPairCombinator(ABC, Generic[FactoryType]):
         self,
         left: FactoryType,
         right: FactoryType,
-        alignment: pandas.DataFrame,
+        alignment: pd.DataFrame,
         **kwargs,
     ) -> tuple[FactoryType, LongTensor]:
         """

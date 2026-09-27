@@ -3,7 +3,6 @@
 import itertools as itt
 import unittest
 
-import numpy
 import numpy as np
 import scipy.sparse
 import torch
@@ -172,7 +171,7 @@ class TestLeakage(unittest.TestCase):
         for m in (rel, inv):
             # check type
             assert isinstance(m, scipy.sparse.spmatrix)
-            assert m.dtype == numpy.int32
+            assert m.dtype == np.int32
             # check shape
             assert m.shape[0] == triples_factory.num_relations
             # check 1-hot
@@ -184,15 +183,15 @@ class TestLeakage(unittest.TestCase):
         rel = triples_factory_to_sparse_matrices(triples_factory)[0]
         sim = jaccard_similarity_scipy(a=rel, b=rel)
         # check type
-        assert isinstance(sim, numpy.ndarray)
-        assert sim.dtype == numpy.float64
+        assert isinstance(sim, np.ndarray)
+        assert sim.dtype == np.float64
         # check shape
         assert sim.shape == (triples_factory.num_relations, triples_factory.num_relations)
         # check value range
         assert (sim >= 0).all()
         assert (sim <= 1).all()
         # check self-similarity = 1
-        numpy.testing.assert_allclose(numpy.diag(sim), 1.0)
+        np.testing.assert_allclose(np.diag(sim), 1.0)
 
     def test_candidate_pairs(self):
         """Test :func:`get_candidate_pairs`."""

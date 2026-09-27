@@ -235,7 +235,7 @@ select = [
     # flake8-implicit-str-concat (ISC)
     "ISC",
     # flake8-import-conventions (ICN)
-    # "ICN",
+    "ICN",
     # flake8-logging (LOG)
     "LOG",
     # flake8-logging-format (G)

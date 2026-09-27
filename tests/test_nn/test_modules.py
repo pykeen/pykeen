@@ -6,7 +6,7 @@ from collections.abc import MutableMapping, Sequence
 from typing import Any
 from unittest import SkipTest
 
-import numpy
+import numpy as np
 import pytest
 import torch
 import torch.nn.functional
@@ -72,7 +72,7 @@ class ConvETests(cases.InteractionTestCase):
             dim=2,
         )
         x = self.instance.hr2d(x)
-        x = x.view(-1, numpy.prod(x.shape[-3:]))
+        x = x.view(-1, np.prod(x.shape[-3:]))
         x = self.instance.hr1d(x)
         return (x.view(1, -1) * t.view(1, -1)).sum() + t_bias
 

@@ -5,8 +5,8 @@ import typing
 from abc import abstractmethod
 from collections.abc import Collection, Sequence
 
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 import torch
 from class_resolver import ClassResolver, HintOrType
 
@@ -99,12 +99,12 @@ def _split_triples(
     return triples_groups
 
 
-def _get_cover_for_column(df: pandas.DataFrame, column: Target, index_column: str = "index") -> set[int]:
+def _get_cover_for_column(df: pd.DataFrame, column: Target, index_column: str = "index") -> set[int]:
     return set(df.groupby(by=column).agg({index_column: "min"})[index_column].values)
 
 
-def _get_covered_entities(df: pandas.DataFrame, chosen: Collection[int]) -> set[int]:
-    return set(numpy.unique(df.loc[df["index"].isin(chosen), [LABEL_HEAD, LABEL_TAIL]]))
+def _get_covered_entities(df: pd.DataFrame, chosen: Collection[int]) -> set[int]:
+    return set(np.unique(df.loc[df["index"].isin(chosen), [LABEL_HEAD, LABEL_TAIL]]))
 
 
 def _get_cover_deterministic(triples: MappedTriples) -> BoolTensor:
@@ -126,7 +126,7 @@ def _get_cover_deterministic(triples: MappedTriples) -> BoolTensor:
     :return: shape: (n,)
         A boolean mask indicating whether the triple is part of the cover.
     """
-    df = pandas.DataFrame(data=triples.numpy(), columns=COLUMN_LABELS).reset_index()
+    df = pd.DataFrame(data=triples.numpy(), columns=COLUMN_LABELS).reset_index()
 
     # select one triple per relation
     chosen = _get_cover_for_column(df=df, column=LABEL_RELATION)
@@ -196,7 +196,7 @@ def normalize_ratios(
 
 def construct_uniform_probability(n: int) -> tuple[float, ...]:
     """Construct a uniform distribution."""
-    return tuple((numpy.ones(shape=(n,)) / n).tolist())
+    return tuple((np.ones(shape=(n,)) / n).tolist())
 
 
 def get_absolute_split_sizes(
@@ -218,11 +218,11 @@ def get_absolute_split_sizes(
         The absolute sizes.
     """
     # due to rounding errors we might lose a few points, thus we use cumulative ratio
-    cum_ratio = numpy.cumsum(ratios)
+    cum_ratio = np.cumsum(ratios)
     cum_ratio[-1] = 1.0
-    cum_ratio = numpy.r_[numpy.zeros(1), cum_ratio]
-    split_points = (cum_ratio * n_total).astype(numpy.int64)
-    sizes = numpy.diff(split_points)
+    cum_ratio = np.r_[np.zeros(1), cum_ratio]
+    split_points = (cum_ratio * n_total).astype(np.int64)
+    sizes = np.diff(split_points)
     return tuple(sizes)
 
 

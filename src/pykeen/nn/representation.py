@@ -13,7 +13,6 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, ClassVar, Literal, Self, cast
 
 import more_itertools
-import numpy
 import numpy as np
 import torch
 import torch.nn
@@ -1924,7 +1923,7 @@ class TensorTrainRepresentation(Representation):
                 N \leq \prod \limits_{n_i \in \textit{ns}} n_i
         """
         m_k = math.ceil(max_id ** (1 / num_cores))
-        n_k = math.ceil(numpy.prod(shape) ** (1 / num_cores))
+        n_k = math.ceil(np.prod(shape) ** (1 / num_cores))
         return [m_k] * num_cores, [n_k] * num_cores
 
     @staticmethod
@@ -2053,12 +2052,12 @@ class TensorTrainRepresentation(Representation):
         if len(ms) != num_cores or len(ns) != num_cores:
             raise ValueError(f"Invalid length: len(ms)={len(ms)}, len(ns)={len(ns)} vs. num_cores={num_cores}")
 
-        m_prod = numpy.prod(ms).item()
+        m_prod = np.prod(ms).item()
         if m_prod < max_id:
             raise ValueError(f"prod(ms)={m_prod} < max_id={max_id}")
 
-        n_prod = numpy.prod(ns).item()
-        s_prod = numpy.prod(shape).item()
+        n_prod = np.prod(ns).item()
+        s_prod = np.prod(shape).item()
         if n_prod < s_prod:
             raise ValueError(f"prod(ns)={n_prod} < prod(shape)={s_prod}")
 

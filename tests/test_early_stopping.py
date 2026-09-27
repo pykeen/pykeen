@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import patch
 
-import numpy
+import numpy as np
 import pytest
 import torch
 import unittest_templates
@@ -113,7 +113,7 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
         """Set up the real world early stopping test."""
         # Fix seed for reproducibility
         torch.manual_seed(seed=self.seed)
-        numpy.random.seed(seed=self.seed)  # noqa: NPY002
+        np.random.seed(seed=self.seed)  # noqa: NPY002
 
     @pytest.mark.slow
     def test_early_stopping(self):
