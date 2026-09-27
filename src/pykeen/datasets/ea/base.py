@@ -2,14 +2,14 @@
 
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Mapping
-from typing import Any, NotRequired, TypedDict
+from collections.abc import Iterable
+from typing import NotRequired, Unpack
 
 import pandas
 from class_resolver import HintOrType, OptionalKwargs
 
 from .combination import GraphPairCombinator, graph_combinator_resolver
-from ..base import LazyDataset
+from ..base import LazyDataset, LazyDatasetKwargs
 from ...triples import TriplesFactory
 from ...typing import EA_SIDE_LEFT, EA_SIDES, EASide, TorchRandomHint
 from ...utils import format_relative_comparison
@@ -25,12 +25,10 @@ logger = logging.getLogger(__name__)
 # TODO: support ID-only graphs
 
 
-class EADatasetKwargs(TypedDict):
+class EADatasetKwargs(LazyDatasetKwargs):
     """Keyword arguments for an entity alignment dataset."""
 
-    metadata: NotRequired[Mapping[str, Any] | None]
     side: NotRequired[EASide | None]
-    create_inverse_triples: NotRequired[bool]
     random_state: NotRequired[TorchRandomHint]
     split_ratios: NotRequired[tuple[float, float, float]]
     combination: NotRequired[HintOrType[GraphPairCombinator]]
@@ -46,19 +44,17 @@ class EADataset(LazyDataset, ABC):
     def __init__(
         self,
         *,
-        metadata: Mapping[str, Any] | None = None,
         side: EASide | None = EA_SIDE_LEFT,
-        create_inverse_triples: bool = False,
         random_state: TorchRandomHint = 0,
         split_ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),
         combination: HintOrType[GraphPairCombinator] = None,
         combination_kwargs: OptionalKwargs = None,
+        **kwargs: Unpack[LazyDatasetKwargs],
     ) -> None:
         """Initialize the dataset.
 
         :param side: the side, if only a single graph should be considered, or `None` to combine the two graphs into a
             single one, using `combination`.
-        :param create_inverse_triples: whether to create inverse triples.
         :param random_state: the random state to use for reproducible splits
         :param split_ratios: the split ratios used to perform the train/test/validation split.
         :param combination: the graph combination. only effective if side is `None`
@@ -66,13 +62,11 @@ class EADataset(LazyDataset, ABC):
 
         :raises ValueError: if an invalid side is passed
         """
-        super().__init__()
-        self._create_inverse_triples = create_inverse_triples
         self.side = side
         self.combination = graph_combinator_resolver.make(combination, pos_kwargs=combination_kwargs)
         self.split_ratios = split_ratios
-        self.metadata = metadata
         self.random_state = random_state
+        super().__init__(**kwargs)
 
     def _load(self) -> None:
         if self.side is None:
@@ -99,7 +93,7 @@ class EADataset(LazyDataset, ABC):
             ratios=self.split_ratios, random_state=self.random_state
         )
         # create inverse triples only for training
-        self._training.create_inverse_triples = self._create_inverse_triples
+        self._training._create_inverse_triples = self.create_inverse_triples
 
     def _load_validation(self) -> None:
         pass
