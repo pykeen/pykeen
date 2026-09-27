@@ -1,6 +1,7 @@
 """Unit tests for triples factories."""
 
 import itertools as itt
+import logging
 import pickle
 import tempfile
 import unittest
@@ -727,27 +728,40 @@ def test_condense(tf_one_hole: CoreTriplesFactory, entities: bool, relations: bo
 _LABELED_TRIPLES = np.array([["a", "r", "b"], ["b", "s", "c"]], dtype=str)
 
 
+_ENTITY = r"entity-to-ID mapping"
+_RELATION = r"relation-to-ID mapping"
+
+
+@pytest.mark.parametrize("compact_id", [False, True])
 @pytest.mark.parametrize(
-    ("kwargs", "match", "compact_id"),
+    ("kwargs", "match"),
     [
-        # non-injective mappings are rejected, also with compaction (which preserves collisions)
-        *(
-            (kwargs, match, compact_id)
-            for kwargs, match in [
-                ({"entity_to_id": {"a": 0, "b": 0, "c": 1}}, r"not injective.*\d+: \['a', 'b'\]"),
-                ({"relation_to_id": {"r": 3, "s": 3}}, r"not injective.*\d+: \['r', 's'\]"),
-            ]
-            for compact_id in (False, True)
-        ),
-        # negative / non-integer IDs; without compaction, since compaction re-assigns IDs
-        ({"entity_to_id": {"a": 0, "b": -1, "c": 1}}, r"non-negative.*'b', -1", False),
-        ({"entity_to_id": {"a": 0, "b": 1.5, "c": 1}}, r"integers.*'b', 1\.5", False),
+        # non-injective mappings report the *original* IDs, also with compaction
+        ({"entity_to_id": {"a": 0, "b": 0, "c": 1}}, _ENTITY + r" is not injective.*0: \['a', 'b'\]"),
+        ({"relation_to_id": {"r": 3, "s": 3}}, _RELATION + r" is not injective.*3: \['r', 's'\]"),
+        # negative IDs
+        ({"entity_to_id": {"a": 0, "b": -1, "c": 1}}, _ENTITY + r" have to be non-negative.*'b', -1"),
+        ({"relation_to_id": {"r": 0, "s": -2}}, _RELATION + r" have to be non-negative.*'s', -2"),
+        # non-integer IDs
+        ({"entity_to_id": {"a": 0, "b": 1.5, "c": 1}}, _ENTITY + r" have to be integers.*'b', 1\.5"),
+        ({"entity_to_id": {"a": 0, "b": 2.0, "c": 1}}, _ENTITY + r" have to be integers.*'b', 2\.0"),
+        ({"entity_to_id": {"a": "0", "b": "1", "c": "2"}}, _ENTITY + r" have to be integers.*'a', '0'"),
+        ({"relation_to_id": {"r": "0", "s": "1"}}, _RELATION + r" have to be integers.*'r', '0'"),
+        ({"entity_to_id": {"a": False, "b": True, "c": 2}}, _ENTITY + r" have to be integers.*'a', False"),
+        ({"relation_to_id": {"r": np.bool_(True), "s": 1}}, _RELATION + r" have to be integers.*'r'"),
     ],
 )
-def test_invalid_label_to_id(kwargs: dict[str, Any], match: str, compact_id: bool) -> None:
-    """Test that invalid label-to-ID mappings are rejected."""
-    with pytest.raises(ValueError, match=match):
+def test_invalid_label_to_id(
+    kwargs: dict[str, Any], match: str, compact_id: bool, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that invalid user-provided label-to-ID mappings are rejected before compaction and mapping."""
+    with (
+        caplog.at_level(logging.WARNING, logger="pykeen.triples.triples_factory"),
+        pytest.raises(ValueError, match=match),
+    ):
         TriplesFactory.from_labeled_triples(triples=_LABELED_TRIPLES, compact_id=compact_id, **kwargs)
+    # no misleading warnings (e.g., about unmappable triples) before the error
+    assert not caplog.records
 
 
 def test_non_injective_labeling_truncated_message() -> None:
@@ -763,15 +777,24 @@ def test_non_injective_labeling_message_bounded() -> None:
     assert len(str(exc_info.value)) < 500
 
 
-def test_non_contiguous_label_to_id() -> None:
+@pytest.mark.parametrize("compact_id", [False, True])
+def test_non_contiguous_label_to_id(compact_id: bool) -> None:
     """Test that valid, but non-contiguous, label-to-ID mappings are accepted."""
     entity_to_id = {"a": 0, "b": 7, "c": np.int64(3)}
     relation_to_id = {"r": 5, "s": 1}
     tf = TriplesFactory.from_labeled_triples(
-        triples=_LABELED_TRIPLES, entity_to_id=entity_to_id, relation_to_id=relation_to_id, compact_id=False
+        triples=_LABELED_TRIPLES, entity_to_id=entity_to_id, relation_to_id=relation_to_id, compact_id=compact_id
     )
-    assert tf.entity_to_id == entity_to_id
-    assert tf.relation_to_id == relation_to_id
-    assert tf.entity_id_to_label == {0: "a", 7: "b", 3: "c"}
-    assert tf.num_entities == 8
-    assert tf.num_relations == 6
+    if compact_id:
+        assert tf.entity_to_id == {"a": 0, "b": 2, "c": 1}
+        assert tf.relation_to_id == {"r": 1, "s": 0}
+        assert tf.num_entities == 3
+        assert tf.num_relations == 2
+    else:
+        assert tf.entity_to_id == entity_to_id
+        assert tf.relation_to_id == relation_to_id
+        assert tf.entity_id_to_label == {0: "a", 7: "b", 3: "c"}
+        assert tf.num_entities == 8
+        assert tf.num_relations == 6
+    # the triples are mapped consistently with the (possibly compacted) mappings
+    assert {tuple(t) for t in tf.triples.tolist()} == {tuple(t) for t in _LABELED_TRIPLES.tolist()}

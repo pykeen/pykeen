@@ -171,14 +171,16 @@ def _format_truncated(items: Sequence[Any], max_items: int = 5, formatter: Calla
     return text
 
 
-def _validate_and_invert_label_to_id(label_to_id: Mapping[str, int]) -> dict[int, str]:
+def _validate_and_invert_label_to_id(label_to_id: Mapping[str, int], name: str = "label") -> dict[int, str]:
     """Validate a label-to-ID mapping and return its inverse.
 
-    The IDs have to be non-negative integers, and the mapping has to be injective, i.e., no two labels may share the
-    same ID. The IDs are *not* required to be contiguous.
+    The IDs have to be non-negative integers (:class:`bool` is not accepted), and the mapping has to be injective,
+    i.e., no two labels may share the same ID. The IDs are *not* required to be contiguous.
 
     :param label_to_id:
         The mapping from labels to IDs.
+    :param name:
+        The name of the kind of labels, e.g., ``"entity"`` or ``"relation"``; used in error messages.
 
     :return:
         The inverse mapping, from IDs to labels.
@@ -186,19 +188,22 @@ def _validate_and_invert_label_to_id(label_to_id: Mapping[str, int]) -> dict[int
     :raises ValueError:
         if any ID is not a non-negative integer, or if multiple labels are mapped to the same ID.
     """
+    description = f"{name}-to-ID mapping"
     # check the ID types; this is cheap since we only check the (few) distinct types
-    invalid_types = {t for t in set(map(type, label_to_id.values())) if not issubclass(t, int | np.integer)}
+    invalid_types = {
+        t for t in set(map(type, label_to_id.values())) if not issubclass(t, int | np.integer) or issubclass(t, bool)
+    }
     if invalid_types:
         offending = [(label, i) for label, i in label_to_id.items() if type(i) in invalid_types]
         raise ValueError(
-            f"All IDs have to be integers, but {len(offending)} labels have non-integer IDs: "
+            f"All IDs of the {description} have to be integers, but {len(offending)} labels have non-integer IDs: "
             f"{_format_truncated(offending)}",
         )
     id_to_label = {i: label for label, i in label_to_id.items()}
     if id_to_label and min(id_to_label.keys()) < 0:
         offending = [(label, i) for label, i in label_to_id.items() if i < 0]
         raise ValueError(
-            f"All IDs have to be non-negative, but {len(offending)} labels have negative IDs: "
+            f"All IDs of the {description} have to be non-negative, but {len(offending)} labels have negative IDs: "
             f"{_format_truncated(offending)}",
         )
     if len(id_to_label) < len(label_to_id):
@@ -208,7 +213,7 @@ def _validate_and_invert_label_to_id(label_to_id: Mapping[str, int]) -> dict[int
             id_to_labels.setdefault(i, []).append(label)
         collisions = [(i, labels) for i, labels in id_to_labels.items() if len(labels) > 1]
         raise ValueError(
-            f"The label-to-ID mapping is not injective: {len(collisions)} ID(s) shared by multiple labels "
+            f"The {description} is not injective: {len(collisions)} ID(s) shared by multiple labels "
             f"(only {len(id_to_label)} unique IDs for {len(label_to_id)} labels). Offending ID: [labels]: "
             + _format_truncated(collisions, formatter=lambda pair: f"{pair[0]!r}: [{_format_truncated(pair[1])}]"),
         )
@@ -231,13 +236,19 @@ class Labeling:
     #: A vectorized version of entity_id_to_label; initialized automatically
     _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
 
-    def __post_init__(self):
+    #: The name of the kind of labels, e.g., "entity"; only used for error messages
+    name: dataclasses.InitVar[str] = "label"
+
+    def __post_init__(self, name: str):
         """Validate the mapping and precompute inverse mappings.
+
+        :param name:
+            The name of the kind of labels, e.g., ``"entity"``; only used for error messages.
 
         :raises ValueError:
             if the IDs are not non-negative integers, or the mapping is not injective
         """
-        self.id_to_label = _validate_and_invert_label_to_id(self.label_to_id)
+        self.id_to_label = _validate_and_invert_label_to_id(self.label_to_id, name=name)
         self._vectorized_mapper = np.vectorize(self.label_to_id.get, otypes=[int])
         self._vectorized_labeler = np.vectorize(self.id_to_label.get, otypes=[str])
 
@@ -1223,10 +1234,11 @@ class TriplesFactory(CoreTriplesFactory):
             the number of relations. May be None, in which case this number is inferred by the label mapping
 
         :raises ValueError:
-            if the explicitly provided number of entities or relations does not match with the one given
-            by the label mapping
+            if the label mappings are invalid, i.e., contain IDs which are not non-negative integers, or map multiple
+            labels to the same ID; or if the explicitly provided number of entities or relations does not match with
+            the one given by the label mapping
         """
-        self.entity_labeling = Labeling(label_to_id=entity_to_id)
+        self.entity_labeling = Labeling(label_to_id=entity_to_id, name="entity")
         if num_entities is None:
             num_entities = self.entity_labeling.max_id
         elif num_entities != self.entity_labeling.max_id:
@@ -1234,7 +1246,7 @@ class TriplesFactory(CoreTriplesFactory):
                 f"Mismatch between the number of entities in labeling ({self.entity_labeling.max_id}) "
                 f"vs. explicitly provided num_entities={num_entities}",
             )
-        self.relation_labeling = Labeling(label_to_id=relation_to_id)
+        self.relation_labeling = Labeling(label_to_id=relation_to_id, name="relation")
         if num_relations is None:
             num_relations = self.relation_labeling.max_id
         elif num_relations != self.relation_labeling.max_id:
@@ -1282,7 +1294,18 @@ class TriplesFactory(CoreTriplesFactory):
 
         :return:
             A new triples factory.
+
+        :raises ValueError:
+            if an explicitly provided ``entity_to_id`` or ``relation_to_id`` mapping is invalid, i.e., contains IDs
+            which are not non-negative integers, or maps multiple labels to the same ID. This check is performed on
+            the provided mapping, i.e., *before* any compaction.
         """
+        # Validate explicitly provided mappings *before* compaction and mapping, such that errors refer to the
+        # user-provided IDs, and invalid IDs are not silently re-mapped
+        for name, label_to_id in (("entity", entity_to_id), ("relation", relation_to_id)):
+            if label_to_id is not None:
+                _validate_and_invert_label_to_id(label_to_id, name=name)
+
         # Check if the triples are inverted already
         # We re-create them pure index based to ensure that _all_ inverse triples are present and that they are
         # contained if and only if create_inverse_triples is True.
