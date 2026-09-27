@@ -2,6 +2,7 @@
 
 from collections.abc import MutableMapping
 from typing import Any
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -83,6 +84,21 @@ class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
         factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
         instances = BatchedSLCWAInstances.from_triples_factory(factory)
         assert len(instances) == 4
+
+    def test_iter_triple_ids_multiple_workers(self):
+        """Test that, across all data loader workers, each triple ID is used exactly once."""
+        # do not drop incomplete batches, since each worker may have an incomplete last batch
+        instance = BatchedSLCWAInstances(mapped_triples=self.factory.mapped_triples, batch_size=7, drop_last=False)
+        num_triples = instance.mapped_triples.shape[0]
+        for num_workers in (1, 2, 3, 11):
+            with self.subTest(num_workers=num_workers):
+                triple_ids: list[int] = []
+                for worker_id in range(num_workers):
+                    worker_info = mock.Mock(id=worker_id, num_workers=num_workers)
+                    with mock.patch("torch.utils.data.get_worker_info", return_value=worker_info):
+                        for batch in instance.iter_triple_ids():
+                            triple_ids.extend(int(i) for i in batch)
+                assert sorted(triple_ids) == list(range(num_triples))
 
     def test_grouped(self):
         """Test that grouped instances emit the expected keys and shapes."""

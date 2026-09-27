@@ -283,7 +283,8 @@ class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
 
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
         yield from data.BatchSampler(
-            sampler=data.RandomSampler(data_source=split_workload(len(self.mapped_triples))),
+            # note: RandomSampler would yield positions within the workload, rather than the triple IDs themselves
+            sampler=data.SubsetRandomSampler(indices=split_workload(len(self.mapped_triples))),
             batch_size=self.batch_size,
             drop_last=self.drop_last,
         )
