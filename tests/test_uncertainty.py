@@ -105,7 +105,7 @@ def test_uncertain_prediction_with_inverse_triples(
     columns: list[int],
 ):
     """Test that uncertainty prediction maps relation IDs like its deterministic counterpart."""
-    dataset = Nations(create_inverse_triples=True)
+    dataset = Nations()
     # disable dropout, so that the MC samples coincide with the deterministic prediction
     model = ERMLPE(
         triples_factory=dataset.training,
@@ -114,6 +114,7 @@ def test_uncertain_prediction_with_inverse_triples(
         random_seed=0,
         input_dropout=0.0,
         hidden_dropout=0.0,
+        use_inverse_triples=True,
     )
     batch = dataset.testing.mapped_triples[:3, columns]
     copy = batch.clone()

@@ -83,8 +83,8 @@ class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
             ["e1", "a", "e2"],
         ]
         t = np.array(t, dtype=str)
-        factory = TriplesFactory.from_labeled_triples(triples=t, create_inverse_triples=True)
-        instances = BatchedSLCWAInstances.from_triples_factory(factory)
+        factory = TriplesFactory.from_labeled_triples(triples=t)
+        instances = BatchedSLCWAInstances.from_triples_factory(factory, create_inverse_triples=True)
         assert len(instances) == 4
 
     @staticmethod

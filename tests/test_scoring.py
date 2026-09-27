@@ -40,9 +40,10 @@ MODEL_CLASSES = [DistMult, UM]
 def model(request) -> ERModel:
     """Return a small model with deterministic parameters."""
     return request.param(
-        triples_factory=KGInfo(num_entities=NUM_ENTITIES, num_relations=NUM_RELATIONS, create_inverse_triples=False),
+        triples_factory=KGInfo(num_entities=NUM_ENTITIES, num_relations=NUM_RELATIONS),
         embedding_dim=8,
         random_seed=42,
+        use_inverse_triples=False,
     ).eval()
 
 

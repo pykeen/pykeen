@@ -63,7 +63,6 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
             mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "train")),
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
-            create_inverse_triples=self.create_inverse_triples,
         )
         self._testing = TriplesFactory(
             mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "test")),

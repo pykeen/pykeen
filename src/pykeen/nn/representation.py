@@ -968,7 +968,7 @@ class CombinedCompGCNRepresentations(nn.Module):
         """
         super().__init__()
         # note: representations are always created for both, relations and their inverses, independent of the
-        # triples factory's create_inverse_triples
+        # model's use_inverse_triples
         self.entity_representations = build_representation(
             max_id=triples_factory.num_entities,
             representation=entity_representations,
