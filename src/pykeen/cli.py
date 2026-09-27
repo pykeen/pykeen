@@ -405,7 +405,7 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: s
             path = f"{pykeen_prefix}.{cls.__qualname__}"
 
         docdata = get_docdata(cls)
-        display_name = name if docdata is None else docdata.get("name", name)
+        display_name = name if docdata is None else docdata.get("name") or name
 
         if tablefmt == "rst":
             yield display_name, f":class:`{path}`"
