@@ -14,14 +14,14 @@ import logging
 import pathlib
 from abc import ABC
 from collections.abc import Hashable, Mapping, Sequence
-from typing import ClassVar, Literal, TypeAlias
+from typing import ClassVar, Literal, TypeAlias, Unpack
 
 import click
 import pandas
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import EADataset
+from .base import EADataset, EADatasetKwargs
 from ..source import GoogleArchivedSource, Source
 from ...constants import COLUMN_LABELS, PYKEEN_DATASETS_MODULE
 from ...triples import TriplesFactory
@@ -64,7 +64,7 @@ class MTransEDataset(EADataset, ABC):
 
     graph_pair: GraphPair
 
-    def __init__(self, graph_pair: GraphPair = EN_DE, **kwargs) -> None:
+    def __init__(self, graph_pair: GraphPair = EN_DE, **kwargs: Unpack[EADatasetKwargs]) -> None:
         """
         Initialize the dataset.
 

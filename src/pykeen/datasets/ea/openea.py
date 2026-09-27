@@ -6,14 +6,14 @@ Get a summary with ``python -m pykeen.datasets.openea``
 import itertools
 import logging
 import pathlib
-from typing import Literal
+from typing import Literal, Unpack
 
 import click
 import pandas
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import EADataset
+from .base import EADataset, EADatasetKwargs
 from ..source import RemoteArchivedSource
 from ...constants import COLUMN_LABELS, PYKEEN_DATASETS_MODULE
 from ...triples import TriplesFactory
@@ -83,7 +83,7 @@ class OpenEA(EADataset):
         graph_pair: GraphPair = D_W,
         size: GraphSize = SIZE_15K,
         version: GraphVersion = V1,
-        **kwargs,
+        **kwargs: Unpack[EADatasetKwargs],
     ) -> None:
         """
         Initialize the dataset.
