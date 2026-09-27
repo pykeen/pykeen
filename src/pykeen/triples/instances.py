@@ -266,7 +266,7 @@ class BaseBatchedSLCWAInstances(
         if kwargs.pop("sampler", None):
             raise AssertionError("sampler is not handled in sLCWA instances")
         if create_inverse_triples is None:
-            create_inverse_triples = tf.create_inverse_triples
+            raise ValueError
 
         return cls(
             mapped_triples=tf._add_inverse_triples_if_necessary(
@@ -450,7 +450,7 @@ class LCWAInstances(Instances[LCWABatch]):
         :returns: The instances.
         """
         if create_inverse_triples is None:
-            create_inverse_triples = tf.create_inverse_triples
+            raise ValueError
         return cls.from_triples(
             mapped_triples=tf._add_inverse_triples_if_necessary(
                 mapped_triples=tf.mapped_triples,

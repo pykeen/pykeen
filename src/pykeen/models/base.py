@@ -137,7 +137,7 @@ class Model(nn.Module, ABC):
             self.loss = loss_resolver.make(loss, pos_kwargs=loss_kwargs)
 
         if use_inverse_triples is None:
-            use_inverse_triples = triples_factory.create_inverse_triples
+            raise ValueError
         self.use_inverse_triples = use_inverse_triples
         self.num_entities = triples_factory.num_entities
         # note: the factory's num_relations may differ, if its create_inverse_triples does not match

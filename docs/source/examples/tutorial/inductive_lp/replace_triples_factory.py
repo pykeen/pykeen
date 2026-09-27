@@ -21,13 +21,11 @@ tf_training, tf_inference, tf_validation, tf_testing = tf_all.split_fully_induct
 )
 
 # train an inductive node piece model
-tf_training.create_inverse_triples = True
 result = pipeline(
     training=tf_training,
     testing=tf_testing,
-    dataset_kwargs={"create_inverse_triples": True},
     model="InductiveNodePiece",
-    model_kwargs={"inference_factory": tf_inference},
+    model_kwargs={"inference_factory": tf_inference, "create_inverse_triples": True},
     training_kwargs={"num_epochs": 0},
     training_loop_kwargs={"mode": "training"},
     evaluator_kwargs={"mode": "validation"},

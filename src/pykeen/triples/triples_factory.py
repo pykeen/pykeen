@@ -274,7 +274,6 @@ class KGInfo(ExtraReprMixin):
         self,
         num_entities: int,
         num_relations: int,
-        create_inverse_triples: bool,
     ) -> None:
         """
         Initialize the information object.
@@ -288,17 +287,16 @@ class KGInfo(ExtraReprMixin):
         """
         self.num_entities = num_entities
         self.real_num_relations = num_relations
-        self._create_inverse_triples = create_inverse_triples
 
     @property
     def num_relations(self) -> int:
         """The number of relations, including the "artificial" inverse relations."""
-        return 2 * self.real_num_relations if self.create_inverse_triples else self.real_num_relations
+        return self.real_num_relations
 
     @property
     def create_inverse_triples(self) -> bool:
         """Whether to create inverse triples."""
-        return self._create_inverse_triples
+        raise NotImplementedError
 
     @create_inverse_triples.setter
     def create_inverse_triples(self, create_inverse_triples: bool) -> None:
@@ -318,7 +316,6 @@ class KGInfo(ExtraReprMixin):
         yield from super().iter_extra_repr()
         yield f"num_entities={self.num_entities}"
         yield f"num_relations={self.num_relations}"
-        yield f"create_inverse_triples={self.create_inverse_triples}"
 
 
 @dataclasses.dataclass
@@ -557,7 +554,6 @@ class CoreTriplesFactory(KGInfo):
             (self.num_entities == __o.num_entities)
             and (self.num_relations == __o.num_relations)
             and (self.num_triples == __o.num_triples)
-            and (self.create_inverse_triples == __o.create_inverse_triples)
             and bool((self.mapped_triples == __o.mapped_triples).all().item())
         )
 
@@ -594,7 +590,6 @@ class CoreTriplesFactory(KGInfo):
             mapped_triples=self.mapped_triples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
-            create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
 
@@ -611,8 +606,6 @@ class CoreTriplesFactory(KGInfo):
             The *internal* ID of the corresponding inverse relation, i.e., in
             ``0 ... num_relations - 1``, as used by models trained on this factory.
         """
-        if not self.create_inverse_triples:
-            raise ValueError("Can not get inverse triple, they have not been created.")
         if not (0 <= relation < self.real_num_relations):
             raise ValueError(f"Invalid {relation=}; must be in [0, {self.real_num_relations})")
         return self.relation_inverter.get_inverse_id(relation_id=self.relation_inverter.to_internal(relation))
@@ -631,8 +624,6 @@ class CoreTriplesFactory(KGInfo):
             the triples, with internal relation IDs and inverse triples, if they are to be created;
             otherwise the input triples.
         """
-        if create_inverse_triples is None:
-            create_inverse_triples = self.create_inverse_triples
         if not create_inverse_triples:
             return mapped_triples
 
@@ -670,7 +661,6 @@ class CoreTriplesFactory(KGInfo):
         mapped_triples: MappedTriples,
         extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
-        create_inverse_triples: bool | None = None,
     ) -> Self:
         """
         Create a new triples factory sharing everything except the triples.
@@ -691,13 +681,10 @@ class CoreTriplesFactory(KGInfo):
         :return:
             The new factory.
         """
-        if create_inverse_triples is None:
-            create_inverse_triples = self.create_inverse_triples
         return CoreTriplesFactory(  # type: ignore[return-value]
             mapped_triples=mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.real_num_relations,
-            create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
                 **(self.metadata if keep_metadata else {}),
@@ -737,7 +724,6 @@ class CoreTriplesFactory(KGInfo):
             mapped_triples=condenser(self.mapped_triples),
             num_entities=condenser.entities.apply_to_num(self.num_entities),
             num_relations=condenser.relations.apply_to_num(self.real_num_relations),
-            create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
 
@@ -809,11 +795,7 @@ class CoreTriplesFactory(KGInfo):
         """
         # Make new triples factories for each group
         return [
-            self.clone_and_exchange_triples(
-                mapped_triples=triples,
-                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                create_inverse_triples=None if i == 0 else False,
-            )
+            self.clone_and_exchange_triples(mapped_triples=triples)
             for i, triples in enumerate(
                 split(
                     mapped_triples=self.mapped_triples,
@@ -935,11 +917,6 @@ class CoreTriplesFactory(KGInfo):
                 raise ValueError(
                     f"Number of relations does not match for others[{i}]: "
                     f"{self.num_relations=} vs. {other.num_relations=}"
-                )
-            if other.create_inverse_triples != self.create_inverse_triples:
-                raise ValueError(
-                    f"Creation of inverse triples does not match for others[{i}]: "
-                    f"{self.create_inverse_triples=} vs. {other.create_inverse_triples=}"
                 )
             mapped_triples.append(other.mapped_triples)
         return self.clone_and_exchange_triples(torch.cat(mapped_triples, dim=0))
@@ -1128,7 +1105,6 @@ class CoreTriplesFactory(KGInfo):
             "num_entities": self.num_entities,
             # note: num_relations will be doubled again when instantiating with create_inverse_triples=True
             "num_relations": self.real_num_relations,
-            "create_inverse_triples": self.create_inverse_triples,
             "metadata": self.metadata,
         }
 
@@ -1347,7 +1323,6 @@ class TriplesFactory(CoreTriplesFactory):
             relation_to_id=condenser.relations.apply_to_map(self.relation_id_to_label),
             num_entities=condenser.entities.apply_to_num(self.num_entities),
             num_relations=condenser.relations.apply_to_num(self.real_num_relations),
-            create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
 
@@ -1371,7 +1346,6 @@ class TriplesFactory(CoreTriplesFactory):
             mapped_triples=self.mapped_triples,
             num_entities=self.num_entities,
             num_relations=self.real_num_relations,
-            create_inverse_triples=self.create_inverse_triples,
             metadata=self.metadata,
         )
 
@@ -1414,10 +1388,7 @@ class TriplesFactory(CoreTriplesFactory):
         mapped_triples: MappedTriples,
         extra_metadata: dict[str, Any] | None = None,
         keep_metadata: bool = True,
-        create_inverse_triples: bool | None = None,
     ) -> Self:
-        if create_inverse_triples is None:
-            create_inverse_triples = self.create_inverse_triples
         return TriplesFactory(  # type: ignore[return-value]
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,

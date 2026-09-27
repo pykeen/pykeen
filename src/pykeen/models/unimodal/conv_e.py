@@ -82,7 +82,7 @@ class ConvE(ERModel[FloatTensor, FloatTensor, tuple[FloatTensor, FloatTensor]]):
     ) -> None:
         """Initialize the model."""
         if use_inverse_triples is None:
-            use_inverse_triples = triples_factory.create_inverse_triples
+            raise ValueError
         # ConvE should be trained with inverse triples
         if not use_inverse_triples:
             logger.warning(

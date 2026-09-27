@@ -42,8 +42,6 @@ class InductiveDataset:
     inductive_testing: CoreTriplesFactory
     #: A factory wrapping the validation triples, that share indices with the INDUCTIVE INFERENCE triples
     inductive_validation: CoreTriplesFactory | None = None
-    #: All datasets should take care of inverse triple creation
-    create_inverse_triples: bool = True
 
     def _summary_rows(self):
         return [
@@ -68,7 +66,7 @@ class InductiveDataset:
         n_triples = sum(count for *_, count in rows)
         rows.append(("Total", "-", "-", n_triples))
         t = tabulate(rows, headers=["Name", "Entities", "Relations", "Triples"])
-        rv = f"{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}"
+        rv = f"{title or self.__class__.__name__} ()\n{t}"
         if show_examples:
             if not isinstance(self.transductive_training, TriplesFactory):
                 raise AttributeError(f"{self.transductive_training.__class__} does not have labeling information.")
@@ -98,7 +96,6 @@ class EagerInductiveDataset(InductiveDataset):
     inductive_inference: CoreTriplesFactory
     inductive_testing: CoreTriplesFactory
     inductive_validation: CoreTriplesFactory | None = None
-    create_inverse_triples: bool = True
 
 
 class LazyInductiveDataset(InductiveDataset):
@@ -219,7 +216,6 @@ class DisjointInductiveSourceDataset(LazyInductiveDataset):
         self.inductive_testing_source = inductive_testing_source
         self.inductive_validation_source = inductive_validation_source
 
-        self.create_inverse_triples = kwargs.get("create_inverse_triples") or False
         self.load_triples_kwargs = kwargs.get("load_triples_kwargs")
 
         if kwargs.get("eager"):
@@ -229,7 +225,6 @@ class DisjointInductiveSourceDataset(LazyInductiveDataset):
         with self.transductive_training_source.open() as file:
             self._transductive_training = TriplesFactory.from_path(
                 file,
-                create_inverse_triples=self.create_inverse_triples,
                 load_triples_kwargs=self.load_triples_kwargs,
             )
 
@@ -237,7 +232,6 @@ class DisjointInductiveSourceDataset(LazyInductiveDataset):
         with self.inductive_inference_source.open() as file:
             self._inductive_inference = TriplesFactory.from_path(
                 file,
-                create_inverse_triples=self.create_inverse_triples,
                 relation_to_id=self._transductive_training.relation_to_id,
                 load_triples_kwargs=self.load_triples_kwargs,
             )
@@ -250,8 +244,6 @@ class DisjointInductiveSourceDataset(LazyInductiveDataset):
                 entity_to_id=self._inductive_inference.entity_to_id,
                 # shares relation index with inductive inference
                 relation_to_id=self._inductive_inference.relation_to_id,
-                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                create_inverse_triples=False,
                 load_triples_kwargs=self.load_triples_kwargs,
             )
 
@@ -263,8 +255,6 @@ class DisjointInductiveSourceDataset(LazyInductiveDataset):
                 entity_to_id=self._inductive_inference.entity_to_id,
                 # share relation index with inductive inference
                 relation_to_id=self._inductive_inference.relation_to_id,
-                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                create_inverse_triples=False,
                 load_triples_kwargs=self.load_triples_kwargs,
             )
 

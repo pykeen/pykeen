@@ -149,9 +149,6 @@ class TestTriplesFactory(unittest.TestCase):
         equal_factory_object = id(restricted_triples_factory) == id(original_triples_factory)
         assert no_restriction_to_apply == equal_factory_object
 
-        # check that inverse_triples is correctly carried over
-        assert original_triples_factory.create_inverse_triples == restricted_triples_factory.create_inverse_triples
-
         # verify that the label-to-ID mapping has not been changed
         assert original_triples_factory.entity_to_id == restricted_triples_factory.entity_to_id
         assert original_triples_factory.relation_to_id == restricted_triples_factory.relation_to_id
@@ -214,17 +211,6 @@ class TestTriplesFactory(unittest.TestCase):
                         invert_relation_selection=invert_relation_selection,
                     )
 
-    def test_split_inverse_triples(self):
-        """Test whether inverse triples are only created in the training factory."""
-        # set create inverse triple to true
-        self.factory.create_inverse_triples = True
-        # split factory
-        train, *others = self.factory.split()
-        # check that in *training* inverse triple are to be created
-        assert train.create_inverse_triples
-        # check that in all other splits no inverse triples are to be created
-        assert not any(f.create_inverse_triples for f in others)
-
     def test_num_relations_preserved_with_inverse_triples(self):
         """Test that derived factories do not re-double the number of relations."""
         factory = Nations(create_inverse_triples=True).training
@@ -255,7 +241,6 @@ class TestTriplesFactory(unittest.TestCase):
             assert part.num_relations == 2 * real_num_relations
         # inverse triples for evaluation are handled by the evaluation code
         for part in evaluation:
-            assert not part.create_inverse_triples
             assert part.num_relations == real_num_relations
 
     @needs_packages("wordcloud", "IPython")
