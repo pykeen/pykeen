@@ -295,7 +295,7 @@ def lit_pipeline(
 def _main(
     training_loop: HintOrType[LitModule],
     dataset: HintOrType[Dataset],
-    create_inverse_triples: bool,
+    use_inverse_triples: bool,
     model: HintOrType[Model],
     loss: HintOrType[Loss],
     batch_size: int,
@@ -312,7 +312,7 @@ def _main(
             "model_kwargs": {
                 "embedding_dim": embedding_dim,
                 "loss": loss,
-                "use_inverse_triples": create_inverse_triples,
+                "use_inverse_triples": use_inverse_triples,
             },
             "batch_size": batch_size,
         },

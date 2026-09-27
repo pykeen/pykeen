@@ -46,7 +46,7 @@ def ablation_pipeline(
     training_loops: str | list[str],
     *,
     epochs: int | None = None,
-    create_inverse_triples: bool | list[bool] = False,
+    use_inverse_triples: bool | list[bool] = False,
     regularizers: str | list[str] | None = None,
     negative_sampler: str | None = None,
     evaluator: str | None = None,
@@ -91,7 +91,7 @@ def ablation_pipeline(
     :param optimizers: An optimizer name or list of optimizer names.
     :param training_loops: A training loop name or list of training loop names.
     :param epochs: A quick way to set the ``num_epochs`` in the training kwargs.
-    :param create_inverse_triples: Either a boolean for a single entry or a list of booleans.
+    :param use_inverse_triples: Either a boolean for a single entry or a list of booleans.
     :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
     :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler is
         desired. Negative sampling is used only in combination with :class:`~pykeen.training.SLCWATrainingLoop`.
@@ -159,7 +159,7 @@ def ablation_pipeline(
         optimizers=optimizers,
         training_loops=training_loops,
         epochs=epochs,
-        create_inverse_triples=create_inverse_triples,
+        use_inverse_triples=use_inverse_triples,
         regularizers=regularizers,
         model_to_model_kwargs=model_to_model_kwargs,
         model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
@@ -341,7 +341,7 @@ def prepare_ablation(
     training_loops: OneOrSequence[str],
     directory: str | pathlib.Path,
     *,
-    create_inverse_triples: OneOrSequence[bool] = False,
+    use_inverse_triples: OneOrSequence[bool] = False,
     regularizers: OneOrSequence[str | None] = None,
     epochs: int | None = None,
     negative_sampler: str | None = None,
@@ -381,7 +381,7 @@ def prepare_ablation(
     :param optimizers: An optimizer name or list of optimizer names.
     :param training_loops: A training loop name or list of training loop names.
     :param epochs: A quick way to set the ``num_epochs`` in the training kwargs.
-    :param create_inverse_triples: Either a boolean for a single entry or a list of booleans.
+    :param use_inverse_triples: Either a boolean for a single entry or a list of booleans.
     :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
     :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler is
         desired. Negative sampling is used only in combination with the pykeen.training.sclwa training loop.
@@ -441,7 +441,7 @@ def prepare_ablation(
     """
     directory = normalize_path(path=directory)
     datasets = upgrade_to_sequence(datasets)
-    create_inverse_triples = upgrade_to_sequence(create_inverse_triples)
+    use_inverse_triples = upgrade_to_sequence(use_inverse_triples)
     models = upgrade_to_sequence(models)
     losses = upgrade_to_sequence(losses)
     optimizers = upgrade_to_sequence(optimizers)
@@ -468,7 +468,7 @@ def prepare_ablation(
     ]
     it = itt.product(
         datasets,
-        create_inverse_triples,
+        use_inverse_triples,
         models,
         losses,
         regularizers,

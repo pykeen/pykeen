@@ -1043,7 +1043,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     embedding_dim: int = 3
 
     #: Whether the model uses inverse relations (needed e.g. by ConvE)
-    create_inverse_triples: bool = False
+    use_inverse_triples: bool = False
 
     #: The sampler to use for sLCWA (different e.g. for R-GCN)
     sampler: str | None = None
@@ -1082,7 +1082,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         # insert shared parameters
         kwargs["triples_factory"] = self.factory
         kwargs["embedding_dim"] = self.embedding_dim
-        kwargs["use_inverse_triples"] = self.create_inverse_triples
+        kwargs["use_inverse_triples"] = self.use_inverse_triples
         return kwargs
 
     def post_instantiation_hook(self) -> None:
@@ -1147,7 +1147,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 self.skipTest(str(e))
             else:
                 raise
-        if score is self.instance.score_r and self.create_inverse_triples:
+        if score is self.instance.score_r and self.use_inverse_triples:
             # TODO: look into score_r for inverse relations
             logger.warning("score_r's shape is not clear yet for models with inverse relations")
         else:
@@ -1310,9 +1310,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         ]
         extras.extend(self.cli_extras)
 
-        # Make sure that the model uses inverse relations if create_inverse_triples=True
-        if self.create_inverse_triples:
-            extras.append("--create-inverse-triples")
+        # Make sure to pass the flag for using inverse triples
+        if self.use_inverse_triples:
+            extras.append("--use-inverse-triples")
 
         return [str(e) for e in extras]
 
@@ -1477,7 +1477,7 @@ class BaseNodePieceTest(ModelTestCase):
     """Test the NodePiece model."""
 
     cls = pykeen.models.NodePiece
-    create_inverse_triples = True
+    use_inverse_triples = True
 
     def _help_test_cli(self, args):
         if self.instance_kwargs.get("tokenizers_kwargs"):
@@ -1510,7 +1510,7 @@ class InductiveModelTestCase(ModelTestCase):
         InductiveModelTestCase.training_loop_kwargs = training_loop_kwargs
         kwargs["triples_factory"] = self.factory = dataset.transductive_training
         kwargs["inference_factory"] = dataset.inductive_inference
-        kwargs["use_inverse_triples"] = self.create_inverse_triples
+        kwargs["use_inverse_triples"] = self.use_inverse_triples
         return kwargs
 
     def _help_test_cli(self, args):

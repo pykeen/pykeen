@@ -252,7 +252,7 @@ class BaseBatchedSLCWAInstances(
 
         :param tf: The triples factory.
         :param create_inverse_triples:
-            Whether to add inverse triples. If None, defaults to the triples factory's ``create_inverse_triples``.
+            Whether to add inverse triples.
         :param kwargs: Additional keyword-based parameters passed to :meth:`__init__`
 
         :returns: The instances.

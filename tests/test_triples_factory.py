@@ -84,9 +84,9 @@ class TestTriplesFactory(unittest.TestCase):
 
     def test_automatic_incomplete_inverse_detection(self):
         """Test detecting that the triples contain inverses, warns about them, and filters them out."""
-        # comment(mberr): from my pov this behaviour is faulty: the triples factory is expected to say it contains
+        # comment(mberr): from my pov this behavior is faulty: the triples factory is expected to say it contains
         # inverse relations, although the triples contained in it are not the same we would have when removing the
-        # first triple, and passing create_inverse_triples=True.
+        # first triple, and passing use_inverse_triples=True.
         t = [
             ["e3", f"a.{INVERSE_SUFFIX}", "e10"],
             ["e1", "a", "e2"],
@@ -566,7 +566,6 @@ class TestUtils(unittest.TestCase):
                 # emulate the state as written by an older PyKEEN
                 base_path = path.joinpath(tf1.base_file_name)
                 state = torch.load(base_path, weights_only=False)
-                state["create_inverse_triples"] = True
                 torch.save(state, base_path)
                 tf2 = tf1.__class__.from_path_binary(path)
                 self.assert_tf_equal(tf1, tf2)

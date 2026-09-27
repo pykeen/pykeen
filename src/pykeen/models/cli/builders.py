@@ -145,7 +145,6 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:
         num_workers,
         random_seed,
         silent: bool,
-        create_inverse_triples: bool,
         **model_kwargs,
     ) -> None:
         """CLI for PyKEEN."""
@@ -179,7 +178,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:
         pipeline_result = pipeline(
             device=device,
             model=model,
-            model_kwargs={**model_kwargs, "use_inverse_triples": create_inverse_triples},
+            model_kwargs=model_kwargs,
             dataset=dataset,
             training=training,
             testing=testing or training,
