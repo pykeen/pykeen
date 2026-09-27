@@ -191,6 +191,7 @@ class Dataset(ExtraReprMixin):
     metadata_file_name: ClassVar[str] = "metadata.pth"
     triples_factory_cls: ClassVar[type[CoreTriplesFactory]] = TriplesFactory
 
+    #: should inverse triples be created?
     create_inverse_triples: bool
 
     def __eq__(self, __o: object, /) -> bool:
@@ -354,6 +355,7 @@ class Dataset(ExtraReprMixin):
             tuple[TriplesFactory, TriplesFactory, TriplesFactory],
             tf.split(ratios or [0.8, 0.1, 0.1]),
         )
+        # TODO create_inverse_triples?
         return EagerDataset(training=training, testing=testing, validation=validation, metadata=metadata)
 
     @classmethod
@@ -575,7 +577,11 @@ class EagerDataset(Dataset):
         self.testing = testing
         self.validation = validation
         self.metadata = metadata
-        self.create_inverse_triples = self.training.create_inverse_triples
+
+    @property
+    def create_inverse_triples(self) -> bool:
+        """Get if the training factory has the create_inverse_triples flag."""
+        return self.training.create_inverse_triples
 
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()

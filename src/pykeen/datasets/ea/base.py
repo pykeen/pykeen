@@ -93,7 +93,7 @@ class EADataset(LazyDataset, ABC):
             ratios=self.split_ratios, random_state=self.random_state
         )
         # create inverse triples only for training
-        self._training.create_inverse_triples = self.create_inverse_triples
+        self._training._create_inverse_triples = self.create_inverse_triples
 
     def _load_validation(self) -> None:
         pass
