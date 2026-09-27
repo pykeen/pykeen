@@ -113,12 +113,7 @@ class ArchivedSource(Source):
     @contextmanager
     def open(self) -> Generator[IO[str]]:
         """Open the file from within a zip or tar archive."""
-        with open_archive(
-            self.path,
-            self.inner_path,
-            archive_type=self.archive_type,
-            representation="text",
-        ) as file:
+        with open_archive(self.path, self.inner_path, archive_type=self.archive_type, representation="text") as file:
             yield file
 
 
