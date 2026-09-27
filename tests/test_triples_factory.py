@@ -226,7 +226,6 @@ class TestTriplesFactory(unittest.TestCase):
         ]
         for derived_factory in derived:
             with self.subTest(derived=derived_factory.__class__.__name__):
-                assert derived_factory.create_inverse_triples
                 assert derived_factory.real_num_relations == real_num_relations
                 assert derived_factory.num_relations == 2 * real_num_relations
 
@@ -593,7 +592,6 @@ class TestUtils(unittest.TestCase):
                 tf2 = tf1.__class__.__new__(tf1.__class__)
                 tf2.__setstate__(state)
                 self.assert_tf_equal(tf1, tf2)
-                assert tf2.create_inverse_triples == create_inverse_triples
                 assert tf2.num_relations == tf1.num_relations
                 # the stale copy must not shadow the derived property
                 assert "num_relations" not in tf2.__dict__
@@ -620,7 +618,6 @@ class TestUtils(unittest.TestCase):
         assert tf1.metadata == tf2.metadata
         assert tf1.num_entities == tf2.num_entities
         assert tf1.num_relations == tf2.num_relations
-        assert tf1.create_inverse_triples == tf2.create_inverse_triples
         assert tf1.mapped_triples.detach().cpu().numpy().tolist() == tf2.mapped_triples.detach().cpu().numpy().tolist()
 
 

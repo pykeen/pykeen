@@ -124,7 +124,6 @@ class TriplesNumericLiteralsFactory(TriplesFactory):
             mapped_triples=mapped_triples,
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
-            create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
                 **(self.metadata if keep_metadata else {}),  # type: ignore[dict-item]

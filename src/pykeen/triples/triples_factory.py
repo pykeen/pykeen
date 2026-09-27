@@ -282,8 +282,6 @@ class KGInfo(ExtraReprMixin):
             the number of entities.
         :param num_relations:
             the number of relations, excluding artifical inverse relations.
-        :param create_inverse_triples:
-            whether to create inverse triples
         """
         self.num_entities = num_entities
         self.real_num_relations = num_relations
@@ -298,15 +296,8 @@ class KGInfo(ExtraReprMixin):
         """Whether to create inverse triples."""
         raise NotImplementedError
 
-    @create_inverse_triples.setter
-    def create_inverse_triples(self, create_inverse_triples: bool) -> None:
-        """Set whether to create inverse triples; :attr:`num_relations` follows."""
-        self._create_inverse_triples = create_inverse_triples
-
     def __setstate__(self, state: MutableMapping[str, Any]) -> None:
         """Restore from a pickled state, tolerating states written before the properties were introduced."""
-        if "_create_inverse_triples" not in state:
-            state["_create_inverse_triples"] = state.pop("create_inverse_triples")
         # num_relations is derived nowadays
         state.pop("num_relations", None)
         self.__dict__.update(state)
@@ -460,7 +451,6 @@ class CoreTriplesFactory(KGInfo):
         mapped_triples: MappedTriples | np.ndarray,
         num_entities: int,
         num_relations: int,
-        create_inverse_triples: bool = False,
         metadata: Mapping[str, Any] | None = None,
     ):
         """
@@ -472,8 +462,6 @@ class CoreTriplesFactory(KGInfo):
             The number of entities.
         :param num_relations:
             The number of relations.
-        :param create_inverse_triples:
-            Whether to create inverse triples.
         :param metadata:
             Arbitrary metadata to go with the graph
 
@@ -485,7 +473,6 @@ class CoreTriplesFactory(KGInfo):
         super().__init__(
             num_entities=num_entities,
             num_relations=num_relations,
-            create_inverse_triples=create_inverse_triples,
         )
         # ensure torch.Tensor
         mapped_triples = torch.as_tensor(mapped_triples)
@@ -515,7 +502,6 @@ class CoreTriplesFactory(KGInfo):
         mapped_triples: MappedTriples,
         num_entities: int | None = None,
         num_relations: int | None = None,
-        create_inverse_triples: bool = False,
         metadata: Mapping[str, Any] | None = None,
     ) -> Self:
         """
@@ -527,8 +513,6 @@ class CoreTriplesFactory(KGInfo):
             The number of entities. If not given, inferred from mapped_triples.
         :param num_relations:
             The number of relations. If not given, inferred from mapped_triples.
-        :param create_inverse_triples:
-            Whether to create inverse triples.
         :param metadata:
             Additional metadata to store in the factory.
 
@@ -543,7 +527,6 @@ class CoreTriplesFactory(KGInfo):
             mapped_triples=mapped_triples,
             num_entities=num_entities,
             num_relations=num_relations,
-            create_inverse_triples=create_inverse_triples,
             metadata=metadata,
         )
 
@@ -611,14 +594,14 @@ class CoreTriplesFactory(KGInfo):
         return self.relation_inverter.get_inverse_id(relation_id=self.relation_inverter.to_internal(relation))
 
     def _add_inverse_triples_if_necessary(
-        self, mapped_triples: MappedTriples, create_inverse_triples: bool | None = None
+        self, mapped_triples: MappedTriples, create_inverse_triples: bool
     ) -> MappedTriples:
         """Add inverse triples if they shall be created.
 
         :param mapped_triples: shape: (n, 3)
             the ID-based triples, using real relation IDs.
         :param create_inverse_triples:
-            whether to add inverse triples. If None, defaults to :attr:`create_inverse_triples`.
+            whether to add inverse triples
 
         :returns: shape: (n, 3) or (2n, 3)
             the triples, with internal relation IDs and inverse triples, if they are to be created;
@@ -675,8 +658,6 @@ class CoreTriplesFactory(KGInfo):
             the dictionaries will be unioned with precedence taken on keys from ``extra_metadata``.
         :param keep_metadata:
             Pass the current factory's metadata to the new triples factory
-        :param create_inverse_triples:
-            Change inverse triple creation flag. If None, use flag from this factory.
 
         :return:
             The new factory.
@@ -834,11 +815,7 @@ class CoreTriplesFactory(KGInfo):
         """
         # Make new triples factories for each group
         return [
-            self.clone_and_exchange_triples(
-                mapped_triples=triples,
-                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                create_inverse_triples=None if i == 0 else False,
-            )
+            self.clone_and_exchange_triples(triples)
             for i, triples in enumerate(
                 split_semi_inductive(mapped_triples=self.mapped_triples, ratios=ratios, random_state=random_state)
             )
@@ -882,10 +859,7 @@ class CoreTriplesFactory(KGInfo):
         inference_tf = self.clone_and_exchange_triples(mapped_triples=inference).apply_condenser(condenser)
         # do not explicitly create inverse triples for testing; this is handled by the evaluation code
         evaluation_tfs = [
-            self.clone_and_exchange_triples(
-                mapped_triples=mapped_triples, create_inverse_triples=False
-            ).apply_condenser(condenser)
-            for mapped_triples in evaluation
+            self.clone_and_exchange_triples(mapped_triples).apply_condenser(condenser) for mapped_triples in evaluation
         ]
         # Make new triples factories for each group
         return [training_tf, inference_tf, *evaluation_tfs]
@@ -1103,7 +1077,6 @@ class CoreTriplesFactory(KGInfo):
     def _get_binary_state(self):
         return {
             "num_entities": self.num_entities,
-            # note: num_relations will be doubled again when instantiating with create_inverse_triples=True
             "num_relations": self.real_num_relations,
             "metadata": self.metadata,
         }
@@ -1120,7 +1093,6 @@ class TriplesFactory(CoreTriplesFactory):
         mapped_triples: MappedTriples | np.ndarray,
         entity_to_id: EntityMapping,
         relation_to_id: RelationMapping,
-        create_inverse_triples: bool = False,
         metadata: Mapping[str, Any] | None = None,
         num_entities: int | None = None,
         num_relations: int | None = None,
@@ -1134,8 +1106,6 @@ class TriplesFactory(CoreTriplesFactory):
             The mapping from entities' labels to their indices.
         :param relation_to_id:
             The mapping from relations' labels to their indices.
-        :param create_inverse_triples:
-            Whether to create inverse triples.
         :param metadata:
             Arbitrary metadata to go with the graph
         :param num_entities:
@@ -1167,7 +1137,6 @@ class TriplesFactory(CoreTriplesFactory):
             mapped_triples=mapped_triples,
             num_entities=num_entities,
             num_relations=num_relations,
-            create_inverse_triples=create_inverse_triples,
             metadata=metadata,
         )
 
@@ -1176,7 +1145,6 @@ class TriplesFactory(CoreTriplesFactory):
         cls,
         triples: LabeledTriples,
         *,
-        create_inverse_triples: bool = False,
         entity_to_id: EntityMapping | None = None,
         relation_to_id: RelationMapping | None = None,
         compact_id: bool = True,
@@ -1188,8 +1156,6 @@ class TriplesFactory(CoreTriplesFactory):
 
         :param triples: shape: (n, 3), dtype: str
             The label-based triples.
-        :param create_inverse_triples:
-            Whether to create inverse triples.
         :param entity_to_id:
             The mapping from entity labels to ID. If None, create a new one from the triples.
         :param relation_to_id:
@@ -1246,7 +1212,6 @@ class TriplesFactory(CoreTriplesFactory):
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             mapped_triples=mapped_triples,
-            create_inverse_triples=create_inverse_triples,
             metadata=metadata,
         )
 
@@ -1255,7 +1220,6 @@ class TriplesFactory(CoreTriplesFactory):
         cls,
         path: str | pathlib.Path | IO[str],
         *,
-        create_inverse_triples: bool = False,
         entity_to_id: EntityMapping | None = None,
         relation_to_id: RelationMapping | None = None,
         compact_id: bool = True,
@@ -1268,8 +1232,6 @@ class TriplesFactory(CoreTriplesFactory):
 
         :param path:
             The path where the label-based triples are stored.
-        :param create_inverse_triples:
-            Whether to create inverse triples.
         :param entity_to_id:
             The mapping from entity labels to ID. If None, create a new one from the triples.
         :param relation_to_id:
@@ -1295,7 +1257,6 @@ class TriplesFactory(CoreTriplesFactory):
 
         return cls.from_labeled_triples(
             triples=triples,
-            create_inverse_triples=create_inverse_triples,
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
             compact_id=compact_id,
@@ -1393,7 +1354,6 @@ class TriplesFactory(CoreTriplesFactory):
             entity_to_id=self.entity_to_id,
             relation_to_id=self.relation_to_id,
             mapped_triples=mapped_triples,
-            create_inverse_triples=create_inverse_triples,
             metadata={
                 **(extra_metadata or {}),
                 **(self.metadata if keep_metadata else {}),  # type: ignore[dict-item]
