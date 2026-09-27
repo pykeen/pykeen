@@ -57,7 +57,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_RATIO: tuple[float, float, float] = (0.8, 0.1, 0.1)
+DEFAULT_RATIOS: tuple[float, float, float] = (0.8, 0.1, 0.1)
 
 
 class LazyDatasetKwargs(TypedDict):
@@ -297,7 +297,12 @@ class Dataset(ExtraReprMixin):
         yield f"create_inverse_triples={self.create_inverse_triples}"
 
     @classmethod
-    def from_path(cls, path: str | pathlib.Path, ratios: list[float] | None = None) -> Dataset:
+    def from_path(
+        cls,
+        path: str | pathlib.Path | IO[str],
+        *,
+        ratios: tuple[float, float] | tuple[float, float, float] | None = None,
+    ) -> Dataset:
         """Create a dataset from a single triples factory by splitting it in 3."""
         tf = TriplesFactory.from_path(path=path)
         return cls.from_tf(tf=tf, ratios=ratios)
@@ -335,11 +340,11 @@ class Dataset(ExtraReprMixin):
         torch.save(metadata, path.joinpath(self.metadata_file_name))
 
     @staticmethod
-    def from_tf(tf: TriplesFactory, ratios: tuple[float, float, float] | None = None) -> Dataset:
+    def from_tf(tf: TriplesFactory, ratios: tuple[float, float] | tuple[float, float, float] | None = None) -> Dataset:
         """Create a dataset from a single triples factory by splitting it in 3."""
         training, testing, validation = cast(
             tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(ratios or DEFAULT_RATIO),
+            tf.split(ratios or DEFAULT_RATIOS),
         )
         return EagerDataset(training=training, testing=testing, validation=validation)
 
@@ -885,13 +890,13 @@ class SplittingLazyDataset(LazyDataset, ABC):
         self,
         *,
         random_state: TorchRandomHint = None,
-        ratios: tuple[float, float, float] | None = None,
+        ratios: tuple[float, float] | tuple[float, float, float] | None = None,
         create_inverse_triples: bool = False,
         eager: bool = False,
     ) -> None:
         """Initialize the dataset."""
         self.random_state = random_state
-        self.split_ratios = ratios or (0.8, 0.1, 0.1)
+        self.ratios = ratios or DEFAULT_RATIOS
         self._create_inverse_triples = create_inverse_triples
         if eager:
             self._load()
@@ -902,9 +907,7 @@ class SplittingLazyDataset(LazyDataset, ABC):
 
     def _load(self) -> None:
         tf = self._get_triples_factory()
-        self._training, self._testing, self._validation = tf.split(
-            ratios=self.split_ratios, random_state=self.random_state
-        )
+        self._training, self._testing, self._validation = tf.split(ratios=self.ratios, random_state=self.random_state)
         self._training.create_inverse_triples = self._create_inverse_triples
 
     def _load_validation(self) -> None:
