@@ -149,6 +149,36 @@ class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
         # not in natural order
         assert first[0][0] != list(range(7))
 
+    def test_data_loader_multiple_workers(self):
+        """Test iteration with a real multi-process data loader with persistent workers."""
+        # 52 triples with batch size 8 -> 7 batches; a per-worker split (26 triples each) would yield 2 x 4 = 8 batches
+        num_triples, batch_size = 52, 8
+        mapped_triples = self.factory.mapped_triples[:num_triples]
+        # map (unique) triples back to their IDs
+        triple_to_id = {tuple(triple): i for i, triple in enumerate(mapped_triples.tolist())}
+        assert len(triple_to_id) == num_triples
+        instance = BatchedSLCWAInstances(
+            mapped_triples=mapped_triples,
+            batch_size=batch_size,
+            drop_last=False,
+            num_entities=self.factory.num_entities,
+            num_relations=self.factory.num_relations,
+        )
+        data_loader = torch.utils.data.DataLoader(
+            dataset=instance,
+            batch_size=None,
+            num_workers=2,
+            persistent_workers=True,
+            generator=torch.Generator().manual_seed(42),
+        )
+        epochs = []
+        for _ in range(2):
+            batches = [[triple_to_id[tuple(triple)] for triple in batch["positives"].tolist()] for batch in data_loader]
+            assert len(batches) == len(instance)
+            assert sorted(i for batch in batches for i in batch) == list(range(num_triples))
+            epochs.append(batches)
+        assert epochs[0] != epochs[1]
+
     def test_grouped(self):
         """Test that grouped instances emit the expected keys and shapes."""
         instances = BatchedSLCWAInstances.from_triples_factory(
