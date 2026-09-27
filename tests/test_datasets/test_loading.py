@@ -2,16 +2,15 @@
 
 import pathlib
 import unittest
-from io import BytesIO
-from urllib.request import urlopen
 
-from pykeen.datasets import Kinships, Nations, dataset_resolver
+from pykeen.datasets import EagerDataset, Kinships, Nations, dataset_resolver
 from pykeen.datasets.base import (
     PackedZipRemoteDataset,
     SingleTabbedDataset,
     TarFileRemoteDataset,
     TarFileSingleDataset,
     UnpackedRemoteDataset,
+    ZipSingleDataset,
 )
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH, NATIONS_VALIDATE_PATH
 from tests import cases, constants
@@ -28,36 +27,36 @@ class TestAnnotated(unittest.TestCase):
                     docdata = cls.__docdata__
                 except AttributeError:
                     self.fail("missing __docdata__")
-                self.assertIn("name", docdata)
-                self.assertIsInstance(docdata["name"], str)
-                self.assertIn("statistics", docdata)
-                self.assertIn("citation", docdata)
+                assert "name" in docdata
+                assert isinstance(docdata["name"], str)
+                assert "statistics" in docdata
+                assert "citation" in docdata
 
                 # Check minimal statistics
                 for k in ("entities", "relations", "triples", "training", "testing", "validation"):
-                    self.assertIn(k, docdata["statistics"], msg=f"statistics are missing {k}")
-                    self.assertIsInstance(docdata["statistics"][k], int)
+                    assert k in docdata["statistics"], f"statistics are missing {k}"
+                    assert isinstance(docdata["statistics"][k], int)
 
                 # Check either a github link or author/publication information is given
                 citation = docdata["citation"]
-                self.assertTrue(
-                    ("author" in citation and "link" in citation and "year" in citation) or "github" in citation,
-                )
+                assert ("author" in citation and "link" in citation and "year" in citation) or "github" in citation
 
             signature = dataset_resolver.signature(cls)
             random_state_param = signature.parameters.get("random_state")
             if random_state_param is not None:
-                self.assertEqual(0, random_state_param.default)
+                assert random_state_param.default == 0
 
 
 class MockSingleTabbedDataset(SingleTabbedDataset):
     """Mock downloading a single file."""
 
     def __init__(self, cache_root: str):  # noqa:D107
-        super().__init__(url=..., name=..., cache_root=cache_root)
-
-    def _get_path(self) -> str:
-        return NATIONS_TRAIN_PATH
+        super().__init__(
+            url=NATIONS_TRAIN_PATH.as_uri(),
+            cache_root=cache_root,
+            # for compatibility with local URI
+            download_kwargs={"backend": "urllib"},
+        )
 
 
 class MockTarFileSingleDataset(TarFileSingleDataset):
@@ -65,14 +64,21 @@ class MockTarFileSingleDataset(TarFileSingleDataset):
 
     def __init__(self, cache_root: str):  # noqa:D107
         super().__init__(
-            url=...,
-            name=...,
+            url=constants.RESOURCES.joinpath("nations.tar.gz").as_uri(),
             relative_path="nations/train.txt",
             cache_root=cache_root,
         )
 
-    def _get_path(self) -> str:
-        return constants.RESOURCES.joinpath("nations.tar.gz")
+
+class MockZipFileSingleDataset(ZipSingleDataset):
+    """Mock downloading a zip archive with a single file."""
+
+    def __init__(self, cache_root: str):  # noqa:D107
+        super().__init__(
+            url=constants.RESOURCES.joinpath("nations.zip").as_uri(),
+            relative_path="nations/train.txt",
+            cache_root=cache_root,
+        )
 
 
 class MockTarFileRemoteDataset(TarFileRemoteDataset):
@@ -86,9 +92,6 @@ class MockTarFileRemoteDataset(TarFileRemoteDataset):
             relative_training_path=pathlib.PurePath("nations", "train.txt"),
             relative_validation_path=pathlib.PurePath("nations", "valid.txt"),
         )
-
-    def _get_bytes(self) -> BytesIO:
-        return BytesIO(urlopen(self.url).read())  # noqa:S310
 
 
 class MockUnpackedRemoteDataset(UnpackedRemoteDataset):
@@ -147,6 +150,22 @@ class TestTarFileSingle(cases.CachedDatasetCase):
     dataset_cls = MockTarFileSingleDataset
 
 
+class TestZipFileSingle(cases.CachedDatasetCase):
+    """Test the base classes.
+
+    .. note::
+
+        This uses the nations training dataset
+    """
+
+    exp_num_entities = 14
+    exp_num_relations = 55
+    exp_num_triples = 1592  # because only loading training set from Nations
+    exp_num_triples_tolerance = 5
+    autoloaded_validation = True
+    dataset_cls = MockZipFileSingleDataset
+
+
 class TestTarRemote(cases.CachedDatasetCase):
     """Test the :class:`pykeen.datasets.base.TarFileRemoteDataset` class."""
 
@@ -163,13 +182,6 @@ class TestPathDatasetTriples(cases.LocalDatasetTestCase):
     exp_num_relations = 55
     exp_num_triples = 1992
     dataset_cls = Nations
-
-    def test_create_inverse_triples(self):
-        """Verify that inverse triples are only created in the training factory."""
-        dataset = Nations(create_inverse_triples=True)
-        assert dataset.training.create_inverse_triples
-        assert not dataset.testing.create_inverse_triples
-        assert not dataset.validation.create_inverse_triples
 
 
 class TestPathDataset(cases.LocalDatasetTestCase):
@@ -197,3 +209,15 @@ class TestZipFileRemote(cases.CachedDatasetCase):
     exp_num_relations = 55
     exp_num_triples = 1992
     dataset_cls = MockZipFileRemoteDataset
+
+
+class TestSummary(unittest.TestCase):
+    """Test the dataset summary."""
+
+    def test_summary_without_validation(self):
+        """Test that a dataset without a validation split can be summarized."""
+        nations = Nations()
+        dataset = EagerDataset(training=nations.training, testing=nations.testing, validation=None)
+        summary = dataset.summary_str()
+        assert "Training" in summary
+        assert "Validation" not in summary

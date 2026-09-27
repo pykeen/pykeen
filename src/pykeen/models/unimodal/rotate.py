@@ -50,9 +50,9 @@ class RotatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=dict(type=int, low=32, high=1024, q=16),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": {"type": int, "low": 32, "high": 1024, "q": 16},
+    }
 
     def __init__(
         self,
@@ -85,18 +85,18 @@ class RotatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         """
         super().__init__(
             interaction=RotatEInteraction,
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-                regularizer=regularizer,
-                regularizer_kwargs=regularizer_kwargs,
-                dtype=torch.cfloat,
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-                constrainer=relation_constrainer,
-                dtype=torch.cfloat,
-            ),
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+                "regularizer": regularizer,
+                "regularizer_kwargs": regularizer_kwargs,
+                "dtype": torch.cfloat,
+            },
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
+                "constrainer": relation_constrainer,
+                "dtype": torch.cfloat,
+            },
             **kwargs,
         )

@@ -32,8 +32,8 @@ logger = logging.getLogger(__name__)
 class InductiveNodePiece(InductiveERModel):
     """A wrapper which combines an interaction function with NodePiece entity representations from [galkin2021]_.
 
-    This model uses the :class:`pykeen.nn.NodePieceRepresentation` instead of a typical
-    :class:`pykeen.nn.Embedding` to more efficiently store representations.
+    This model uses the :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation` instead of a typical
+    :class:`~pykeen.nn.representation.Embedding` to more efficiently store representations.
     ---
     citation:
         author: Galkin
@@ -42,9 +42,9 @@ class InductiveNodePiece(InductiveERModel):
         github: https://github.com/migalkin/NodePiece
     """
 
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
 
     def __init__(
         self,
@@ -58,22 +58,23 @@ class InductiveNodePiece(InductiveERModel):
         aggregation: Hint[Callable[[torch.Tensor, int], torch.Tensor]] = None,
         validation_factory: CoreTriplesFactory | None = None,
         test_factory: CoreTriplesFactory | None = None,
+        use_inverse_triples: bool = True,
         **kwargs,
     ) -> None:
         """
         Initialize the model.
 
         :param triples_factory:
-            the triples factory of training triples. Must have create_inverse_triples set to True.
+            the triples factory of training triples.
         :param inference_factory:
-            the triples factory of inference triples. Must have create_inverse_triples set to True.
+            the triples factory of inference triples.
         :param validation_factory:
-            the triples factory of validation triples. Must have create_inverse_triples set to True.
+            the triples factory of validation triples.
         :param test_factory:
-            the triples factory of testing triples. Must have create_inverse_triples set to True.
+            the triples factory of testing triples.
         :param num_tokens:
             the number of relations to use to represent each entity, cf.
-            :class:`pykeen.nn.NodePieceRepresentation`.
+            :class:`~pykeen.nn.node_piece.representation.NodePieceRepresentation`.
         :param embedding_dim:
             the embedding dimension. Only used if embedding_specification is not given.
         :param relation_representations_kwargs:
@@ -94,16 +95,18 @@ class InductiveNodePiece(InductiveERModel):
 
             The aggregation takes two arguments: the (batched) tensor of token representations, in shape
             ``(*, num_tokens, *dt)``, and the index along which to aggregate.
+        :param use_inverse_triples:
+            whether to use inverse relations. Must be True, since the node piece representations require them.
         :param kwargs:
             additional keyword-based arguments passed to :meth:`ERModel.__init__`
 
         :raises ValueError:
-            if the triples factory does not create inverse triples
+            if ``use_inverse_triples`` is False
         """
-        if not triples_factory.create_inverse_triples:
+        if not use_inverse_triples:
             raise ValueError(
-                "The provided triples factory does not create inverse triples. However, for the node piece "
-                "representations inverse relation representations are required.",
+                "Node piece representations require inverse relation representations. Hence, the model has to be "
+                "created with use_inverse_triples=True.",
             )
 
         # always create representations for normal and inverse relations and padding
@@ -118,17 +121,18 @@ class InductiveNodePiece(InductiveERModel):
 
         super().__init__(
             triples_factory=triples_factory,
+            use_inverse_triples=use_inverse_triples,
             interaction=interaction,
             entity_representations=NodePieceRepresentation,
-            entity_representations_kwargs=dict(
-                triples_factory=triples_factory,
-                tokenizers=RelationTokenizer,
-                token_representations=relation_representations,
-                aggregation=aggregation,
-                num_tokens=num_tokens,
-            ),
+            entity_representations_kwargs={
+                "triples_factory": triples_factory,
+                "tokenizers": RelationTokenizer,
+                "token_representations": relation_representations,
+                "aggregation": aggregation,
+                "num_tokens": num_tokens,
+            },
             relation_representations=SubsetRepresentation(  # hide padding relation
-                max_id=triples_factory.num_relations,
+                max_id=2 * triples_factory.real_num_relations,
                 base=relation_representations,
             ),
             validation_factory=validation_factory,
@@ -160,10 +164,10 @@ class InductiveNodePiece(InductiveERModel):
             a new NodePiece entity representation with shared relation tokenization and aggregation.
 
         :raises ValueError:
-            if the triples factory does not request inverse triples, or the number of relations differs.
+            if the number of relations differs.
         """
-        if triples_factory.num_relations != self.num_relations:
-            raise ValueError(f"{self.num_relations=} != {triples_factory.num_relations=} !")
+        if triples_factory.real_num_relations != self.num_real_relations:
+            raise ValueError(f"{self.num_real_relations=} != {triples_factory.real_num_relations=} !")
         # note: we cannot ensure the mapping also matches...
 
         # get relation representations

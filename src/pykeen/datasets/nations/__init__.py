@@ -1,18 +1,19 @@
 """Get triples from the Nations dataset."""
 
 import pathlib
+from typing import Unpack
 
 from docdata import parse_docdata
 
-from ..base import PathDataset
+from ..base import LazyDatasetKwargs, PathDataset, PathDatasetKwargs
 from ..literal_base import NumericPathDataset
 from ...triples import TriplesNumericLiteralsFactory
 
 __all__ = [
-    "NATIONS_TRAIN_PATH",
-    "NATIONS_TEST_PATH",
-    "NATIONS_VALIDATE_PATH",
     "NATIONS_LITERALS_PATH",
+    "NATIONS_TEST_PATH",
+    "NATIONS_TRAIN_PATH",
+    "NATIONS_VALIDATE_PATH",
     "Nations",
     "NationsLiteral",
 ]
@@ -44,11 +45,8 @@ class Nations(PathDataset):
         github: ZhenfengLei/KGDatasets
     """
 
-    def __init__(self, **kwargs):
-        """Initialize the Nations dataset.
-
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PathDataset`.
-        """
+    def __init__(self, **kwargs: Unpack[PathDatasetKwargs]) -> None:
+        """Initialize the Nations dataset."""
         super().__init__(
             training_path=NATIONS_TRAIN_PATH,
             testing_path=NATIONS_TEST_PATH,
@@ -80,11 +78,8 @@ class NationsLiteral(NumericPathDataset):
 
     training: TriplesNumericLiteralsFactory
 
-    def __init__(self, **kwargs):
-        """Initialize the Nations dataset with literals.
-
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PathDataset`.
-        """
+    def __init__(self, **kwargs: Unpack[LazyDatasetKwargs]) -> None:
+        """Initialize the Nations dataset with literals."""
         super().__init__(
             training_path=NATIONS_TRAIN_PATH,
             testing_path=NATIONS_TEST_PATH,

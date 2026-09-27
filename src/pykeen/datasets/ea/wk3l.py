@@ -1,4 +1,10 @@
-"""The Wk3l-15k dataset family.
+"""The Wk3l and Cn3l dataset family.
+
+.. seealso::
+
+    - https://github.com/muhaochen/MTransE for Wk3l-15k, Wk3l-120k, and Cn3l
+    - https://github.com/muhaochen/MTransE-tf for Wk3l-60k in
+      https://github.com/muhaochen/MTransE-tf/raw/refs/heads/master/preprocess/wk3l_60k.zip
 
 Get a summary with ``python -m pykeen.datasets.wk3l``
 """
@@ -7,24 +13,24 @@ import itertools
 import logging
 import pathlib
 from abc import ABC
-from collections.abc import Iterable, Mapping
-from typing import ClassVar, Literal
+from collections.abc import Hashable, Mapping, Sequence
+from typing import ClassVar, Literal, TypeAlias, Unpack
 
 import click
-import pandas
+import pandas as pd
 from docdata import parse_docdata
 from more_click import verbose_option
-from pystow.utils import read_zipfile_csv
 
-from .base import EADataset
+from .base import EADataset, EADatasetKwargs
+from ..source import GoogleArchivedSource, Source
 from ...constants import COLUMN_LABELS, PYKEEN_DATASETS_MODULE
 from ...triples import TriplesFactory
 from ...typing import EA_SIDE_LEFT, EA_SIDE_RIGHT, EA_SIDES, LABEL_HEAD, LABEL_TAIL, EASide
 
 __all__ = [
+    "CN3l",
     "MTransEDataset",
     "WK3l15k",
-    "CN3l",
     "WK3l120k",
 ]
 
@@ -38,28 +44,32 @@ GRAPH_PAIRS = (EN_DE, EN_FR)
 WK3L_MODULE = PYKEEN_DATASETS_MODULE.module("wk3l")
 EA_SIDES_R: tuple[EASide, EASide] = (EA_SIDE_RIGHT, EA_SIDE_LEFT)
 
+Key: TypeAlias = EASide | tuple[EASide, EASide] | None
+
 
 class MTransEDataset(EADataset, ABC):
     """Base class for WK3l datasets (WK3l-15k, WK3l-120k, CN3l)."""
 
     #: The mapping from (graph-pair, side) to triple file name
-    FILE_NAMES: ClassVar[Mapping[tuple[GraphPair, None | EASide | tuple[EASide, EASide]], str]]
+    FILE_NAMES: ClassVar[Mapping[tuple[GraphPair, Key], str]]
 
     #: The internal dataset name
     DATASET_NAME: ClassVar[str]
 
     #: The hex digest for the zip file
-    SHA512: str = (
+    SHA512: ClassVar[str] = (
         "b5b64db8acec2ef83a418008e8ff6ddcd3ea1db95a0a158825ea9cffa5a3c34a"
         "9aba6945674304f8623ab21c7248fed900028e71ad602883a307364b6e3681dc"
     )
 
-    def __init__(self, graph_pair: GraphPair = EN_DE, **kwargs):
+    graph_pair: GraphPair
+
+    def __init__(self, graph_pair: GraphPair = EN_DE, **kwargs: Unpack[EADatasetKwargs]) -> None:
         """
         Initialize the dataset.
 
         :param graph_pair:
-            the graph-pair within the dataset family (cf. :data:`GRAPH_PAIRS`)
+            the graph-pair within the dataset family (cf. ``GRAPH_PAIRS``)
         :param kwargs:
             additional keyword-based parameters passed to :meth:`EABase.__init__`
 
@@ -71,18 +81,26 @@ class MTransEDataset(EADataset, ABC):
             raise ValueError(f"Invalid graph pair: Allowed are: {GRAPH_PAIRS}")
         # store *before* calling super to have it available when loading the graphs
         self.graph_pair = graph_pair
-        # ensure zip file is present
-        self.zip_path = WK3L_MODULE.ensure_from_google(
-            name="data.zip", file_id=GOOGLE_DRIVE_ID, download_kwargs=dict(hexdigests=dict(sha512=self.SHA512))
-        )
         super().__init__(**kwargs)
 
-    def _cache_sub_directories(self) -> Iterable[str]:  # noqa: D102
-        # shared directory for multiple datasets.
-        yield "wk3l"
+    @classmethod
+    def _get_source(cls, graph_pair: GraphPair, key: Key) -> Source:
+        """Get the source."""
+        inner_path = pathlib.PurePosixPath(
+            "data",
+            cls.DATASET_NAME,
+            graph_pair,
+            cls.FILE_NAMES[graph_pair, key],
+        )
+        return GoogleArchivedSource(
+            archive_type="zip",
+            google_file_id=GOOGLE_DRIVE_ID,
+            path=WK3L_MODULE.join(name="wk3l.zip"),
+            inner_path=inner_path,
+        )
 
     @classmethod
-    def _relative_path(cls, graph_pair: GraphPair, key: None | EASide | tuple[EASide, EASide]) -> pathlib.PurePath:
+    def _relative_path(cls, graph_pair: GraphPair, key: EASide | tuple[EASide, EASide] | None) -> pathlib.PurePath:
         """Determine the relative path inside the zip file."""
         return pathlib.PurePosixPath(
             "data",
@@ -91,30 +109,29 @@ class MTransEDataset(EADataset, ABC):
             cls.FILE_NAMES[graph_pair, key],
         )
 
-    def _load_df(self, key: None | EASide | tuple[EASide, EASide], **kwargs) -> pandas.DataFrame:
-        return read_zipfile_csv(
-            path=self.zip_path,
-            inner_path=str(self._relative_path(graph_pair=self.graph_pair, key=key)),
-            header=None,
-            sep="@@@",
-            engine="python",
-            encoding="utf8",
-            dtype=str,
-            keep_default_na=False,
-            **kwargs,
-        )
+    def _load_df(self, key: EASide | tuple[EASide, EASide] | None, names: Sequence[Hashable]) -> pd.DataFrame:
+        source = self._get_source(self.graph_pair, key)
+        with source.open() as file:
+            return pd.read_csv(
+                file,
+                header=None,
+                sep="@@@",
+                engine="python",
+                encoding="utf8",
+                dtype=str,
+                keep_default_na=False,
+                names=list(names),
+            )
 
-    # docstr-coverage: inherited
-    def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
+    def _load_graph(self, side: EASide) -> TriplesFactory:
         logger.info(f"Loading graph for side: {side}")
         df = self._load_df(key=side, names=COLUMN_LABELS)
         # create triples factory
         return TriplesFactory.from_labeled_triples(
-            triples=df.values, metadata=dict(graph_pair=self.graph_pair, side=side)
+            triples=df.values, metadata={"graph_pair": self.graph_pair, "side": side}
         )
 
-    # docstr-coverage: inherited
-    def _load_alignment(self) -> pandas.DataFrame:  # noqa: D102
+    def _load_alignment(self) -> pd.DataFrame:
         """Load entity alignment information for the given graph pair."""
         logger.info("Loading alignment information")
         # load mappings for both sides
@@ -127,7 +144,7 @@ class MTransEDataset(EADataset, ABC):
             part = df.loc[:, [(EA_SIDE_LEFT, column), (EA_SIDE_RIGHT, column)]].copy()
             part.columns = list(EA_SIDES)
             dfs.append(part)
-        return pandas.concat(dfs)
+        return pd.concat(dfs)
 
 
 @parse_docdata
@@ -243,8 +260,8 @@ class CN3l(MTransEDataset):
 
 @click.command()
 @verbose_option
-def _main():
-    for cls, graph_pair, side in itertools.product((WK3l15k, WK3l120k, CN3l), GRAPH_PAIRS, EA_SIDES + (None,)):
+def _main() -> None:
+    for cls, graph_pair, side in itertools.product((WK3l15k, WK3l120k, CN3l), GRAPH_PAIRS, (*EA_SIDES, None)):
         ds = cls(graph_pair=graph_pair, side=side)
         ds.summarize()
 

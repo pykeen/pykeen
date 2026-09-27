@@ -44,20 +44,20 @@ class ConvE(ERModel[FloatTensor, FloatTensor, tuple[FloatTensor, FloatTensor]]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        output_channels=dict(type=int, low=4, high=6, scale="power_two"),
-        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-        output_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-        feature_map_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "output_channels": {"type": int, "low": 4, "high": 6, "scale": "power_two"},
+        "input_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+        "output_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+        "feature_map_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+    }
     #: The default loss function class
     loss_default: ClassVar[type[Loss]] = BCEAfterSigmoidLoss  # type: ignore[type-abstract]
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
-    #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,L)
+    #: If batch normalization is enabled, this is: num_features - C from an expected input of size (N,C,L)
     bn0: torch.nn.BatchNorm2d | None
-    #: If batch normalization is enabled, this is: num_features – C from an expected input of size (N,C,H,W)
+    #: If batch normalization is enabled, this is: num_features - C from an expected input of size (N,C,H,W)
     bn1: torch.nn.BatchNorm2d | None
     bn2: torch.nn.BatchNorm1d | None
 
@@ -77,48 +77,49 @@ class ConvE(ERModel[FloatTensor, FloatTensor, tuple[FloatTensor, FloatTensor]]):
         apply_batch_normalization: bool = True,
         entity_initializer: Hint[Initializer] = xavier_normal_,
         relation_initializer: Hint[Initializer] = xavier_normal_,
+        use_inverse_triples: bool = True,
         **kwargs,
     ) -> None:
         """Initialize the model."""
         # ConvE should be trained with inverse triples
-        if not triples_factory.create_inverse_triples:
+        if not use_inverse_triples:
             logger.warning(
                 "\nThe ConvE model should be trained with inverse triples.\n"
-                "This can be done by defining the TriplesFactory class with the _create_inverse_triples_ parameter set "
-                "to true.",
+                "This can be done by passing use_inverse_triples=True to the model.",
             )
 
         super().__init__(
             triples_factory=triples_factory,
+            use_inverse_triples=use_inverse_triples,
             interaction=ConvEInteraction,
-            interaction_kwargs=dict(
-                input_channels=input_channels,
-                output_channels=output_channels,
-                embedding_height=embedding_height,
-                embedding_width=embedding_width,
-                kernel_height=kernel_height,
-                kernel_width=kernel_width,
-                input_dropout=input_dropout,
-                output_dropout=output_dropout,
-                feature_map_dropout=feature_map_dropout,
-                embedding_dim=embedding_dim,
-                apply_batch_normalization=apply_batch_normalization,
-            ),
+            interaction_kwargs={
+                "input_channels": input_channels,
+                "output_channels": output_channels,
+                "embedding_height": embedding_height,
+                "embedding_width": embedding_width,
+                "kernel_height": kernel_height,
+                "kernel_width": kernel_width,
+                "input_dropout": input_dropout,
+                "output_dropout": output_dropout,
+                "feature_map_dropout": feature_map_dropout,
+                "embedding_dim": embedding_dim,
+                "apply_batch_normalization": apply_batch_normalization,
+            },
             entity_representations_kwargs=[
                 # entity embedding
-                dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": entity_initializer,
+                },
                 # ConvE uses one bias for each entity
-                dict(
-                    shape=tuple(),
-                    initializer=nn.init.zeros_,
-                ),
+                {
+                    "shape": (),
+                    "initializer": nn.init.zeros_,
+                },
             ],
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-            ),
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
+            },
             **kwargs,
         )

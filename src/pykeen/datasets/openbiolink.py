@@ -3,11 +3,13 @@
 Get a summary with ``python -m pykeen.datasets.openbiolink``
 """
 
+from typing import Unpack
+
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import PackedZipRemoteDataset
+from .base import PackedRemoteDataSetKwargs, PackedZipRemoteDataset
 
 __all__ = [
     "OpenBioLink",
@@ -43,14 +45,13 @@ class OpenBioLink(PackedZipRemoteDataset):
         triples: 4563407
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[PackedRemoteDataSetKwargs]) -> None:
         """Initialize the OpenBioLink dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PackedZipRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PackedZipRemoteDataset`.
         """
         super().__init__(
             url=HQ_URL,
-            name="HQ_DIR.zip",
             relative_training_path="HQ_DIR/train_test_data/train_sample.csv",
             relative_testing_path="HQ_DIR/train_test_data/test_sample.csv",
             relative_validation_path="HQ_DIR/train_test_data/val_sample.csv",
@@ -78,14 +79,13 @@ class OpenBioLinkLQ(PackedZipRemoteDataset):
         triples: 27320889
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[PackedRemoteDataSetKwargs]) -> None:
         """Initialize the OpenBioLink (low quality) dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.PackedZipRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PackedZipRemoteDataset`.
         """
         super().__init__(
             url=LQ_URL,
-            name="ALL_DIR.zip",
             relative_training_path="ALL_DIR/train_test_data/train_sample.csv",
             relative_testing_path="ALL_DIR/train_test_data/test_sample.csv",
             relative_validation_path="ALL_DIR/train_test_data/val_sample.csv",
@@ -95,7 +95,7 @@ class OpenBioLinkLQ(PackedZipRemoteDataset):
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     for cls in [OpenBioLink, OpenBioLinkLQ]:
         cls().summarize()
 

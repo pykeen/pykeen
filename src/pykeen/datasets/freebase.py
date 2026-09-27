@@ -4,13 +4,18 @@
 * FB15k-237
 """
 
-import os
+import pathlib
+from typing import Unpack
 
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import PackedZipRemoteDataset, TarFileRemoteDataset
+from .base import (
+    PackedRemoteDataSetKwargs,
+    PackedZipRemoteDataset,
+    TarFileRemoteDataset,
+)
 
 __all__ = [
     "FB15k",
@@ -37,18 +42,18 @@ class FB15k(TarFileRemoteDataset):
         link: http://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data.pdf
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[PackedRemoteDataSetKwargs]) -> None:
         """Initialize the FreeBase 15K dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileRemoteDataset`.
 
         .. warning:: This dataset contains testing leakage. Use :class:`FB15k237` instead.
         """
         super().__init__(
             url="https://everest.hds.utc.fr/lib/exe/fetch.php?media=en:fb15k.tgz",
-            relative_training_path=os.path.join("FB15k", "freebase_mtr100_mte100-train.txt"),
-            relative_testing_path=os.path.join("FB15k", "freebase_mtr100_mte100-test.txt"),
-            relative_validation_path=os.path.join("FB15k", "freebase_mtr100_mte100-valid.txt"),
+            relative_training_path=pathlib.PurePath("FB15k", "freebase_mtr100_mte100-train.txt"),
+            relative_testing_path=pathlib.PurePath("FB15k", "freebase_mtr100_mte100-test.txt"),
+            relative_validation_path=pathlib.PurePath("FB15k", "freebase_mtr100_mte100-valid.txt"),
             **kwargs,
         )
 
@@ -72,23 +77,23 @@ class FB15k237(PackedZipRemoteDataset):
         link: https://www.aclweb.org/anthology/W15-4007/
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[PackedRemoteDataSetKwargs]) -> None:
         """Initialize the FreeBase 15K (237) dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.ZipFileRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PackedZipRemoteDataset`.
         """
         super().__init__(
             url="https://download.microsoft.com/download/8/7/0/8700516A-AB3D-4850-B4BB-805C515AECE1/FB15K-237.2.zip",
-            relative_training_path=os.path.join("Release", "train.txt"),
-            relative_testing_path=os.path.join("Release", "test.txt"),
-            relative_validation_path=os.path.join("Release", "valid.txt"),
+            relative_training_path=pathlib.PurePath("Release", "train.txt"),
+            relative_testing_path=pathlib.PurePath("Release", "test.txt"),
+            relative_validation_path=pathlib.PurePath("Release", "valid.txt"),
             **kwargs,
         )
 
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     for cls in [FB15k, FB15k237]:
         cls().summarize()
 

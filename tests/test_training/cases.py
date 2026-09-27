@@ -2,8 +2,10 @@
 
 import tempfile
 from collections.abc import MutableMapping
+from contextlib import ExitStack
 from typing import Any, ClassVar
 
+import pytest
 import torch
 import unittest_templates
 from torch.optim import Adam, Optimizer
@@ -18,8 +20,8 @@ from pykeen.training.training_loop import NonFiniteLossError, NoTrainingBatchErr
 from pykeen.triples import TriplesFactory
 
 __all__ = [
-    "TrainingLoopTestCase",
     "SLCWATrainingLoopTestCase",
+    "TrainingLoopTestCase",
 ]
 
 
@@ -52,7 +54,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
             optimizer=self.optimizer_cls(model.get_grad_params()),
         )
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = self.triples_factory
         kwargs["automatic_memory_optimization"] = False
@@ -68,20 +70,23 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
         )
 
     def test_sub_batching(self):
-        """Test if sub-batching works as expected."""
-        self.instance.train(
-            triples_factory=self.triples_factory,
-            num_epochs=1,
-            batch_size=self.batch_size,
-            sub_batch_size=self.sub_batch_size,
-        )
+        """Test if sub-batching works as expected, or raises an error if the training loop does not support it."""
+        with ExitStack() as stack:
+            if not self.cls.supports_sub_batching:
+                stack.enter_context(pytest.raises(NotImplementedError))
+            self.instance.train(
+                triples_factory=self.triples_factory,
+                num_epochs=1,
+                batch_size=self.batch_size,
+                sub_batch_size=self.sub_batch_size,
+            )
 
     def test_sub_batching_support(self):
         """Test if sub-batching works as expected."""
-        model = ConvE(triples_factory=self.triples_factory)
+        model = ConvE(triples_factory=self.triples_factory, use_inverse_triples=True)
         training_loop = self._with_model(model)
 
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             training_loop.train(
                 triples_factory=self.triples_factory,
                 num_epochs=1,
@@ -111,7 +116,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
             triples_factory=self.triples_factory,
             optimizer=self.optimizer_cls(model.get_grad_params()),
         )
-        with self.assertRaises(NonFiniteLossError):
+        with pytest.raises(NonFiniteLossError):
             training_loop.train(
                 triples_factory=self.triples_factory,
                 num_epochs=patience + 1,
@@ -167,7 +172,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
                 checkpoint_frequency=0,
             )
 
-        self.assertEqual(losses, losses_2)
+        assert losses == losses_2
 
     def test_result_tracker(self):
         """Test whether losses are tracked by the result tracker."""
@@ -182,7 +187,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
 
     def test_error_on_no_batch(self):
         """Verify that an error is raised if no training batch is available."""
-        with self.assertRaises(NoTrainingBatchError):
+        with pytest.raises(NoTrainingBatchError):
             self.instance.train(
                 triples_factory=self.triples_factory,
                 num_epochs=self.num_epochs,
@@ -197,7 +202,7 @@ class SLCWATrainingLoopTestCase(TrainingLoopTestCase):
     #: Should negative samples be filtered?
     filterer_cls: ClassVar[type[Filterer] | None] = None
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["negative_sampler"] = "basic"
         kwargs["negative_sampler_kwargs"] = {"filterer": self.filterer_cls}

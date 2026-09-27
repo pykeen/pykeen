@@ -1,6 +1,6 @@
 """Tests for splitting of triples."""
 
-import numpy
+import numpy as np
 import pytest
 import torch
 
@@ -26,7 +26,8 @@ def test_get_absolute_split_sizes():
         strict=False,
     ):
         # generate random ratios
-        ratios = numpy.random.uniform(size=(num_splits,))
+        rng = np.random.default_rng(seed=42)
+        ratios = rng.uniform(size=(num_splits,))
         ratios = ratios / ratios.sum()
         sizes = get_absolute_split_sizes(n_total=n_total, ratios=ratios)
         # check size
@@ -39,10 +40,10 @@ def test_get_absolute_split_sizes():
         assert sum(sizes) == n_total
 
         # check consistency with ratios
-        rel_size = numpy.asarray(sizes) / n_total
+        rel_size = np.asarray(sizes) / n_total
         # the number of decimal digits equivalent to 1 / n_total
-        decimal = numpy.floor(numpy.log10(n_total))
-        numpy.testing.assert_almost_equal(rel_size, ratios, decimal=decimal)
+        decimal = np.floor(np.log10(n_total))
+        np.testing.assert_almost_equal(rel_size, ratios, decimal=decimal)
 
 
 def test_normalize_ratios():
@@ -59,10 +60,10 @@ def test_normalize_ratios():
         # check values
         assert len(output) >= 2
         assert all(0 <= ratio <= 1 for ratio in output)
-        output_np = numpy.asarray(output)
-        numpy.testing.assert_almost_equal(output_np.sum(), numpy.ones(1))
+        output_np = np.asarray(output)
+        np.testing.assert_almost_equal(output_np.sum(), np.ones(1))
         # compare against expected
-        numpy.testing.assert_almost_equal(output_np, numpy.asarray(exp_output))
+        np.testing.assert_almost_equal(output_np, np.asarray(exp_output))
 
 
 def test_normalize_invalid_ratio():
@@ -74,8 +75,8 @@ def test_normalize_invalid_ratio():
         [0.8, 0.1, 0.2],
     ]
     for ratios in cases:
-        with pytest.raises(ValueError):
-            _ = normalize_ratios(ratios=ratios)
+        with pytest.raises(ValueError, match=r"ratios sum to more than 1.0"):
+            normalize_ratios(ratios=ratios)
 
 
 class DeterministicCleanerTests(CleanerTestCase):
@@ -171,9 +172,9 @@ class RandomizedCleanerTests(CleanerTestCase):
         )
 
         if expected_training_1 == new_training:
-            self.assertEqual(expected_testing_1, new_testing)
+            assert expected_testing_1 == new_testing
         elif expected_training_2 == new_training:
-            self.assertEqual(expected_testing_2, new_testing)
+            assert expected_testing_2 == new_testing
         else:
             self.fail("training was not correct")
 
@@ -201,13 +202,9 @@ class CoverageSplitterTest(SplitterTestCase):
         assert cover.shape == (self.mapped_triples.shape[0],)
 
         # check coverage
-        self.assertEqual(
-            get_entities(self.mapped_triples),
-            get_entities(self.mapped_triples[cover]),
-            msg="entity coverage is not full",
+        assert get_entities(self.mapped_triples) == get_entities(self.mapped_triples[cover]), (
+            "entity coverage is not full"
         )
-        self.assertEqual(
-            get_relations(self.mapped_triples),
-            get_relations(self.mapped_triples[cover]),
-            msg="relation coverage is not full",
+        assert get_relations(self.mapped_triples) == get_relations(self.mapped_triples[cover]), (
+            "relation coverage is not full"
         )

@@ -19,7 +19,7 @@ __all__ = [
 class DistMultLiteralGated(LiteralModel):
     """An implementation of the LiteralE model with thhe Gated DistMult interaction from [kristiadi2018]_.
 
-    This model is different from :class:`pykeen.models.DistMultLiteral` because it uses a
+    This model is different from :class:`~pykeen.models.DistMultLiteral` because it uses a
     gate (like found in `LSTMs <https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html>`_)
     instead of a LinearDropout module.
 
@@ -33,12 +33,12 @@ class DistMultLiteralGated(LiteralModel):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        input_dropout=DEFAULT_DROPOUT_HPO_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "input_dropout": DEFAULT_DROPOUT_HPO_RANGE,
+    }
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(margin=0.0)
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {"margin": 0.0}
     interaction_cls: ClassVar[type[Interaction]] = DistMultInteraction
 
     def __init__(
@@ -64,22 +64,22 @@ class DistMultLiteralGated(LiteralModel):
             triples_factory=triples_factory,
             interaction=self.interaction_cls,
             combination=GatedCombination,
-            combination_kwargs=dict(
-                entity_embedding_dim=embedding_dim,
-                literal_embedding_dim=triples_factory.numeric_literals.shape[1],
-                input_dropout=input_dropout,
-            ),
+            combination_kwargs={
+                "entity_embedding_dim": embedding_dim,
+                "literal_embedding_dim": triples_factory.numeric_literals.shape[1],
+                "input_dropout": input_dropout,
+            },
             entity_representations_kwargs=[
-                dict(
-                    shape=embedding_dim,
-                    initializer=nn.init.xavier_normal_,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": nn.init.xavier_normal_,
+                },
             ],
             relation_representations_kwargs=[
-                dict(
-                    shape=embedding_dim,
-                    initializer=nn.init.xavier_normal_,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": nn.init.xavier_normal_,
+                },
             ],
             **kwargs,
         )

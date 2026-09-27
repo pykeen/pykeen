@@ -15,8 +15,7 @@ class DisjointGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
 
     cls = pykeen.datasets.ea.combination.DisjointGraphPairCombinator
 
-    # docstr-coverage: inherited
-    def _verify_manual(self, combined_tf: CoreTriplesFactory):  # noqa: D102
+    def _verify_manual(self, combined_tf: CoreTriplesFactory):
         # assumes deterministic entity to id mapping
         expected_triples = {
             # from left_tf
@@ -41,8 +40,7 @@ class ExtraRelationGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase
     cls = pykeen.datasets.ea.combination.ExtraRelationGraphPairCombinator
     same_as_rel_name = cls.ALIGNMENT_RELATION_NAME
 
-    # docstr-coverage: inherited
-    def _verify_manual(self, combined_tf: CoreTriplesFactory):  # noqa: D102
+    def _verify_manual(self, combined_tf: CoreTriplesFactory):
         same_as_id = combined_tf.relation_to_id[self.__class__.same_as_rel_name]
         assert isinstance(same_as_id, int)
         # assumes deterministic entity to id mapping
@@ -73,8 +71,7 @@ class CollapseGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
 
     cls = pykeen.datasets.ea.combination.CollapseGraphPairCombinator
 
-    # docstr-coverage: inherited
-    def _verify_manual(self, combined_tf: CoreTriplesFactory):  # noqa: D102
+    def _verify_manual(self, combined_tf: CoreTriplesFactory):
         # assumes deterministic entity to id mapping
         expected_triples = {
             (0, 0, 1),
@@ -96,8 +93,7 @@ class SwapGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase):
 
     cls = pykeen.datasets.ea.combination.SwapGraphPairCombinator
 
-    # docstr-coverage: inherited
-    def _verify_manual(self, combined_tf: CoreTriplesFactory):  # noqa: D102
+    def _verify_manual(self, combined_tf: CoreTriplesFactory):
         # assumes deterministic entity to id mapping
         expected_triples = {
             # from left_tf

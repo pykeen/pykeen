@@ -9,7 +9,7 @@ from pykeen.models.inductive import InductiveNodePieceGNN
 from pykeen.stoppers import EarlyStopper
 from pykeen.training import SLCWATrainingLoop
 
-dataset = InductiveFB15k237(version="v1", create_inverse_triples=True)
+dataset = InductiveFB15k237(version="v1")
 
 model = InductiveNodePieceGNN(
     triples_factory=dataset.transductive_training,  # training factory, will be also used for a GNN
@@ -19,6 +19,7 @@ model = InductiveNodePieceGNN(
     loss=NSSALoss(margin=15),  # dummy loss
     random_seed=42,
     gnn_encoder=None,  # defaults to a 2-layer CompGCN with DistMult composition function
+    use_inverse_triples=True,
 )
 # ensure that the model is on the right device
 model = model.to(model.device)
@@ -29,7 +30,7 @@ training_loop = SLCWATrainingLoop(
     triples_factory=dataset.transductive_training,  # training triples
     model=model,
     optimizer=optimizer,
-    negative_sampler_kwargs=dict(num_negs_per_pos=32),
+    negative_sampler_kwargs={"num_negs_per_pos": 32},
     mode="training",  # necessary to specify for the inductive mode - training has its own set of nodes
 )
 

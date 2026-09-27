@@ -11,10 +11,10 @@ from ..typing import FloatTensor, GaussianDistribution
 from ..utils import at_least_eps, batched_dot, tensor_sum
 
 __all__ = [
-    "KG2ESimilarity",
-    "kg2e_similarity_resolver",
     "ExpectedLikelihood",
+    "KG2ESimilarity",
     "NegativeKullbackLeiblerDivergence",
+    "kg2e_similarity_resolver",
 ]
 
 
@@ -60,8 +60,7 @@ class ExpectedLikelihood(KG2ESimilarity):
         \right)
     """
 
-    # docstr-coverage: inherited
-    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:
+    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:  # noqa: D102
         var = tensor_sum(*(d.diagonal_covariance for d in (h, r, t)))
         mean = tensor_sum(h.mean, -t.mean, -r.mean)
 
@@ -112,8 +111,7 @@ class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
         <https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Kullback%E2%80%93Leibler_divergence>`_
     """
 
-    # docstr-coverage: inherited
-    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:
+    def forward(self, h: GaussianDistribution, r: GaussianDistribution, t: GaussianDistribution) -> FloatTensor:  # noqa: D102
         e_var = h.diagonal_covariance + t.diagonal_covariance
         r_var_safe = at_least_eps(r.diagonal_covariance)
         terms = []
@@ -151,9 +149,9 @@ class NegativeKullbackLeiblerDivergence(KG2ESimilarity):
         return -result
 
 
-#: A resolver for similarities for :class:`pykeen.nn.modules.KG2EInteraction`
+#: A resolver for similarities for :class:`~pykeen.nn.modules.KG2EInteraction`
 kg2e_similarity_resolver: ClassResolver[KG2ESimilarity] = ClassResolver.from_subclasses(
-    base=KG2ESimilarity,
+    base=KG2ESimilarity,  # type: ignore[type-abstract]
     synonyms={"kl": NegativeKullbackLeiblerDivergence, "el": ExpectedLikelihood},
     default=NegativeKullbackLeiblerDivergence,
 )

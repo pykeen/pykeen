@@ -30,9 +30,9 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = dict(
-        embedding_dim=dict(type=int, low=32, high=512, q=32),
-    )
+    hpo_default = {
+        "embedding_dim": {"type": int, "low": 32, "high": 512, "q": 32},
+    }
 
     def __init__(
         self,
@@ -42,6 +42,7 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
         encoder_kwargs: Mapping[str, Any] | None = None,
         interaction: Hint[Interaction[FloatTensor, RelationRepresentation, FloatTensor]] = None,
         interaction_kwargs: Mapping[str, Any] | None = None,
+        use_inverse_triples: bool = True,
         **kwargs,
     ):
         """Initialize the model.
@@ -53,16 +54,25 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
             ``encoder_kwargs``.
         :param encoder_kwargs:
             Additional keyword arguments for the encoder,
-            cf. :class:`pykeen.nn.representation.CombinedCompGCNRepresentations`.
+            cf. :class:`~pykeen.nn.representation.CombinedCompGCNRepresentations`.
         :param interaction:
             The interaction function to use as decoder.
         :param interaction_kwargs:
             Additional keyword based arguments for the interaction function.
+        :param use_inverse_triples:
+            Whether to use inverse relations. Must be True, since the CompGCN encoder always creates representations
+            for inverse relations.
         :param kwargs:
-            Additional keyword based arguments passed to :class:`pykeen.models.ERModel`.
+            Additional keyword based arguments passed to :class:`~pykeen.models.ERModel`.
+
+        :raises ValueError:
+            if ``use_inverse_triples`` is False
         """
+        if not use_inverse_triples:
+            raise ValueError("CompGCN requires inverse relations. Create the model with use_inverse_triples=True.")
+
         encoder_kwargs = {} if encoder_kwargs is None else dict(encoder_kwargs)
-        encoder_kwargs.setdefault("entity_representations_kwargs", dict(embedding_dim=embedding_dim))
+        encoder_kwargs.setdefault("entity_representations_kwargs", {"embedding_dim": embedding_dim})
         encoder_kwargs.setdefault("relation_representations_kwargs", encoder_kwargs["entity_representations_kwargs"])
 
         # combined representation
@@ -76,6 +86,7 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
             interaction = DistMultInteraction
         super().__init__(
             triples_factory=triples_factory,
+            use_inverse_triples=use_inverse_triples,
             interaction=interaction,
             interaction_kwargs=interaction_kwargs,
             entity_representations=entity_representations,

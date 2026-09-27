@@ -26,10 +26,10 @@ class TorusE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        p=dict(type=int, low=1, high=2),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "p": {"type": int, "low": 1, "high": 2},
+    }
 
     def __init__(
         self,
@@ -44,7 +44,7 @@ class TorusE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         relation_initializer_kwargs: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
-        r"""Initialize TorusE via the :class:`pykeen.nn.modules.TorusEInteraction` interaction.
+        r"""Initialize TorusE via the :class:`~pykeen.nn.modules.TorusEInteraction` interaction.
 
         :param embedding_dim: The entity embedding dimension $d$.
 
@@ -60,22 +60,22 @@ class TorusE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param entity_normalizer_kwargs: Keyword arguments to be used when calling the entity normalizer
         :param relation_initializer: Relation initializer function. Defaults to None
         :param relation_initializer_kwargs: Keyword arguments to be used when calling the relation initializer
-        :param kwargs: Remaining keyword arguments passed through to :class:`pykeen.models.ERModel`.
+        :param kwargs: Remaining keyword arguments passed through to :class:`~pykeen.models.ERModel`.
         """
         super().__init__(
             interaction=TorusEInteraction,
-            interaction_kwargs=dict(p=p, power_norm=power_norm),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-                initializer_kwargs=entity_initializer_kwargs,
-                normalizer=entity_normalizer,
-                normalizer_kwargs=entity_normalizer_kwargs,
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-                initializer_kwargs=relation_initializer_kwargs,
-            ),
+            interaction_kwargs={"p": p, "power_norm": power_norm},
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+                "initializer_kwargs": entity_initializer_kwargs,
+                "normalizer": entity_normalizer,
+                "normalizer_kwargs": entity_normalizer_kwargs,
+            },
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
+                "initializer_kwargs": relation_initializer_kwargs,
+            },
             **kwargs,
         )

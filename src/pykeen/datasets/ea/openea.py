@@ -6,15 +6,15 @@ Get a summary with ``python -m pykeen.datasets.openea``
 import itertools
 import logging
 import pathlib
-from typing import Literal
+from typing import Literal, Unpack
 
 import click
-import pandas
+import pandas as pd
 from docdata import parse_docdata
 from more_click import verbose_option
-from pystow.utils import read_zipfile_csv
 
-from .base import EADataset
+from .base import EADataset, EADatasetKwargs
+from ..source import RemoteArchivedSource
 from ...constants import COLUMN_LABELS, PYKEEN_DATASETS_MODULE
 from ...triples import TriplesFactory
 from ...typing import EA_SIDE_LEFT, EA_SIDES, EASide
@@ -80,11 +80,11 @@ class OpenEA(EADataset):
     def __init__(
         self,
         *,
-        graph_pair: str = D_W,
+        graph_pair: GraphPair = D_W,
         size: GraphSize = SIZE_15K,
         version: GraphVersion = V1,
-        **kwargs,
-    ):
+        **kwargs: Unpack[EADatasetKwargs],
+    ) -> None:
         """
         Initialize the dataset.
 
@@ -108,53 +108,61 @@ class OpenEA(EADataset):
         if version not in GRAPH_VERSIONS:
             raise ValueError(f"version must be one of {GRAPH_VERSIONS}")
 
-        # ensure zip file is present
-        self.zip_path = OPEN_EA_MODULE.ensure(
-            url=OpenEA.FIGSHARE_LINK,
-            name="OpenEA_dataset_v2.0.zip",
-            download_kwargs=dict(hexdigests=dict(sha512=OpenEA.SHA512)),
-        )
-        # save relative paths beforehand so they are present for loading
-        self.inner_path = pathlib.PurePosixPath("OpenEA_dataset_v2.0", f"{graph_pair}_{size}_{version}")
+        self.left_source = self._source(graph_pair, size, version, "rel_triples_1")
+        self.right_source = self._source(graph_pair, size, version, "rel_triples_2")
+        self.alignment_source = self._source(graph_pair, size, version, "ent_links")
+
         # delegate to super class
         super().__init__(**kwargs)
 
-    # docstr-coverage: inherited
-    def _load_graph(self, side: EASide) -> TriplesFactory:  # noqa: D102
+    @staticmethod
+    def _source(graph_pair: GraphPair, size: GraphSize, version: GraphVersion, part) -> RemoteArchivedSource:
+        return RemoteArchivedSource(
+            archive_type="zip",
+            path=OPEN_EA_MODULE.join(name="OpenEA_dataset_v2.0.zip"),
+            url=OpenEA.FIGSHARE_LINK,
+            inner_path=pathlib.PurePosixPath(
+                "OpenEA_dataset_v2.0",
+                f"{graph_pair}_{size}_{version}",
+                part,
+            ),
+            force=False,
+        )
+
+    def _load_graph(self, side: EASide) -> TriplesFactory:
         # left side has files ending with 1, right side with 2
-        one_or_two = "1" if side == EA_SIDE_LEFT else "2"
-        file_name = f"rel_triples_{one_or_two}"
-        return TriplesFactory.from_labeled_triples(
-            triples=read_zipfile_csv(
-                path=self.zip_path,
-                inner_path=str(self.inner_path.joinpath(file_name)),
+        source = self.left_source if side == EA_SIDE_LEFT else self.right_source
+        with source.open() as file:
+            df = pd.read_csv(
+                file,
                 header=None,
                 names=COLUMN_LABELS,
                 sep="\t",
                 encoding="utf8",
                 dtype=str,
-            ).values,
-            metadata={"path": self.zip_path},
+            )
+        return TriplesFactory.from_labeled_triples(
+            triples=df.values,
+            metadata={"path": source.path},
         )
 
-    # docstr-coverage: inherited
-    def _load_alignment(self) -> pandas.DataFrame:  # noqa: D102
-        return read_zipfile_csv(
-            path=self.zip_path,
-            inner_path=str(self.inner_path.joinpath("ent_links")),
-            header=None,
-            names=list(EA_SIDES),
-            sep="\t",
-            encoding="utf8",
-            dtype=str,
-        )
+    def _load_alignment(self) -> pd.DataFrame:
+        with self.alignment_source.open() as file:
+            return pd.read_csv(
+                file,
+                header=None,
+                names=list(EA_SIDES),
+                sep="\t",
+                encoding="utf8",
+                dtype=str,
+            )
 
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     for size, version, graph_pair, side in itertools.product(
-        GRAPH_SIZES, GRAPH_VERSIONS, GRAPH_PAIRS, EA_SIDES + (None,)
+        GRAPH_SIZES, GRAPH_VERSIONS, GRAPH_PAIRS, (*EA_SIDES, None)
     ):
         ds = OpenEA(graph_pair=graph_pair, side=side, size=size, version=version)
         ds.summarize()

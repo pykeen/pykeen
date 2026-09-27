@@ -10,8 +10,8 @@ dataset = Nations()
 model: ERModel[FloatTensor, FloatTensor, FloatTensor] = ERModel(
     triples_factory=dataset.training,
     interaction="distmult",
-    entity_representations_kwargs=dict(embedding_dim=3, dropout=0.1),
-    relation_representations_kwargs=dict(embedding_dim=3, dropout=0.1),
+    entity_representations_kwargs={"embedding_dim": 3, "dropout": 0.1},
+    relation_representations_kwargs={"embedding_dim": 3, "dropout": 0.1},
 )
 batch = torch.as_tensor(data=[[0, 1, 0]]).repeat(10, 1)
 scores = model.score_hrt(batch)

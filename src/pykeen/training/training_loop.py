@@ -1,20 +1,21 @@
 """Training loops for KGE models using multi-modal information."""
 
+import functools
 import gc
 import inspect
 import logging
-import os
 import pathlib
 import pickle
 import random
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from contextlib import ExitStack
 from datetime import datetime
 from hashlib import md5
+from math import ceil
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import IO, Any, ClassVar, Generic, Literal, TypeVar
+from typing import IO, Any, ClassVar, Concatenate, Generic, Literal, ParamSpec, TypeVar
 
 import numpy as np
 import torch
@@ -44,18 +45,25 @@ from ..stoppers import Stopper
 from ..trackers import ResultTracker, tracker_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.weights import LossWeighter
-from ..typing import FloatTensor, InductiveMode
+from ..typing import COLUMN_RELATION, FloatTensor, InductiveMode, TargetColumn
 from ..utils import format_relative_comparison, get_batchnorm_modules, get_preferred_device, normalize_string
 
 __all__ = [
-    "TrainingLoop",
     "NonFiniteLossError",
+    "OptimizerClearedError",
+    "OptimizerNotRecreatableError",
     "SubBatchingNotSupportedError",
+    "TrainingLoop",
 ]
 
 logger = logging.getLogger(__name__)
 
 BatchType = TypeVar("BatchType")
+P = ParamSpec("P")
+R = TypeVar("R")
+
+#: whether :func:`torch.load` supports memory-mapping, which was added in torch 2.1
+_TORCH_LOAD_SUPPORTS_MMAP = "mmap" in inspect.signature(torch.load).parameters
 
 
 class NonFiniteLossError(RuntimeError):
@@ -91,46 +99,117 @@ class SubBatchingNotSupportedError(NotImplementedError):
         super().__init__(model)
         self.model = model
 
-    def __str__(self):  # noqa: D105
+    def __str__(self):
         return (
             f"No sub-batching support for {self.model.__class__.__name__} due to modules "
             f"{get_batchnorm_modules(self.model)}."
         )
 
 
-def _get_optimizer_kwargs(optimizer: Optimizer) -> Mapping[str, Any]:
-    optimizer_kwargs = optimizer.state_dict()
-    optimizer_kwargs = {
-        key: value for key, value in optimizer_kwargs["param_groups"][0].items() if key not in ["params", "initial_lr"]
-    }
-    return optimizer_kwargs
+class OptimizerNotRecreatableError(ValueError):
+    """An exception raised when a pre-instantiated optimizer or LR scheduler would need to be re-created."""
 
 
-def _get_lr_scheduler_kwargs(lr_scheduler: LRScheduler) -> Mapping[str, Any]:
-    # note: this seems to be a pretty unsafe method to derive __init__ kwargs...
-    init_parameters = inspect.signature(lr_scheduler.__init__).parameters
-    return {
-        key: value
-        for key, value in lr_scheduler.state_dict().items()
-        if key not in {"last_epoch", "optimizer"} and key in init_parameters
-    }
+class OptimizerClearedError(ValueError):
+    """An exception raised when the optimizer is required, but has been cleared."""
 
 
-class TrainingLoop(Generic[BatchType], ABC):
+def _get_num_targets(model: Model, target: TargetColumn, mode: InductiveMode | None) -> int:
+    """Get the number of candidates for the target column.
+
+    :param model: The model.
+    :param target: The target column.
+    :param mode: The inductive mode, or None in the transductive setting.
+
+    :returns: The number of relations for the relation column, and otherwise the number of entities in the given mode.
+    """
+    if target == COLUMN_RELATION:
+        return model.num_relations
+    return model._get_entity_len(mode=mode)
+
+
+def _make_optimizer_and_lr_scheduler(
+    model: Model,
+    *,
+    optimizer: HintOrType[Optimizer],
+    optimizer_kwargs: OptionalKwargs,
+    lr_scheduler: HintOrType[LRScheduler],
+    lr_scheduler_kwargs: OptionalKwargs,
+) -> tuple[Optimizer, LRScheduler | None]:
+    """Create an optimizer for the model's parameters, and optionally an LR scheduler for this optimizer."""
+    optimizer_instance = optimizer_resolver.make(optimizer, optimizer_kwargs, params=model.get_grad_params())
+    if lr_scheduler is None:
+        return optimizer_instance, None
+    lr_scheduler_instance = lr_scheduler_resolver.make(lr_scheduler, lr_scheduler_kwargs, optimizer=optimizer_instance)
+    return optimizer_instance, lr_scheduler_instance
+
+
+def _restore_state_after_probing(
+    func: "Callable[Concatenate[TrainingLoop, P], R]",
+) -> "Callable[Concatenate[TrainingLoop, P], R]":
+    """Decorate a size probing method to restore the model, optimizer, and LR scheduler state afterwards.
+
+    Size probing runs actual training steps, including parameter updates, to also account for the memory required by
+    the optimizer step, e.g., for Adam's moment estimates. The state is stored in a temporary directory on disk, since
+    a copy in GPU memory would distort the memory estimates, and a copy in host memory may exhaust it, e.g., when GPU
+    memory spills over into host memory.
+    """
+
+    @functools.wraps(func)
+    def wrapped(self: "TrainingLoop", *args: P.args, **kwargs: P.kwargs) -> R:
+        components = {
+            name: component
+            for name, component in (
+                ("model", self.model),
+                ("optimizer", self.optimizer),
+                ("lr_scheduler", self.lr_scheduler),
+            )
+            if component is not None
+        }
+        device = self.device
+        load_kwargs: dict[str, Any] = {"map_location": device, "weights_only": False}
+        # memory-map the snapshot to avoid a full copy in host memory; we only do this when loading to an accelerator,
+        # since tensors loaded to CPU would keep referencing the (temporary) file, e.g., as part of the optimizer state
+        if _TORCH_LOAD_SUPPORTS_MMAP and device.type != "cpu":
+            load_kwargs["mmap"] = True
+        with TemporaryDirectory(ignore_cleanup_errors=True) as directory:
+            paths = {name: pathlib.Path(directory).joinpath(f"{name}.pt") for name in components}
+            for name, component in components.items():
+                torch.save(component.state_dict(), paths[name])
+            try:
+                return func(self, *args, **kwargs)
+            finally:
+                # restore one component at a time to limit the peak memory usage
+                for name, component in components.items():
+                    component.load_state_dict(torch.load(paths[name], **load_kwargs))
+
+    return wrapped
+
+
+class TrainingLoop(ABC, Generic[BatchType]):
     """A training loop."""
 
-    lr_scheduler: LRScheduler | None
     model: Model
-    optimizer: Optimizer
+
+    optimizer: Optimizer | None
+    lr_scheduler: LRScheduler | None
+
+    #: creates a fresh optimizer and LR scheduler for a given model; None if they cannot be re-created
+    _optimizer_factory: Callable[[Model], tuple[Optimizer, LRScheduler | None]] | None
+
+    #: whether the current optimizer has already been used for training
+    _optimizer_used: bool
 
     losses_per_epochs: list[float]
 
-    hpo_default = dict(
-        num_epochs=dict(type=int, low=100, high=1000, q=100),
-        batch_size=dict(type=int, low=4, high=12, scale="power_two"),  # [16, 4096]
-    )
+    hpo_default = {
+        "num_epochs": {"type": int, "low": 100, "high": 1000, "q": 100},
+        "batch_size": {"type": int, "low": 4, "high": 12, "scale": "power_two"},  # [16, 4096]
+    }
 
     supports_slicing: ClassVar[bool] = False
+    #: Whether the training loop can split a batch into sub-batches
+    supports_sub_batching: ClassVar[bool] = True
 
     @update_docstring_with_resolver_keys(
         ResolverKey("optimizer", "class_resolver.contrib.torch.optimizer_resolver"),
@@ -157,10 +236,13 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         :param model: The model to train
         :param triples_factory: The training triples factory
-        :param optimizer: The optimizer to use while training the model
+        :param optimizer: The optimizer to use while training the model. A pre-instantiated optimizer can only be used
+            for a single fresh training run; pass its class and `optimizer_kwargs` instead to allow re-creating it for
+            subsequent fresh runs.
         :param optimizer_kwargs: additional keyword-based parameters to instantiate the optimizer (if necessary).
             `params` will be added automatically based on the `model`.
-        :param lr_scheduler: The learning rate scheduler you want to use while training the model
+        :param lr_scheduler: The learning rate scheduler you want to use while training the model. The same restriction
+            as for pre-instantiated optimizers applies.
         :param lr_scheduler_kwargs: additional keyword-based parameters to instantiate the LR scheduler (if necessary).
             `optimizer` will be added automatically.
         :param automatic_memory_optimization: bool Whether to automatically optimize the sub-batch size during training
@@ -172,10 +254,20 @@ class TrainingLoop(Generic[BatchType], ABC):
         :param loss_weighter_kwargs: Parameters for the method to determine loss weights.
         """
         self.model = model
-        self.optimizer = optimizer_resolver.make(optimizer, pos_kwargs=optimizer_kwargs, params=model.get_grad_params())
-        self.lr_scheduler = lr_scheduler_resolver.make_safe(
-            lr_scheduler, pos_kwargs=lr_scheduler_kwargs, optimizer=self.optimizer
+        factory = functools.partial(
+            _make_optimizer_and_lr_scheduler,
+            optimizer=optimizer,
+            optimizer_kwargs=optimizer_kwargs,
+            lr_scheduler=lr_scheduler,
+            lr_scheduler_kwargs=lr_scheduler_kwargs,
         )
+        self.optimizer, self.lr_scheduler = factory(model)
+        self._optimizer_used = False
+        # pre-instantiated optimizers and LR schedulers are used as-is, but cannot be re-created, since their
+        # constructor parameters cannot be reliably recovered from the instance. Not keeping the factory also ensures
+        # that clearing the optimizer releases the instances.
+        pre_instantiated = isinstance(optimizer, Optimizer) or isinstance(lr_scheduler, LRScheduler)
+        self._optimizer_factory = None if pre_instantiated else factory
         self.losses_per_epochs = []
         self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
@@ -198,19 +290,34 @@ class TrainingLoop(Generic[BatchType], ABC):
         return normalize_string(cls.__name__, suffix=TrainingLoop.__name__)
 
     @property
-    def device(self):  # noqa: D401
+    def device(self):
         """The device used by the model."""
         return self.model.device
 
     @property
-    def loss(self):  # noqa: D401
+    def loss(self):
         """The loss used by the model."""
         return self.model.loss
 
+    def _reset_optimizer(self) -> None:
+        """Create a fresh optimizer and LR scheduler for the model's current parameters.
+
+        :raises OptimizerNotRecreatableError: if the optimizer or LR scheduler were passed pre-instantiated, and thus
+            cannot be re-created
+        """
+        if self._optimizer_factory is None:
+            raise OptimizerNotRecreatableError(
+                "Cannot create a fresh optimizer, since the optimizer or LR scheduler were passed pre-instantiated, "
+                "and have already been used or cleared. Pass them as class and kwargs instead, to allow re-creating "
+                "them for fresh training runs.",
+            )
+        self.optimizer, self.lr_scheduler = self._optimizer_factory(self.model)
+        self._optimizer_used = False
+
     @property
-    def checksum(self) -> str:  # noqa: D401
+    def checksum(self) -> str:
         """The checksum of the model and optimizer the training loop was configured with."""
-        h = md5()  # noqa: S303,S324
+        h = md5()  # noqa: S324
         h.update(str(self.model).encode("utf-8"))
         h.update(str(self.optimizer).encode("utf-8"))
         return h.hexdigest()
@@ -232,7 +339,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         sub_batch_size: int | None = None,
         num_workers: int | None = None,
         clear_optimizer: bool = False,
-        checkpoint_directory: None | str | pathlib.Path = None,
+        checkpoint_directory: str | pathlib.Path | None = None,
         checkpoint_name: str | None = None,
         checkpoint_frequency: int | None = None,
         checkpoint_on_failure: bool = False,
@@ -266,8 +373,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         :param use_tqdm: Should a progress bar be shown for epochs?
         :param use_tqdm_batch: Should a progress bar be shown for batching (inside the epoch progress bar)?
         :param tqdm_kwargs: Keyword arguments passed to :mod:`tqdm` managing the progress bar.
-        :param stopper: An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking if training
-            should stop early
+        :param stopper: An instance of :class:`~pykeen.stoppers.early_stopping.EarlyStopper` with settings for
+            checking if training should stop early
         :param sub_batch_size: If provided split each batch into sub-batches to avoid memory issues for large models /
             small GPUs.
         :param num_workers: The number of child CPU workers used for loading data. If None, data are loaded in the main
@@ -275,7 +382,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         :param clear_optimizer: Whether to delete the optimizer instance after training (as the optimizer might have
             additional memory consumption due to e.g. moments in Adam).
         :param checkpoint_directory: An optional directory to store the checkpoint files. If None, a subdirectory named
-            ``checkpoints`` in the directory defined by :data:`pykeen.constants.PYKEEN_HOME` is used. Unless the
+            ``checkpoints`` in the directory defined by :data:`~pykeen.constants.PYKEEN_HOME` is used. Unless the
             environment variable ``PYKEEN_HOME`` is overridden, this will be ``~/.pykeen/checkpoints``.
         :param checkpoint_name: The filename for saving checkpoints. If the given filename exists already, that file
             will be loaded and used to continue training.
@@ -289,8 +396,8 @@ class TrainingLoop(Generic[BatchType], ABC):
             be ``PyKEEN_just_saved_my_day_{datetime}.pt`` in the given checkpoint_root.
         :param drop_last: Whether to drop the last batch in each epoch to prevent smaller batches. Defaults to False,
             except if the model contains batch normalization layers. Can be provided explicitly to override.
-        :param callbacks: An optional :class:`pykeen.training.TrainingCallback` or collection of callback instances that
-            define one of several functionalities. Their interface was inspired by Keras.
+        :param callbacks: An optional :class:`~pykeen.training.TrainingCallback` or collection of callback
+            instances that define one of several functionalities. Their interface was inspired by Keras.
         :param callbacks_kwargs: additional keyword-based parameter to instantiate the training callback.
         :param gradient_clipping_max_norm: The maximum gradient norm for use with gradient clipping. If None, no
             gradient norm clipping is used.
@@ -302,6 +409,10 @@ class TrainingLoop(Generic[BatchType], ABC):
             https://pytorch.org/docs/stable/notes/cuda.html#cuda-memory-pinning
 
         :returns: The losses per epoch.
+
+        :raises OptimizerClearedError: if training should be continued, but the optimizer has been cleared
+        :raises OptimizerNotRecreatableError: if a fresh training run would need to re-create a pre-instantiated
+            optimizer or LR scheduler
         """
         self._should_stop = False
 
@@ -362,6 +473,15 @@ class TrainingLoop(Generic[BatchType], ABC):
         if getattr(stopper, "stopped", False):
             result: list[float] | None = self.losses_per_epochs
         else:
+            # Force weight re-initialization and a fresh optimizer if training continuation is not explicitly requested.
+            if not continue_training:
+                self.model.reset_parameters_()
+                if self.optimizer is None or self._optimizer_used:
+                    self._reset_optimizer()
+            elif self.optimizer is None:
+                raise OptimizerClearedError("Cannot continue training after the optimizer has been cleared.")
+            self._optimizer_used = True
+
             # send model to device before going into the internal training loop
             self.model = self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
 
@@ -491,6 +611,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         del batch
         del batches
         gc.collect()
+        if self.optimizer is None:
+            raise OptimizerClearedError("The optimizer has been cleared.")
         self.optimizer.zero_grad()
         self._free_graph_and_cache()
 
@@ -513,9 +635,9 @@ class TrainingLoop(Generic[BatchType], ABC):
         sub_batch_size: int | None = None,
         num_workers: int | None = None,
         save_checkpoints: bool = False,
-        checkpoint_path: None | str | pathlib.Path = None,
+        checkpoint_path: str | pathlib.Path | None = None,
         checkpoint_frequency: int | None = None,
-        checkpoint_on_failure_file_path: None | str | pathlib.Path = None,
+        checkpoint_on_failure_file_path: str | pathlib.Path | None = None,
         best_epoch_model_file_path: pathlib.Path | None = None,
         last_best_epoch: int | None = None,
         drop_last: bool | None = None,
@@ -527,8 +649,6 @@ class TrainingLoop(Generic[BatchType], ABC):
         pin_memory: bool = True,
     ) -> list[float] | None:
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
-        if self.optimizer is None:
-            raise ValueError("optimizer must be set before running _train()")
         # When using early stopping models have to be saved separately at the best epoch, since the training loop will
         # due to the patience continue to train after the best epoch and thus alter the model
         # -> the temporay file has to be created outside, which we assert here
@@ -592,6 +712,8 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         if sub_batch_size is None or sub_batch_size == batch_size:  # by default do not split batches in sub-batches
             sub_batch_size = batch_size
+        elif not self.supports_sub_batching:
+            raise NotImplementedError(f"{self.__class__.__name__} does not support sub-batching.")
         elif get_batchnorm_modules(self.model):  # if there are any, this is truthy
             raise SubBatchingNotSupportedError(self.model)
 
@@ -601,27 +723,6 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         if drop_last is None:
             drop_last = model_contains_batch_norm
-
-        # Force weight initialization if training continuation is not explicitly requested.
-        if not continue_training:
-            # Reset the weights
-            self.model.reset_parameters_()
-            # afterwards, some parameters may be on the wrong device
-            self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
-
-            # Create new optimizer
-            optimizer_kwargs = _get_optimizer_kwargs(self.optimizer)
-            self.optimizer = self.optimizer.__class__(
-                params=self.model.get_grad_params(),
-                **optimizer_kwargs,
-            )
-
-            if self.lr_scheduler is not None:
-                # Create a new lr scheduler and add the optimizer
-                lr_scheduler_kwargs = _get_lr_scheduler_kwargs(self.lr_scheduler)
-                self.lr_scheduler = self.lr_scheduler.__class__(optimizer=self.optimizer, **lr_scheduler_kwargs)
-        elif not self.optimizer.state:
-            raise ValueError("Cannot continue_training without being trained once.")
 
         # Ensure the model is on the correct device
         self.model.to(get_preferred_device(self.model, allow_ambiguity=True))
@@ -635,7 +736,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         # When size probing, we don't want progress bars
         if _use_outer_tqdm:
             # Create progress bar
-            _tqdm_kwargs = dict(desc=f"Training epochs on {self.device}", unit="epoch")
+            _tqdm_kwargs = {"desc": f"Training epochs on {self.device}", "unit": "epoch"}
             if tqdm_kwargs is not None:
                 _tqdm_kwargs.update(tqdm_kwargs)
             epochs = trange(self._epoch + 1, 1 + num_epochs, **_tqdm_kwargs, initial=self._epoch, total=num_epochs)
@@ -656,7 +757,7 @@ class TrainingLoop(Generic[BatchType], ABC):
             sampler=sampler,
         )
         if len(train_data_loader) == 0:
-            raise NoTrainingBatchError()
+            raise NoTrainingBatchError
         if drop_last and not only_size_probing:
             logger.info(
                 "Dropping last (incomplete) batch each epoch (%s batches).",
@@ -675,7 +776,9 @@ class TrainingLoop(Generic[BatchType], ABC):
         if gradient_clipping_max_abs_value is not None:
             pre_step_callbacks.append(GradientAbsClippingTrainingCallback(clip_value=gradient_clipping_max_abs_value))
         callback.register_callback(
-            OptimizerTrainingCallback(only_size_probing=only_size_probing, pre_step_callbacks=pre_step_callbacks)
+            # note: we also apply parameter updates during size probing to account for the optimizer's memory
+            # requirements; the size probing methods restore the state afterwards
+            OptimizerTrainingCallback(pre_step_callbacks=pre_step_callbacks)
         )
         if self.lr_scheduler is not None:
             callback.register_callback(LearningRateSchedulerTrainingCallback())
@@ -737,9 +840,9 @@ class TrainingLoop(Generic[BatchType], ABC):
             except (MemoryError, RuntimeError) as e:
                 # During automatic memory optimization only the error message is of interest
                 if only_size_probing:
-                    raise e
+                    raise
 
-                logger.warning(f"The training loop just failed during epoch {epoch} due to error {str(e)}.")
+                logger.warning(f"The training loop just failed during epoch {epoch} due to error {e!s}.")
                 if checkpoint_on_failure_file_path:
                     # When there wasn't a best epoch the checkpoint path should be None
                     if last_best_epoch is not None and best_epoch_model_file_path is not None:
@@ -757,22 +860,19 @@ class TrainingLoop(Generic[BatchType], ABC):
                         f"used as 'checkpoint_file' argument.",
                     )
                 # Delete temporary best epoch model
-                if best_epoch_model_file_path is not None and best_epoch_model_file_path.is_file():
-                    os.remove(best_epoch_model_file_path)
-                raise e
+                if best_epoch_model_file_path:
+                    best_epoch_model_file_path.unlink(missing_ok=True)
+                raise
 
             # Includes a call to result_tracker.log_metrics
             callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss)
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints and checkpoint_path is not None:
+                assert checkpoint_frequency is not None
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 # MyPy overrides are because you should
-                if (
-                    minutes_since_last_checkpoint >= checkpoint_frequency  # type: ignore
-                    or self._should_stop
-                    or epoch == num_epochs
-                ):
+                if minutes_since_last_checkpoint >= checkpoint_frequency or self._should_stop or epoch == num_epochs:
                     # When there wasn't a best epoch the checkpoint path should be None
                     if last_best_epoch is not None and best_epoch_model_file_path is not None:
                         best_epoch_model_checkpoint_file_path = best_epoch_model_file_path
@@ -781,15 +881,14 @@ class TrainingLoop(Generic[BatchType], ABC):
                         stopper=stopper,
                         best_epoch_model_checkpoint_file_path=best_epoch_model_checkpoint_file_path,
                         triples_factory=triples_factory,
-                    )  # type: ignore
+                    )
                     last_checkpoint = time.time()
 
             if self._should_stop:
                 if last_best_epoch is not None and best_epoch_model_file_path is not None:
                     self._load_state(path=best_epoch_model_file_path)
                     # Delete temporary best epoch model
-                    if pathlib.Path.is_file(best_epoch_model_file_path):
-                        os.remove(best_epoch_model_file_path)
+                    best_epoch_model_file_path.unlink(missing_ok=True)
                 return self.losses_per_epochs
 
         callback.post_train(losses=self.losses_per_epochs)
@@ -799,8 +898,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         if stopper is not None and last_best_epoch is not None and best_epoch_model_file_path is not None:
             self._load_state(path=best_epoch_model_file_path)
             # Delete temporary best epoch model
-            if pathlib.Path.is_file(best_epoch_model_file_path):
-                os.remove(best_epoch_model_file_path)
+            best_epoch_model_file_path.unlink(missing_ok=True)
 
         return self.losses_per_epochs
 
@@ -882,6 +980,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         """Process a single batch and returns the loss."""
         raise NotImplementedError
 
+    @_restore_state_after_probing
     def batch_size_search(
         self,
         *,
@@ -927,7 +1026,7 @@ class TrainingLoop(Generic[BatchType], ABC):
             except RuntimeError as runtime_error:
                 self._free_graph_and_cache()
                 if not is_oom_error(runtime_error):
-                    raise runtime_error
+                    raise
                 if batch_size == 1:
                     logger.debug(f"{batch_size=:_} does not fit into your memory with these parameters.")
                     break
@@ -951,6 +1050,7 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         return batch_size, evaluated_once
 
+    @_restore_state_after_probing
     def sub_batch_and_slice(
         self,
         *,
@@ -976,7 +1076,17 @@ class TrainingLoop(Generic[BatchType], ABC):
         )
         return sub_batch_size, slice_size
 
-    @abstractmethod
+    def _get_initial_slice_size(self, batch_size: int) -> int:
+        """Get the slice size to start the slice size search with.
+
+        :param batch_size: The batch size to use.
+
+        :returns: The initial slice size. Defaults to half the number of entities.
+        """
+        # Since the batch_size search with size 1, i.e., one tuple scored on all entities,
+        # must have failed to start slice_size search, we start with trying half the entities.
+        return ceil(self.model._get_entity_len(mode=self.mode) / 2)
+
     def _slice_size_search(
         self,
         *,
@@ -991,6 +1101,9 @@ class TrainingLoop(Generic[BatchType], ABC):
         and sub_batch size on the hardware at hand. If even the slice size 1 is too high, it will raise an error.
         Otherwise it will return the determined slice size.
 
+        The search starts at :meth:`_get_initial_slice_size`, and halves (or doubles) the slice size until it finds the
+        largest one which fits into memory.
+
         :param triples_factory: A triples factory
         :param batch_size: The batch size to use.
         :param sub_batch_size: The sub-batch size to use.
@@ -1000,8 +1113,48 @@ class TrainingLoop(Generic[BatchType], ABC):
         :returns: The slice_size that allows training the model with the given parameters on this hardware.
 
         :raises MemoryError: If it is not possible to train the model on the hardware at hand with the given parameters.
+        :raises RuntimeError: If a runtime error other than an out-of-memory error is raised during training.
         """
-        raise NotImplementedError
+        reached_max = False
+        evaluated_once = False
+        logger.info("Trying slicing now.")
+        slice_size = self._get_initial_slice_size(batch_size=batch_size)
+        while True:
+            try:
+                logger.debug(f"Trying {slice_size=:_} now.")
+                self._train(
+                    triples_factory=triples_factory,
+                    num_epochs=1,
+                    batch_size=batch_size,
+                    sub_batch_size=sub_batch_size,
+                    slice_size=slice_size,
+                    only_size_probing=True,
+                )
+            except RuntimeError as runtime_error:
+                self._free_graph_and_cache()
+                if not is_oom_error(runtime_error):
+                    raise
+                if evaluated_once:
+                    slice_size //= 2
+                    logger.info(f"Concluded search with {slice_size=:_}.")
+                    break
+                if slice_size == 1:
+                    raise MemoryError(
+                        f"Even {slice_size=:_} doesn't fit into your memory with these parameters."
+                    ) from runtime_error
+
+                logger.debug(f"The {slice_size=:_} was too big, trying less now.")
+                slice_size //= 2
+                reached_max = True
+            else:
+                self._free_graph_and_cache()
+                if reached_max:
+                    logger.info(f"Concluded search with {slice_size=:_}.")
+                    break
+                slice_size *= 2
+                evaluated_once = True
+
+        return slice_size
 
     def _sub_batch_size_search(
         self,
@@ -1044,7 +1197,7 @@ class TrainingLoop(Generic[BatchType], ABC):
         except RuntimeError as runtime_error:
             self._free_graph_and_cache()
             if not is_oom_error(runtime_error):
-                raise runtime_error
+                raise
             logger.debug(f"The batch_size {batch_size=:_} was too big, sub_batching is required.")
             sub_batch_size //= 2
         else:
@@ -1053,7 +1206,11 @@ class TrainingLoop(Generic[BatchType], ABC):
 
         if not finished_search:
             logger.info("Starting sub_batch_size search for training now...")
-            if get_batchnorm_modules(self.model):  # if there are any, this is truthy
+            if not self.supports_sub_batching:
+                logger.info(f"{self.__class__.__name__} does not support sub-batching.")
+                supports_sub_batching = False
+                sub_batch_size = batch_size
+            elif get_batchnorm_modules(self.model):  # if there are any, this is truthy
                 logger.info("This model does not support sub-batching.")
                 supports_sub_batching = False
                 sub_batch_size = batch_size
@@ -1073,7 +1230,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                     except RuntimeError as runtime_error:
                         self._free_graph_and_cache()
                         if not is_oom_error(runtime_error):
-                            raise runtime_error
+                            raise
                         if sub_batch_size == 1:
                             logger.info(f"Even {sub_batch_size=:_} does not fit in memory with these parameters")
                             break
@@ -1103,8 +1260,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         """Save the state of the training loop.
 
         :param path: Path of the file where to store the state in.
-        :param stopper: An instance of :class:`pykeen.stopper.EarlyStopper` with settings for checking if training
-            should stop early
+        :param stopper: An instance of :class:`~pykeen.stoppers.early_stopping.EarlyStopper` with settings for
+            checking if training should stop early
         :param best_epoch_model_checkpoint_file_path: The file path for the checkpoint of the best epoch model when
             using early stopping.
         :param triples_factory: The triples factory being used in the current training loop.
@@ -1117,25 +1274,19 @@ class TrainingLoop(Generic[BatchType], ABC):
         logger.debug("=> Saving checkpoint.")
 
         if stopper is None:
-            stopper_dict: Mapping[str, Any] = dict()
+            stopper_dict: Mapping[str, Any] = {}
         else:
             stopper_dict = stopper.get_summary_dict()
 
         # Only if a cuda device is available, the random state is accessed
-        if torch.cuda.is_available():
-            torch_cuda_random_state = torch.cuda.get_rng_state()
-        else:
-            torch_cuda_random_state = None
+        torch_cuda_random_state = torch.cuda.get_rng_state() if torch.cuda.is_available() else None
 
         if best_epoch_model_checkpoint_file_path is not None:
             best_epoch_model_checkpoint = torch.load(best_epoch_model_checkpoint_file_path, weights_only=False)
         else:
             best_epoch_model_checkpoint = None
 
-        if self.lr_scheduler is None:
-            lr_scheduler_state_dict = None
-        else:
-            lr_scheduler_state_dict = self.lr_scheduler.state_dict()
+        lr_scheduler_state_dict = None if self.lr_scheduler is None else self.lr_scheduler.state_dict()
 
         relation_to_id_dict = None
         entity_to_id_dict = None
@@ -1154,7 +1305,7 @@ class TrainingLoop(Generic[BatchType], ABC):
                 "random_seed": self.model._random_seed,
                 "stopper_dict": stopper_dict,
                 "random_state": random.getstate(),
-                "np_random_state": np.random.get_state(),
+                "np_random_state": np.random.get_state(),  # noqa: NPY002
                 "torch_random_state": torch.random.get_rng_state(),
                 "torch_cuda_random_state": torch_cuda_random_state,
                 # This is an entire checkpoint for the optional best model when using early stopping
@@ -1183,12 +1334,12 @@ class TrainingLoop(Generic[BatchType], ABC):
         :returns: Temporary file path of the best epoch model and the best epoch when using early stoppers, None
             otherwise.
 
-        :raises ValueError: If the internal optimizer is none
         :raises CheckpointMismatchError: If the given checkpoint file has a non-matching checksum, i.e. it was saved
             with a different configuration.
         """
+        # the optimizer may have been cleared after a previous run; its state is restored from the checkpoint
         if self.optimizer is None:
-            raise ValueError
+            self._reset_optimizer()
 
         logger.info(f"=> loading checkpoint '{path}'")
         checkpoint = torch.load(path, weights_only=False)
@@ -1218,7 +1369,8 @@ class TrainingLoop(Generic[BatchType], ABC):
         best_epoch_model_file_path = None
         best_epoch = None
         if checkpoint.get("best_epoch_model_checkpoint"):
-            best_epoch_model_file_path = pathlib.Path(NamedTemporaryFile().name)
+            with NamedTemporaryFile(delete=False) as ntf:
+                best_epoch_model_file_path = pathlib.Path(ntf.name)
             best_epoch = checkpoint["best_epoch_model_checkpoint"]["epoch"]
             torch.save(
                 checkpoint["best_epoch_model_checkpoint"],
@@ -1253,11 +1405,13 @@ class TrainingLoop(Generic[BatchType], ABC):
         self._epoch = checkpoint["epoch"]
         self.losses_per_epochs = checkpoint["loss"]
         self.model.load_state_dict(checkpoint["model_state_dict"])
+        if self.optimizer is None:
+            raise OptimizerClearedError("The optimizer has been cleared.")
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if self.lr_scheduler is not None:
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
         random.setstate(checkpoint["random_state"])
-        np.random.set_state(checkpoint["np_random_state"])
+        np.random.set_state(checkpoint["np_random_state"])  # noqa: NPY002
         torch.random.set_rng_state(checkpoint["torch_random_state"])
         logger.info(f"=> loaded checkpoint '{path}' stopped after having finished epoch {checkpoint['epoch']}")
 

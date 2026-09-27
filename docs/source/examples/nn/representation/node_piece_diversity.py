@@ -3,7 +3,7 @@
 from pykeen.datasets import CoDExSmall
 from pykeen.models import NodePiece
 
-dataset = CoDExSmall(create_inverse_triples=True)
+dataset = CoDExSmall()
 model = NodePiece(
     triples_factory=dataset.training,
     tokenizers=["AnchorTokenizer", "RelationTokenizer"],

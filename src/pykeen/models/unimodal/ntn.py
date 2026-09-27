@@ -56,10 +56,10 @@ class NTN(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor, Floa
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        num_slices=dict(type=int, low=2, high=4),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "num_slices": {"type": int, "low": 2, "high": 4},
+    }
 
     @update_docstring_with_resolver_keys(
         ResolverKey(name="non_linearity", resolver="class_resolver.contrib.torch.activation_resolver")
@@ -91,21 +91,21 @@ class NTN(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor, Floa
                 activation=non_linearity,
                 activation_kwargs=non_linearity_kwargs,
             ),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-            ),
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+            },
             relation_representations_kwargs=[
                 # w: (k, d, d)
-                dict(shape=(num_slices, embedding_dim, embedding_dim)),
+                {"shape": (num_slices, embedding_dim, embedding_dim)},
                 # vh: (k, d)
-                dict(shape=(num_slices, embedding_dim)),
+                {"shape": (num_slices, embedding_dim)},
                 # vt: (k, d)
-                dict(shape=(num_slices, embedding_dim)),
+                {"shape": (num_slices, embedding_dim)},
                 # b: (k,)
-                dict(shape=(num_slices,)),
+                {"shape": (num_slices,)},
                 # u: (k,)
-                dict(shape=(num_slices,)),
+                {"shape": (num_slices,)},
             ],
             **kwargs,
         )

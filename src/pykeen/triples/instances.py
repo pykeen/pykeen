@@ -5,42 +5,63 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from typing import Generic, TypedDict, TypeVar
+from typing import Generic, NotRequired, Self, TypedDict, TypeVar
 
 import numpy as np
 import scipy.sparse
 import torch
 from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch.utils import data
-from typing_extensions import NotRequired, Self
 
 from .triples_factory import CoreTriplesFactory
 from .utils import compute_compressed_adjacency_list
 from .weights import LossWeighter, loss_weighter_resolver
 from .. import typing as pykeen_typing
 from ..constants import get_target_column
-from ..sampling import NegativeSampler, negative_sampler_resolver
+from ..sampling import BasicNegativeSampler, NegativeSampler, negative_sampler_resolver
 from ..typing import (
     BoolTensor,
     FloatTensor,
     LongTensor,
     MappedTriples,
+    Target,
     TargetColumn,
     TargetHint,
 )
 from ..utils import split_workload
 
 __all__ = [
-    "Instances",
-    "LCWAInstances",
     "BaseBatchedSLCWAInstances",
+    "BatchCWABatch",
     "BatchedSLCWAInstances",
-    "SubGraphSLCWAInstances",
+    "GroupedSLCWABatch",
+    "Instances",
     "LCWABatch",
+    "LCWAInstances",
     "SLCWABatch",
+    "SubGraphSLCWAInstances",
 ]
 
 BatchType = TypeVar("BatchType")
+
+
+class BatchCWABatch(TypedDict):
+    """A batch for BCWA training."""
+
+    heads: LongTensor
+    """The unique head entity indices, shape: (num_unique_heads,)."""
+
+    relations: LongTensor
+    """The unique relation indices, shape: (num_unique_relations,)."""
+
+    tails: LongTensor
+    """The unique tail entity indices, shape: (num_unique_tails,)."""
+
+    positives: LongTensor
+    """The positive triples, in batch-local indices, shape: (num_positive_triples, 3)."""
+
+    weights: NotRequired[FloatTensor]
+    """Sample weights, shape: (num_unique_heads, num_unique_relations, num_unique_tails)."""
 
 
 class LCWABatch(TypedDict):
@@ -56,10 +77,11 @@ class LCWABatch(TypedDict):
 class SLCWABatch(TypedDict):
     """A batch for sLCWA training."""
 
-    # TODO: separately storing head/relation/tail corruptions would enable faster scoring (and thus training)
-
     #: the positive triples, shape: (batch_size, 3)
     positives: LongTensor
+
+    #: sample weights for the positive triples
+    pos_weights: NotRequired[FloatTensor]
 
     #: the negative triples, shape: (batch_size, num_negatives_per_positive, 3)
     negatives: LongTensor
@@ -67,12 +89,30 @@ class SLCWABatch(TypedDict):
     #: filtering masks for negative triples, shape: (batch_size, num_negatives_per_positive)
     masks: NotRequired[BoolTensor]
 
-    #: sample weights
-    pos_weights: NotRequired[FloatTensor]
+    #: sample weights for the negative triples
     neg_weights: NotRequired[FloatTensor]
 
 
-class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
+class GroupedSLCWABatch(TypedDict):
+    """An sLCWA batch keeping negatives grouped by the corrupted position."""
+
+    #: the positive triples, shape: (batch_size, 3)
+    positives: LongTensor
+
+    #: sample weights for the positive triples
+    pos_weights: NotRequired[FloatTensor]
+
+    #: the replacement IDs, keyed by corrupted target, shape: (batch_size, k_target)
+    corruptions: dict[Target, LongTensor]
+
+    #: filtering masks for negative triples, keyed by corrupted target, shape: (batch_size, k_target)
+    masks: NotRequired[dict[Target, BoolTensor]]
+
+    #: sample weights for the negatives, keyed by corrupted target
+    neg_weights: NotRequired[dict[Target, FloatTensor]]
+
+
+class Instances(data.Dataset[BatchType], ABC, Generic[BatchType]):
     """Base class for training instances."""
 
     @abstractmethod
@@ -81,7 +121,9 @@ class Instances(data.Dataset[BatchType], Generic[BatchType], ABC):
         raise NotImplementedError
 
 
-class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCWABatch]):
+class BaseBatchedSLCWAInstances(
+    Instances[SLCWABatch | GroupedSLCWABatch], data.IterableDataset[SLCWABatch | GroupedSLCWABatch]
+):
     """Pre-batched training instances for the sLCWA training loop.
 
     .. note::
@@ -105,6 +147,7 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
         negative_sampler_kwargs: OptionalKwargs = None,
         loss_weighter: HintOrType[LossWeighter] = None,
         loss_weighter_kwargs: OptionalKwargs = None,
+        grouped: bool = False,
     ):
         """Initialize the dataset.
 
@@ -117,6 +160,11 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
         :param negative_sampler_kwargs: additional keyword-based parameters used to instantiate the negative sampler
         :param loss_weighter: The method to determine sample weights.
         :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
+        :param grouped: whether to keep the negative samples grouped by corrupted target instead of materialising
+            them as dense triples. This requires a negative sampler which supports grouped corruption, cf.
+            :data:`~pykeen.sampling.NegativeSampler.supports_grouped_corruption`.
+
+        :raises ValueError: if `grouped` is `True`, but the negative sampler does not support grouped corruption.
         """
         self.mapped_triples = mapped_triples
         self.batch_size = batch_size
@@ -129,10 +177,16 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
             num_relations=num_relations,
         )
         self.loss_weighter = loss_weighter_resolver.make_safe(loss_weighter, loss_weighter_kwargs)
+        if grouped and not self.negative_sampler.supports_grouped_corruption:
+            raise ValueError(
+                f"grouped=True requires a negative sampler which supports grouped corruption, but "
+                f"{self.negative_sampler.__class__.__name__} does not. Consider using "
+                f"{BasicNegativeSampler.__name__} instead."
+            )
+        self.grouped = grouped
 
-    def __getitem__(self, item: list[int]) -> SLCWABatch:
-        """Get a batch from the given list of positive triple IDs."""
-        positive_batch = self.mapped_triples[item]
+    def _get_dense_batch(self, positive_batch: LongTensor) -> SLCWABatch:
+        """Get a dense sLCWA batch for the given positive triples."""
         negative_batch, masks = self.negative_sampler.sample(positive_batch=positive_batch)
         result = SLCWABatch(positives=positive_batch, negatives=negative_batch)
         if masks is not None:
@@ -142,12 +196,45 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
             result["neg_weights"] = self.loss_weighter.weight_triples(negative_batch)
         return result
 
+    def _get_grouped_batch(self, positive_batch: LongTensor) -> GroupedSLCWABatch:
+        """Get a grouped sLCWA batch for the given positive triples."""
+        corruptions, masks = self.negative_sampler.sample_grouped(positive_batch=positive_batch)
+        result = GroupedSLCWABatch(positives=positive_batch, corruptions=corruptions)
+        if masks is not None:
+            result["masks"] = masks
+        if self.loss_weighter is not None:
+            h, r, t = positive_batch.unbind(dim=-1)
+            result["pos_weights"] = self.loss_weighter(h=h, r=r, t=t)
+            neg_weights: dict[Target, FloatTensor] = {}
+            for target, replacements in corruptions.items():
+                match target:
+                    case pykeen_typing.LABEL_HEAD:
+                        raw_weights = self.loss_weighter(h=replacements, r=r[:, None], t=t[:, None])
+                    case pykeen_typing.LABEL_RELATION:
+                        raw_weights = self.loss_weighter(h=h[:, None], r=replacements, t=t[:, None])
+                    case pykeen_typing.LABEL_TAIL:
+                        raw_weights = self.loss_weighter(h=h[:, None], r=r[:, None], t=replacements)
+                # loss weighters may only depend on a subset of h/r/t (e.g. RelationLossWeighter ignores h/t) and
+                # rely on __call__'s documented broadcasting semantics; broadcast explicitly to replacements' shape
+                # so downstream concatenation/masking sees the same per-negative shape as the dense path. clone()
+                # since broadcast_to returns a non-writable expanded view (e.g. incompatible with pin_memory).
+                neg_weights[target] = raw_weights.broadcast_to(replacements.shape).clone()
+            result["neg_weights"] = neg_weights
+        return result
+
+    def __getitem__(self, item: list[int]) -> SLCWABatch | GroupedSLCWABatch:
+        """Get a batch from the given list of positive triple IDs."""
+        positive_batch = self.mapped_triples[item]
+        if self.grouped:
+            return self._get_grouped_batch(positive_batch=positive_batch)
+        return self._get_dense_batch(positive_batch=positive_batch)
+
     @abstractmethod
     def iter_triple_ids(self) -> Iterable[list[int]]:
         """Iterate over batches of IDs of positive triples."""
         raise NotImplementedError
 
-    def __iter__(self) -> Iterator[SLCWABatch]:
+    def __iter__(self) -> Iterator[SLCWABatch | GroupedSLCWABatch]:
         """Iterate over batches."""
         for triple_ids in self.iter_triple_ids():
             yield self[triple_ids]
@@ -160,8 +247,16 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
         return num_batches
 
     @classmethod
-    def from_triples_factory(cls, tf: CoreTriplesFactory, **kwargs) -> Self:
-        """Create sLCWA instances for triples factory."""
+    def from_triples_factory(cls, tf: CoreTriplesFactory, create_inverse_triples: bool = False, **kwargs) -> Self:
+        """Create sLCWA instances for triples factory.
+
+        :param tf: The triples factory.
+        :param create_inverse_triples:
+            Whether to add inverse triples.
+        :param kwargs: Additional keyword-based parameters passed to :meth:`__init__`
+
+        :returns: The instances.
+        """
         # TODO: can we better type `kwargs`?
         if "shuffle" in kwargs:
             if kwargs.pop("shuffle"):
@@ -172,9 +267,11 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
             raise AssertionError("sampler is not handled in sLCWA instances")
 
         return cls(
-            mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
+            mapped_triples=tf._add_inverse_triples_if_necessary(
+                mapped_triples=tf.mapped_triples, create_inverse_triples=create_inverse_triples
+            ),
             num_entities=tf.num_entities,
-            num_relations=tf.num_relations,
+            num_relations=2 * tf.real_num_relations if create_inverse_triples else tf.real_num_relations,
             **kwargs,
         )
 
@@ -182,13 +279,42 @@ class BaseBatchedSLCWAInstances(Instances[SLCWABatch], data.IterableDataset[SLCW
 class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
     """Random pre-batched training instances for the sLCWA training loop."""
 
-    # docstr-coverage: inherited
+    #: the number of iterations started in this (worker) process; used to vary the shared permutation across epochs
+    #: when the data loader's workers are persistent (and thus their base seed does not change between epochs).
+    #: note: this class-level default is shadowed by an instance attribute upon the first increment. This relies on
+    #: each worker process operating on its own copy of the dataset, and starting its iterator exactly once per epoch,
+    #: such that all workers share the same counter value in each epoch.
+    _num_worker_iterations: int = 0
+
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
-        yield from data.BatchSampler(
-            sampler=data.RandomSampler(data_source=split_workload(len(self.mapped_triples))),
-            batch_size=self.batch_size,
-            drop_last=self.drop_last,
-        )
+        worker_info = data.get_worker_info()
+        if worker_info is None:
+            # single-process data loading
+            yield from data.BatchSampler(
+                sampler=data.RandomSampler(data_source=range(len(self.mapped_triples))),
+                batch_size=self.batch_size,
+                drop_last=self.drop_last,
+            )
+            return
+
+        # multi-process data loading: to obtain the same batches (in particular, the same number of batches, and at
+        # most one incomplete batch) as for single-process loading, all workers generate the same random permutation
+        # of *all* triple IDs, split it into batches, and each worker only yields its share of these batches.
+        # The workers' seeds are `base_seed + worker_id`, where `base_seed` is drawn anew for each data loader
+        # iterator, cf. https://docs.pytorch.org/docs/stable/data.html#randomness-in-multi-process-data-loading
+        # This means for each epoch, unless `persistent_workers=True`, in which case the workers (and their seeds) are
+        # reused across epochs; hence, we additionally mix in the number of iterations started by this worker.
+        base_seed = worker_info.seed - worker_info.id
+        generator = np.random.default_rng([base_seed, self._num_worker_iterations])
+        self._num_worker_iterations += 1
+        permutation = generator.permutation(len(self.mapped_triples))
+        # batch b consists of the triple IDs permutation[b * batch_size : (b + 1) * batch_size]; __len__ already
+        # accounts for dropping an incomplete last batch.
+        # note: with `in_order=True` (the default), the data loader fetches from the workers in a round-robin fashion;
+        # hence assigning batches round-robin, too, retains the batch order of the shared permutation. With
+        # `in_order=False`, the batches' contents are still the same, but their order may differ.
+        for batch_id in range(worker_info.id, len(self), worker_info.num_workers):
+            yield permutation[batch_id * self.batch_size : (batch_id + 1) * self.batch_size].tolist()
 
 
 class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
@@ -221,7 +347,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
             if torch.sum(weights) == 0:
                 # randomly choose a vertex which has not been chosen yet
                 pool = (~node_picked).nonzero()
-                chosen_vertex = pool[torch.randint(pool.numel(), size=tuple())]
+                chosen_vertex = pool[torch.randint(pool.numel(), size=())]
             else:
                 # normalize to probabilities
                 probabilities = weights.float() / weights.sum().float()
@@ -257,7 +383,6 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
             node_weights[other_vertex] -= 1
         return result
 
-    # docstr-coverage: inherited
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
         yield from (self.subgraph_sample() for _ in split_workload(len(self)))
 
@@ -274,7 +399,7 @@ class LCWAInstances(Instances[LCWABatch]):
         target: TargetHint = None,
         loss_weighter: HintOrType[LossWeighter] = None,
         loss_weighter_kwargs: OptionalKwargs = None,
-    ):
+    ) -> None:
         """Initialize the LCWA instances.
 
         :param pairs: The unique pairs
@@ -296,7 +421,8 @@ class LCWAInstances(Instances[LCWABatch]):
         num_entities: int,
         num_relations: int,
         target: TargetHint = None,
-        **kwargs,
+        loss_weighter: HintOrType[LossWeighter] = None,
+        loss_weighter_kwargs: OptionalKwargs = None,
     ) -> Self:
         """Create LCWA instances from triples.
 
@@ -304,7 +430,8 @@ class LCWAInstances(Instances[LCWABatch]):
         :param num_entities: The number of entities.
         :param num_relations: The number of relations.
         :param target: The column to predict
-        :param kwargs: Additional keyword-based parameters passed to :meth:`__init__`
+        :param loss_weighter: The method to determine sample weights.
+        :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
 
         :returns: The instances.
         """
@@ -321,28 +448,51 @@ class LCWAInstances(Instances[LCWABatch]):
         )
         # convert to csr for fast row slicing
         compressed = compressed.tocsr()
-        return cls(pairs=unique_pairs, compressed=compressed, target=target, **kwargs)
+        return cls(
+            pairs=unique_pairs,
+            compressed=compressed,
+            target=target,
+            loss_weighter=loss_weighter,
+            loss_weighter_kwargs=loss_weighter_kwargs,
+        )
 
     @classmethod
-    def from_triples_factory(cls, tf: CoreTriplesFactory, **kwargs) -> Self:
+    def from_triples_factory(
+        cls,
+        tf: CoreTriplesFactory,
+        *,
+        create_inverse_triples: bool = False,
+        target: TargetHint = None,
+        loss_weighter: HintOrType[LossWeighter] = None,
+        loss_weighter_kwargs: OptionalKwargs = None,
+    ) -> Self:
         """Create LCWA instances for triples factory.
 
         :param tf: The triples factory.
-        :param kwargs: Additional keyword-based parameters passed to :meth:`from_triples`
+        :param create_inverse_triples:
+            Whether to add inverse triples.
+        :param target: The column to predict
+        :param loss_weighter: The method to determine sample weights.
+        :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
 
         :returns: The instances.
         """
         return cls.from_triples(
-            mapped_triples=tf._add_inverse_triples_if_necessary(mapped_triples=tf.mapped_triples),
+            mapped_triples=tf._add_inverse_triples_if_necessary(
+                mapped_triples=tf.mapped_triples,
+                create_inverse_triples=create_inverse_triples,
+            ),
             num_entities=tf.num_entities,
-            num_relations=tf.num_relations,
-            **kwargs,
+            num_relations=2 * tf.real_num_relations if create_inverse_triples else tf.real_num_relations,
+            target=target,
+            loss_weighter=loss_weighter,
+            loss_weighter_kwargs=loss_weighter_kwargs,
         )
 
-    def __len__(self) -> int:  # noqa: D105
+    def __len__(self) -> int:
         return self.pairs.shape[0]
 
-    def __getitem__(self, item: int) -> LCWABatch:  # noqa: D105
+    def __getitem__(self, item: int) -> LCWABatch:
         pairs = self.pairs[item]
         result = LCWABatch(pairs=pairs, target=torch.from_numpy(np.asarray(self.compressed[item, :].todense())[0, :]))
         if self.loss_weighter is None:

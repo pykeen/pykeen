@@ -1,6 +1,6 @@
 """Built-in datasets for PyKEEN.
 
-New datasets (inheriting from :class:`pykeen.datasets.Dataset`) can be registered with PyKEEN using the
+New datasets (inheriting from :class:`~pykeen.datasets.Dataset`) can be registered with PyKEEN using the
 :mod:`pykeen.datasets` group in Python entrypoints in your own `setup.py`, `setup.cfg`, `pyproject.toml`, or other
 package configuration. They are loaded automatically with :func:`importlib.metadata.entry_points` via
 :mod:`class_resolver`.
@@ -11,15 +11,17 @@ import logging
 from class_resolver import ClassResolver
 
 from .aristo import AristoV4
-from .base import (  # noqa:F401
+from .base import (
     CompressedSingleDataset,
     Dataset,
     EagerDataset,
     LazyDataset,
+    PackedRemoteDataSet,
     PackedZipRemoteDataset,
     PathDataset,
-    RemoteDataset,
     SingleTabbedDataset,
+    SourceDataSet,
+    SplittingLazyDataset,
     TabbedDataset,
     TarFileRemoteDataset,
     TarFileSingleDataset,
@@ -55,49 +57,46 @@ from .wordnet import WN18, WN18RR
 from .yago import YAGO310
 
 __all__ = [
-    # Utilities
-    "dataset_resolver",
-    "get_dataset",
-    "has_dataset",
-    # Base Classes
-    "Dataset",
-    # Concrete Classes
-    "AristoV4",
-    "Hetionet",
-    "Kinships",
-    "Nations",
-    "OpenBioLink",
-    "OpenBioLinkLQ",
-    "CoDExSmall",
-    "CoDExMedium",
-    "CoDExLarge",
-    "CN3l",
-    "OGBBioKG",
-    "OGBWikiKG2",
+    "CKG",
+    "CSKG",
+    "DB100K",
+    "DRKG",
     "UMLS",
-    "FB15k",
-    "FB15k237",
-    "WK3l15k",
-    "WK3l120k",
+    "WD50KT",
     "WN18",
     "WN18RR",
     "YAGO310",
-    "DRKG",
+    "AristoV4",
     "BioKG",
+    "CN3l",
+    "CoDExLarge",
+    "CoDExMedium",
+    "CoDExSmall",
     "ConceptNet",
-    "CKG",
-    "CSKG",
-    "DBpedia50",
-    "DB100K",
-    "OpenEA",
     "Countries",
-    "WD50KT",
-    "Wikidata5M",
-    "PharmKG8k",
-    "PharmKG",
-    "PrimeKG",
+    "DBpedia50",
+    "Dataset",
+    "FB15k",
+    "FB15k237",
     "Globi",
+    "Hetionet",
+    "Kinships",
+    "Nations",
+    "OGBBioKG",
+    "OGBWikiKG2",
+    "OpenBioLink",
+    "OpenBioLinkLQ",
+    "OpenEA",
     "PharMeBINet",
+    "PharmKG",
+    "PharmKG8k",
+    "PrimeKG",
+    "WK3l15k",
+    "WK3l120k",
+    "Wikidata5M",
+    "dataset_resolver",
+    "get_dataset",
+    "has_dataset",
 ]
 
 logger = logging.getLogger(__name__)
@@ -107,9 +106,11 @@ dataset_resolver: ClassResolver[Dataset] = ClassResolver.from_subclasses(
     base=Dataset,
     skip={
         EagerDataset,
+        SourceDataSet,
         LazyDataset,
         PathDataset,
-        RemoteDataset,
+        SplittingLazyDataset,
+        PackedRemoteDataSet,
         UnpackedRemoteDataset,
         TarFileRemoteDataset,
         PackedZipRemoteDataset,

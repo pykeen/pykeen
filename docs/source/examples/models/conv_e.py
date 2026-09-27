@@ -3,13 +3,15 @@
 # Step 1: Get triples
 from pykeen.datasets import get_dataset
 
-dataset = get_dataset(dataset="nations", dataset_kwargs=dict(create_inverse_triples=True))
+dataset = get_dataset(dataset="nations")
 
 # Step 2: Configure the model
 from pykeen.models import ConvE
 
 model = ConvE(
     triples_factory=dataset.training,
+    # ConvE should be trained with inverse relations
+    use_inverse_triples=True,
     embedding_dim=200,
     input_channels=1,
     output_channels=32,

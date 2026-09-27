@@ -1,10 +1,11 @@
 """WordNet datasets."""
 
 import pathlib
+from typing import Unpack
 
 from docdata import parse_docdata
 
-from .base import TarFileRemoteDataset
+from .base import PackedRemoteDataSetKwargs, PathDatasetKwargs, TarFileRemoteDataset
 
 __all__ = [
     "WN18",
@@ -31,10 +32,10 @@ class WN18(TarFileRemoteDataset):
         link: https://arxiv.org/abs/1301.3485
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[PackedRemoteDataSetKwargs]) -> None:
         """Initialize the WordNet-18 dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileRemoteDataset`.
 
         .. warning:: This dataset contains testing leakage. Use :class:`WN18RR` instead.
         """
@@ -66,10 +67,10 @@ class WN18RR(TarFileRemoteDataset):
         link: https://www.aclweb.org/anthology/W15-4007/
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[PathDatasetKwargs]) -> None:
         """Initialize the WordNet-18 (RR) dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.TarFileRemoteDataset`.
         """
         super().__init__(
             url="https://github.com/TimDettmers/ConvE/raw/master/WN18RR.tar.gz",
@@ -80,7 +81,7 @@ class WN18RR(TarFileRemoteDataset):
         )
 
 
-def _main():
+def _main() -> None:
     for cls in [WN18, WN18RR]:
         cls().summarize()
 

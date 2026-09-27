@@ -39,10 +39,10 @@ class TransD(
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        relation_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "relation_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
 
     def __init__(
         self,
@@ -51,9 +51,9 @@ class TransD(
         relation_dim: int | None = None,
         interaction_kwargs: OptionalKwargs = None,
         entity_initializer: Hint[Initializer] = xavier_uniform_,
-        entity_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        entity_constrainer: Hint[Constrainer] = clamp_norm,
         relation_initializer: Hint[Initializer] = xavier_uniform_norm_,
-        relation_constrainer: Hint[Constrainer] = clamp_norm,  # type: ignore
+        relation_constrainer: Hint[Constrainer] = clamp_norm,
         **kwargs,
     ) -> None:
         """
@@ -67,14 +67,14 @@ class TransD(
             Additional keyword-based parameters passed to :class:`~pykeen.nn.modules.TransDInteraction`.
 
         :param entity_initializer:
-            The entity representation initializer. Defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+            The entity representation initializer. Defaults to :func:`~pykeen.nn.init.xavier_uniform_`.
         :param entity_constrainer:
-            The entity representation constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
+            The entity representation constrainer. Defaults to :func:`~pykeen.utils.clamp_norm`.
 
         :param relation_initializer:
-            The relation representation initializer. Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`.
+            The relation representation initializer. Defaults to :func:`~pykeen.nn.init.xavier_uniform_norm_`.
         :param relation_constrainer:
-            The relation representation constrainer. Defaults to :func:`pykeen.utils.clamp_norm`.
+            The relation representation constrainer. Defaults to :func:`~pykeen.utils.clamp_norm`.
 
         :param kwargs:
             Additional keyword-based parameters passed to :class:`~pykeen.models.ERModel`.
@@ -84,28 +84,28 @@ class TransD(
             interaction=TransDInteraction,
             interaction_kwargs=interaction_kwargs,
             entity_representations_kwargs=[
-                dict(
-                    shape=embedding_dim,
-                    initializer=entity_initializer,
-                    constrainer=entity_constrainer,
-                    constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
-                ),
-                dict(
-                    shape=embedding_dim,
-                    initializer=xavier_normal_,
-                ),
+                {
+                    "shape": embedding_dim,
+                    "initializer": entity_initializer,
+                    "constrainer": entity_constrainer,
+                    "constrainer_kwargs": {"maxnorm": 1.0, "p": 2, "dim": -1},
+                },
+                {
+                    "shape": embedding_dim,
+                    "initializer": xavier_normal_,
+                },
             ],
             relation_representations_kwargs=[
-                dict(
-                    shape=(relation_dim,),
-                    initializer=relation_initializer,
-                    constrainer=relation_constrainer,
-                    constrainer_kwargs=dict(maxnorm=1.0, p=2, dim=-1),
-                ),
-                dict(
-                    shape=(relation_dim,),
-                    initializer=xavier_normal_,
-                ),
+                {
+                    "shape": (relation_dim,),
+                    "initializer": relation_initializer,
+                    "constrainer": relation_constrainer,
+                    "constrainer_kwargs": {"maxnorm": 1.0, "p": 2, "dim": -1},
+                },
+                {
+                    "shape": (relation_dim,),
+                    "initializer": xavier_normal_,
+                },
             ],
             **kwargs,
         )

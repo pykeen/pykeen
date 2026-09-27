@@ -2,23 +2,30 @@
 
 from .api import (
     PipelineResult,
+    ResolutionResult,
+    TrainResult,
     pipeline,
     pipeline_from_config,
     pipeline_from_path,
     replicate_pipeline_from_config,
     replicate_pipeline_from_path,
+    resolve_pipeline,
 )
-from .plot_utils import plot, plot_early_stopping, plot_er, plot_losses
+from .plot_utils import build_representation_getter, plot, plot_early_stopping, plot_er, plot_losses
 
 __all__ = [
     "PipelineResult",
-    "pipeline_from_path",
-    "pipeline_from_config",
-    "replicate_pipeline_from_config",
-    "replicate_pipeline_from_path",
+    "ResolutionResult",
+    "TrainResult",
+    "build_representation_getter",
     "pipeline",
-    "plot_losses",
+    "pipeline_from_config",
+    "pipeline_from_path",
+    "plot",
     "plot_early_stopping",
     "plot_er",
-    "plot",
+    "plot_losses",
+    "replicate_pipeline_from_config",
+    "replicate_pipeline_from_path",
+    "resolve_pipeline",
 ]

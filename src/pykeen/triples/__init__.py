@@ -52,34 +52,46 @@ Analysis
 ========
 
 We also provide methods for analyzing knowledge graphs. These include simple statistics such as the number of entities
-or relations (in :mod:`pykeen.triples.stats`), as well as advanced analysis of relational patterns
+or relations (in :mod:`pykeen.triples.analysis`), as well as advanced analysis of relational patterns
 (:mod:`pykeen.triples.analysis`).
 """
 
 from .instances import (
     BaseBatchedSLCWAInstances,
+    BatchCWABatch,
     BatchedSLCWAInstances,
+    GroupedSLCWABatch,
     Instances,
     LCWABatch,
     LCWAInstances,
     SLCWABatch,
     SubGraphSLCWAInstances,
 )
-from .triples_factory import AnyTriples, CoreTriplesFactory, KGInfo, TriplesFactory, get_mapped_triples
+from .triples_factory import (
+    AnyTriples,
+    CoreTriplesFactory,
+    KGInfo,
+    TriplesFactory,
+    get_mapped_triples,
+    splits_similarity,
+)
 from .triples_numeric_literals_factory import TriplesNumericLiteralsFactory
 
 __all__ = [
-    "Instances",
+    "AnyTriples",
     "BaseBatchedSLCWAInstances",
-    "LCWABatch",
-    "SLCWABatch",
-    "LCWAInstances",
+    "BatchCWABatch",
     "BatchedSLCWAInstances",
-    "SubGraphSLCWAInstances",
-    "KGInfo",
     "CoreTriplesFactory",
+    "GroupedSLCWABatch",
+    "Instances",
+    "KGInfo",
+    "LCWABatch",
+    "LCWAInstances",
+    "SLCWABatch",
+    "SubGraphSLCWAInstances",
     "TriplesFactory",
     "TriplesNumericLiteralsFactory",
     "get_mapped_triples",
-    "AnyTriples",
+    "splits_similarity",
 ]

@@ -4,8 +4,7 @@ import random
 from collections.abc import MutableMapping
 from typing import Any
 
-import numpy
-import numpy.testing
+import numpy as np
 import pytest
 import scipy.sparse.csgraph
 import unittest_templates
@@ -37,12 +36,12 @@ class MixtureAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
     """Tests for mixture anchor selection."""
 
     cls = pykeen.nn.node_piece.MixtureAnchorSelection
-    kwargs = dict(
-        selections=[
+    kwargs = {
+        "selections": [
             pykeen.nn.node_piece.DegreeAnchorSelection,
             pykeen.nn.node_piece.PageRankAnchorSelection,
         ],
-    )
+    }
 
 
 class AnchorSelectionMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node_piece.AnchorSelection]):
@@ -59,11 +58,11 @@ class CSGraphAnchorSearcherTests(cases.AnchorSearcherTestCase):
     cls = pykeen.nn.node_piece.CSGraphAnchorSearcher
 
 
-@pytest.mark.parametrize("num_anchors, num_entities, k, seed", [(3, 7, 2, 0)])
+@pytest.mark.parametrize(("num_anchors", "num_entities", "k", "seed"), [(3, 7, 2, 0)])
 def test_top_k_indices(num_anchors: int, num_entities: int, k: int, seed: int) -> None:
     """Test top-k index calculation."""
     # generate test data (with fixed seed for reproducibility)
-    rng = numpy.random.default_rng(seed=seed)
+    rng = np.random.default_rng(seed=seed)
     array = rng.uniform(size=(num_anchors, num_entities))
     # get result using argpartition
     cls = pykeen.nn.node_piece.CSGraphAnchorSearcher
@@ -71,12 +70,12 @@ def test_top_k_indices(num_anchors: int, num_entities: int, k: int, seed: int) -
     # check shape
     assert ap.shape == (k, num_entities)
     # check type
-    assert numpy.issubdtype(ap.dtype, numpy.integer)
+    assert np.issubdtype(ap.dtype, np.integer)
     # check value range
-    numpy.testing.assert_array_less(-1, ap)
-    numpy.testing.assert_array_less(ap, num_anchors)
+    np.testing.assert_array_less(-1, ap)
+    np.testing.assert_array_less(ap, num_anchors)
     # check equality with argsort
-    numpy.testing.assert_array_equal(ap, cls.topk_argsort(array=array, k=k))
+    np.testing.assert_array_equal(ap, cls.topk_argsort(array=array, k=k))
 
 
 class ScipySparseAnchorSearcherTests(cases.AnchorSearcherTestCase):
@@ -89,9 +88,9 @@ class ScipySparseAnchorSearcherTests(cases.AnchorSearcherTestCase):
         self.instance: pykeen.nn.node_piece.ScipySparseAnchorSearcher
         k = 2
         max_iter = 3
-        edge_index = numpy.stack([numpy.arange(self.num_entities - 1), numpy.arange(1, self.num_entities)])
+        edge_index = np.stack([np.arange(self.num_entities - 1), np.arange(1, self.num_entities)])
         adjacency = self.instance.create_adjacency(edge_index=edge_index)
-        anchors = numpy.arange(3)
+        anchors = np.arange(3)
         # determine pool using anchor searcher
         pool = self.instance.bfs(
             anchors=anchors,
@@ -107,10 +106,10 @@ class ScipySparseAnchorSearcherTests(cases.AnchorSearcherTestCase):
             unweighted=True,
             indices=anchors,
         )
-        k_dist = numpy.partition(distances, kth=k, axis=0)[:k, :].T.max(axis=1)
+        k_dist = np.partition(distances, kth=k, axis=0)[:k, :].T.max(axis=1)
         exp_pool = ((distances <= k_dist) & (k_dist <= max_iter)).T
 
-        numpy.testing.assert_array_equal(pool, exp_pool)
+        np.testing.assert_array_equal(pool, exp_pool)
 
 
 @needs_packages("torch_sparse")
@@ -157,7 +156,7 @@ class PrecomputedPoolTokenizerTests(cases.TokenizerTestCase):
 
     cls = pykeen.nn.node_piece.PrecomputedPoolTokenizer
 
-    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:  # noqa: D102
+    def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         # generate random pool
         kwargs["pool"] = {

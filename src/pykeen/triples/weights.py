@@ -21,16 +21,16 @@ involved: :class:`~pykeen.triples.weights.RelationLossWeighter`.
 
 Example
 -------
-Below is a minimal example of how to use it via the high-level :func:`~pykeen.pipeline.api.pipeline` API:
+Below is a minimal example of how to use it via the high-level :func:`~pykeen.pipeline.pipeline` API:
 
 .. literalinclude:: ../examples/training/loss_weights.py
 """
 
 from abc import ABC, abstractmethod
+from typing import Self
 
 import torch
 from class_resolver import ClassResolver
-from typing_extensions import Self
 
 from ..typing import COLUMN_RELATION, FloatTensor, LongTensor, MappedTriples
 
@@ -80,8 +80,7 @@ class RelationLossWeighter(LossWeighter):
         super().__init__()
         self.weights = weights
 
-    # docstr-coverage: inherited
-    def __call__(self, h: LongTensor | None, r: LongTensor | None, t: LongTensor | None) -> FloatTensor:
+    def __call__(self, h: LongTensor | None, r: LongTensor | None, t: LongTensor | None) -> FloatTensor:  # noqa: D102
         if r is None:
             return self.weights
         return self.weights[r]
@@ -96,4 +95,4 @@ class RelationLossWeighter(LossWeighter):
 
 
 #: A resolver for loss weighters
-loss_weighter_resolver: ClassResolver[LossWeighter] = ClassResolver.from_subclasses(base=LossWeighter)
+loss_weighter_resolver: ClassResolver[LossWeighter] = ClassResolver.from_subclasses(base=LossWeighter)  # type: ignore[type-abstract]

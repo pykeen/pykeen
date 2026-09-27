@@ -18,9 +18,9 @@ from ..utils import normalize_path, normalize_string, upgrade_to_sequence
 __all__ = [
     "ablation_pipeline",
     "ablation_pipeline_from_config",
+    "prepare_ablation",
     "prepare_ablation_from_config",
     "prepare_ablation_from_path",
-    "prepare_ablation",
 ]
 
 logger = logging.getLogger(__name__)
@@ -46,8 +46,8 @@ def ablation_pipeline(
     training_loops: str | list[str],
     *,
     epochs: int | None = None,
-    create_inverse_triples: bool | list[bool] = False,
-    regularizers: None | str | list[str] = None,
+    use_inverse_triples: bool | list[bool] = False,
+    regularizers: str | list[str] | None = None,
     negative_sampler: str | None = None,
     evaluator: str | None = None,
     stopper: str | None = "NopStopper",
@@ -91,10 +91,10 @@ def ablation_pipeline(
     :param optimizers: An optimizer name or list of optimizer names.
     :param training_loops: A training loop name or list of training loop names.
     :param epochs: A quick way to set the ``num_epochs`` in the training kwargs.
-    :param create_inverse_triples: Either a boolean for a single entry or a list of booleans.
+    :param use_inverse_triples: Either a boolean for a single entry or a list of booleans.
     :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
     :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler is
-        desired. Negative sampling is used only in combination with :class:`pykeen.training.SLCWATrainingLoop`.
+        desired. Negative sampling is used only in combination with :class:`~pykeen.training.SLCWATrainingLoop`.
     :param evaluator: The name of the evaluator to be used. Defaults to rank-based evaluator.
     :param stopper: The name of the stopper to be used. Defaults to NopStopper which doesn't define a stopping
         criterion.
@@ -104,7 +104,7 @@ def ablation_pipeline(
         model to be used in HPO.
     :param model_to_loss_to_loss_kwargs: A mapping from model name to a mapping of loss name to a mapping of default
         keyword arguments for the instantiation of that loss function. This is useful because for some losses, have
-        hyper-parameters such as :class:`pykeen.losses.MarginRankingLoss`.
+        hyper-parameters such as :class:`~pykeen.losses.MarginRankingLoss`.
     :param model_to_loss_to_loss_kwargs_ranges: A mapping from model name to a mapping of loss name to a mapping of
         keyword argument ranges for that loss to be used in HPO.
     :param model_to_optimizer_to_optimizer_kwargs: A mapping from model name to a mapping of optimizer name to a mapping
@@ -159,7 +159,7 @@ def ablation_pipeline(
         optimizers=optimizers,
         training_loops=training_loops,
         epochs=epochs,
-        create_inverse_triples=create_inverse_triples,
+        use_inverse_triples=use_inverse_triples,
         regularizers=regularizers,
         model_to_model_kwargs=model_to_model_kwargs,
         model_to_model_kwargs_ranges=model_to_model_kwargs_ranges,
@@ -293,7 +293,7 @@ def prepare_ablation_from_path(
     :returns: pairs of output directories and HPO config paths inside those directories
     """
     directory = normalize_path(directory, *iter_unique_ids())
-    with open(path) as file:
+    with directory.open() as file:
         config = json.load(file)
     return prepare_ablation_from_config(config=config, directory=directory, save_artifacts=save_artifacts)
 
@@ -333,7 +333,7 @@ def path_to_str(x: object) -> str:
     raise TypeError(x)
 
 
-def prepare_ablation(  # noqa:C901
+def prepare_ablation(
     datasets: OneOrSequence[str | SplitToPathDict],
     models: OneOrSequence[str],
     losses: OneOrSequence[str],
@@ -341,8 +341,8 @@ def prepare_ablation(  # noqa:C901
     training_loops: OneOrSequence[str],
     directory: str | pathlib.Path,
     *,
-    create_inverse_triples: OneOrSequence[bool] = False,
-    regularizers: OneOrSequence[None | str] = None,
+    use_inverse_triples: OneOrSequence[bool] = False,
+    regularizers: OneOrSequence[str | None] = None,
     epochs: int | None = None,
     negative_sampler: str | None = None,
     evaluator: str | None = None,
@@ -381,7 +381,7 @@ def prepare_ablation(  # noqa:C901
     :param optimizers: An optimizer name or list of optimizer names.
     :param training_loops: A training loop name or list of training loop names.
     :param epochs: A quick way to set the ``num_epochs`` in the training kwargs.
-    :param create_inverse_triples: Either a boolean for a single entry or a list of booleans.
+    :param use_inverse_triples: Either a boolean for a single entry or a list of booleans.
     :param regularizers: A regularizer name, list of regularizer names, or None if no regularizer is desired.
     :param negative_sampler: A negative sampler name, list of regularizer names, or None if no negative sampler is
         desired. Negative sampling is used only in combination with the pykeen.training.sclwa training loop.
@@ -441,7 +441,7 @@ def prepare_ablation(  # noqa:C901
     """
     directory = normalize_path(path=directory)
     datasets = upgrade_to_sequence(datasets)
-    create_inverse_triples = upgrade_to_sequence(create_inverse_triples)
+    use_inverse_triples = upgrade_to_sequence(use_inverse_triples)
     models = upgrade_to_sequence(models)
     losses = upgrade_to_sequence(losses)
     optimizers = upgrade_to_sequence(optimizers)
@@ -466,9 +466,9 @@ def prepare_ablation(  # noqa:C901
             str,
         ]
     ]
-    it = itt.product(  # type: ignore
+    it = itt.product(
         datasets,
-        create_inverse_triples,
+        use_inverse_triples,
         models,
         losses,
         regularizers,
@@ -484,7 +484,7 @@ def prepare_ablation(  # noqa:C901
     directories = []
     for counter, (
         dataset,
-        this_create_inverse_triples,
+        use_inverse_triples,
         model,
         loss,
         regularizer,
@@ -511,7 +511,7 @@ def prepare_ablation(  # noqa:C901
             save_model_directory.mkdir(exist_ok=True, parents=True)
             _experiment_optuna_config["save_model_directory"] = save_model_directory.as_posix()
 
-        hpo_config: dict[str, Any] = dict()
+        hpo_config: dict[str, Any] = {}
         hpo_config["stopper"] = stopper
 
         if stopper_kwargs is not None:
@@ -538,16 +538,19 @@ def prepare_ablation(  # noqa:C901
             hpo_config["testing"] = dataset["testing"]
             hpo_config["validation"] = dataset["validation"]
         else:
-            raise ValueError(
+            raise TypeError(
                 "Dataset must be either the dataset name, i.e., of type str, or a dictionary containing\n"
                 "the paths to the training, testing, and validation data.",
             )
         logger.info(f"Dataset: {dataset}")
-        hpo_config["dataset_kwargs"] = dict(create_inverse_triples=this_create_inverse_triples)
-        logger.info(f"Add inverse triples: {this_create_inverse_triples}")
+        hpo_config["dataset_kwargs"] = {}
 
         hpo_config["model"] = model
-        hpo_config["model_kwargs"] = model_to_model_kwargs.get(model, {})
+        hpo_config["model_kwargs"] = {
+            **model_to_model_kwargs.get(model, {}),
+            "use_inverse_triples": use_inverse_triples,
+        }
+        logger.info(f"Use inverse triples: {use_inverse_triples}")
         hpo_config["model_kwargs_ranges"] = model_to_model_kwargs_ranges.get(model, {})
         logger.info(f"Model: {model}")
 
@@ -621,12 +624,12 @@ def prepare_ablation(  # noqa:C901
         if epochs is not None:
             hpo_config.setdefault("training_kwargs", {}).setdefault("num_epochs", epochs)
 
-        rv_config = dict(
-            type="hpo",
-            metadata=metadata or {},
-            pipeline=hpo_config,
-            optuna=_experiment_optuna_config,
-        )
+        rv_config = {
+            "type": "hpo",
+            "metadata": metadata or {},
+            "pipeline": hpo_config,
+            "optuna": _experiment_optuna_config,
+        }
 
         rv_config_path = output_directory.joinpath("hpo_config.json")
         with rv_config_path.open("w") as file:

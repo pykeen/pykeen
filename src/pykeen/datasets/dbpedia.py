@@ -4,9 +4,14 @@
 - Paper: https://arxiv.org/abs/1711.03438
 """
 
+from typing import Unpack
+
 from docdata import parse_docdata
 
-from .base import UnpackedRemoteDataset
+from .base import (
+    UnpackedRemoteDataset,
+    UnpackedRemoteDataSetKwargs,
+)
 
 __all__ = [
     "DBpedia50",
@@ -37,22 +42,14 @@ class DBpedia50(UnpackedRemoteDataset):
         triples: 34421
     """
 
-    def __init__(self, **kwargs):
-        """Initialize the DBpedia50 small dataset from [shi2017b]_.
-
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
-        """
-        super().__init__(
-            training_url=TRAIN_URL,
-            testing_url=TEST_URL,
-            validation_url=VALID_URL,
-            load_triples_kwargs={
-                # as pointed out in https://github.com/pykeen/pykeen/issues/275#issuecomment-776412294,
-                # the columns are not ordered properly.
-                "column_remapping": [0, 2, 1],
-            },
-            **kwargs,
-        )
+    def __init__(self, **kwargs: Unpack[UnpackedRemoteDataSetKwargs]) -> None:
+        """Initialize the DBpedia50 small dataset from [shi2017b]_."""
+        kwargs["load_triples_kwargs"] = {
+            # as pointed out in https://github.com/pykeen/pykeen/issues/275#issuecomment-776412294,
+            # the columns are not ordered properly.
+            "column_remapping": [0, 2, 1],
+        }
+        super().__init__(training_url=TRAIN_URL, testing_url=TEST_URL, validation_url=VALID_URL, **kwargs)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,13 @@
 """The Aristo-v4 dataset."""
 
 import pathlib
+from typing import Unpack
 
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import PackedZipRemoteDataset
+from .base import PackedRemoteDataSetKwargs, PackedZipRemoteDataset
 
 
 @parse_docdata
@@ -39,10 +40,10 @@ class AristoV4(PackedZipRemoteDataset):
         link: https://openreview.net/pdf?id=Qa3uS3H7-Le
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[PackedRemoteDataSetKwargs]) -> None:
         """Initialize the Aristo-v4 dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.ZipFileRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.PackedZipRemoteDataset`.
         """
         super().__init__(
             url="https://zenodo.org/record/5942560/files/aristo-v4.zip",
@@ -55,7 +56,7 @@ class AristoV4(PackedZipRemoteDataset):
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     for cls in [AristoV4]:
         cls().summarize()
 

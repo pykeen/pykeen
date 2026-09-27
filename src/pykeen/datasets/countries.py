@@ -1,8 +1,10 @@
 """The Countries dataset."""
 
+from typing import Unpack
+
 from docdata import parse_docdata
 
-from .base import UnpackedRemoteDataset
+from .base import UnpackedRemoteDataset, UnpackedRemoteDataSetKwargs
 
 BASE_URL = "https://raw.githubusercontent.com/ZhenfengLei/KGDatasets/master/Countries/Countries_S1"
 
@@ -30,10 +32,10 @@ class Countries(UnpackedRemoteDataset):
         triples: 1158
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Unpack[UnpackedRemoteDataSetKwargs]) -> None:
         """Initialize the Countries small dataset.
 
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.UnpackedRemoteDataset`.
+        :param kwargs: keyword arguments passed to :class:`~pykeen.datasets.base.UnpackedRemoteDataset`.
         """
         super().__init__(
             training_url=f"{BASE_URL}/train.txt",

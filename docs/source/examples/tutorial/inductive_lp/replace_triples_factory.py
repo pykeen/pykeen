@@ -21,16 +21,14 @@ tf_training, tf_inference, tf_validation, tf_testing = tf_all.split_fully_induct
 )
 
 # train an inductive node piece model
-tf_training.create_inverse_triples = True
 result = pipeline(
     training=tf_training,
     testing=tf_testing,
-    dataset_kwargs=dict(create_inverse_triples=True),
     model="InductiveNodePiece",
-    model_kwargs=dict(inference_factory=tf_inference),
-    training_kwargs=dict(num_epochs=0),
-    training_loop_kwargs=dict(mode="training"),
-    evaluator_kwargs=dict(mode="validation"),
+    model_kwargs={"inference_factory": tf_inference, "use_inverse_triples": True},
+    training_kwargs={"num_epochs": 0},
+    training_loop_kwargs={"mode": "training"},
+    evaluator_kwargs={"mode": "validation"},
 )
 
 # inference some validation triples
@@ -43,7 +41,6 @@ tf_new = generate_triples_factory(
     num_entities=13,
     num_relations=tf_training.real_num_relations,
     random_state=42,
-    create_inverse_triples=False,
 )
 model: InductiveNodePiece = result.model
 model.replace_entity_representations_(

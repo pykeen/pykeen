@@ -5,7 +5,7 @@ import unittest
 from collections.abc import Iterable, Mapping
 
 import numpy as np
-import pandas
+import pandas as pd
 
 from pykeen.datasets import Dataset, Nations
 from pykeen.datasets import analysis as dataset_analysis
@@ -24,26 +24,27 @@ class TestUtils(unittest.TestCase):
     def test_skyline(self):
         """Test the skyline function."""
         n = 500
+        rng = np.random.default_rng(seed=42)
         pairs = list(
             zip(
-                np.random.randint(low=0, high=200, size=n, dtype=int),
-                np.random.uniform(0, 6, size=n),
+                rng.integers(low=0, high=200, size=n, dtype=int),
+                rng.uniform(0, 6, size=n),
                 strict=False,
             )
         )
-        self.assertEqual(set(_old_skyline(pairs)), set(triple_analysis._get_skyline(pairs)))
+        assert set(_old_skyline(pairs)) == set(triple_analysis._get_skyline(pairs))
 
 
 def _test_count_dataframe(
     dataset: Dataset,
-    df: pandas.DataFrame,
+    df: pd.DataFrame,
     labels: bool = True,
     merge_subsets: bool = True,
     merge_sides: bool = True,
 ):
     """Check the general structure of a count dataframe."""
     # check correct output type
-    assert isinstance(df, pandas.DataFrame)
+    assert isinstance(df, pd.DataFrame)
 
     expected_columns = {triple_analysis.COUNT_COLUMN_NAME}
     expected_columns.update(
@@ -95,7 +96,7 @@ def _test_count_dataframe(
 
 
 def _check_labels(
-    df: pandas.DataFrame,
+    df: pd.DataFrame,
     labels: bool,
     id_column_name: str,
     label_column_name: str,
@@ -175,7 +176,7 @@ class DatasetAnalysisTests(unittest.TestCase):
         )
 
         # check correct type
-        assert isinstance(df, pandas.DataFrame)
+        assert isinstance(df, pd.DataFrame)
 
         # check relation_id value range
         assert df[triple_analysis.RELATION_ID_COLUMN_NAME].isin(self.dataset.relation_to_id.values()).all()
@@ -184,13 +185,13 @@ class DatasetAnalysisTests(unittest.TestCase):
         assert df[triple_analysis.PATTERN_TYPE_COLUMN_NAME].isin(triple_analysis.RELATION_PATTERN_TYPES).all()
 
         # check confidence value range
-        x = df[triple_analysis.CONFIDENCE_COLUMN_NAME].values
-        assert (0 <= x).all()
+        x = df[triple_analysis.CONFIDENCE_COLUMN_NAME].to_numpy()
+        assert (x >= 0).all()
         assert (x <= 1).all()
 
         # check support value range
-        x = df[triple_analysis.SUPPORT_COLUMN_NAME].values
-        assert (1 <= x).all()
+        x = df[triple_analysis.SUPPORT_COLUMN_NAME].to_numpy()
+        assert (x >= 1).all()
 
     def test_relation_cardinality_types(self):
         """Tests for relation cardinality type classification."""
@@ -199,7 +200,7 @@ class DatasetAnalysisTests(unittest.TestCase):
         )
 
         # check correct type
-        assert isinstance(df, pandas.DataFrame)
+        assert isinstance(df, pd.DataFrame)
 
         # check relation_id value range
         assert df[triple_analysis.RELATION_ID_COLUMN_NAME].isin(self.dataset.relation_to_id.values()).all()
@@ -214,7 +215,7 @@ class DatasetAnalysisTests(unittest.TestCase):
         )
 
         # check correct type
-        assert isinstance(df, pandas.DataFrame)
+        assert isinstance(df, pd.DataFrame)
 
         assert {
             triple_analysis.RELATION_ID_COLUMN_NAME,

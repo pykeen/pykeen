@@ -15,14 +15,14 @@ Examples
 ========
 
 Below you can find a few examples of how to use them inside the training pipeline. If you want to check before an actual
-training how (static) checkpoint schedules behave, you can take a look at :meth:`pykeen.checkpoints.final_checkpoints`
-and :meth:`pykeen.checkpoints.simulate_checkpoints`.
+training how (static) checkpoint schedules behave, you can take a look at :meth:`~pykeen.checkpoints.final_checkpoints`
+and :meth:`~pykeen.checkpoints.simulate_checkpoints`.
 
 To reduce the number of necessary imports, the examples all use dictionaries/strings to specify components instead of
 passing classes or actual instances. You can find more information about resolution in general at
 :ref:`using_resolvers`. The resolver for the schedule component is
-:data:`pykeen.checkpoints.schedule.schedule_resolver`, and for the keeper component it is
-:data:`pykeen.checkpoints.keeper_resolver`.
+:data:`~pykeen.checkpoints.schedule_resolver`, and for the keeper component it is
+:data:`~pykeen.checkpoints.keeper_resolver`.
 
 Example 1
 ---------
@@ -72,21 +72,21 @@ from .schedule import (
 from .utils import MetricSelection
 
 __all__ = [
-    "save_model",
-    "schedule_resolver",
+    "BestCheckpointKeeper",
+    "BestCheckpointSchedule",
+    "CheckpointKeeper",
     "CheckpointSchedule",
     "EveryCheckpointSchedule",
-    "ExplicitCheckpointSchedule",
-    "BestCheckpointSchedule",
-    "UnionCheckpointSchedule",
-    "keeper_resolver",
-    "CheckpointKeeper",
-    "LastCheckpointKeeper",
-    "ModuloCheckpointKeeper",
     "ExplicitCheckpointKeeper",
-    "BestCheckpointKeeper",
-    "UnionCheckpointKeeper",
+    "ExplicitCheckpointSchedule",
+    "LastCheckpointKeeper",
     "MetricSelection",
-    "simulate_checkpoints",
+    "ModuloCheckpointKeeper",
+    "UnionCheckpointKeeper",
+    "UnionCheckpointSchedule",
     "final_checkpoints",
+    "keeper_resolver",
+    "save_model",
+    "schedule_resolver",
+    "simulate_checkpoints",
 ]

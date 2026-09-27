@@ -14,13 +14,12 @@ from ..typing import MappedTriples
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "get_relation_count_df",
     "get_entity_count_df",
     "get_entity_relation_co_occurrence_df",
-    "get_relation_functionality_df",
-    # relation typing
-    "get_relation_pattern_types_df",
     "get_relation_cardinality_types_df",
+    "get_relation_count_df",
+    "get_relation_functionality_df",
+    "get_relation_pattern_types_df",
 ]
 
 # constants
@@ -31,7 +30,7 @@ def _get_mapped_triples(dataset: Dataset, parts: Collection[str]) -> Collection[
     return torch.cat([dataset.factory_dict[part].mapped_triples for part in parts], dim=0).tolist()
 
 
-def _normalize_parts(dataset: Dataset, parts: None | str | Collection[str]) -> Collection[str]:
+def _normalize_parts(dataset: Dataset, parts: str | Collection[str] | None) -> Collection[str]:
     if parts is None:
         parts = dataset.factory_dict.keys()
     elif isinstance(parts, str):
@@ -382,11 +381,6 @@ def get_relation_functionality_df(
 
     :return:
         A dataframe with columns (relation_id | functionality | inverse functionality)
-
-    .. [wang2018]
-        Wang, Z., *et al.* (2018). `Cross-lingual Knowledge Graph Alignment via Graph Convolutional Networks
-        <https://doi.org/10.18653/v1/D18-1032>`_. Proceedings of the 2018 Conference on Empirical Methods in
-        Natural Language Processing, 349–357.
     """
     # TODO: Consider merging with other analysis methods
     parts = _normalize_parts(dataset=dataset, parts=parts)

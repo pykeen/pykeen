@@ -5,7 +5,7 @@ The following tutorial is based on a question originally posed by Heiko Paulheim
 <https://github.com/pykeen/pykeen/issues/97>`_.
 
 Given the following toy example comprising three entities in a triangle, a translational distance model like
-:class:`pykeen.models.TransE` should be able to exactly learn the geometric structure.
+:class:`~pykeen.models.TransE` should be able to exactly learn the geometric structure.
 
 ======== ========== ========
 Head     Relation   Tail
@@ -15,20 +15,8 @@ Belgium  partOf     EU
 EU       hasCapital Brussels
 ======== ========== ========
 
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    tf = ...
-    results = pipeline(
-        training=tf,
-        testing=...,
-        model="TransE",
-        model_kwargs=dict(embedding_dim=2),
-        random_seed=1,
-        device="cpu",
-    )
-    results.plot()
+.. literalinclude:: /examples/tutorial/translational_toy_example.py
+    :lines: 4-25
 
 .. image:: ../img/toy_1.png
     :alt: Troubleshooting Image 1
@@ -40,20 +28,8 @@ with the ``optimizer_kwargs`` and ``training_kwargs`` to the ``pipeline()`` func
 For example, you can decrease the optimizer's learning rate to make the loss curve less bumpy. Second, you can increase
 the number of epochs during training.
 
-.. code-block:: python
-
-    results = pipeline(
-        training=tf,
-        testing=...,
-        model="TransE",
-        model_kwargs=dict(embedding_dim=2),
-        optimizer_kwargs=dict(lr=1.0e-1),
-        training_kwargs=dict(num_epochs=128, use_tqdm_batch=False),
-        evaluation_kwargs=dict(use_tqdm=False),
-        random_seed=1,
-        device="cpu",
-    )
-    results.plot()
+.. literalinclude:: /examples/tutorial/translational_toy_example.py
+    :lines: 28-39
 
 .. image:: ../img/toy_2.png
     :alt: Troubleshooting Image 2
@@ -69,21 +45,8 @@ margin-based loss might not look like the exact geometric solution. If you want 
 function which does not use a margin, e.g. the softplus loss. You can do this by passing ``loss="softplus"`` to the
 pipeline.
 
-.. code-block:: python
-
-    toy_results = pipeline(
-        training=tf,
-        testing=...,
-        model="TransE",
-        loss="softplus",
-        model_kwargs=dict(embedding_dim=2),
-        optimizer_kwargs=dict(lr=1.0e-1),
-        training_kwargs=dict(num_epochs=128, use_tqdm_batch=False),
-        evaluation_kwargs=dict(use_tqdm=False),
-        random_seed=1,
-        device="cpu",
-    )
-    results.plot()
+.. literalinclude:: /examples/tutorial/translational_toy_example.py
+    :lines: 42-54
 
 .. image:: ../img/toy_3.png
     :alt: Troubleshooting Image 3

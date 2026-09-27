@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from typing import Any, ClassVar
 
 import torch
-from class_resolver.api import HintOrType
+from class_resolver import HintOrType
 from torch.nn.init import normal_
 
 from ..nbase import ERModel
@@ -22,8 +22,8 @@ __all__ = [
 class ComplEx(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     r"""An implementation of ComplEx [trouillon2016]_.
 
-    The ComplEx model combines complex-valued :class:`pykeen.nn.Embedding` entity and relation representations with a
-    :class:`pykeen.nn.ComplExInteraction`.
+    The ComplEx model combines complex-valued :class:`~pykeen.nn.representation.Embedding` entity and relation
+    representations with a :class:`~pykeen.nn.modules.ComplExInteraction`.
 
     ---
     citation:
@@ -34,19 +34,19 @@ class ComplEx(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+    }
     #: The default loss function class
     loss_default: ClassVar[type[Loss]] = SoftplusLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs: ClassVar[Mapping[str, Any]] = dict(reduction="mean")
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {"reduction": "mean"}
     #: The LP settings used by [trouillon2016]_ for ComplEx.
-    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = dict(
-        weight=0.01,
-        p=2.0,
-        normalize=True,
-    )
+    regularizer_default_kwargs: ClassVar[Mapping[str, Any]] = {
+        "weight": 0.01,
+        "p": 2.0,
+        "normalize": True,
+    }
 
     def __init__(
         self,
@@ -74,26 +74,26 @@ class ComplEx(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param regularizer_kwargs:
             additional keyword arguments passed to the regularizer. Defaults to `ComplEx.regularizer_default_kwargs`.
         :param kwargs:
-            remaining keyword arguments to forward to :class:`pykeen.models.ERModel`
+            remaining keyword arguments to forward to :class:`~pykeen.models.ERModel`
         """
         regularizer_kwargs = regularizer_kwargs or ComplEx.regularizer_default_kwargs
         super().__init__(
             interaction=ComplExInteraction,
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
                 # use torch's native complex data type
-                dtype=torch.cfloat,
-                regularizer=regularizer,
-                regularizer_kwargs=regularizer_kwargs,
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
+                "dtype": torch.cfloat,
+                "regularizer": regularizer,
+                "regularizer_kwargs": regularizer_kwargs,
+            },
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
                 # use torch's native complex data type
-                dtype=torch.cfloat,
-                regularizer=regularizer,
-                regularizer_kwargs=regularizer_kwargs,
-            ),
+                "dtype": torch.cfloat,
+                "regularizer": regularizer,
+                "regularizer_kwargs": regularizer_kwargs,
+            },
             **kwargs,
         )

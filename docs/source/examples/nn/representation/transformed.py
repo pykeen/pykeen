@@ -26,10 +26,10 @@ mlp = nn.Sequential(
 r = TransformedRepresentation(
     transformation=mlp,
     # note: this will create an Embedding base representation
-    base_kwargs=dict(
-        max_id=dataset.num_entities,
-        shape=(dim,),
-        initializer=initializer,
-        trainable=False,
-    ),
+    base_kwargs={
+        "max_id": dataset.num_entities,
+        "shape": (dim,),
+        "initializer": initializer,
+        "trainable": False,
+    },
 )

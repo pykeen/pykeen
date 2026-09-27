@@ -7,7 +7,7 @@ from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from typing import NamedTuple
 
-import numpy
+import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 
@@ -90,8 +90,7 @@ def _add_labels(
             raise ValueError
         label_to_id = getattr(triples_factory, label_to_id_mapping_name)
     assert label_to_id is not None
-    return pd.merge(
-        left=df,
+    return df.merge(
         right=pd.DataFrame(
             data=list(label_to_id.items()),
             columns=[label_column, id_column],
@@ -451,7 +450,7 @@ def skyline(data_stream: Iterable[PatternMatch]) -> Iterable[PatternMatch]:
 def _get_counts(
     mapped_triples: MappedTriples,
     column: int | Sequence[int],
-) -> tuple[numpy.ndarray, numpy.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     unique, counts = mapped_triples[:, column].view(-1).unique(return_counts=True)
     return unique.numpy(), counts.numpy()
 

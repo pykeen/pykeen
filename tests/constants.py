@@ -5,9 +5,9 @@ import pathlib
 import unittest
 
 __all__ = [
+    "EPSILON",
     "HERE",
     "RESOURCES",
-    "EPSILON",
     "skip_if_windows",
 ]
 

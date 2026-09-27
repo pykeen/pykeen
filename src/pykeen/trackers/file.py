@@ -6,15 +6,15 @@ import json
 import logging
 import pathlib
 from collections.abc import Mapping
-from typing import Any, ClassVar, TextIO
+from typing import IO, Any, ClassVar
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
 from ..utils import flatten_dictionary, normalize_path
 
 __all__ = [
-    "FileResultTracker",
     "CSVResultTracker",
+    "FileResultTracker",
     "JSONResultTracker",
 ]
 
@@ -42,11 +42,11 @@ class FileResultTracker(ResultTracker):
     extension: ClassVar[str]
 
     #: The file where the results are written to.
-    file: TextIO
+    file: IO[str]
 
     def __init__(
         self,
-        path: None | str | pathlib.Path = None,
+        path: str | pathlib.Path | None = None,
         name: str | None = None,
     ):
         """Initialize the tracker.
@@ -61,7 +61,6 @@ class FileResultTracker(ResultTracker):
         logger.info(f"Logging to {path.as_uri()}.")
         self.file = path.open(mode="w", newline="", encoding="utf8")
 
-    # docstr-coverage: inherited
     def end_run(self, success: bool = True) -> None:  # noqa: D102
         self.file.close()
 
@@ -83,7 +82,7 @@ class CSVResultTracker(FileResultTracker):
 
     def __init__(
         self,
-        path: None | str | pathlib.Path = None,
+        path: str | pathlib.Path | None = None,
         name: str | None = None,
         **kwargs,
     ):
@@ -97,37 +96,33 @@ class CSVResultTracker(FileResultTracker):
         super().__init__(path=path, name=name)
         self.csv_writer = csv.writer(self.file, **kwargs)
 
-    # docstr-coverage: inherited
     def start_run(self, run_name: str | None = None) -> None:  # noqa: D102
         self.csv_writer.writerow(self.HEADER)
 
-    # docstr-coverage: inherited
     def _write(
         self,
         dictionary: Mapping[str, Any],
         label: str,
         step: int | None,
         prefix: str | None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         dictionary = flatten_dictionary(dictionary=dictionary, prefix=prefix)
         self.csv_writer.writerows((label, step, key, value) for key, value in dictionary.items())
         self.file.flush()
 
-    # docstr-coverage: inherited
-    def log_params(
+    def log_params(  # noqa: D102
         self,
         params: Mapping[str, Any],
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self._write(dictionary=params, label="parameter", step=0, prefix=prefix)
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self._write(dictionary=metrics, label="metric", step=step, prefix=prefix)
 
 
@@ -144,21 +139,19 @@ class JSONResultTracker(FileResultTracker):
     extension = "jsonl"
 
     def _write(self, obj) -> None:
-        print(json.dumps(obj), file=self.file, flush=True)  # noqa:T201
+        print(json.dumps(obj), file=self.file, flush=True)
 
-    # docstr-coverage: inherited
-    def log_params(
+    def log_params(  # noqa: D102
         self,
         params: Mapping[str, Any],
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self._write({"params": params, "prefix": prefix})
 
-    # docstr-coverage: inherited
-    def log_metrics(
+    def log_metrics(  # noqa: D102
         self,
         metrics: Mapping[str, float],
         step: int | None = None,
         prefix: str | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         self._write({"metrics": metrics, "prefix": prefix, "step": step})

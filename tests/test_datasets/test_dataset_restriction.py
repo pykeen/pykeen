@@ -42,7 +42,7 @@ def test_trivial(dataset: Dataset) -> None:
     assert_equal_except_meta(dataset, dataset.restrict(relations=[], invert_relation_selection=True))
 
 
-@pytest.fixture()
+@pytest.fixture
 def rng() -> random.Random:
     """Fixture for random seed."""
     return random.Random(x=42)  # noqa: S311
@@ -51,7 +51,7 @@ def rng() -> random.Random:
 class PartialCase(NamedTuple):
     """One part of the test case (either entities or relations)."""
 
-    selection: None | Collection[int]
+    selection: Collection[int] | None
     invert: bool
     max_ids: int
 

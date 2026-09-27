@@ -3,12 +3,13 @@
 Get a summary with ``python -m pykeen.datasets.biokg``.
 """
 
+from typing import Unpack
+
 import click
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import ZipSingleDataset
-from ..typing import TorchRandomHint
+from .base import CompressedSingleDatasetKwargs, ZipSingleDataset
 
 __all__ = [
     "BioKG",
@@ -39,27 +40,15 @@ class BioKG(ZipSingleDataset):
         validation: 206800
     """
 
-    def __init__(
-        self,
-        random_state: TorchRandomHint = 0,
-        **kwargs,
-    ):
-        """Initialize the BioKG dataset from [walsh2020]_.
-
-        :param random_state: The random seed to use in splitting the dataset. Defaults to 0.
-        :param kwargs: keyword arguments passed to :class:`pykeen.datasets.base.TarFileSingleDataset`.
-        """
-        super().__init__(
-            url=URL,
-            relative_path="biokg.links.tsv",
-            random_state=random_state,
-            **kwargs,
-        )
+    def __init__(self, **kwargs: Unpack[CompressedSingleDatasetKwargs]) -> None:
+        """Initialize the BioKG dataset from [walsh2020]_."""
+        kwargs.setdefault("random_state", 0)
+        super().__init__(url=URL, relative_path="biokg.links.tsv", **kwargs)
 
 
 @click.command()
 @verbose_option
-def _main():
+def _main() -> None:
     from pykeen.datasets import get_dataset
 
     ds = get_dataset(dataset=BioKG)

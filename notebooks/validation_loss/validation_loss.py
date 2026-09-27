@@ -1,8 +1,8 @@
 # %%
 """Validation loss notebook."""
 
-import pandas
-import seaborn
+import pandas as pd
+import seaborn as sns
 
 from pykeen.datasets import get_dataset
 from pykeen.pipeline import pipeline
@@ -17,21 +17,21 @@ result_tracker = PythonResultTracker()
 result = pipeline(
     dataset=dataset,
     model="mure",
-    model_kwargs=dict(embedding_dim=16),
-    training_kwargs=dict(
-        num_epochs=100,
+    model_kwargs={"embedding_dim": 16},
+    training_kwargs={
+        "num_epochs": 100,
         # this will log a metric with name "validation.loss" to the configured result tracker
-        callbacks="evaluation-loss",
-        callback_kwargs=dict(triples_factory=dataset.validation, prefix="validation"),
-    ),
+        "callbacks": "evaluation-loss",
+        "callback_kwargs": {"triples_factory": dataset.validation, "prefix": "validation"},
+    },
     result_tracker=result_tracker,
 )
 # %% [markdown]
 # ## Evaluation with seaborn
 
 # %%
-grid = seaborn.relplot(
-    data=pandas.DataFrame(
+grid = sns.relplot(
+    data=pd.DataFrame(
         data=[
             [step, step_metrics.get("loss"), step_metrics.get("validation.loss")]
             for step, step_metrics in result_tracker.metrics.items()

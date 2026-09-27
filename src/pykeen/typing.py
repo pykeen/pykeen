@@ -11,51 +11,42 @@ import torch
 from class_resolver import Hint, HintOrType, HintType
 
 __all__ = [
-    # General types
-    "Hint",
-    "HintType",
-    "HintOrType",
-    "Mutation",
-    "OneOrSequence",
-    # Triples
-    "LabeledTriples",
-    "MappedTriples",
-    "EntityMapping",
-    "RelationMapping",
-    # Others
-    "DeviceHint",
-    "TorchRandomHint",
-    # Tensor Functions
-    "Initializer",
-    "Normalizer",
-    "Constrainer",
-    "cast_constrainer",
-    # Tensors
-    "HeadRepresentation",
-    "RelationRepresentation",
-    "TailRepresentation",
-    # Dataclasses
-    "GaussianDistribution",
-    # prediction targets
-    "Target",
-    "LABEL_HEAD",
-    "LABEL_RELATION",
-    "LABEL_TAIL",
-    "TargetColumn",
     "COLUMN_HEAD",
     "COLUMN_RELATION",
     "COLUMN_TAIL",
-    # modes
-    "InductiveMode",
-    "TRAINING",
-    "TESTING",
-    "VALIDATION",
-    # entity alignment sides
-    "EASide",
+    "EA_SIDES",
     "EA_SIDE_LEFT",
     "EA_SIDE_RIGHT",
-    "EA_SIDES",
-    # utils
+    "LABEL_HEAD",
+    "LABEL_RELATION",
+    "LABEL_TAIL",
+    "TESTING",
+    "TRAINING",
+    "VALIDATION",
+    "Constrainer",
+    "DeviceHint",
+    "EASide",
+    "EntityMapping",
+    "GaussianDistribution",
+    "HeadRepresentation",
+    "Hint",
+    "HintOrType",
+    "HintType",
+    "InductiveMode",
+    "Initializer",
+    "LabeledTriples",
+    "MappedTriples",
+    "Mutation",
+    "Normalizer",
+    "OneOrSequence",
+    "RelationMapping",
+    "RelationRepresentation",
+    "TailRepresentation",
+    "Target",
+    "TargetColumn",
+    "TorchRandomHint",
+    "TransductiveRatiosHint",
+    "cast_constrainer",
     "normalize_rank_type",
     "normalize_target",
 ]
@@ -97,14 +88,14 @@ DeviceHint = Hint[torch.device]
 TorchRandomHint = None | int | torch.Generator
 
 Representation = TypeVar("Representation", bound=OneOrSequence[FloatTensor])
-#: A type variable for head representations used in :class:`pykeen.models.Model`,
-#: :class:`pykeen.nn.modules.Interaction`, etc.
+#: A type variable for head representations used in :class:`~pykeen.models.Model`,
+#: :class:`~pykeen.nn.modules.Interaction`, etc.
 HeadRepresentation = TypeVar("HeadRepresentation", bound=OneOrSequence[FloatTensor])
-#: A type variable for relation representations used in :class:`pykeen.models.Model`,
-#: :class:`pykeen.nn.modules.Interaction`, etc.
+#: A type variable for relation representations used in :class:`~pykeen.models.Model`,
+#: :class:`~pykeen.nn.modules.Interaction`, etc.
 RelationRepresentation = TypeVar("RelationRepresentation", bound=OneOrSequence[FloatTensor])
-#: A type variable for tail representations used in :class:`pykeen.models.Model`,
-#: :class:`pykeen.nn.modules.Interaction`, etc.
+#: A type variable for tail representations used in :class:`~pykeen.models.Model`,
+#: :class:`~pykeen.nn.modules.Interaction`, etc.
 TailRepresentation = TypeVar("TailRepresentation", bound=OneOrSequence[FloatTensor])
 
 
@@ -184,3 +175,6 @@ EASide = Literal["left", "right"]
 EA_SIDE_LEFT: EASide = "left"
 EA_SIDE_RIGHT: EASide = "right"
 EA_SIDES: tuple[EASide, EASide] = (EA_SIDE_LEFT, EA_SIDE_RIGHT)
+
+#: A hint for transductive splitting ratios
+TransductiveRatiosHint = tuple[float, float] | tuple[float, float, float]

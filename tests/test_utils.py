@@ -10,8 +10,9 @@ import timeit
 import unittest
 from collections.abc import Iterable
 from typing import Any
+from unittest import mock
 
-import numpy
+import numpy as np
 import pytest
 import torch
 
@@ -25,14 +26,16 @@ from pykeen.utils import (
     compose,
     estimate_cost_of_sequence,
     flatten_dictionary,
+    get_connected_components,
     get_optimal_sequence,
     get_until_first_blank,
     iter_weisfeiler_lehman,
-    logcumsumexp,
     merge_kwargs,
     project_entity,
+    resolve_device,
     set_random_seed,
     split_complex,
+    split_workload,
     tensor_product,
     tensor_sum,
 )
@@ -53,8 +56,8 @@ class TestCompose(unittest.TestCase):
         fog = compose(_f, _g, name="fog")
         for i in range(5):
             with self.subTest(i=i):
-                self.assertEqual(_g(_f(i)), fog(i))
-                self.assertEqual(_g(_f(i**2)), fog(i**2))
+                assert _g(_f(i)) == fog(i)
+                assert _g(_f(i**2)) == fog(i**2)
 
 
 class FlattenDictionaryTest(unittest.TestCase):
@@ -129,7 +132,7 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         """Test the trivial string."""
         s = ""
         r = get_until_first_blank(s)
-        self.assertEqual("", r)
+        assert r == ""
 
     def test_regular(self):
         """Test a regulat case."""
@@ -139,7 +142,7 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         Now I continue.
         """
         r = get_until_first_blank(s)
-        self.assertEqual("Broken line.", r)
+        assert r == "Broken line."
 
 
 def _generate_shapes(
@@ -166,6 +169,32 @@ def _generate_shapes(
         yield tuple(shapes)
 
 
+class SplitWorkloadTests(unittest.TestCase):
+    """Tests for :func:`pykeen.utils.split_workload`."""
+
+    def test_single_process(self):
+        """Test that the full workload is returned outside of worker processes."""
+        assert split_workload(n=17) == range(17)
+
+    def test_partition(self):
+        """Test that the workloads of all workers form an exact partition."""
+        for n, num_workers in itertools.chain(
+            [(25, 11), (0, 3), (1, 4), (3, 7), (100, 3)],
+            itertools.product(range(0, 50, 7), range(1, 13)),
+        ):
+            with self.subTest(n=n, num_workers=num_workers):
+                workloads = []
+                for worker_id in range(num_workers):
+                    worker_info = mock.Mock(id=worker_id, num_workers=num_workers)
+                    with mock.patch("torch.utils.data.get_worker_info", return_value=worker_info):
+                        workloads.append(split_workload(n=n))
+                # contiguous & exact partition of range(n)
+                assert [i for workload in workloads for i in workload] == list(range(n))
+                # balanced
+                sizes = [len(workload) for workload in workloads]
+                assert max(sizes) - min(sizes) <= 1
+
+
 class TestUtils(unittest.TestCase):
     """Tests for :mod:`pykeen.utils`."""
 
@@ -175,9 +204,9 @@ class TestUtils(unittest.TestCase):
         compacted_mapping, id_remapping = compact_mapping(mapping=mapping)
 
         # check correct value range
-        self.assertEqual(set(compacted_mapping.values()), set(range(len(mapping))))
-        self.assertEqual(set(id_remapping.keys()), set(mapping.values()))
-        self.assertEqual(set(id_remapping.values()), set(compacted_mapping.values()))
+        assert set(compacted_mapping.values()) == set(range(len(mapping)))
+        assert set(id_remapping.keys()) == set(mapping.values())
+        assert set(id_remapping.values()) == set(compacted_mapping.values())
 
     def test_clamp_norm(self):
         """Test clamp_norm() ."""
@@ -271,13 +300,13 @@ class TestUtils(unittest.TestCase):
         for shapes in _generate_shapes(generator=generator):
             arrays = [torch.empty(*shape) for shape in shapes]
             cost = estimate_cost_of_sequence(*(a.shape for a in arrays))
-            n_samples, time = timeit.Timer(stmt="sum(arrays)", globals=dict(arrays=arrays)).autorange()
+            n_samples, time = timeit.Timer(stmt="sum(arrays)", globals={"arrays": arrays}).autorange()
             consumption = time / n_samples
             data.append((cost, consumption))
-        a = numpy.asarray(data)
+        a = np.asarray(data)
 
         # check for strong correlation between estimated costs and measured execution time
-        assert (numpy.corrcoef(x=a[:, 0], y=a[:, 1])[0, 1]) > 0.8
+        assert (np.corrcoef(x=a[:, 0], y=a[:, 1])[0, 1]) > 0.8
 
     @pytest.mark.slow
     def test_get_optimal_sequence_caching(self):
@@ -292,10 +321,10 @@ class TestUtils(unittest.TestCase):
             # check caching
             samples, second_time = timeit.Timer(
                 stmt="get_optimal_sequence(*shapes)",
-                globals=dict(
-                    get_optimal_sequence=get_optimal_sequence,
-                    shapes=shapes,
-                ),
+                globals={
+                    "get_optimal_sequence": get_optimal_sequence,
+                    "shapes": shapes,
+                },
             ).autorange()
             second_time /= samples
 
@@ -336,14 +365,6 @@ class TestUtils(unittest.TestCase):
 
             # compare result to sequential addition
             assert torch.allclose(result, functools.reduce(operator.mul, tensors[1:], tensors[0]))
-
-    def test_logcumsumexp(self):
-        """Verify that our numpy implementation gives the same results as the torch variant."""
-        generator = numpy.random.default_rng(seed=42)
-        a = generator.random(size=(21,))
-        r1 = logcumsumexp(a)
-        r2 = torch.logcumsumexp(torch.as_tensor(a), dim=0).numpy()
-        numpy.testing.assert_allclose(r1, r2)
 
     def test_weisfeiler_lehman(self):
         """Test Weisfeiler Lehman."""
@@ -410,3 +431,54 @@ def test_merge_kwargs(
     with pytest.raises(error) if error else contextlib.nullcontext():
         merged_kwargs = merge_kwargs(kwargs=kwargs, **extra)
         assert merged_kwargs == expected
+
+
+@pytest.mark.parametrize(
+    ("device", "cuda_available", "mps_available", "expected"),
+    [
+        (None, False, False, "cpu"),
+        (None, False, True, "mps"),
+        (None, True, False, "cuda"),
+        (None, True, True, "cuda"),
+        ("gpu", False, False, "cpu"),
+        ("gpu", False, True, "mps"),
+        ("gpu", True, False, "cuda"),
+        ("cuda", False, False, "cpu"),
+        ("cuda", False, True, "mps"),
+        ("cuda", True, False, "cuda"),
+        ("mps", False, False, "cpu"),
+        ("mps", False, True, "mps"),
+        ("cpu", False, False, "cpu"),
+        ("cpu", True, True, "cpu"),
+    ],
+)
+def test_resolve_device(device: str | None, cuda_available: bool, mps_available: bool, expected: str) -> None:
+    """Test device resolution with (un)available accelerators."""
+    with (
+        mock.patch("torch.cuda.is_available", return_value=cuda_available),
+        mock.patch("torch.backends.mps.is_available", return_value=mps_available),
+    ):
+        assert resolve_device(device).type == expected
+
+
+@pytest.mark.parametrize(
+    ("pairs", "expected"),
+    [
+        # empty graph
+        ([], []),
+        # single edge
+        ([(1, 2)], [[1, 2]]),
+        # two disjoint components
+        ([(1, 2), (3, 4)], [[1, 2], [3, 4]]),
+        # the last edge merges two components, leaving node 1 as root only reachable via an intermediate node
+        ([(1, 2), (3, 4), (2, 3)], [[1, 2, 3, 4]]),
+        # chain in reverse order
+        ([(4, 3), (3, 2), (2, 1)], [[1, 2, 3, 4]]),
+        # self-loop and cycle
+        ([(1, 1), (2, 3), (3, 5), (5, 2)], [[1], [2, 3, 5]]),
+    ],
+)
+def test_get_connected_components(pairs: list[tuple[int, int]], expected: list[list[int]]) -> None:
+    """Test calculation of connected components."""
+    components = get_connected_components(pairs)
+    assert sorted(sorted(component) for component in components) == expected

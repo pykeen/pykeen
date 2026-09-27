@@ -25,7 +25,7 @@ class ConcatProjectionCombinationTest(cases.CombinationTestCase):
     """Test for concat + projection combination."""
 
     cls = pykeen.nn.combination.ConcatProjectionCombination
-    kwargs = dict(input_dims=cases.CombinationTestCase.input_dims[0])
+    kwargs = {"input_dims": cases.CombinationTestCase.input_dims[0]}
     input_dims = cases.CombinationTestCase.input_dims[0:1]
 
 
@@ -44,10 +44,10 @@ class GatedCombinationTest(cases.CombinationTestCase):
     """Test for gated combination."""
 
     cls = pykeen.nn.combination.GatedCombination
-    kwargs = dict(
-        entity_dim=cases.CombinationTestCase.input_dims[0][0],
-        literal_dim=cases.CombinationTestCase.input_dims[0][1],
-    )
+    kwargs = {
+        "entity_dim": cases.CombinationTestCase.input_dims[0][0],
+        "literal_dim": cases.CombinationTestCase.input_dims[0][1],
+    }
     input_dims = cases.CombinationTestCase.input_dims[0:1]
 
 

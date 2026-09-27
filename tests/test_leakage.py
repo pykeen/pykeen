@@ -3,7 +3,6 @@
 import itertools as itt
 import unittest
 
-import numpy
 import numpy as np
 import scipy.sparse
 import torch
@@ -58,11 +57,11 @@ class TestLeakage(unittest.TestCase):
             ["-2", test_relation_inverse, "-1"],  # this one was leaked!
         ]
         train_factory = TriplesFactory.from_labeled_triples(
-            triples=np.array(train, dtype=np.str),
+            triples=np.array(train, dtype=str),
             filter_out_candidate_inverse_relations=False,
         )
         test_factory = TriplesFactory.from_labeled_triples(
-            triples=np.array(test, dtype=np.str),
+            triples=np.array(test, dtype=str),
             entity_to_id=train_factory.entity_to_id,
             relation_to_id=train_factory.relation_to_id,
             filter_out_candidate_inverse_relations=False,
@@ -73,49 +72,39 @@ class TestLeakage(unittest.TestCase):
         # expected_frequency = n / (n + len(forwards_extras) + len(inverse_extras))
         # self.assertLessEqual(min_frequency, expected_frequency)
 
-        self.assertGreater(len(forwards_extras), len(inverse_extras))
-        self.assertLess(
-            expected_forwards_frequency,
-            expected_inverse_frequency,
-            msg="Forwards frequency should be higher than inverse frequency",
+        assert len(forwards_extras) > len(inverse_extras)
+        assert expected_forwards_frequency < expected_inverse_frequency, (
+            "Forwards frequency should be higher than inverse frequency"
         )
 
         sealant = Sealant(train_factory, symmetric=False, minimum_frequency=min_frequency)
         test_relation_id, test_relation_inverse_id = (
             train_factory.relation_to_id[r] for r in (test_relation, test_relation_inverse)
         )
-        self.assertNotEqual(
-            0,
-            len(sealant.candidate_inverse_relations),
-            msg=f"did not find any candidate inverse relations at frequency>={min_frequency}",
+        assert len(sealant.candidate_inverse_relations) != 0, (
+            f"did not find any candidate inverse relations at frequency>={min_frequency}"
         )
-        self.assertEqual(
-            {
-                (test_relation_id, test_relation_inverse_id): expected_forwards_frequency,
-                (test_relation_inverse_id, test_relation_id): expected_inverse_frequency,
-            },
-            dict(sealant.candidate_inverse_relations),
-        )
+        assert {
+            (test_relation_id, test_relation_inverse_id): expected_forwards_frequency,
+            (test_relation_inverse_id, test_relation_id): expected_inverse_frequency,
+        } == dict(sealant.candidate_inverse_relations)
 
-        self.assertIn(test_relation_id, sealant.inverses)
-        self.assertEqual(test_relation_inverse_id, sealant.inverses[test_relation])
-        self.assertIn(test_relation_inverse_id, sealant.inverses)
-        self.assertEqual(test_relation, sealant.inverses[test_relation_inverse_id])
+        assert test_relation_id in sealant.inverses
+        assert test_relation_inverse_id == sealant.inverses[test_relation]
+        assert test_relation_inverse_id in sealant.inverses
+        assert test_relation == sealant.inverses[test_relation_inverse_id]
 
-        self.assertIn(
-            test_relation_inverse_id,
-            sealant.inverse_relations_to_delete,
-            msg="The wrong relation was picked for deletion",
+        assert test_relation_inverse_id in sealant.inverse_relations_to_delete, (
+            "The wrong relation was picked for deletion"
         )
 
         # Test looking up inverse triples
         test_leaked = test_factory.mapped_triples[
             test_factory.get_mask_for_relations(relations=sealant.inverse_relations_to_delete, invert=False)
         ]
-        self.assertEqual(1, len(test_leaked))
-        self.assertEqual(
-            (train_factory.entity_to_id["-2"], test_relation_inverse, train_factory.entity_to_id["-1"]),
-            tuple(test_leaked[0]),
+        assert len(test_leaked) == 1
+        assert (train_factory.entity_to_id["-2"], test_relation_inverse, train_factory.entity_to_id["-1"]) == tuple(
+            test_leaked[0]
         )
 
     def test_generate_compact_vectorized_lookup(self):
@@ -182,7 +171,7 @@ class TestLeakage(unittest.TestCase):
         for m in (rel, inv):
             # check type
             assert isinstance(m, scipy.sparse.spmatrix)
-            assert m.dtype == numpy.int32
+            assert m.dtype == np.int32
             # check shape
             assert m.shape[0] == triples_factory.num_relations
             # check 1-hot
@@ -194,15 +183,15 @@ class TestLeakage(unittest.TestCase):
         rel = triples_factory_to_sparse_matrices(triples_factory)[0]
         sim = jaccard_similarity_scipy(a=rel, b=rel)
         # check type
-        assert isinstance(sim, numpy.ndarray)
-        assert sim.dtype == numpy.float64
+        assert isinstance(sim, np.ndarray)
+        assert sim.dtype == np.float64
         # check shape
         assert sim.shape == (triples_factory.num_relations, triples_factory.num_relations)
         # check value range
         assert (sim >= 0).all()
         assert (sim <= 1).all()
         # check self-similarity = 1
-        numpy.testing.assert_allclose(numpy.diag(sim), 1.0)
+        np.testing.assert_allclose(np.diag(sim), 1.0)
 
     def test_candidate_pairs(self):
         """Test :func:`get_candidate_pairs`."""
@@ -238,7 +227,8 @@ class TestLeakage(unittest.TestCase):
             triples,
             num_relations=6,
         )
-        assert rel.max() == 1 and inv.max() == 1
+        assert rel.max() == 1
+        assert inv.max() == 1
         candidate_pairs = get_candidate_pairs(a=rel, threshold=0.97)
         expected_candidate_pairs = {
             (0, 1),
@@ -250,7 +240,7 @@ class TestLeakage(unittest.TestCase):
             (4, 5),
             (5, 4),
         }
-        self.assertEqual(expected_candidate_pairs, candidate_pairs)
+        assert expected_candidate_pairs == candidate_pairs
 
         candidate_pairs = get_candidate_pairs(a=rel, b=inv, threshold=0.97)
         expected_candidate_pairs = {
@@ -267,4 +257,4 @@ class TestLeakage(unittest.TestCase):
             (5, 1),
             (5, 2),
         }
-        self.assertEqual(expected_candidate_pairs, candidate_pairs)
+        assert expected_candidate_pairs == candidate_pairs

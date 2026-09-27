@@ -9,21 +9,21 @@ result_tracker = tracker_resolver.make(None)
 result = pipeline(
     dataset="nations",
     model="mure",
-    training_kwargs=dict(
-        num_epochs=10,
-        callbacks="checkpoint",
-        callbacks_kwargs=dict(
-            schedule="best",
-            schedule_kwargs=dict(
-                result_tracker=result_tracker,
+    training_kwargs={
+        "num_epochs": 10,
+        "callbacks": "checkpoint",
+        "callbacks_kwargs": {
+            "schedule": "best",
+            "schedule_kwargs": {
+                "result_tracker": result_tracker,
                 # in this example, we just use the training loss
-                metric_selection=MetricSelection(
+                "metric_selection": MetricSelection(
                     metric="loss",
                     maximize=False,
                 ),
-            ),
-        ),
-    ),
+            },
+        },
+    },
     # Important: use the same result tracker instance as in the checkpoint callback
     result_tracker=result_tracker,
 )

@@ -2,7 +2,7 @@
 
 from typing import Literal, TypeAlias
 
-import numpy
+import numpy as np
 import scipy.sparse
 import torch
 from sklearn.preprocessing import normalize as sklearn_normalize
@@ -12,10 +12,10 @@ from ...triples.leakage import jaccard_similarity_scipy, triples_factory_to_spar
 from ...typing import FloatTensor, LongTensor
 
 __all__ = [
-    "get_csr_matrix",
-    "marginal_score",
-    "get_relation_similarity",
     "VectorNormalizationMethod",
+    "get_csr_matrix",
+    "get_relation_similarity",
+    "marginal_score",
 ]
 
 #: Methods allowed for vector normalization in :func:`sklearn.preprocessing.normalize`
@@ -23,10 +23,10 @@ VectorNormalizationMethod: TypeAlias = Literal["l1", "l2", "max"]
 
 
 def get_csr_matrix(
-    row_indices: numpy.ndarray,
-    col_indices: numpy.ndarray,
+    row_indices: np.ndarray,
+    col_indices: np.ndarray,
     shape: tuple[int, int],
-    dtype: type[numpy.number] = numpy.float32,
+    dtype: type[np.number] = np.float32,
     norm: VectorNormalizationMethod | None = "l1",
 ) -> scipy.sparse.csr_matrix:
     """Create a sparse matrix, with ones for the given non-zero locations.
@@ -41,7 +41,7 @@ def get_csr_matrix(
     """
     # create sparse matrix of absolute counts
     matrix = scipy.sparse.coo_matrix(
-        (numpy.ones(row_indices.shape, dtype=dtype), (row_indices, col_indices)),
+        (np.ones(row_indices.shape, dtype=dtype), (row_indices, col_indices)),
         shape=shape,
     ).tocsr()
     if not norm:
@@ -83,7 +83,7 @@ def marginal_score(
 
 
 def sparsify(
-    matrix: numpy.ndarray,
+    matrix: np.ndarray,
     threshold: float | None = None,
 ) -> scipy.sparse.spmatrix:
     """Sparsify a matrix.
@@ -94,7 +94,7 @@ def sparsify(
     :returns: shape: (m, n) a sparsified matrix
     """
     if threshold is not None:
-        matrix = numpy.copy(matrix)
+        matrix = np.copy(matrix)
         matrix[matrix < threshold] = 0.0
     sparse = scipy.sparse.csr_matrix(matrix)
     sparse.eliminate_zeros()

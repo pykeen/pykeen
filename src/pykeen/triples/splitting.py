@@ -5,10 +5,10 @@ import typing
 from abc import abstractmethod
 from collections.abc import Collection, Sequence
 
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 import torch
-from class_resolver.api import ClassResolver, HintOrType
+from class_resolver import ClassResolver, HintOrType
 
 from ..constants import COLUMN_LABELS
 from ..typing import (
@@ -28,21 +28,18 @@ from ..utils import ensure_torch_random_state, format_relative_comparison
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "split",
-    # Cleaners
-    "cleaner_resolver",
     "Cleaner",
-    "RandomizedCleaner",
-    "DeterministicCleaner",
-    # Splitters
-    "splitter_resolver",
-    "Splitter",
     "CleanupSplitter",
     "CoverageSplitter",
-    # Utils
+    "DeterministicCleaner",
+    "RandomizedCleaner",
+    "Splitter",
     "TripleCoverageError",
-    "normalize_ratios",
+    "cleaner_resolver",
     "get_absolute_split_sizes",
+    "normalize_ratios",
+    "split",
+    "splitter_resolver",
 ]
 
 
@@ -102,12 +99,12 @@ def _split_triples(
     return triples_groups
 
 
-def _get_cover_for_column(df: pandas.DataFrame, column: Target, index_column: str = "index") -> set[int]:
+def _get_cover_for_column(df: pd.DataFrame, column: Target, index_column: str = "index") -> set[int]:
     return set(df.groupby(by=column).agg({index_column: "min"})[index_column].values)
 
 
-def _get_covered_entities(df: pandas.DataFrame, chosen: Collection[int]) -> set[int]:
-    return set(numpy.unique(df.loc[df["index"].isin(chosen), [LABEL_HEAD, LABEL_TAIL]]))
+def _get_covered_entities(df: pd.DataFrame, chosen: Collection[int]) -> set[int]:
+    return set(np.unique(df.loc[df["index"].isin(chosen), [LABEL_HEAD, LABEL_TAIL]]))
 
 
 def _get_cover_deterministic(triples: MappedTriples) -> BoolTensor:
@@ -129,7 +126,7 @@ def _get_cover_deterministic(triples: MappedTriples) -> BoolTensor:
     :return: shape: (n,)
         A boolean mask indicating whether the triple is part of the cover.
     """
-    df = pandas.DataFrame(data=triples.numpy(), columns=COLUMN_LABELS).reset_index()
+    df = pd.DataFrame(data=triples.numpy(), columns=COLUMN_LABELS).reset_index()
 
     # select one triple per relation
     chosen = _get_cover_for_column(df=df, column=LABEL_RELATION)
@@ -191,7 +188,7 @@ def normalize_ratios(
     ratios = tuple(ratios)
     ratio_sum = sum(ratios)
     if ratio_sum < 1.0 - epsilon:
-        ratios = ratios + (1.0 - ratio_sum,)
+        ratios = (*ratios, 1.0 - ratio_sum)
     elif ratio_sum > 1.0 + epsilon:
         raise ValueError(f"ratios sum to more than 1.0: {ratios} (sum={ratio_sum})")
     return ratios
@@ -199,7 +196,7 @@ def normalize_ratios(
 
 def construct_uniform_probability(n: int) -> tuple[float, ...]:
     """Construct a uniform distribution."""
-    return tuple((numpy.ones(shape=(n,)) / n).tolist())
+    return tuple((np.ones(shape=(n,)) / n).tolist())
 
 
 def get_absolute_split_sizes(
@@ -221,11 +218,11 @@ def get_absolute_split_sizes(
         The absolute sizes.
     """
     # due to rounding errors we might lose a few points, thus we use cumulative ratio
-    cum_ratio = numpy.cumsum(ratios)
+    cum_ratio = np.cumsum(ratios)
     cum_ratio[-1] = 1.0
-    cum_ratio = numpy.r_[numpy.zeros(1), cum_ratio]
-    split_points = (cum_ratio * n_total).astype(numpy.int64)
-    sizes = numpy.diff(split_points)
+    cum_ratio = np.r_[np.zeros(1), cum_ratio]
+    split_points = (cum_ratio * n_total).astype(np.int64)
+    sizes = np.diff(split_points)
     return tuple(sizes)
 
 
@@ -313,18 +310,17 @@ def _prepare_cleanup(
 class RandomizedCleaner(Cleaner):
     """Cleanup a triples array by randomly selecting testing triples and recalculate to minimize moves.
 
-    1. Calculate ``move_id_mask`` as in :func:`_prepare_cleanup`
+    1. Calculate ``move_id_mask`` as in ``_prepare_cleanup``
     2. Choose a triple to move, recalculate ``move_id_mask``
     3. Continue until ``move_id_mask`` has no true bits
     """
 
-    # docstr-coverage: inherited
-    def cleanup_pair(
+    def cleanup_pair(  # noqa: D102
         self,
         reference: MappedTriples,
         other: MappedTriples,
         random_state: TorchRandomHint,
-    ) -> tuple[MappedTriples, MappedTriples]:  # noqa: D102
+    ) -> tuple[MappedTriples, MappedTriples]:
         generator = ensure_torch_random_state(random_state)
         move_id_mask = _prepare_cleanup(reference, other)
 
@@ -350,13 +346,12 @@ class RandomizedCleaner(Cleaner):
 class DeterministicCleaner(Cleaner):
     """Cleanup a triples array (testing) with respect to another (training)."""
 
-    # docstr-coverage: inherited
-    def cleanup_pair(
+    def cleanup_pair(  # noqa: D102
         self,
         reference: MappedTriples,
         other: MappedTriples,
         random_state: TorchRandomHint,
-    ) -> tuple[MappedTriples, MappedTriples]:  # noqa: D102
+    ) -> tuple[MappedTriples, MappedTriples]:
         move_id_mask = _prepare_cleanup(reference, other)
         reference = torch.cat([reference, other[move_id_mask]])
         other = other[~move_id_mask]
@@ -364,7 +359,7 @@ class DeterministicCleaner(Cleaner):
 
 
 #: A resolver for triple cleaners
-cleaner_resolver: ClassResolver[Cleaner] = ClassResolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)
+cleaner_resolver: ClassResolver[Cleaner] = ClassResolver.from_subclasses(base=Cleaner, default=DeterministicCleaner)  # type: ignore[type-abstract]
 
 
 class Splitter:
@@ -454,13 +449,12 @@ class CleanupSplitter(Splitter):
         """
         self.cleaner = cleaner_resolver.make(cleaner)
 
-    # docstr-coverage: inherited
-    def split_absolute_size(
+    def split_absolute_size(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         sizes: Sequence[int],
         generator: torch.Generator,
-    ) -> Sequence[MappedTriples]:  # noqa: D102
+    ) -> Sequence[MappedTriples]:
         triples_groups = _split_triples(mapped_triples, sizes=sizes, generator=generator)
         # Make sure that the first element has all the right stuff in it
         logger.debug("cleaning up groups")
@@ -472,25 +466,24 @@ class CleanupSplitter(Splitter):
 class CoverageSplitter(Splitter):
     """This splitter greedily selects training triples such that each entity is covered and then splits the rest."""
 
-    # docstr-coverage: inherited
-    def split_absolute_size(
+    def split_absolute_size(  # noqa: D102
         self,
         mapped_triples: MappedTriples,
         sizes: Sequence[int],
         generator: torch.Generator,
-    ) -> Sequence[MappedTriples]:  # noqa: D102
+    ) -> Sequence[MappedTriples]:
         seed_mask = _get_cover_deterministic(triples=mapped_triples)
         train_seed = mapped_triples[seed_mask]
         remaining_triples = mapped_triples[~seed_mask]
         if train_seed.shape[0] > sizes[0]:
             raise ValueError(f"Could not find a coverage of all entities and relation with only {sizes[0]} triples.")
-        remaining_sizes = (sizes[0] - train_seed.shape[0],) + tuple(sizes[1:])
+        remaining_sizes = (sizes[0] - train_seed.shape[0], *tuple(sizes[1:]))
         train, *rest = _split_triples(mapped_triples=remaining_triples, sizes=remaining_sizes, generator=generator)
         return [torch.cat([train_seed, train], dim=0), *rest]
 
 
 #: A resolver for triple splitters
-splitter_resolver: ClassResolver[Splitter] = ClassResolver.from_subclasses(base=Splitter, default=CoverageSplitter)
+splitter_resolver: ClassResolver[Splitter] = ClassResolver.from_subclasses(base=Splitter, default=CoverageSplitter)  # type: ignore[type-abstract]
 
 
 def split(
@@ -539,7 +532,7 @@ def split(
     """
     # backwards compatibility
     splitter_cls: type[Splitter] = splitter_resolver.lookup(method)
-    kwargs = dict()
+    kwargs = {}
     if splitter_cls is CleanupSplitter and randomize_cleanup:
         kwargs["cleaner"] = cleaner_resolver.normalize_cls(RandomizedCleaner)
     return splitter_resolver.make(splitter_cls, pos_kwargs=kwargs).split(

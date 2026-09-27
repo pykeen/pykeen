@@ -3,8 +3,8 @@
 from collections.abc import Collection, Iterable, MutableMapping, Sequence
 from typing import Any
 
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 import pytest
 import torch
 import unittest_templates
@@ -38,13 +38,13 @@ class TargetPredictionsTests(cases.PredictionTestCase):
     """Tests for target prediction post-processing."""
 
     cls = pykeen.predict.TargetPredictions
-    kwargs = dict(target=pykeen.typing.LABEL_HEAD, other_columns_fixed_ids=(0, 1))
+    kwargs = {"target": pykeen.typing.LABEL_HEAD, "other_columns_fixed_ids": (0, 1)}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
         generator = torch.manual_seed(seed=42)
         target = kwargs["target"]
-        self.df = kwargs["df"] = pandas.DataFrame(
+        self.df = kwargs["df"] = pd.DataFrame(
             data={
                 f"{target}_id": range(self.dataset.num_entities),
                 "score": torch.rand(size=(self.dataset.num_entities,), generator=generator),
@@ -71,7 +71,7 @@ class TriplePredictionsTest(cases.PredictionTestCase):
             )
         }
         data["score"] = torch.rand(size=(5,), generator=generator).numpy()
-        self.df = kwargs["df"] = pandas.DataFrame(data=data)
+        self.df = kwargs["df"] = pd.DataFrame(data=data)
         return kwargs
 
 
@@ -101,10 +101,10 @@ class AllScoreConsumerTestCase(cases.ScoreConsumerTests):
     """Test all score consumer."""
 
     cls = pykeen.predict.AllScoreConsumer
-    kwargs = dict(
-        num_entities=cases.ScoreConsumerTests.num_entities,
-        num_relations=cases.ScoreConsumerTests.num_entities,
-    )
+    kwargs = {
+        "num_entities": cases.ScoreConsumerTests.num_entities,
+        "num_relations": cases.ScoreConsumerTests.num_entities,
+    }
 
 
 class ScoreConsumerMetaTestCase(unittest_templates.MetaTestCase[pykeen.predict.ScoreConsumer]):
@@ -114,12 +114,13 @@ class ScoreConsumerMetaTestCase(unittest_templates.MetaTestCase[pykeen.predict.S
     base_test = cases.ScoreConsumerTests
 
 
-@pytest.mark.parametrize(["num_entities", "num_relations"], [(3, 2)])
+@pytest.mark.parametrize(("num_entities", "num_relations"), [(3, 2)])
 def test_consume_scores(num_entities: int, num_relations: int):
     """Test for consume_scores."""
     dataset = pykeen.predict.AllPredictionDataset(num_entities=num_entities, num_relations=num_relations)
     model = pykeen.models.mocks.FixedModel(
-        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=False)
+        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations),
+        use_inverse_triples=False,
     )
     consumer = pykeen.predict.CountScoreConsumer()
     pykeen.predict.consume_scores(model, dataset, consumer)
@@ -127,12 +128,12 @@ def test_consume_scores(num_entities: int, num_relations: int):
     assert consumer.score_count == num_relations * num_entities**2
 
 
-def _iter_predict_all_inputs() -> Iterable[tuple[pykeen.models.Model, int | None, pykeen.typing.Target, int]]:
+def _iter_predict_all_inputs() -> Iterable[tuple[pykeen.models.Model, int | None, pykeen.typing.Target, int | None]]:
     """Iterate over test inputs for predict_all."""
     # use a small model, since operation is expensive
     num_entities, num_relations = 3, 2
     model = pykeen.models.mocks.FixedModel(
-        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=False)
+        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations)
     )
     # all scores, automatic batch size
     yield model, None, pykeen.typing.LABEL_TAIL, None
@@ -146,12 +147,13 @@ def _iter_predict_all_inputs() -> Iterable[tuple[pykeen.models.Model, int | None
     yield model, 3, pykeen.typing.LABEL_RELATION, None
     # model with inverse relations
     model = pykeen.models.mocks.FixedModel(
-        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations, create_inverse_triples=True)
+        triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations),
+        use_inverse_triples=True,
     )
     yield model, None, pykeen.typing.LABEL_TAIL, None
 
 
-def _check_score_pack(pack: pykeen.predict.ScorePack, model: pykeen.models.Model, num_triples: int):
+def _check_score_pack(pack: pykeen.predict.ScorePack, model: pykeen.models.Model, num_triples: int) -> None:
     """Check store pack properties."""
     assert isinstance(pack, pykeen.predict.ScorePack)
     # check type
@@ -168,8 +170,8 @@ def _check_score_pack(pack: pykeen.predict.ScorePack, model: pykeen.models.Model
     assert pack.result[:, 1].max() < model.num_relations
 
 
-@pytest.mark.parametrize(["model", "k", "target", "batch_size"], _iter_predict_all_inputs())
-def test_predict_all(model: pykeen.models.Model, k: int | None, target: pykeen.typing.Target, batch_size: int):
+@pytest.mark.parametrize(("model", "k", "target", "batch_size"), list(_iter_predict_all_inputs()))
+def test_predict_all(model: pykeen.models.Model, k: int | None, target: pykeen.typing.Target, batch_size: int) -> None:
     """Test the predict method."""
     pack = pykeen.predict.predict_all(model=model, k=k, target=target, batch_size=batch_size)
     _check_score_pack(
@@ -177,11 +179,12 @@ def test_predict_all(model: pykeen.models.Model, k: int | None, target: pykeen.t
     )
 
 
-def test_predict_top_k_consistency():
+def test_predict_top_k_consistency() -> None:
     """Test consistency of top-k scoring."""
     ks = [5, 10]
     model = pykeen.models.mocks.FixedModel(
-        triples_factory=KGInfo(num_entities=3, num_relations=5, create_inverse_triples=False)
+        triples_factory=KGInfo(num_entities=3, num_relations=5),
+        use_inverse_triples=False,
     )
     dfs = [
         pykeen.predict.predict_all(model=model, k=k)
@@ -192,7 +195,7 @@ def test_predict_top_k_consistency():
     ]
     assert set(dfs[0].columns) == set(dfs[0].columns)
     for column in dfs[0].columns:
-        numpy.testing.assert_equal(dfs[0][column].values, dfs[1][column].values)
+        np.testing.assert_equal(dfs[0][column].values, dfs[1][column].values)
 
 
 def _iter_predict_triples_inputs() -> Iterable[
@@ -216,13 +219,13 @@ def _iter_predict_triples_inputs() -> Iterable[
     # single labeled triple
     yield model, labeled_list[0], factory, None
     # model with inverse relations
-    dataset = Nations(create_inverse_triples=True)
+    dataset = Nations()
     factory = dataset.training
-    model = pykeen.models.mocks.FixedModel(triples_factory=factory)
+    model = pykeen.models.mocks.FixedModel(triples_factory=factory, use_inverse_triples=True)
     yield model, factory.mapped_triples[:3], None, None
 
 
-@pytest.mark.parametrize(["model", "triples", "triples_factory", "batch_size"], _iter_predict_triples_inputs())
+@pytest.mark.parametrize(("model", "triples", "triples_factory", "batch_size"), list(_iter_predict_triples_inputs()))
 def test_predict_triples(
     model: pykeen.models.Model,
     triples: AnyTriples,
@@ -233,7 +236,7 @@ def test_predict_triples(
     pack = pykeen.predict.predict_triples(
         model=model, triples=triples, triples_factory=triples_factory, batch_size=batch_size
     )
-    if not isinstance(triples, torch.Tensor | numpy.ndarray) and isinstance(triples[0], str):
+    if not isinstance(triples, torch.Tensor | np.ndarray) and isinstance(triples[0], str):
         num_triples = 1
     else:
         num_triples = len(triples)
@@ -267,12 +270,12 @@ def _iter_get_input_batch_inputs() -> Iterable[
     yield factory, None, 1, "uk", pykeen.typing.LABEL_HEAD
 
 
-@pytest.mark.parametrize(["factory", "head", "relation", "tail", "exp_target"], _iter_get_input_batch_inputs())
+@pytest.mark.parametrize(("factory", "head", "relation", "tail", "exp_target"), list(_iter_get_input_batch_inputs()))
 def test_get_input_batch(
     factory: CoreTriplesFactory | None,
-    head: None | int | str,
-    relation: None | int | str,
-    tail: None | int | str,
+    head: int | str | None,
+    relation: int | str | None,
+    tail: int | str | None,
     exp_target: pykeen.typing.Target,
 ):
     """Test input batch construction for target prediction."""
@@ -288,7 +291,7 @@ def test_get_input_batch(
 
 
 def _iter_get_targets_inputs() -> Iterable[
-    tuple[None | torch.Tensor | Collection[str | int], CoreTriplesFactory | None, bool]
+    tuple[torch.Tensor | Collection[str | int] | None, CoreTriplesFactory | None, bool]
 ]:
     """Iterate over test inputs for _get_targets."""
     factory = Nations().training
@@ -310,10 +313,10 @@ def _iter_get_targets_inputs() -> Iterable[
 
 
 @pytest.mark.parametrize(
-    ["ids", "factory", "entity", "exp_labels", "exp_ids", "exp_tensor"], _iter_get_targets_inputs()
+    ("ids", "factory", "entity", "exp_labels", "exp_ids", "exp_tensor"), _iter_get_targets_inputs()
 )
 def test_get_targets(
-    ids: None | torch.Tensor | Collection[str | int],
+    ids: torch.Tensor | Collection[str | int] | None,
     factory: CoreTriplesFactory | None,
     entity: bool,
     exp_labels: Sequence[str] | None,
@@ -355,14 +358,16 @@ def _iter_predict_target_inputs() -> Iterable[
         yield model, 0, 1, None, factory_, [0, 3, 7]
 
 
-@pytest.mark.parametrize(["model", "head", "relation", "tail", "factory", "targets"], _iter_predict_target_inputs())
+@pytest.mark.parametrize(
+    ("model", "head", "relation", "tail", "factory", "targets"), list(_iter_predict_target_inputs())
+)
 def test_predict_target(
     model: pykeen.models.Model,
-    head: None | int | str,
-    relation: None | int | str,
-    tail: None | int | str,
+    head: int | str | None,
+    relation: int | str | None,
+    tail: int | str | None,
     factory: CoreTriplesFactory | None,
-    targets: None | torch.LongTensor | Sequence[int | str],
+    targets: torch.LongTensor | Sequence[int | str] | None,
 ):
     """Test target scoring."""
     pred = pykeen.predict.predict_target(
@@ -372,8 +377,27 @@ def test_predict_target(
     assert pred.factory == factory
 
 
+@pytest.mark.parametrize("targets", [None, [1, 2, 3]])
+def test_predict_relation_target_with_inverse_triples(targets: Sequence[int] | None):
+    """Test that relation prediction reports "real" relation IDs when using inverse relations."""
+    factory = Nations().training
+    model = pykeen.models.mocks.FixedModel(triples_factory=factory, use_inverse_triples=False)
+    pred = pykeen.predict.predict_target(model=model, head=0, tail=1, triples_factory=factory, targets=targets)
+
+    # the IDs have to be the "real" ones, i.e., match the factory's relation labeling ...
+    expected_ids = set(range(factory.real_num_relations)) if targets is None else set(targets)
+    assert set(pred.df["relation_id"]) == expected_ids
+    # ... and be consistent with the labels
+    assert all(
+        factory.relation_to_id[label] == identifier
+        for identifier, label in zip(pred.df["relation_id"], pred.df["relation_label"], strict=True)
+    )
+    # ... such that they can be compared against the factory's triples
+    pred.add_membership_columns(training=factory)
+
+
 @pytest.mark.parametrize(
-    ["heads", "relations", "tails", "target"],
+    ("heads", "relations", "tails", "target"),
     [
         # tail prediction
         ([1, 2], [3], None, pykeen.typing.LABEL_TAIL),

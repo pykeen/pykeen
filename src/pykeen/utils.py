@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import ftplib
 import functools
 import itertools as itt
@@ -22,10 +23,11 @@ from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
 from typing import (
+    IO,
     Any,
     Generic,
-    TextIO,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -41,75 +43,93 @@ from torch import nn
 from typing_extensions import ParamSpec
 
 from .constants import PYKEEN_BENCHMARKS
-from .typing import BoolTensor, DeviceHint, FloatTensor, LongTensor, MappedTriples, TorchRandomHint
+from .typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    BoolTensor,
+    DeviceHint,
+    FloatTensor,
+    HeadRepresentation,
+    LongTensor,
+    MappedTriples,
+    RelationRepresentation,
+    TailRepresentation,
+    Target,
+    TorchRandomHint,
+)
 from .version import get_git_hash
 
 __all__ = [
-    "at_least_eps",
-    "broadcast_upgrade_to_sequences",
-    "compose",
-    "clamp_norm",
-    "compact_mapping",
-    "create_relation_to_entity_set_mapping",
-    "ensure_complex",
-    "ensure_torch_random_state",
-    "format_relative_comparison",
-    "invert_mapping",
-    "random_non_negative_int",
-    "resolve_device",
-    "split_complex",
-    "normalize_string",
-    "get_until_first_blank",
-    "flatten_dictionary",
-    "set_random_seed",
+    "Bias",
+    "ExtraReprMixin",
     "NoRandomSeedNecessary",
     "Result",
-    "fix_dataclass_init_docs",
-    "get_benchmark",
-    "upgrade_to_sequence",
-    "ensure_tuple",
-    "unpack_singletons",
-    "extend_batch",
-    "check_shapes",
     "all_in_bounds",
-    "view_complex",
-    "combine_complex",
-    "get_model_io",
-    "get_json_bytes_io",
-    "get_df_io",
-    "ensure_ftp_directory",
-    "get_batchnorm_modules",
-    "get_dropout_modules",
-    "calculate_broadcasted_elementwise_result_shape",
-    "estimate_cost_of_sequence",
-    "get_optimal_sequence",
-    "tensor_sum",
-    "tensor_product",
-    "negative_norm_of_sum",
-    "negative_norm",
-    "project_entity",
-    "get_expected_norm",
-    "Bias",
-    "complex_normalize",
-    "lp_norm",
-    "powersum_norm",
-    "get_devices",
-    "get_preferred_device",
-    "triple_tensor_to_set",
-    "is_triple_tensor_subset",
-    "logcumsumexp",
-    "get_connected_components",
-    "normalize_path",
-    "get_edge_index",
-    "prepare_filter_triples",
-    "nested_get",
-    "rate_limited",
-    "ExtraReprMixin",
-    "einsum",
-    "isin_many_dim",
-    "split_workload",
+    "at_least_eps",
     "batched_dot",
+    "broadcast_index_shapes",
+    "broadcast_upgrade_to_sequences",
+    "calculate_broadcasted_elementwise_result_shape",
+    "check_shapes",
+    "clamp_norm",
+    "combine_complex",
+    "compact_mapping",
+    "complex_normalize",
+    "compose",
+    "create_relation_to_entity_set_mapping",
+    "einsum",
+    "ensure_complex",
+    "ensure_ftp_directory",
+    "ensure_torch_random_state",
+    "ensure_tuple",
+    "estimate_cost_of_sequence",
+    "extend_batch",
+    "fix_dataclass_init_docs",
+    "flatten_dictionary",
+    "format_relative_comparison",
+    "get_batchnorm_modules",
+    "get_benchmark",
+    "get_connected_components",
+    "get_devices",
+    "get_df_io",
+    "get_dropout_modules",
+    "get_edge_index",
+    "get_expected_norm",
+    "get_json_bytes_io",
+    "get_model_io",
+    "get_optimal_sequence",
+    "get_preferred_device",
+    "get_until_first_blank",
+    "invert_mapping",
+    "is_triple_tensor_subset",
+    "isin_many_dim",
+    "logcumsumexp",
+    "lp_norm",
     "merge_kwargs",
+    "negative_norm",
+    "negative_norm_of_sum",
+    "nested_get",
+    "normalize_path",
+    "normalize_string",
+    "pad_trailing_dims",
+    "parallel_prefix_unsqueeze",
+    "powersum_norm",
+    "prefix_unsqueeze_target",
+    "prepare_filter_triples",
+    "project_entity",
+    "random_non_negative_int",
+    "rate_limited",
+    "resolve_device",
+    "set_random_seed",
+    "split_complex",
+    "split_workload",
+    "tensor_product",
+    "tensor_sum",
+    "triple_tensor_to_set",
+    "unpack_singletons",
+    "upgrade_to_sequence",
+    "view_complex",
 ]
 
 logger = logging.getLogger(__name__)
@@ -136,9 +156,12 @@ def resolve_device(device: DeviceHint = None) -> torch.device:
         device = "cuda"
     if isinstance(device, str):
         device = torch.device(device)
-    if not torch.cuda.is_available() and device.type == "cuda":
+    if device.type == "cuda" and not torch.cuda.is_available():
+        device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+        logger.warning(f"No CUDA devices were available. The model runs on {device.type}.")
+    if device.type == "mps" and not torch.backends.mps.is_available():
         device = torch.device("cpu")
-        logger.warning("No cuda devices were available. The model runs on CPU")
+        logger.warning("MPS was not available. The model runs on CPU")
     return device
 
 
@@ -196,7 +219,7 @@ def flatten_dictionary(
     sep: str = ".",
 ) -> dict[str, Any]:
     """Flatten a nested dictionary."""
-    real_prefix = tuple() if prefix is None else (prefix,)
+    real_prefix = () if prefix is None else (prefix,)
     partial_result = _flatten_dictionary(dictionary=dictionary, prefix=real_prefix)
     return {sep.join(map(str, k)): v for k, v in partial_result.items()}
 
@@ -208,7 +231,7 @@ def _flatten_dictionary(
     """Help flatten a nested dictionary."""
     result = {}
     for k, v in dictionary.items():
-        new_prefix = prefix + (k,)
+        new_prefix = (*prefix, k)
         if isinstance(v, dict):
             result.update(_flatten_dictionary(dictionary=v, prefix=new_prefix))
         else:
@@ -220,7 +243,7 @@ def clamp_norm(
     x: torch.Tensor,
     maxnorm: float,
     p: str | int = "fro",
-    dim: None | int | Iterable[int] = None,
+    dim: int | Iterable[int] | None = None,
 ) -> torch.Tensor:
     """Ensure that a tensor's norm does not exceeds some threshold.
 
@@ -272,7 +295,7 @@ def set_random_seed(seed: int) -> tuple[None, torch.Generator, None]:
         and :func:`random.seed`.
     :returns: A three tuple with None, the torch generator, and None.
     """
-    np.random.seed(seed=seed)
+    np.random.seed(seed=seed)  # noqa: NPY002
     generator = torch.manual_seed(seed=seed)
     random.seed(seed)
     return None, generator, None
@@ -306,10 +329,7 @@ def all_in_bounds(
         return False
 
     # upper bound
-    if high is not None and (x > high + a_tol).any():
-        return False
-
-    return True
+    return not (high is not None and (x > high + a_tol).any())
 
 
 def is_cudnn_error(runtime_error: RuntimeError) -> bool:
@@ -381,7 +401,7 @@ def combine_complex(
     return torch.view_as_complex(torch.stack([x_re, x_im], dim=-1))
 
 
-def fix_dataclass_init_docs(cls: type) -> type:
+def fix_dataclass_init_docs(cls: type[X]) -> type[X]:
     """Fix the ``__init__`` documentation for a :class:`dataclasses.dataclass`.
 
     :param cls: The class whose docstring needs fixing
@@ -389,7 +409,7 @@ def fix_dataclass_init_docs(cls: type) -> type:
 
     .. seealso:: https://github.com/agronholm/sphinx-autodoc-typehints/issues/123
     """
-    cls.__init__.__qualname__ = f"{cls.__name__}.__init__"  # type:ignore
+    cls.__init__.__qualname__ = f"{cls.__name__}.__init__"
     return cls
 
 
@@ -423,12 +443,10 @@ def get_df_io(df: pd.DataFrame) -> BytesIO:
     return df_io
 
 
-def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: str) -> None:
+def ensure_ftp_directory(*, ftp: ftplib.FTP, directory: pathlib.Path | str) -> None:
     """Ensure the directory exists on the FTP server."""
-    try:
-        ftp.mkd(directory)
-    except ftplib.error_perm:
-        pass  # its fine...
+    with contextlib.suppress(ftplib.error_perm):  # its fine...
+        ftp.mkd(pathlib.Path(directory).as_posix())
 
 
 K = TypeVar("K")
@@ -500,6 +518,30 @@ def calculate_broadcasted_elementwise_result_shape(
     return tuple(max(a, b) for a, b in zip(first, second, strict=False))
 
 
+def pad_trailing_dims(x: torch.Tensor, ndim: int) -> torch.Tensor:
+    """Append singleton dimensions until the tensor has the given number of dimensions.
+
+    This is useful for tensors which are aligned from the *left*, e.g., index tensors whose batch dimensions come
+    first, since :mod:`torch` broadcasts from the right.
+
+    :param x:
+        the tensor
+    :param ndim:
+        the desired number of dimensions; must be at least `x.ndim`
+
+    :raises ValueError:
+        if the tensor already has more than the desired number of dimensions
+
+    :return:
+        the tensor with trailing singleton dimensions appended
+    """
+    if ndim < x.ndim:
+        raise ValueError(f"Cannot reduce a tensor of shape {tuple(x.shape)} to {ndim} dimensions.")
+    if ndim == x.ndim:
+        return x
+    return x.view(*x.shape, *(1,) * (ndim - x.ndim))
+
+
 def estimate_cost_of_sequence(
     shape: tuple[int, ...],
     *other_shapes: tuple[int, ...],
@@ -510,7 +552,7 @@ def estimate_cost_of_sequence(
             np.prod,
             itt.islice(
                 itt.accumulate(
-                    (shape,) + other_shapes,
+                    (shape, *other_shapes),
                     calculate_broadcasted_elementwise_result_shape,
                 ),
                 1,
@@ -577,7 +619,7 @@ def _reorder(
         return tensors
     # determine optimal processing order
     shapes = tuple(tuple(t.shape) for t in tensors)
-    if len(set(s[0] for s in shapes if s)) < 2:
+    if len({s[0] for s in shapes if s}) < 2:
         # heuristic
         return tensors
     order = get_optimal_sequence(*shapes)[1]
@@ -678,9 +720,7 @@ def project_entity(
     e_bot[..., :change_dim] += e[..., :change_dim]
 
     # Enforce constraints
-    e_bot = clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
-
-    return e_bot
+    return clamp_norm(e_bot, p=2, dim=-1, maxnorm=1)
 
 
 def upgrade_to_sequence(x: X | Sequence[X]) -> Sequence[X]:
@@ -713,7 +753,7 @@ def upgrade_to_sequence(x: X | Sequence[X]) -> Sequence[X]:
     >>> upgrade_to_sequence(tuple("test"))
     ('t', 'e', 's', 't')
     """
-    return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)  # type: ignore
+    return x if (isinstance(x, Sequence) and not isinstance(x, str)) else (x,)
 
 
 def broadcast_upgrade_to_sequences(*xs: X | Sequence[X]) -> Sequence[Sequence[X]]:
@@ -838,7 +878,7 @@ def check_shapes(
     >>> check_shapes(((10, 20), "bd"), ((10, 30, 20), "bdd"), raise_on_errors=False)
     False
     """
-    dims: dict[str, tuple[int, ...]] = dict()
+    dims: dict[str, tuple[int, ...]] = {}
     errors = []
     for actual_shape, shape in x:
         if isinstance(actual_shape, torch.Tensor):
@@ -895,11 +935,10 @@ def get_expected_norm(
         # mean = scipy.stats.norm.ppf(1 - 1/d)
         # scale = scipy.stats.norm.ppf(1 - 1/d * 1/math.e) - mean
         # return scipy.stats.gumbel_r.mean(loc=mean, scale=scale)
-    elif math.isfinite(p):
+    if math.isfinite(p):
         exp_abs_norm_p = math.pow(2, p / 2) * math.gamma((p + 1) / 2) / math.sqrt(math.pi)
         return math.pow(exp_abs_norm_p * d, 1 / p)
-    else:
-        raise TypeError(f"norm not implemented for {type(p)}: {p}")
+    raise TypeError(f"norm not implemented for {type(p)}: {p}")
 
 
 class Bias(nn.Module):
@@ -1102,7 +1141,7 @@ def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collect
     :return:
         a collection of connected components, i.e., a collection of disjoint collections of node ids.
     """
-    parent: dict[X, X] = dict()
+    parent: dict[X, X] = {}
     for x, y in pairs:
         parent.setdefault(x, x)
         parent.setdefault(y, y)
@@ -1113,18 +1152,18 @@ def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collect
         if x == y:
             continue
         # make x the smaller one
-        if y < x:  # type: ignore
+        if y < x:  # type: ignore[operator]
             x, y = y, x
         # merge
         parent[y] = x
     # extract partitions
     result = defaultdict(list)
-    for k, v in parent.items():
-        result[v].append(k)
+    for k in parent:
+        result[find(x=k, parent=parent)].append(k)
     return list(result.values())
 
 
-PathType = str | pathlib.Path | TextIO
+PathType = str | pathlib.Path | IO[str]
 
 
 def normalize_path(
@@ -1160,7 +1199,7 @@ def normalize_path(
         if default is None:
             raise ValueError("If no default is provided, path cannot be None.")
         path = default
-    if isinstance(path, TextIO):
+    if isinstance(path, IO):
         path = path.name
     if isinstance(path, str):
         path = pathlib.Path(path)
@@ -1423,7 +1462,7 @@ def get_edge_index(
 
 def prepare_filter_triples(
     mapped_triples: MappedTriples,
-    additional_filter_triples: None | MappedTriples | list[MappedTriples] = None,
+    additional_filter_triples: MappedTriples | list[MappedTriples] | None = None,
     warn: bool = True,
 ) -> MappedTriples:
     """Prepare the filter triples from the evaluation triples, and additional filter triples."""
@@ -1532,17 +1571,22 @@ class ExtraReprMixin:
         """
         return ", ".join(self.iter_extra_repr())
 
-    def __repr__(self) -> str:  # noqa: D105
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.extra_repr()})"
 
 
 try:
     from opt_einsum import contract
 
-    einsum = functools.partial(contract, backend="torch")
+    _einsum_impl = functools.partial(contract, backend="torch")
     logger.info("Using opt_einsum")
 except ImportError:
-    einsum = torch.einsum
+    _einsum_impl = torch.einsum
+
+
+def einsum(*args, **kwargs):
+    """Compute an Einstein summation, using ``opt_einsum`` as a backend if it is installed."""
+    return _einsum_impl(*args, **kwargs)
 
 
 def isin_many_dim(elements: torch.Tensor, test_elements: torch.Tensor, dim: int = 0) -> BoolTensor:
@@ -1593,14 +1637,13 @@ def add_cudnn_error_hint(func: Callable[P, X]) -> Callable[P, X]:
         a decorated function
     """
 
-    # docstr-coverage: excused `wrapped`
     @functools.wraps(func)
     def wrapped(*args: P.args, **kwargs: P.kwargs) -> X:
         try:
             return func(*args, **kwargs)
         except RuntimeError as e:
             if not is_cudnn_error(e):
-                raise e
+                raise
             raise RuntimeError(
                 "\nThis code crash might have been caused by a CUDA bug, see "
                 "https://github.com/allenai/allennlp/issues/2888, "
@@ -1612,18 +1655,22 @@ def add_cudnn_error_hint(func: Callable[P, X]) -> Callable[P, X]:
 
 
 def split_workload(n: int) -> range:
-    """Split workload for multi-processing."""
+    """Split workload for multi-processing.
+
+    :param n: the total number of work items
+    :returns: the range of work items for the current data loader worker. If not in a worker process, this is
+        ``range(n)``; otherwise, the ranges of all workers form an exact, contiguous partition of ``range(n)``.
+    """
     # cf. https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset
     worker_info = torch.utils.data.get_worker_info()
     if worker_info is None:  # single-process data loading, return the full iterator
-        workload = range(n)
-    else:
-        num_workers = worker_info.num_workers
-        worker_id = worker_info.id  # 1-based
-        start = math.ceil(n / num_workers * worker_id)
-        stop = math.ceil(n / num_workers * (worker_id + 1))
-        workload = range(start, stop)
-    return workload
+        return range(n)
+    num_workers = worker_info.num_workers
+    worker_id = worker_info.id  # 0-based
+    # use exact integer arithmetic to avoid floating point rounding issues
+    start = n * worker_id // num_workers
+    stop = n * (worker_id + 1) // num_workers
+    return range(start, stop)
 
 
 def batched_dot(a: FloatTensor, b: FloatTensor) -> FloatTensor:
@@ -1666,12 +1713,10 @@ def circular_correlation(a: FloatTensor, b: FloatTensor) -> FloatTensor:
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
 
 
-# docstr-coverage:excused `overload`
 @overload
 def merge_kwargs(kwargs: Sequence[OptionalKwargs], **extra_kwargs: Any | None) -> Sequence[OptionalKwargs]: ...
 
 
-# docstr-coverage:excused `overload`
 @overload
 def merge_kwargs(kwargs: OptionalKwargs, **extra_kwargs: Any | None) -> OptionalKwargs: ...
 
@@ -1704,3 +1749,74 @@ def merge_kwargs(kwargs: OneOrManyOptionalKwargs, **extra_kwargs: Any | None) ->
             raise ValueError(f"Found inconsistency for {key=} : {extra_kwargs[key]=} vs. {kwargs[key]=}")
         kwargs[key] = value
     return kwargs
+
+
+def broadcast_index_shapes(shapes: Iterable[tuple[int, ...]]) -> tuple[int, ...]:
+    """Determine the common shape of the given index shapes.
+
+    :param shapes: the shapes of the index tensors; they must have the same number of
+        dimensions, cf. :func:`~pykeen.utils.pad_trailing_dims`
+
+    :returns: the broadcasted shape
+
+    :raises ValueError: if the shapes are not broadcastable
+    """
+    # note: this is equivalent to torch.broadcast_shapes for equal-ndim shapes, but about an order of magnitude
+    # faster, and scoring constructs one batch per call
+    materialized = list(shapes)
+    result = []
+    for sizes in zip(*materialized, strict=True):
+        if len(set(sizes) - {1}) > 1:
+            raise ValueError(f"Cannot broadcast index shapes {materialized}")
+        result.append(max(sizes))
+    return tuple(result)
+
+
+@overload
+def parallel_prefix_unsqueeze(x: Sequence[FloatTensor], ndim: int) -> Sequence[FloatTensor]: ...
+
+
+@overload
+def parallel_prefix_unsqueeze(x: FloatTensor, ndim: int) -> FloatTensor: ...
+
+
+def parallel_prefix_unsqueeze(x: FloatTensor | Sequence[FloatTensor], ndim: int) -> FloatTensor | Sequence[FloatTensor]:
+    """Prepend the given number of singleton dimensions to all representations."""
+    # note: a single view adds all leading singleton dimensions at once; prepending them is always
+    # stride-expressible, so this works for non-contiguous (e.g., transposed or expanded) inputs, too
+    prefix = (1,) * ndim
+    if not isinstance(x, Sequence):
+        return x.view(prefix + x.shape)
+    return cast(Sequence[FloatTensor], [xx.view(prefix + xx.shape) for xx in x])
+
+
+def prefix_unsqueeze_target(
+    target: Target,
+    ndim: int,
+    h: HeadRepresentation,
+    r: RelationRepresentation,
+    t: TailRepresentation,
+) -> tuple[HeadRepresentation, RelationRepresentation, TailRepresentation]:
+    """Prepend batch dimensions to the target's representations.
+
+    When the same candidates are scored for each batch element, the target's representations are looked up once,
+    with shape ``(num, *dims)``. They need the batch dimensions prepended to broadcast against the other two
+    positions, which have shape ``(*batch_shape, 1, *dims)``.
+
+    :param target: the target position
+    :param ndim: the number of batch dimensions to prepend
+    :param h: the head representations
+    :param r: the relation representations
+    :param t: the tail representations
+
+    :raises ValueError: if the target is invalid
+
+    :return: the representations, with the target's ones unsqueezed
+    """
+    if target == LABEL_HEAD:
+        return parallel_prefix_unsqueeze(h, ndim=ndim), r, t
+    if target == LABEL_RELATION:
+        return h, parallel_prefix_unsqueeze(r, ndim=ndim), t
+    if target == LABEL_TAIL:
+        return h, r, parallel_prefix_unsqueeze(t, ndim=ndim)
+    raise ValueError(f"Unknown target={target}")

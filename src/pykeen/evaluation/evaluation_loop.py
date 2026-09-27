@@ -7,8 +7,8 @@ from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping
 from typing import Any, Generic, TypeAlias, TypeVar
 
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 import torch
 from class_resolver import HintOrType, OptionalKwargs
 from torch.utils.data import Dataset
@@ -25,11 +25,9 @@ from ..utils import determine_maximum_batch_size, upgrade_to_sequence
 
 __all__ = [
     "AdditionalFilterTriplesHint",
-    # Evaluation loops
     "EvaluationLoop",
-    "LCWAEvaluationLoop",
-    # Evaluation datasets
     "LCWAEvaluationDataset",
+    "LCWAEvaluationLoop",
 ]
 
 logger = logging.getLogger(__name__)
@@ -128,7 +126,7 @@ class EvaluationLoop(Generic[BatchType]):
 
     def get_collator(self):
         """Get the collator to use for the data loader."""
-        return None
+        return
 
     def get_loader(self, batch_size: int, pin_memory: bool = True, **kwargs) -> DataLoader:
         """Create a data loader for a single evaluation round.
@@ -200,16 +198,16 @@ class FilterIndex:
     """An index structure for filtering (roughly following CSR)."""
 
     # The key-id for each triple, shape: (num_triples,)
-    triple_id_to_key_id: numpy.ndarray
+    triple_id_to_key_id: np.ndarray
 
     #: the number of targets for each key, shape: (num_unique_keys + 1,)
-    bounds: numpy.ndarray
+    bounds: np.ndarray
 
     #: the concatenation of unique targets for each key (use bounds to select appropriate sub-array)
     indices: LongTensor
 
     @classmethod
-    def from_df(cls, df: pandas.DataFrame, target: Target) -> "FilterIndex":
+    def from_df(cls, df: pd.DataFrame, target: Target) -> "FilterIndex":
         """Create index from dataframe.
 
         :param df: the dataframe, comprising columns [LABEL_HEAD, LABEL_RELATION, LABEL_TAIL]
@@ -227,7 +225,7 @@ class FilterIndex:
         # group key = everything except the prediction target
         key = [c for c in df.columns if c != target]
         # initialize data structure
-        triple_id_to_key_id = numpy.empty_like(df.index)
+        triple_id_to_key_id = np.empty_like(df.index)
         indices = []
         bounds = [0]
         # group by key
@@ -239,9 +237,9 @@ class FilterIndex:
         # convert lists to arrays
         indices = torch.as_tensor(indices)
         # instantiate
-        return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=numpy.asarray(bounds), indices=indices)
+        return cls(triple_id_to_key_id=triple_id_to_key_id, bounds=np.asarray(bounds), indices=indices)
 
-    def __getitem__(self, item: int) -> numpy.ndarray:  # noqa: D105
+    def __getitem__(self, item: int) -> np.ndarray:
         # return indices corresponding to the `item`-th triple
         key_id = self.triple_id_to_key_id[item]
         low, high = self.bounds[key_id : key_id + 2]
@@ -276,6 +274,11 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, torch.T
         if targets is None:
             targets = [LABEL_HEAD, LABEL_TAIL]
         mapped_triples = get_mapped_triples(mapped_triples=mapped_triples, factory=factory)
+        # note: a single tensor or triples factory is a valid hint, and neither has a meaningful truth value;
+        # hence we normalize to a sequence before checking whether anything was passed at all
+        additional_filter_triples = (
+            [] if additional_filter_triples is None else list(upgrade_to_sequence(additional_filter_triples))
+        )
 
         self.mapped_triples = mapped_triples
         self.num_triples = mapped_triples.shape[0]
@@ -285,13 +288,8 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, torch.T
         if filtered:
             if not additional_filter_triples:
                 logger.warning("Enabled filtered evaluation, but not additional filter triples are passed.")
-            df = pandas.DataFrame(
-                data=torch.cat(
-                    [
-                        mapped_triples,
-                        *(get_mapped_triples(x) for x in upgrade_to_sequence(additional_filter_triples or [])),
-                    ]
-                ),
+            df = pd.DataFrame(
+                data=torch.cat([mapped_triples, *(get_mapped_triples(x) for x in additional_filter_triples)]),
                 columns=COLUMN_LABELS,
             )
             self.filter_indices = {target: FilterIndex.from_df(df=df, target=target) for target in targets}
@@ -305,10 +303,10 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, torch.T
         """Return the number of targets."""
         return len(self.targets)
 
-    def __len__(self) -> int:  # noqa: D105
+    def __len__(self) -> int:
         return self.num_triples * self.num_targets
 
-    def __getitem__(self, index: int) -> tuple[Target, MappedTriples, LongTensor | None]:  # noqa: D105
+    def __getitem__(self, index: int) -> tuple[Target, MappedTriples, LongTensor | None]:
         # sorted by target -> most of the batches only have a single target
         target_id, index = divmod(index, self.num_triples)
         target = self.targets[target_id]
@@ -331,7 +329,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, torch.T
 
         # stack groups into a single tensor
         result = {}
-        for target in triples.keys():
+        for target in triples:
             target_triples = torch.stack(triples[target])
             if target in nnz:
                 batch_ids = []
@@ -392,7 +390,6 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
         )
         self.targets = targets
 
-    # docstr-coverage: inherited
     def get_collator(self):  # noqa: D102
         return LCWAEvaluationDataset.collate
 
@@ -405,16 +402,19 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
             # {(h, r, t1), (h, r, t1), ..., (h, r, tk)}
             # predict scores for all candidates
             scores = self.model.predict(hrt_batch=hrt_batch, target=target, mode=self.mode, slice_size=slice_size)
-            true_scores = dense_positive_mask = None
+            dense_positive_mask = None
+
+            # the true score is required for ranking, independent of whether the filtered protocol is used;
+            # filtering only decides whether the *other* positives are masked out beforehand.
+            batch_ids = torch.arange(scores.shape[0], device=scores.device)
+            target_ids = hrt_batch[:, TARGET_TO_INDEX[target]]
+            # shape: (batch_size, 1)
+            true_scores = scores[batch_ids, target_ids, None]
 
             # filter scores
             if self.evaluator.filtered:
                 if filter_batch is None:
                     raise AssertionError("Filter indices are required to filter scores.")
-                # extract true scores
-                batch_ids = torch.arange(scores.shape[0], device=scores.device)
-                target_ids = hrt_batch[:, TARGET_TO_INDEX[target]]
-                true_scores = scores[batch_ids, target_ids, None]
                 # replace by nan
                 scores = filter_scores_(scores=scores, filter_batch=filter_batch)
                 # rewrite true scores
@@ -422,11 +422,13 @@ class LCWAEvaluationLoop(EvaluationLoop[Mapping[Target, MappedTriples]]):
 
             # create dense positive masks
             # TODO: afaik, dense positive masks are not used on GPU -> we do not need to move the masks around
-            elif self.evaluator.requires_positive_mask:
+            # note: an evaluator may require *both* filtering and the dense masks
+            if self.evaluator.requires_positive_mask:
                 if filter_batch is None:
                     raise AssertionError("Filter indices are required to create dense positive masks.")
                 dense_positive_mask = torch.zeros_like(scores, dtype=torch.bool, device=filter_batch.device)
-                dense_positive_mask[filter_batch[:, 0], filter_batch[:, 0]] = True
+                # filter_batch is given as (batch_id, entity_id) pairs
+                dense_positive_mask[filter_batch[:, 0], filter_batch[:, 1]] = True
 
             # delegate processing of scores to the evaluator
             self.evaluator.process_scores_(

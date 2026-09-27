@@ -1,6 +1,6 @@
 """Training callbacks.
 
-Training callbacks allow for arbitrary extension of the functionality of the :class:`pykeen.training.TrainingLoop`
+Training callbacks allow for arbitrary extension of the functionality of the :class:`~pykeen.training.TrainingLoop`
 without subclassing it. Each callback instance has a ``loop`` attribute that allows access to the parent training
 loop and all of its attributes, including the model. The interaction points are similar to those of
 `Keras <https://keras.io/guides/writing_your_own_callbacks/#an-overview-of-callback-methods>`_.
@@ -79,17 +79,17 @@ from ..utils import determine_maximum_batch_size
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "callback_resolver",
-    "TrainingCallbackHint",
-    "TrainingCallback",
-    "StopperTrainingCallback",
-    "TrackerTrainingCallback",
+    "CheckpointTrainingCallback",
     "EvaluationLoopTrainingCallback",
     "EvaluationTrainingCallback",
-    "CheckpointTrainingCallback",
-    "MultiTrainingCallback",
-    "GradientNormClippingTrainingCallback",
     "GradientAbsClippingTrainingCallback",
+    "GradientNormClippingTrainingCallback",
+    "MultiTrainingCallback",
+    "StopperTrainingCallback",
+    "TrackerTrainingCallback",
+    "TrainingCallback",
+    "TrainingCallbackHint",
+    "callback_resolver",
 ]
 
 
@@ -101,29 +101,29 @@ class TrainingCallback:
         self._training_loop = None
 
     @property
-    def training_loop(self) -> training.TrainingLoop:  # noqa:D401
+    def training_loop(self) -> training.TrainingLoop:
         """The training loop."""
         if self._training_loop is None:
             raise ValueError("Callback was never initialized")
         return self._training_loop
 
     @property
-    def model(self) -> Model:  # noqa:D401
+    def model(self) -> Model:
         """The model, accessed via the training loop."""
         return self.training_loop.model
 
     @property
-    def loss(self) -> Loss:  # noqa: D401
+    def loss(self) -> Loss:
         """The loss, accessed via the training loop."""
         return self.training_loop.loss
 
     @property
-    def optimizer(self) -> optim.Optimizer:  # noqa:D401
+    def optimizer(self) -> optim.Optimizer:
         """The optimizer, accessed via the training loop."""
         return self.training_loop.optimizer
 
     @property
-    def result_tracker(self) -> ResultTracker:  # noqa: D401
+    def result_tracker(self) -> ResultTracker:
         """The result tracker, accessed via the training loop."""
         assert self.training_loop.result_tracker is not None
         return self.training_loop.result_tracker
@@ -153,12 +153,11 @@ class TrainingCallback:
 
 class TrackerTrainingCallback(TrainingCallback):
     """
-    An adapter for the :class:`pykeen.trackers.ResultTracker`.
+    An adapter for the :class:`~pykeen.trackers.ResultTracker`.
 
     It logs the loss after each epoch to the given result tracker,
     """
 
-    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         self.result_tracker.log_metrics({"loss": epoch_loss}, step=epoch)
 
@@ -179,7 +178,6 @@ class GradientNormClippingTrainingCallback(TrainingCallback):
         self.max_norm = max_norm
         self.norm_type = norm_type or 2.0
 
-    # docstr-coverage: inherited
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         clip_grad_norm_(
             parameters=self.model.get_grad_params(),
@@ -203,7 +201,6 @@ class GradientAbsClippingTrainingCallback(TrainingCallback):
         super().__init__()
         self.clip_value = clip_value
 
-    # docstr-coverage: inherited
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         clip_grad_value_(self.model.get_grad_params(), clip_value=self.clip_value)
 
@@ -271,7 +268,6 @@ class EvaluationTrainingCallback(TrainingCallback):
         self.kwargs = kwargs
         self.batch_size = self.kwargs.pop("batch_size", None)
 
-    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if epoch % self.frequency:
             return
@@ -314,7 +310,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
         :param additional_filter_triples:
             additional filter triples to use for creating the filter
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`EvaluationLoop.evaluate`
+            additional keyword-based parameters passed to :meth:`~pykeen.evaluation.EvaluationLoop.evaluate`
         """
         super().__init__()
         self.frequency = frequency
@@ -339,7 +335,6 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
             )
         return self._evaluation_loop
 
-    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if epoch % self.frequency:
             return
@@ -348,7 +343,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
 
 
 class StopperTrainingCallback(TrainingCallback):
-    """An adapter for the :class:`pykeen.stopper.Stopper`."""
+    """An adapter for the :class:`~pykeen.stoppers.stopper.Stopper`."""
 
     def __init__(
         self,
@@ -376,7 +371,6 @@ class StopperTrainingCallback(TrainingCallback):
         self.last_best_epoch = last_best_epoch
         self.best_epoch_model_file_path = best_epoch_model_file_path
 
-    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         if self.stopper.should_evaluate(epoch):
             # TODO how to pass inductive mode
@@ -394,36 +388,30 @@ class OptimizerTrainingCallback(TrainingCallback):
     """Use optimizer to update parameters."""
 
     # TODO: we may want to separate TrainingCallback from pre-step callbacks in the future
-    def __init__(self, only_size_probing: bool = False, pre_step_callbacks: Sequence[TrainingCallback] | None = None):
+    def __init__(self, pre_step_callbacks: Sequence[TrainingCallback] | None = None):
         """Initialize the callback.
 
-        :param only_size_probing:
-            whether this is during size probing, where we do not want to apply weight changes
         :param pre_step_callbacks:
             callbacks to apply before making the step, e.g., for gradient clipping.
         """
         super().__init__()
-        self.only_size_probing = only_size_probing
         self.pre_step_callbacks = tuple(pre_step_callbacks or [])
 
-    # docstr-coverage: inherited
-    def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
+    def pre_batch(self, **kwargs: Any) -> None:
         # Recall that torch *accumulates* gradients. Before passing in a
         # new instance, you need to zero out the gradients from the old instance
 
         # note: we want to run this step during size probing to cleanup any remaining grads
         self.optimizer.zero_grad(set_to_none=True)
 
-    # docstr-coverage: inherited
-    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
+    def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:
         # pre-step callbacks
         for cb in self.pre_step_callbacks:
             cb.pre_step(epoch=epoch, **kwargs)
 
-        # when called by batch_size_search(), the parameter update should not be applied.
-        if not self.only_size_probing:
-            # update parameters according to optimizer
-            self.optimizer.step()
+        # update parameters according to optimizer
+        # note: we also apply this during size probing to account for the optimizer's memory requirements
+        self.optimizer.step()
 
         # After changing applying the gradients to the embeddings, the model is notified that the forward
         # constraints are no longer applied
@@ -435,8 +423,7 @@ class OptimizerTrainingCallback(TrainingCallback):
 class LearningRateSchedulerTrainingCallback(TrainingCallback):
     """Update learning rate scheduler."""
 
-    # docstr-coverage: inherited
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         if self.training_loop.lr_scheduler is None:
             raise ValueError(f"{self} can only be called when a learning rate schedule is used.")
         self.training_loop.lr_scheduler.step(epoch=epoch)
@@ -533,18 +520,16 @@ class EvaluationLossTrainingCallback(TrainingCallback):
         self.prefix = prefix
         self.label_smoothing = label_smoothing
         if data_loader_kwargs is None:
-            data_loader_kwargs = dict(sampler=None)
+            data_loader_kwargs = {"sampler": None}
         self.data_loader_kwargs = data_loader_kwargs
         self.maximum_batch_size = maximum_batch_size
         self.callback = MultiTrainingCallback(callbacks=callbacks, callbacks_kwargs=callbacks_kwargs)
 
-    # docstr-coverage: inherited
-    def register_training_loop(self, training_loop: training.TrainingLoop) -> None:  # noqa: D102
+    def register_training_loop(self, training_loop: training.TrainingLoop) -> None:
         super().register_training_loop(training_loop)
         self.callback.register_training_loop(training_loop=training_loop)
 
-    # docstr-coverage: inherited
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
         from .lcwa import LCWATrainingLoop
 
         # set to evaluation mode
@@ -569,7 +554,7 @@ class EvaluationLossTrainingCallback(TrainingCallback):
             epoch=epoch,
             **self.data_loader_kwargs,
         )
-        self.result_tracker.log_metrics(metrics=dict(loss=loss), step=epoch, prefix=self.prefix)
+        self.result_tracker.log_metrics(metrics={"loss": loss}, step=epoch, prefix=self.prefix)
 
 
 #: A hint for constructing a :class:`MultiTrainingCallback`
@@ -604,7 +589,6 @@ class MultiTrainingCallback(TrainingCallback):
         super().__init__()
         self.callbacks = callback_resolver.make_many(callbacks, callbacks_kwargs) if callbacks else []
 
-    # docstr-coverage: inherited
     def register_training_loop(self, training_loop: training.TrainingLoop) -> None:  # noqa: D102
         super().register_training_loop(training_loop=training_loop)
         for callback in self.callbacks:
@@ -616,32 +600,26 @@ class MultiTrainingCallback(TrainingCallback):
         if self._training_loop is not None:
             callback.register_training_loop(self._training_loop)
 
-    # docstr-coverage: inherited
     def pre_batch(self, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.pre_batch(**kwargs)
 
-    # docstr-coverage: inherited
     def on_batch(self, epoch: int, batch, batch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.on_batch(epoch=epoch, batch=batch, batch_loss=batch_loss, **kwargs)
 
-    # docstr-coverage: inherited
     def post_batch(self, epoch: int, batch, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_batch(epoch=epoch, batch=batch, **kwargs)
 
-    # docstr-coverage: inherited
     def pre_step(self, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.pre_step(**kwargs)
 
-    # docstr-coverage: inherited
     def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_epoch(epoch=epoch, epoch_loss=epoch_loss, **kwargs)
 
-    # docstr-coverage: inherited
     def post_train(self, losses: list[float], **kwargs: Any) -> None:  # noqa: D102
         for callback in self.callbacks:
             callback.post_train(losses=losses, **kwargs)
@@ -663,19 +641,19 @@ class CheckpointTrainingCallback(TrainingCallback):
         Create callback.
 
         :param schedule:
-            a selection of the checkpoint schedule, cf. :const:`pykeen.checkpoints.scheduler_resolver`
+            a selection of the checkpoint schedule, cf. :const:`~pykeen.checkpoints.schedule_resolver`
         :param schedule_kwargs:
             keyword-based parameters to instantiate the checkpoint schedule, if necessary,
-            cf. :const:`pykeen.checkpoints.scheduler_resolver`
+            cf. :const:`~pykeen.checkpoints.schedule_resolver`
         :param keeper:
-            a selection of the checkpoint retention logic, cf. :const:`pykeen.checkpoints.keeper_resolver`.
+            a selection of the checkpoint retention logic, cf. :const:`~pykeen.checkpoints.keeper_resolver`.
             `None` corresponds to keeping all checkpoints (which were created).
         :param keeper_kwargs:
             keyword-based parameters to instantiate the retention policy, if necessary,
-            cf. :const:`pykeen.checkpoints.keeper_resolver`
+            cf. :const:`~pykeen.checkpoints.keeper_resolver`
         :param root:
             the checkpoint root directory. Defaults to a fresh sub-directory of
-            :const:`pykeen.constants.PYKEEN_CHECKPOINTS`
+            :const:`~pykeen.constants.PYKEEN_CHECKPOINTS`
         :param name_template:
             a name template for the checkpoint file. Can contain a format key `{epoch}` which is replaced by the actual
             epoch. This callback does not take care of overwriting existing files, i.e., if you want to keep multiple
@@ -684,7 +662,7 @@ class CheckpointTrainingCallback(TrainingCallback):
         super().__init__()
         self.schedule = schedule_resolver.make(schedule, schedule_kwargs)
         self.keeper = keeper_resolver.make_safe(keeper, keeper_kwargs)
-        self.checkpoint_store: dict[int, pathlib.Path] = dict()
+        self.checkpoint_store: dict[int, pathlib.Path] = {}
         if root is None:
             while (path := PYKEEN_CHECKPOINTS.joinpath(str(uuid.uuid4()))).exists():
                 continue
@@ -694,8 +672,7 @@ class CheckpointTrainingCallback(TrainingCallback):
         self.name_template = name_template
         self.root.mkdir(parents=True, exist_ok=True)
 
-    # docstr-coverage: inherited
-    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:
+    def post_epoch(self, epoch: int, epoch_loss: float, **kwargs: Any) -> None:  # noqa: D102
         # use 1-based epochs
         epoch += 1
         if not self.schedule(epoch):

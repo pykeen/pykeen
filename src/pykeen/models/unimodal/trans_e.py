@@ -33,10 +33,10 @@ class TransE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default: ClassVar[Mapping[str, Any]] = dict(
-        embedding_dim=DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
-        scoring_fct_norm=dict(type=int, low=1, high=2),
-    )
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
+        "scoring_fct_norm": {"type": int, "low": 1, "high": 2},
+    }
 
     def __init__(
         self,
@@ -62,11 +62,11 @@ class TransE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
             Whether to use the p-th power of the $L_p$ norm. It has the advantage of being differentiable around 0,
             and numerically more stable.
 
-        :param entity_initializer: Entity initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_`.
+        :param entity_initializer: Entity initializer function. Defaults to :func:`~pykeen.nn.init.xavier_uniform_`.
         :param entity_constrainer: Entity constrainer function. Defaults to :func:`torch.nn.functional.normalize`.
 
         :param relation_initializer:
-            Relation initializer function. Defaults to :func:`pykeen.nn.init.xavier_uniform_norm_`.
+            Relation initializer function. Defaults to :func:`~pykeen.nn.init.xavier_uniform_norm_`.
         :param relation_constrainer: Relation constrainer function. Defaults to none.
 
         :param regularizer:
@@ -86,20 +86,20 @@ class TransE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         """
         super().__init__(
             interaction=TransEInteraction,
-            interaction_kwargs=dict(p=scoring_fct_norm, power_norm=power_norm),
-            entity_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=entity_initializer,
-                constrainer=entity_constrainer,
-                regularizer=regularizer,
-                regularizer_kwargs=regularizer_kwargs,
-            ),
-            relation_representations_kwargs=dict(
-                shape=embedding_dim,
-                initializer=relation_initializer,
-                constrainer=relation_constrainer,
-                regularizer=regularizer,
-                regularizer_kwargs=regularizer_kwargs,
-            ),
+            interaction_kwargs={"p": scoring_fct_norm, "power_norm": power_norm},
+            entity_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": entity_initializer,
+                "constrainer": entity_constrainer,
+                "regularizer": regularizer,
+                "regularizer_kwargs": regularizer_kwargs,
+            },
+            relation_representations_kwargs={
+                "shape": embedding_dim,
+                "initializer": relation_initializer,
+                "constrainer": relation_constrainer,
+                "regularizer": regularizer,
+                "regularizer_kwargs": regularizer_kwargs,
+            },
             **kwargs,
         )

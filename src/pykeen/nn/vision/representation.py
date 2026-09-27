@@ -6,14 +6,13 @@ Generally requires :mod:`torchvision` to be installed.
 import functools
 import pathlib
 from collections.abc import Callable, Sequence
-from typing import Any, TypeAlias
+from typing import Any, Self, TypeAlias
 
 import torch
 import torch.nn
 import torch.utils.data
 from class_resolver import OptionalKwargs
 from docdata import parse_docdata
-from typing_extensions import Self
 
 from .cache import WikidataImageCache
 from ..representation import BackfillRepresentation, Representation
@@ -30,11 +29,11 @@ except ImportError:
     models = vision_transforms = Image = None
 
 __all__ = [
+    "ImageHint",
+    "ImageHints",
     "VisionDataset",
     "VisualRepresentation",
     "WikidataVisualRepresentation",
-    "ImageHint",
-    "ImageHints",
 ]
 
 
@@ -83,8 +82,7 @@ class VisionDataset(torch.utils.data.Dataset):
         transforms.append(vision_transforms.ConvertImageDtype(torch.get_default_dtype()))
         self.transforms = vision_transforms.Compose(transforms=transforms)
 
-    # docstr-coverage: inherited
-    def __getitem__(self, item: int) -> torch.Tensor:  # noqa:D105
+    def __getitem__(self, item: int) -> torch.Tensor:
         _ensure_vision(self, Image)
         image = self.images[item]
         if isinstance(image, str | pathlib.Path):
@@ -95,8 +93,7 @@ class VisionDataset(torch.utils.data.Dataset):
         assert isinstance(image, torch.Tensor | Image.Image)
         return self.transforms(image)
 
-    # docstr-coverage: inherited
-    def __len__(self) -> int:  # noqa:D105
+    def __len__(self) -> int:
         return len(self.images)
 
 
@@ -186,8 +183,7 @@ class VisualRepresentation(Representation):
         """
         return pool(encoder(images)["feature"])
 
-    # docstr-coverage: inherited
-    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:  # noqa: D102
+    def _plain_forward(self, indices: LongTensor | None = None) -> FloatTensor:
         dataset = self.images
         if indices is not None:
             dataset = torch.utils.data.Subset(dataset=dataset, indices=indices)
@@ -214,23 +210,30 @@ class WikidataVisualRepresentation(BackfillRepresentation):
     """
 
     def __init__(
-        self, wikidata_ids: Sequence[str], max_id: int | None = None, image_kwargs: OptionalKwargs = None, **kwargs
+        self,
+        wikidata_ids: Sequence[str],
+        max_id: int | None = None,
+        image_kwargs: OptionalKwargs = None,
+        cache: WikidataImageCache | None = None,
+        **kwargs,
     ):
         """Initialize the representation.
 
         :param wikidata_ids: The Wikidata IDs.
         :param max_id: The total number of IDs. If provided, must match the length of ``wikidata_ids``.
         :param image_kwargs: Keyword-based parameters passed to
-            :meth:`pykeen.nn.vision.cache.WikidataImageCache.get_image_paths`.
+            :meth:`~pykeen.nn.vision.WikidataImageCache.get_image_paths`.
+        :param cache: A pre-instantiated image cache. If None, :class:`~pykeen.nn.vision.WikidataImageCache` is used.
         :param kwargs: Additional keyword-based parameters passed to
-            :class:`pykeen.nn.vision.representation.VisualRepresentation`.
+            :class:`~pykeen.nn.vision.representation.VisualRepresentation`.
 
         :raises ValueError: If the max_id does not match the number of Wikidata IDs.
         """
         max_id = max_id or len(wikidata_ids)
         if len(wikidata_ids) != max_id:
             raise ValueError(f"Inconsistent max_id={max_id} vs. len(wikidata_ids)={len(wikidata_ids)}")
-        images = WikidataImageCache().get_image_paths(wikidata_ids, **(image_kwargs or {}))
+        cache = cache or WikidataImageCache()
+        images = cache.get_image_paths(wikidata_ids, **(image_kwargs or {}))
         base_ids = [i for i, path in enumerate(images) if path is not None]
         images = [path for path in images if path is not None]
         super().__init__(
@@ -249,7 +252,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         :param triples_factory: The triples factory.
         :param for_entities: Whether to create the initializer for entities (or relations).
         :param kwargs: Additional keyword-based arguments passed to
-            :class:`pykeen.nn.vision.representation.WikidataVisualRepresentation`.
+            :class:`~pykeen.nn.vision.representation.WikidataVisualRepresentation`.
 
         :returns: A visual representation from the triples factory.
         """
@@ -272,7 +275,7 @@ class WikidataVisualRepresentation(BackfillRepresentation):
         :param dataset: The dataset; needs to have Wikidata IDs as entity names.
         :param for_entities: Whether to create the initializer for entities (or relations).
         :param kwargs: Additional keyword-based arguments passed to
-            :class:`pykeen.nn.vision.representation.WikidataVisualRepresentation`.
+            :class:`~pykeen.nn.vision.representation.WikidataVisualRepresentation`.
 
         :returns: A visual representation from the training factory in the dataset.
 

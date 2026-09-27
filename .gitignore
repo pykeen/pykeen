@@ -119,3 +119,4 @@ wandb/*
 mlruns
 doctests/
 tox2.ini
+uv.lock

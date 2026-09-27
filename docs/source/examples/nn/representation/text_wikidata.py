@@ -14,11 +14,11 @@ entity_representations = WikidataTextRepresentation.from_dataset(
 result = pipeline(
     dataset=dataset,
     model=ERModel,
-    model_kwargs=dict(
-        interaction="distmult",
-        entity_representations=entity_representations,
-        relation_representation_kwargs=dict(
-            shape=entity_representations.shape,
-        ),
-    ),
+    model_kwargs={
+        "interaction": "distmult",
+        "entity_representations": entity_representations,
+        "relation_representation_kwargs": {
+            "shape": entity_representations.shape,
+        },
+    },
 )

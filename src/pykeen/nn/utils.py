@@ -11,12 +11,11 @@ from ..typing import FloatTensor, LongTensor, OneOrSequence
 from ..utils import upgrade_to_sequence
 
 __all__ = [
+    "ShapeError",
+    "adjacency_tensor_to_stacked_matrix",
     "apply_optional_bn",
     "safe_diagonal",
-    "adjacency_tensor_to_stacked_matrix",
     "use_horizontal_stacking",
-    "ShapeError",
-    # Caches
 ]
 
 logger = logging.getLogger(__name__)
@@ -45,10 +44,7 @@ def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Ten
             a = a.to_dense()
         # note: torch.sparse.mm only works for COO matrices;
         #       @ only works for CSR matrices
-        if matrix.is_sparse_csr:
-            a = matrix @ a
-        else:
-            a = torch.sparse.mm(matrix, a)
+        a = matrix @ a if matrix.is_sparse_csr else torch.sparse.mm(matrix, a)
         yield a
 
 

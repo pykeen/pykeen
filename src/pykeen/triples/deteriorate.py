@@ -8,7 +8,7 @@ import click
 import more_click
 import torch
 
-from pykeen.triples import TriplesFactory
+from pykeen.triples import CoreTriplesFactory
 from pykeen.typing import TorchRandomHint
 from pykeen.utils import ensure_torch_random_state
 
@@ -20,11 +20,11 @@ logger = logging.getLogger(__name__)
 
 
 def deteriorate(
-    reference: TriplesFactory,
-    *others: TriplesFactory,
+    reference: CoreTriplesFactory,
+    *others: CoreTriplesFactory,
     n: int | float,
     random_state: TorchRandomHint = None,
-) -> list[TriplesFactory]:
+) -> list[CoreTriplesFactory]:
     """Remove n triples from the reference set.
 
     :param reference: The reference triples factory
@@ -39,11 +39,8 @@ def deteriorate(
     :raises ValueError: If a float is given for n that isn't between 0 and 1
     """
     # TODO: take care that triples aren't removed that are the only ones with any given entity
-    if reference.create_inverse_triples:
-        raise NotImplementedError
-
     if isinstance(n, float):
-        if n < 0 or 1 <= n:
+        if n < 0 or n >= 1:
             raise ValueError
         n = int(n * reference.num_triples)
 

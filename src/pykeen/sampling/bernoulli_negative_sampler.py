@@ -33,6 +33,10 @@ class BernoulliNegativeSampler(NegativeSampler):
     actual positive triples $(h,r,t) \in \mathcal{K}$ will be removed.
     """
 
+    # note: the corrupted position is chosen per negative sample from a data-dependent (relation-specific)
+    # probability, so the groups are ragged and cannot be laid out rectangularly without padding, which would cost
+    # more interaction compute than it saves on lookups. Hence, `supports_grouped_corruption` stays `False`.
+
     def __init__(
         self,
         *,
@@ -44,7 +48,7 @@ class BernoulliNegativeSampler(NegativeSampler):
         :param mapped_triples:
             the positive training triples
         :param kwargs:
-            Additional keyword based arguments passed to :class:`pykeen.sampling.NegativeSampler`.
+            Additional keyword based arguments passed to :class:`~pykeen.sampling.NegativeSampler`.
         """
         super().__init__(mapped_triples=mapped_triples, **kwargs)
         # Preprocessing: Compute corruption probabilities
@@ -68,7 +72,6 @@ class BernoulliNegativeSampler(NegativeSampler):
             # Set parameter for Bernoulli distribution
             self.corrupt_head_probability[r] = tph / (tph + hpt)
 
-    # docstr-coverage: inherited
     def corrupt_batch(self, positive_batch: LongTensor) -> LongTensor:  # noqa: D102
         batch_shape = positive_batch.shape[:-1]
 
@@ -92,7 +95,6 @@ class BernoulliNegativeSampler(NegativeSampler):
                 batch=negative_batch,
                 index=index,
                 selection=mask,
-                size=mask.sum(),
                 max_index=self.num_entities,
             )
 

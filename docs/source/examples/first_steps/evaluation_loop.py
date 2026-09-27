@@ -21,10 +21,10 @@ _ = training_loop.train(
     batch_size=256,
     # NEW: validation evaluation callback
     callbacks="evaluation-loop",
-    callbacks_kwargs=dict(
-        prefix="validation",
-        factory=dataset.validation,
-    ),
+    callbacks_kwargs={
+        "prefix": "validation",
+        "factory": dataset.validation,
+    },
 )
 # Pick an evaluation loop (NEW)
 evaluation_loop = LCWAEvaluationLoop(

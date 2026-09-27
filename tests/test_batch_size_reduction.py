@@ -36,7 +36,7 @@ def triples_factory() -> CoreTriplesFactory:
     return Nations().training
 
 
-@pytest.fixture()
+@pytest.fixture
 def model(triples_factory: CoreTriplesFactory) -> Iterator[MockModel]:
     """Return a fixture for a model."""
     model = MockModel(triples_factory=triples_factory)
@@ -66,7 +66,7 @@ def test_predict_triples(model: MockModel, triples_factory: CoreTriplesFactory) 
     assert score_pack
 
 
-@pytest.fixture()
+@pytest.fixture
 def evaluator() -> RankBasedEvaluator:
     """Return a fixture for an evaluator."""
     return RankBasedEvaluator()
