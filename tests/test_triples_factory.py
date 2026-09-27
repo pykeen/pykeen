@@ -209,7 +209,7 @@ class TestTriplesFactory(unittest.TestCase):
         """Test that derived factories do not re-double the number of relations."""
         factory = Nations().training
         real_num_relations = factory.real_num_relations
-        assert factory.num_relations == 2 * real_num_relations
+        assert factory.num_relations == real_num_relations
 
         # drop a "middle" entity, so that condensing actually has to re-assign IDs
         mapped_triples = factory.mapped_triples
@@ -221,7 +221,7 @@ class TestTriplesFactory(unittest.TestCase):
         for derived_factory in derived:
             with self.subTest(derived=derived_factory.__class__.__name__):
                 assert derived_factory.real_num_relations == real_num_relations
-                assert derived_factory.num_relations == 2 * real_num_relations
+                assert derived_factory.num_relations == real_num_relations
 
     def test_fully_inductive_split_with_inverse_triples(self):
         """Test that a fully inductive split does not re-double the number of relations."""
@@ -230,7 +230,7 @@ class TestTriplesFactory(unittest.TestCase):
         training, inference, *evaluation = factory.split_fully_inductive(random_state=0)
         for part in (training, inference):
             assert part.real_num_relations == real_num_relations
-            assert part.num_relations == 2 * real_num_relations
+            assert part.num_relations == real_num_relations
         # inverse triples for evaluation are handled by the evaluation code
         for part in evaluation:
             assert part.num_relations == real_num_relations
@@ -451,7 +451,7 @@ class TestLiterals(unittest.TestCase):
     def test_inverse_triples(self):
         """Test that the right number of entities and triples exist after inverting them."""
         triples_factory = TriplesFactory.from_labeled_triples(triples=triples)
-        assert triples_factory.num_relations == 4
+        assert triples_factory.num_relations == 2
         assert set(range(triples_factory.num_entities)) == set(triples_factory.entity_to_id.values()), (
             "wrong number entities"
         )

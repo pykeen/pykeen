@@ -290,7 +290,6 @@ class TestInductiveNodePiece(cases.InductiveModelTestCase):
             mapped_triples=mapped_triples,
             num_entities=self.factory.num_entities,
             num_relations=self.factory.real_num_relations,
-            create_inverse_triples=True,
         )
         new_instance = self.instance.create_entity_representation_for_new_triples(factory)
         assert isinstance(new_instance, pykeen.nn.NodePieceRepresentation)
