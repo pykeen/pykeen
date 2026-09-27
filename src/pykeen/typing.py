@@ -45,6 +45,7 @@ __all__ = [
     "Target",
     "TargetColumn",
     "TorchRandomHint",
+    "TransductiveRatiosHint",
     "cast_constrainer",
     "normalize_rank_type",
     "normalize_target",
@@ -174,3 +175,6 @@ EASide = Literal["left", "right"]
 EA_SIDE_LEFT: EASide = "left"
 EA_SIDE_RIGHT: EASide = "right"
 EA_SIDES: tuple[EASide, EASide] = (EA_SIDE_LEFT, EA_SIDE_RIGHT)
+
+#: A hint for transductive splitting ratios
+TransductiveRatiosHint = tuple[float, float] | tuple[float, float, float]

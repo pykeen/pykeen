@@ -32,7 +32,7 @@ from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.deteriorate import deteriorate
 from ..triples.remix import remix
 from ..triples.triples_factory import splits_similarity
-from ..typing import MappedTriples, TorchRandomHint
+from ..typing import MappedTriples, TorchRandomHint, TransductiveRatiosHint
 from ..utils import (
     ExtraReprMixin,
     format_relative_comparison,
@@ -55,6 +55,8 @@ __all__ = [
     "SingleTabbedDataset",
     "SingleTabbedDatasetKwargs",
     "SourceDataSet",
+    "SplittingLazyDataset",
+    "SplittingLazyDatasetKwargs",
     "TabbedDataset",
     "TabbedDatasetKwargs",
     "TarFileRemoteDataset",
@@ -66,6 +68,8 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_RATIOS: tuple[float, float, float] = (0.8, 0.1, 0.1)
 
 
 class LazyDatasetKwargs(TypedDict):
@@ -306,7 +310,12 @@ class Dataset(ExtraReprMixin):
         yield f"create_inverse_triples={self.create_inverse_triples}"
 
     @classmethod
-    def from_path(cls, path: str | pathlib.Path, ratios: list[float] | None = None) -> Dataset:
+    def from_path(
+        cls,
+        path: str | pathlib.Path | IO[str],
+        *,
+        ratios: TransductiveRatiosHint | None = None,
+    ) -> Dataset:
         """Create a dataset from a single triples factory by splitting it in 3."""
         tf = TriplesFactory.from_path(path=path)
         return cls.from_tf(tf=tf, ratios=ratios)
@@ -347,13 +356,13 @@ class Dataset(ExtraReprMixin):
     def from_tf(
         tf: TriplesFactory,
         *,
-        ratios: list[float] | None = None,
+        ratios: TransductiveRatiosHint | None = None,
         metadata: Metadata | None = None,
     ) -> Dataset:
         """Create a dataset from a single triples factory by splitting it in 3."""
         training, testing, validation = cast(
             tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(ratios or [0.8, 0.1, 0.1]),
+            tf.split(ratios or DEFAULT_RATIOS),
         )
         # TODO create_inverse_triples?
         return EagerDataset(training=training, testing=testing, validation=validation, metadata=metadata)
@@ -882,33 +891,60 @@ class PackedZipRemoteDataset(PackedRemoteDataSet):
     archive_type = "zip"
 
 
-class TabbedDatasetKwargs(LazyDatasetKwargs):
-    """Keyword arguments for a tabbed dataset."""
+class SplittingLazyDatasetKwargs(LazyDatasetKwargs):
+    """Keyword arguments for a splitting lazy dataset."""
 
     random_state: NotRequired[TorchRandomHint]
+    ratios: NotRequired[TransductiveRatiosHint | None]
+
+
+class SplittingLazyDataset(LazyDataset, ABC):
+    """A dataset that splits."""
+
+    def __init__(
+        self,
+        *,
+        random_state: TorchRandomHint = None,
+        ratios: TransductiveRatiosHint | None = None,
+        **kwargs: Unpack[LazyDatasetKwargs],
+    ) -> None:
+        """Initialize the dataset."""
+        self.random_state = random_state
+        self.ratios = ratios or DEFAULT_RATIOS
+        super().__init__(**kwargs)
+
+    @abstractmethod
+    def _get_triples_factory(self) -> TriplesFactory:
+        """Get the triples factory that will be split."""
+
+    def _load(self) -> None:
+        tf = self._get_triples_factory()
+        self._training, self._testing, self._validation = tf.split(ratios=self.ratios, random_state=self.random_state)
+        self._training.create_inverse_triples = self.create_inverse_triples
+
+    def _load_validation(self) -> None:
+        pass  # already loaded by _load()
+
+
+class TabbedDatasetKwargs(SplittingLazyDatasetKwargs):
+    """Keyword arguments for a tabbed dataset."""
+
     read_csv_kwargs: NotRequired[dict[str, Any] | None]
     delimiter: NotRequired[str | None]
 
 
-class TabbedDataset(LazyDataset):
+class TabbedDataset(SplittingLazyDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
-
-    ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
 
     def __init__(
         self,
         source: Source,
         *,
-        random_state: TorchRandomHint = None,
         read_csv_kwargs: dict[str, Any] | None = None,
         delimiter: str | None = None,
-        **kwargs: Unpack[LazyDatasetKwargs],
+        **kwargs: Unpack[SplittingLazyDatasetKwargs],
     ) -> None:
-        """Initialize dataset.
-
-        :param random_state: An optional random state to make the training/testing/validation split reproducible.
-        """
-        self.random_state = random_state
+        """Initialize dataset."""
         self.source = source
         self.read_csv_kwargs = read_csv_kwargs or {}
         self.read_csv_kwargs.setdefault("sep", delimiter or "\t")
@@ -918,29 +954,16 @@ class TabbedDataset(LazyDataset):
         """Get the path of the data if there's a single file."""
         return self.source.path
 
-    def _get_df(self) -> pd.DataFrame:
+    def _get_triples_factory(self) -> TriplesFactory:
         with self.source.open() as file:
             df = pd.read_csv(file, **self.read_csv_kwargs)
-        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
-
-    def _load(self) -> None:
-        df = self._get_df()
+        df = _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
         path = self._get_path()
-        tf = TriplesFactory.from_labeled_triples(
+        return TriplesFactory.from_labeled_triples(
             triples=df.values,
             create_inverse_triples=self.create_inverse_triples,
             metadata={"path": path} if path else None,
         )
-        self._training, self._testing, self._validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(
-                ratios=self.ratios,
-                random_state=self.random_state,
-            ),
-        )
-
-    def _load_validation(self) -> None:
-        pass  # already loaded by _load()
 
 
 class CompressedSingleDatasetKwargs(TabbedDatasetKwargs):
@@ -1018,8 +1041,6 @@ class SingleTabbedDatasetKwargs(TabbedDatasetKwargs):
 
 class SingleTabbedDataset(TabbedDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
-
-    ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
 
     def __init__(
         self,
