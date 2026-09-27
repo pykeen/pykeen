@@ -789,6 +789,9 @@ class UnpackedRemoteDataset(SourceDataSet):
         :param training_url: The URL of the training file
         :param testing_url: The URL of the testing file
         :param validation_url: The URL of the validation file
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
         :param force: If true, redownload any cached files
         :param download_kwargs: Keyword arguments to pass to :func:`pystow.utils.download`
         """
@@ -842,6 +845,10 @@ class PackedRemoteDataSet(SourceDataSet):
         :param relative_training_path: The path inside the cache root where the training path gets extracted
         :param relative_testing_path: The path inside the cache root where the testing path gets extracted
         :param relative_validation_path: The path inside the cache root where the validation path gets extracted
+        :param force: whether files should be re-downloaded
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
         """
         name = name_from_url(url)
         path = self._help_cache(cache_root).joinpath(name)
@@ -965,6 +972,9 @@ class CompressedSingleDataset(TabbedDataset):
         :param url: The url where to download the dataset from
         :param relative_path: The path inside the archive to the contained dataset.
         :param name: The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
         :param download_kwargs: Keyword arguments to pass through to :func:`pystow.utils.download`.
         :param force: whether files should be re-downloaded
         """
@@ -998,6 +1008,8 @@ class SingleTabbedDatasetKwargs(TabbedDatasetKwargs):
 
     #: The name of the file
     name: NotRequired[str | None]
+    #: An override for where the files are cached
+    cache_root: NotRequired[str | pathlib.Path | None]
     #: An override for configuration of the download workflow with :func:`pystow.utils.download`
     download_kwargs: NotRequired[DownloadKwargs | None]
     #: If given as true, will re-download the file
@@ -1014,15 +1026,18 @@ class SingleTabbedDataset(TabbedDataset):
         url: str,
         *,
         name: str | None = None,
+        cache_root: str | pathlib.Path | None = None,
         download_kwargs: DownloadKwargs | None = None,
         force: bool = False,
-        cache_root: str | pathlib.Path | None = None,
         **kwargs: Unpack[TabbedDatasetKwargs],
     ) -> None:
         """Initialize dataset.
 
         :param url: The url where to download the dataset from
         :param name: The name of the file. If not given, tries to get the name from the end of the URL
+        :param cache_root: An optional directory to store the extracted files. Is none is given, the default PyKEEN
+            directory is used. This is defined either by the environment variable ``PYKEEN_HOME`` or defaults to
+            ``~/.pykeen``.
         :param download_kwargs: Keyword arguments to pass through to :func:`pystow.utils.download`.
         :param force: whether files should be re-downloaded
         """
