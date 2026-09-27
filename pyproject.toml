@@ -247,7 +247,7 @@ select = [
     # flake8-print (T20)
     "T20",
     # flake8-pyi (PYI)
-    # "PYI",
+    "PYI",
     # flake8-pytest-style (PT)
     "PT",
     # flake8-quotes (Q)
@@ -312,6 +312,7 @@ ignore = [
     "D105", # Missing docstring in magic method
     "S101", # Use of assert detected, TODO remove
     "RUF012", # FIXME
+    "PYI041", # "int | float" annotations should be not be replaced by "float"
     "TRY003", # long error messages (doesn't make sense)
 ]
 

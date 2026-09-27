@@ -289,7 +289,7 @@ class DisjointInductivePathDataset(DisjointInductiveSourceDataset):
         transductive_training_path: str | pathlib.Path,
         inductive_inference_path: str | pathlib.Path,
         inductive_testing_path: str | pathlib.Path,
-        inductive_validation_path: str | str | pathlib.Path,
+        inductive_validation_path: str | pathlib.Path,
         **kwargs: Unpack[PathDatasetKwargs],
     ) -> None:
         """Initialize the dataset.
@@ -322,7 +322,7 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductiveSourceDataset):
         inductive_testing_url: str,
         inductive_validation_url: str,
         *,
-        cache_root: str | None = None,
+        cache_root: str | pathlib.Path | None = None,
         force: bool = False,
         download_kwargs: DownloadKwargs | None = None,
         version: Version | None = None,
@@ -345,35 +345,19 @@ class UnpackedRemoteDisjointInductiveDataset(DisjointInductiveSourceDataset):
         if download_kwargs is None:
             download_kwargs = {}
         download_kwargs.setdefault("backend", "urllib")
-        transductive_training_source = RemoteSimpleSource(
-            path=cache_root_.joinpath("training", name_from_url(transductive_training_url)),
-            url=transductive_training_url,
-            force=force,
-            download_kwargs=download_kwargs,
-        )
-        inductive_inference_source = RemoteSimpleSource(
-            path=cache_root_.joinpath("inference", name_from_url(inductive_inference_url)),
-            url=inductive_inference_url,
-            force=force,
-            download_kwargs=download_kwargs,
-        )
-        inductive_testing_source = RemoteSimpleSource(
-            path=cache_root_.joinpath("inference", name_from_url(inductive_testing_url)),
-            url=inductive_testing_url,
-            force=force,
-            download_kwargs=download_kwargs,
-        )
-        inductive_validation_source = RemoteSimpleSource(
-            path=cache_root_.joinpath("inference", name_from_url(inductive_validation_url)),
-            url=inductive_validation_url,
-            force=force,
-            download_kwargs=download_kwargs,
-        )
+
+        def _get_source(directory: str, url: str) -> Source:
+            return RemoteSimpleSource(
+                path=cache_root_.joinpath(directory, name_from_url(url)),
+                url=url,
+                force=force,
+                download_kwargs=download_kwargs,
+            )
 
         super().__init__(
-            transductive_training_source=transductive_training_source,
-            inductive_inference_source=inductive_inference_source,
-            inductive_testing_source=inductive_testing_source,
-            inductive_validation_source=inductive_validation_source,
+            transductive_training_source=_get_source("training", transductive_training_url),
+            inductive_inference_source=_get_source("inference", inductive_inference_url),
+            inductive_testing_source=_get_source("inference", inductive_testing_url),
+            inductive_validation_source=_get_source("inference", inductive_validation_url),
             **kwargs,
         )
