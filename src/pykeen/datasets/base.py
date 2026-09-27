@@ -45,6 +45,7 @@ __all__ = [
     "SingleTabbedDataset",
     "SingleTabbedDatasetKwargs",
     "SourceDataSet",
+    "SplittingLazyDatasetKwargs",
     "TabbedDataset",
     "TabbedDatasetKwargs",
     "TarFileRemoteDataset",
@@ -880,6 +881,8 @@ class PackedZipRemoteDataset(PackedRemoteDataSet):
 
 
 class SplittingLazyDatasetKwargs(LazyDatasetKwargs):
+    """Keyword arguments for a splitting lazy dataset."""
+
     random_state: NotRequired[TorchRandomHint]
     ratios: NotRequired[TransductiveRatiosHint | None]
 

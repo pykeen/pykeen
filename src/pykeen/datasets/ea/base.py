@@ -91,11 +91,6 @@ class EADataset(SplittingLazyDataset, ABC):
             return self._load_graph(side=self.side)
         raise ValueError(f"side must be one of {EA_SIDES} or None")
 
-        self._training, self._testing, self._validation = tf.split(ratios=self.ratios, random_state=self.random_state)
-        # create inverse triples only for training
-        self._training.create_inverse_triples = self._create_inverse_triples
-        return None
-
     @abstractmethod
     def _load_graph(self, side: EASide) -> TriplesFactory:
         """Load the graph for one side."""
