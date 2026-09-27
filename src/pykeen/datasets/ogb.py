@@ -10,7 +10,7 @@ import logging
 import pathlib
 import typing
 from collections.abc import Sequence
-from typing import ClassVar, Generic, Literal, TypedDict, TypeVar, cast, overload
+from typing import ClassVar, Generic, Literal, TypedDict, TypeVar, Unpack, cast, overload
 
 import click
 import numpy
@@ -19,7 +19,7 @@ import torch
 from docdata import parse_docdata
 from more_click import verbose_option
 
-from .base import LazyDataset
+from .base import LazyDataset, LazyDatasetKwargs
 from ..triples import TriplesFactory
 from ..typing import EntityMapping, RelationMapping
 
@@ -49,6 +49,11 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
 
     #: The name of the dataset to download
     name: ClassVar[str]
+
+    def __init__(self, *, cache_root: str | None = None, **kwargs: Unpack[LazyDatasetKwargs]) -> None:
+        """Initialize the OGB loader."""
+        self._cache_root = cache_root
+        super().__init__(**kwargs)
 
     def _load(self) -> None:
         dataset = self._load_ogb_dataset()
@@ -92,7 +97,7 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
             raise ModuleNotFoundError(
                 f"Need to `pip install ogb` to use pykeen.datasets.{self.__class__.__name__}.",
             ) from e
-        return LinkPropPredDataset(name=self.name, root=self.cache_root)
+        return LinkPropPredDataset(name=self.name, root=self._help_cache(self._cache_root))
 
     @overload
     def _load_data_dict_for_split(self, dataset: LinkPropPredDataset, which: TrainKey) -> PreprocessedTrainDictType: ...

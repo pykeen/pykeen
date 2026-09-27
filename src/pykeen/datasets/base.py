@@ -652,11 +652,6 @@ class LazyDataset(Dataset, ABC):
     def _load_validation(self) -> None:
         """Load the validation triples factory."""
 
-    @property
-    def cache_root(self) -> pathlib.Path:
-        """Get the default cache root."""
-        return self._help_cache(None)
-
     def _help_cache(self, cache_root: str | pathlib.Path | None) -> pathlib.Path:
         """Get the appropriate cache root directory.
 
@@ -789,6 +784,7 @@ class UnpackedRemoteDataset(SourceDataSet):
         *,
         force: bool = False,
         download_kwargs: DownloadKwargs | None = None,
+        cache_root: str | None = None,
         **kwargs: Unpack[PathDatasetKwargs],
     ) -> None:
         """Initialize dataset.
@@ -802,10 +798,11 @@ class UnpackedRemoteDataset(SourceDataSet):
         if download_kwargs is None:
             download_kwargs = {}
         download_kwargs.setdefault("backend", "urllib")
+        cache_root_ = self._help_cache(cache_root)
 
         def _get_source(url: str) -> Source:
             return RemoteSimpleSource(
-                path=self.cache_root.joinpath(name_from_url(url)),
+                path=cache_root_.joinpath(name_from_url(url)),
                 url=url,
                 force=force,
                 download_kwargs=cast(DownloadKwargs, download_kwargs),
@@ -838,6 +835,7 @@ class PackedRemoteDataSet(SourceDataSet):
         relative_validation_path: str | pathlib.PurePath,
         *,
         force: bool = False,
+        cache_root: str | None = None,
         **kwargs: Unpack[PathDatasetKwargs],
     ) -> None:
         """Initialize dataset.
@@ -848,7 +846,7 @@ class PackedRemoteDataSet(SourceDataSet):
         :param relative_validation_path: The path inside the cache root where the validation path gets extracted
         """
         name = name_from_url(url)
-        path = self.cache_root.joinpath(name)
+        path = self._help_cache(cache_root).joinpath(name)
 
         def _get_source(inner_path: str | pathlib.PurePath) -> RemoteArchivedSource:
             return RemoteArchivedSource(
@@ -960,6 +958,7 @@ class CompressedSingleDataset(TabbedDataset):
         name: str | None = None,
         download_kwargs: DownloadKwargs | None = None,
         force: bool = False,
+        cache_root: str | None = None,
         **kwargs: Unpack[TabbedDatasetKwargs],
     ) -> None:
         """Initialize dataset.
@@ -975,7 +974,7 @@ class CompressedSingleDataset(TabbedDataset):
         source = RemoteArchivedSource(
             archive_type=self.archive_type,
             url=url,
-            path=self.cache_root.joinpath(name),
+            path=self._help_cache(cache_root).joinpath(name),
             inner_path=relative_path,
             download_kwargs=download_kwargs,
             force=force,
@@ -1018,6 +1017,7 @@ class SingleTabbedDataset(TabbedDataset):
         name: str | None = None,
         download_kwargs: DownloadKwargs | None = None,
         force: bool = False,
+        cache_root: str | None = None,
         **kwargs: Unpack[TabbedDatasetKwargs],
     ) -> None:
         """Initialize dataset.
@@ -1028,7 +1028,7 @@ class SingleTabbedDataset(TabbedDataset):
         :param force: whether files should be re-downloaded
         """
         name = name or name_from_url(url)
-        path = self.cache_root.joinpath(name)
+        path = self._help_cache(cache_root).joinpath(name)
         source = RemoteSimpleSource(
             url=url,
             force=force,

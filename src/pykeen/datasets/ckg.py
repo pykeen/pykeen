@@ -44,10 +44,12 @@ class CKG(TabbedDataset):
         validation: 2669153
     """
 
-    def __init__(self, *, force: bool = False, **kwargs: Unpack[TabbedDatasetKwargs]) -> None:
+    def __init__(
+        self, *, force: bool = False, cache_root: str | None = None, **kwargs: Unpack[TabbedDatasetKwargs]
+    ) -> None:
         """Initialize the `CKG <https://github.com/MannLabs/CKG>`_ dataset from [santos2020]_."""
         kwargs.setdefault("random_state", 0)
-        source = CKGSimpleSource(path=self.cache_root.joinpath("preloaded.tsv.gz"), url=URL, force=force)
+        source = CKGSimpleSource(path=self._help_cache(cache_root).joinpath("preloaded.tsv.gz"), url=URL, force=force)
         super().__init__(source, **kwargs)
 
 
