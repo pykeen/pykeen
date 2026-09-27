@@ -146,6 +146,35 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         r = get_until_first_blank(s)
         assert r == "Broken line."
 
+    def test_multi_line_first_paragraph(self):
+        """Test a first paragraph spanning more than two lines."""
+        assert get_until_first_blank("A\nB\nC\n\nD") == "A B C"
+
+    def test_whitespace_only_blank_line(self):
+        """Test that a line consisting of whitespace only counts as blank."""
+        assert get_until_first_blank("A\n  B\n  C\n    \n  D") == "A B C"
+
+    def test_no_blank_line(self):
+        """Test a string without any blank line."""
+        assert get_until_first_blank("A\n  B\n  C") == "A B C"
+
+    def test_leading_blank_lines(self):
+        """Test that leading blank lines are skipped."""
+        assert get_until_first_blank("\n   \n  A\n  B\n  C\n\n  D") == "A B C"
+
+    def test_class_docstring(self):
+        """Test a typical indented class docstring."""
+        doc = """
+            A model with a summary
+            spanning several lines.
+
+            Some more details, which are not part of the summary.
+
+            ---
+            name: A
+        """
+        assert get_until_first_blank(doc) == "A model with a summary spanning several lines."
+
 
 def _generate_shapes(
     n_dim: int = 5,

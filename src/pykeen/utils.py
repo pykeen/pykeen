@@ -203,14 +203,20 @@ def get_preferred_device(module: nn.Module, allow_ambiguity: bool = True) -> tor
 
 
 def get_until_first_blank(s: str) -> str:
-    """Recapitulate all lines in the string until the first blank line."""
-    lines = list(s.splitlines())
-    try:
-        m, _ = min(enumerate(lines), key=lambda line: line == "")
-    except ValueError:
-        return s
-    else:
-        return " ".join(line.lstrip() for line in lines[: m + 2])
+    """Recapitulate all lines in the string until the first blank line.
+
+    Lines consisting only of whitespace count as blank. Leading blank lines are skipped, such that for docstrings
+    starting with a line break, the first paragraph is returned. Each line is stripped of surrounding whitespace,
+    and the lines are joined by single spaces.
+
+    :param s:
+        the string, e.g., a docstring
+
+    :return:
+        the first paragraph, joined into a single line
+    """
+    lines = (line.strip() for line in s.splitlines())
+    return " ".join(itt.takewhile(bool, itt.dropwhile(lambda line: not line, lines)))
 
 
 def flatten_dictionary(
