@@ -781,6 +781,7 @@ def test_view_complex_odd_dimension() -> None:
         ((3, 4), (3, 2)),
         ((2, 3, 6), (2, 3, 3)),
         ((2,), (1,)),
+        ((0, 4), (0, 2)),
     ],
 )
 def test_ensure_complex_shape(shape: tuple[int, ...], expected_shape: tuple[int, ...]) -> None:

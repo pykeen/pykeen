@@ -431,7 +431,7 @@ def _real_to_complex(x: FloatTensor) -> torch.Tensor:
             f"since it holds interleaved pairs of real and imaginary parts.",
         )
     # reshape only copies if a view is impossible
-    x = x.reshape(*x.shape[:-1], -1, 2)
+    x = x.reshape(*x.shape[:-1], x.shape[-1] // 2, 2)
     try:
         return torch.view_as_complex(x)
     except RuntimeError:
