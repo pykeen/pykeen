@@ -47,6 +47,8 @@ from pykeen.utils import (
     split_complex,
     tensor_product,
     tensor_sum,
+    view_complex,
+    view_complex_native,
 )
 
 
@@ -640,3 +642,40 @@ class TestNormalizePath(unittest.TestCase):
         fd = os.open(self.file_path, os.O_RDONLY)
         with os.fdopen(fd) as file, pytest.raises(TypeError, match="file handle"):
             normalize_path(file)
+@pytest.mark.parametrize("shape", [(6,), (3, 4), (2, 3, 8)])
+def test_view_complex(shape: tuple[int, ...]) -> None:
+    """Test converting real-valued tensors with interleaved real/imaginary parts to complex ones."""
+    x = torch.rand(*shape)
+    y = view_complex(x)
+    assert y.is_complex()
+    assert y.shape == (*shape[:-1], shape[-1] // 2)
+    # round-trip
+    assert torch.equal(torch.view_as_real(y).view(x.shape), x)
+    # consistency with native implementation
+    assert torch.equal(y, view_complex_native(x))
+    # interleaved layout
+    assert torch.equal(y.real, x[..., 0::2])
+    assert torch.equal(y.imag, x[..., 1::2])
+
+
+def test_view_complex_complex_input() -> None:
+    """Test that complex input is passed through unchanged."""
+    x = torch.rand(3, 4, dtype=torch.cfloat)
+    assert view_complex(x) is x
+
+
+def test_view_complex_non_contiguous() -> None:
+    """Test conversion of non-contiguous input."""
+    base = torch.rand(6, 5)
+    x = base.t()
+    assert not x.is_contiguous()
+    y = view_complex(x)
+    assert y.shape == (5, 3)
+    assert torch.equal(y, view_complex_native(x.contiguous()))
+    assert torch.equal(torch.view_as_real(y).reshape(x.shape), x)
+
+
+def test_view_complex_odd_dimension() -> None:
+    """Test that an odd last dimension raises an error."""
+    with pytest.raises(ValueError, match="even"):
+        view_complex(torch.rand(2, 5))

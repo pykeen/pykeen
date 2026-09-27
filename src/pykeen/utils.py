@@ -390,9 +390,30 @@ def split_complex(
 
 
 def view_complex(x: FloatTensor) -> torch.Tensor:
-    """Convert a PyKEEN complex tensor representation into a torch one."""
-    real, imag = split_complex(x=x)
-    return torch.complex(real=real, imag=imag)
+    """Convert a PyKEEN complex tensor representation into a torch one.
+
+    PyKEEN stores complex tensors of shape ``(..., d)`` as real tensors of shape ``(..., 2 * d)``, where the last
+    dimension contains interleaved pairs of real and imaginary part, i.e., the layout of :func:`torch.view_as_real`
+    after flattening the last two dimensions.
+
+    In contrast to :func:`view_complex_native`, this function also works for input with arbitrary strides, but always
+    creates a copy.
+
+    :param x: shape: ``(..., 2 * d)``
+        the real-valued tensor. If it is already complex, it is returned unchanged.
+
+    :return: shape: ``(..., d)``
+        the complex tensor.
+
+    :raises ValueError:
+        if the last dimension of a real-valued input is not even.
+    """
+    if x.is_complex():
+        return x
+    if x.ndim == 0 or x.shape[-1] % 2:
+        raise ValueError(f"The last dimension of a real-valued input must be even, but {x.shape=}")
+    x = x.unflatten(-1, (-1, 2))
+    return torch.complex(real=x[..., 0], imag=x[..., 1])
 
 
 def view_complex_native(x: FloatTensor) -> torch.Tensor:
