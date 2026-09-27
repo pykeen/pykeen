@@ -871,24 +871,58 @@ class PackedZipRemoteDataset(PackedRemoteDataSet):
     archive_type = "zip"
 
 
-class TabbedDatasetKwargs(LazyDatasetKwargs):
+class SplittingLazyDatasetKwargs(LazyDatasetKwargs):
+    random_state: NotRequired[TorchRandomHint]
+    ratios: NotRequired[tuple[float, float, float] | None]
+
+
+class SplittingLazyDataset(LazyDataset, ABC):
+    """A dataset that splits."""
+
+    def __init__(
+        self,
+        *,
+        random_state: TorchRandomHint = None,
+        ratios: tuple[float, float, float] | None = None,
+        create_inverse_triples: bool = False,
+        eager: bool = False,
+    ) -> None:
+        """Initialize the dataset."""
+        self.random_state = random_state
+        self.split_ratios = ratios or (0.8, 0.1, 0.1)
+        self._create_inverse_triples = create_inverse_triples
+        if eager:
+            self._load()
+
+    @abstractmethod
+    def _get_triples_factory(self) -> TriplesFactory:
+        raise NotImplementedError
+
+    def _load(self) -> None:
+        tf = self._get_triples_factory()
+        self._training, self._testing, self._validation = tf.split(
+            ratios=self.split_ratios, random_state=self.random_state
+        )
+        self._training.create_inverse_triples = self._create_inverse_triples
+
+    def _load_validation(self) -> None:
+        pass  # already loaded by _load()
+
+
+class TabbedDatasetKwargs(SplittingLazyDatasetKwargs):
     """Keyword arguments for a tabbed dataset."""
 
-    random_state: NotRequired[TorchRandomHint]
     read_csv_kwargs: NotRequired[dict[str, Any] | None]
     delimiter: NotRequired[str | None]
 
 
-class TabbedDataset(LazyDataset):
+class TabbedDataset(SplittingLazyDataset):
     """This class is for when you've got a single TSV of edges and want them to get auto-split."""
-
-    ratios: ClassVar[Sequence[float]] = (0.8, 0.1, 0.1)
 
     def __init__(
         self,
         source: Source,
         *,
-        random_state: TorchRandomHint = None,
         read_csv_kwargs: dict[str, Any] | None = None,
         delimiter: str | None = None,
         **kwargs: Unpack[LazyDatasetKwargs],
@@ -897,15 +931,10 @@ class TabbedDataset(LazyDataset):
 
         :param random_state: An optional random state to make the training/testing/validation split reproducible.
         """
-        self.random_state = random_state
-        self._create_inverse_triples = kwargs.get("create_inverse_triples") or False
-        self._training = None
-        self._testing = None
-        self._validation = None
-
         self.source = source
         self.read_csv_kwargs = read_csv_kwargs or {}
         self.read_csv_kwargs.setdefault("sep", delimiter or "\t")
+        super().__init__(**kwargs)
 
         if kwargs.get("eager"):
             self._load()
@@ -914,29 +943,16 @@ class TabbedDataset(LazyDataset):
         """Get the path of the data if there's a single file."""
         return self.source.path
 
-    def _get_df(self) -> pd.DataFrame:
+    def _get_triples_factory(self) -> TriplesFactory:
         with self.source.open() as file:
             df = pd.read_csv(file, **self.read_csv_kwargs)
-        return _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
-
-    def _load(self) -> None:
-        df = self._get_df()
+        df = _reorder_columns(df, self.read_csv_kwargs.get("usecols"))
         path = self._get_path()
-        tf = TriplesFactory.from_labeled_triples(
+        return TriplesFactory.from_labeled_triples(
             triples=df.values,
-            create_inverse_triples=self._create_inverse_triples,
+            create_inverse_triples=self.create_inverse_triples,
             metadata={"path": path} if path else None,
         )
-        self._training, self._testing, self._validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
-            tf.split(
-                ratios=self.ratios,
-                random_state=self.random_state,
-            ),
-        )
-
-    def _load_validation(self) -> None:
-        pass  # already loaded by _load()
 
 
 class CompressedSingleDatasetKwargs(TabbedDatasetKwargs):

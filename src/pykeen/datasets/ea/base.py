@@ -4,12 +4,14 @@ import logging
 from abc import abstractmethod
 from collections.abc import Iterable, Mapping
 from typing import Any
+from typing import Any, NotRequired, TypedDict, Unpack
 
 import pandas
 from class_resolver import HintOrType, OptionalKwargs
 
 from .combination import GraphPairCombinator, graph_combinator_resolver
 from ..base import EagerDataset
+from ..base import SplittingLazyDataset, SplittingLazyDatasetKwargs
 from ...triples import TriplesFactory
 from ...typing import EA_SIDE_LEFT, EA_SIDES, EASide, TorchRandomHint
 from ...utils import format_relative_comparison
@@ -24,7 +26,19 @@ logger = logging.getLogger(__name__)
 # TODO: support ID-only graphs
 
 
-class EADataset(EagerDataset):
+class EADatasetKwargs(TypedDict):
+    """Keyword arguments for an entity alignment dataset."""
+
+    metadata: NotRequired[Mapping[str, Any] | None]
+    side: NotRequired[EASide | None]
+    create_inverse_triples: NotRequired[bool]
+    random_state: NotRequired[TorchRandomHint]
+    ratios: NotRequired[tuple[float, float, float] | None]
+    combination: NotRequired[HintOrType[GraphPairCombinator]]
+    combination_kwargs: NotRequired[OptionalKwargs]
+
+
+class EADataset(SplittingLazyDataset, ABC):
     """Base class for entity alignment datasets."""
 
     def __init__(
@@ -32,11 +46,9 @@ class EADataset(EagerDataset):
         *,
         metadata: Mapping[str, Any] | None = None,
         side: EASide | None = EA_SIDE_LEFT,
-        create_inverse_triples: bool = False,
-        random_state: TorchRandomHint = 0,
-        split_ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),
         combination: HintOrType[GraphPairCombinator] = None,
         combination_kwargs: OptionalKwargs = None,
+        **kwargs: Unpack[SplittingLazyDatasetKwargs],
     ) -> None:
         """Initialize the dataset.
 
@@ -44,13 +56,19 @@ class EADataset(EagerDataset):
             single one, using `combination`.
         :param create_inverse_triples: whether to create inverse triples.
         :param random_state: the random state to use for reproducible splits
-        :param split_ratios: the split ratios used to perform the train/test/validation split.
+        :param ratios: the split ratios used to perform the train/test/validation split.
         :param combination: the graph combination. only effective if side is `None`
         :param combination_kwargs: additional keyword-based parameters for the graph combination
 
         :raises ValueError: if an invalid side is passed
         """
-        if side is None:
+        self.side = side
+        self.combination = graph_combinator_resolver.make(combination, pos_kwargs=combination_kwargs)
+        self.metadata = metadata
+        super().__init__(**kwargs)
+
+    def _get_triples_factory(self) -> TriplesFactory:
+        if self.side is None:
             # load both graphs
             left, right = (self._load_graph(side=side) for side in EA_SIDES)
             # load alignment
@@ -64,21 +82,11 @@ class EADataset(EagerDataset):
                     f"Dropped {format_relative_comparison(part=old - new, total=old)} alignments "
                     f"due to being duplicates.",
                 )
-            # combine
-            self.combination = graph_combinator_resolver.make(combination, pos_kwargs=combination_kwargs)
-            tf, self.alignment = self.combination(left=left, right=right, alignment=alignment)  # **kwargs
-        elif side not in EA_SIDES:
-            raise ValueError(f"side must be one of {EA_SIDES} or None")
-        else:
-            self.combination = self.alignment = None
-            tf = self._load_graph(side=side)
-        # store for repr
-        self.side = side
-        # split
-        training, testing, validation = tf.split(ratios=split_ratios, random_state=random_state)
-        # create inverse triples only for training
-        training.create_inverse_triples = create_inverse_triples
-        super().__init__(training=training, testing=testing, validation=validation, metadata=metadata)
+            tf, self.alignment = self.combination(left=left, right=right, alignment=alignment)
+            return tf
+        if self.side in EA_SIDES:
+            return self._load_graph(side=self.side)
+        raise ValueError(f"side must be one of {EA_SIDES} or None")
 
     @abstractmethod
     def _load_graph(self, side: EASide) -> TriplesFactory:
