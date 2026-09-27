@@ -545,8 +545,35 @@ def calculate_broadcasted_elementwise_result_shape(
     first: tuple[int, ...],
     second: tuple[int, ...],
 ) -> tuple[int, ...]:
-    """Determine the return shape of a broadcasted elementwise operation."""
-    return tuple(max(a, b) for a, b in zip(first, second, strict=False))
+    """Determine the return shape of a broadcasted elementwise operation.
+
+    Follows the same (right-aligned) semantics as :func:`torch.broadcast_shapes`: the shorter shape is padded with
+    leading singleton dimensions, and a dimension of size 1 broadcasts to the other size (including 0).
+
+    :param first:
+        the first shape
+    :param second:
+        the second shape
+
+    :raises ValueError:
+        if the shapes are not broadcastable
+
+    :return:
+        the broadcasted shape
+    """
+    # pad the shorter shape with leading singleton dimensions
+    diff = len(first) - len(second)
+    padded_first = (1,) * -diff + tuple(first) if diff < 0 else first
+    padded_second = (1,) * diff + tuple(second) if diff > 0 else second
+    result = []
+    for a, b in zip(padded_first, padded_second, strict=True):
+        if a == b or b == 1:
+            result.append(a)
+        elif a == 1:
+            result.append(b)
+        else:
+            raise ValueError(f"Shapes {tuple(first)} and {tuple(second)} are not broadcastable.")
+    return tuple(result)
 
 
 def pad_trailing_dims(x: torch.Tensor, ndim: int) -> torch.Tensor:

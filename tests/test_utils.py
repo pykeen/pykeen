@@ -338,6 +338,56 @@ class TestUtils(unittest.TestCase):
                 exp_shape = c.shape
                 assert shape == exp_shape
 
+    def test_calculate_broadcasted_elementwise_result_shape_edge_cases(self):
+        """Test calculate_broadcasted_elementwise_result_shape for differing ndims, size-0 dims, and incompatibility."""
+        for first, second, expected in (
+            # differing number of dimensions (right-aligned)
+            ((3, 4), (4,), (3, 4)),
+            ((4,), (3, 4), (3, 4)),
+            ((2, 1, 5), (3, 1), (2, 3, 5)),
+            ((), (2, 3), (2, 3)),
+            ((2, 3), (), (2, 3)),
+            # size-0 dimensions
+            ((1,), (0,), (0,)),
+            ((0,), (1,), (0,)),
+            ((0, 3), (1, 1), (0, 3)),
+            ((2, 0), (0,), (2, 0)),
+        ):
+            with self.subTest(first=first, second=second):
+                assert calculate_broadcasted_elementwise_result_shape(first=first, second=second) == expected
+                assert expected == tuple(torch.broadcast_shapes(first, second))
+        for first, second in (
+            ((2,), (3,)),
+            ((3, 4), (3,)),
+            ((0,), (2,)),
+            ((2, 3), (4, 3, 1)),
+        ):
+            with self.subTest(first=first, second=second), pytest.raises(ValueError, match="not broadcastable"):
+                calculate_broadcasted_elementwise_result_shape(first=first, second=second)
+
+    def test_calculate_broadcasted_elementwise_result_shape_random(self):
+        """Compare calculate_broadcasted_elementwise_result_shape against torch.broadcast_shapes on random shapes."""
+        rng = random.Random(42)  # noqa: S311
+        choices = (0, 1, 1, 2, 3)
+        for _ in range(500):
+            first = tuple(rng.choice(choices) for _ in range(rng.randrange(5)))
+            second = tuple(rng.choice(choices) for _ in range(rng.randrange(5)))
+            try:
+                expected = tuple(torch.broadcast_shapes(first, second))
+            except RuntimeError:
+                with pytest.raises(ValueError, match="not broadcastable"):
+                    calculate_broadcasted_elementwise_result_shape(first=first, second=second)
+            else:
+                assert calculate_broadcasted_elementwise_result_shape(first=first, second=second) == expected
+
+    def test_estimate_cost_of_sequence_differing_ndim(self):
+        """Test estimate_cost_of_sequence for shapes with differing number of dimensions."""
+        # (3, 4) + (4,) -> (3, 4), i.e., cost 12
+        assert estimate_cost_of_sequence((3, 4), (4,)) == 12
+        assert estimate_cost_of_sequence((4,), (3, 4)) == 12
+        # (5, 1, 1) + (3, 1) -> (5, 3, 1): 15; (5, 3, 1) + (2,) -> (5, 3, 2): 30
+        assert estimate_cost_of_sequence((5, 1, 1), (3, 1), (2,)) == 15 + 30
+
     @unittest.skip("This is often failing non-deterministically")
     def test_estimate_cost_of_add_sequence(self):
         """Test ``estimate_cost_of_add_sequence()``."""
