@@ -57,6 +57,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+TransductiveRatiosHint = tuple[float, float] | tuple[float, float, float]
 DEFAULT_RATIOS: tuple[float, float, float] = (0.8, 0.1, 0.1)
 
 
@@ -301,7 +302,7 @@ class Dataset(ExtraReprMixin):
         cls,
         path: str | pathlib.Path | IO[str],
         *,
-        ratios: tuple[float, float] | tuple[float, float, float] | None = None,
+        ratios: TransductiveRatiosHint | None = None,
     ) -> Dataset:
         """Create a dataset from a single triples factory by splitting it in 3."""
         tf = TriplesFactory.from_path(path=path)
@@ -340,7 +341,7 @@ class Dataset(ExtraReprMixin):
         torch.save(metadata, path.joinpath(self.metadata_file_name))
 
     @staticmethod
-    def from_tf(tf: TriplesFactory, ratios: tuple[float, float] | tuple[float, float, float] | None = None) -> Dataset:
+    def from_tf(tf: TriplesFactory, ratios: TransductiveRatiosHint | None = None) -> Dataset:
         """Create a dataset from a single triples factory by splitting it in 3."""
         training, testing, validation = cast(
             tuple[TriplesFactory, TriplesFactory, TriplesFactory],
@@ -880,7 +881,7 @@ class PackedZipRemoteDataset(PackedRemoteDataSet):
 
 class SplittingLazyDatasetKwargs(LazyDatasetKwargs):
     random_state: NotRequired[TorchRandomHint]
-    ratios: NotRequired[tuple[float, float, float] | None]
+    ratios: NotRequired[TransductiveRatiosHint | None]
 
 
 class SplittingLazyDataset(LazyDataset, ABC):
@@ -890,7 +891,7 @@ class SplittingLazyDataset(LazyDataset, ABC):
         self,
         *,
         random_state: TorchRandomHint = None,
-        ratios: tuple[float, float] | tuple[float, float, float] | None = None,
+        ratios: TransductiveRatiosHint | None = None,
         create_inverse_triples: bool = False,
         eager: bool = False,
     ) -> None:
@@ -930,7 +931,7 @@ class TabbedDataset(SplittingLazyDataset):
         *,
         read_csv_kwargs: dict[str, Any] | None = None,
         delimiter: str | None = None,
-        **kwargs: Unpack[LazyDatasetKwargs],
+        **kwargs: Unpack[SplittingLazyDatasetKwargs],
     ) -> None:
         """Initialize dataset.
 

@@ -9,7 +9,7 @@ import pandas
 from class_resolver import HintOrType, OptionalKwargs
 
 from .combination import GraphPairCombinator, graph_combinator_resolver
-from ..base import SplittingLazyDataset, SplittingLazyDatasetKwargs
+from ..base import SplittingLazyDataset, SplittingLazyDatasetKwargs, TransductiveRatiosHint
 from ...triples import TriplesFactory
 from ...typing import EA_SIDE_LEFT, EA_SIDES, EASide, TorchRandomHint
 from ...utils import format_relative_comparison
@@ -32,7 +32,7 @@ class EADatasetKwargs(TypedDict):
     side: NotRequired[EASide | None]
     create_inverse_triples: NotRequired[bool]
     random_state: NotRequired[TorchRandomHint]
-    ratios: NotRequired[tuple[float, float, float] | None]
+    ratios: NotRequired[TransductiveRatiosHint | None]
     combination: NotRequired[HintOrType[GraphPairCombinator]]
     combination_kwargs: NotRequired[OptionalKwargs]
 
@@ -67,6 +67,7 @@ class EADataset(SplittingLazyDataset, ABC):
         self.side = side
         self.combination = graph_combinator_resolver.make(combination, pos_kwargs=combination_kwargs)
         self.metadata = metadata
+        self.alignment = None
         super().__init__(**kwargs)
 
     def _get_triples_factory(self) -> TriplesFactory:
@@ -85,14 +86,15 @@ class EADataset(SplittingLazyDataset, ABC):
                     f"due to being duplicates.",
                 )
             tf, self.alignment = self.combination(left=left, right=right, alignment=alignment)
-        elif self.side in EA_SIDES:
-            tf = self._load_graph(side=self.side)
-        else:
-            raise ValueError(f"side must be one of {EA_SIDES} or None")
+            return tf
+        if self.side in EA_SIDES:
+            return self._load_graph(side=self.side)
+        raise ValueError(f"side must be one of {EA_SIDES} or None")
 
         self._training, self._testing, self._validation = tf.split(ratios=self.ratios, random_state=self.random_state)
         # create inverse triples only for training
         self._training.create_inverse_triples = self._create_inverse_triples
+        return None
 
     @abstractmethod
     def _load_graph(self, side: EASide) -> TriplesFactory:
