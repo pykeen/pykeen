@@ -2,10 +2,14 @@
 
 import contextlib
 import functools
+import io
 import itertools
 import operator
+import os
+import pathlib
 import random
 import string
+import tempfile
 import timeit
 import unittest
 from collections.abc import Iterable
@@ -36,6 +40,7 @@ from pykeen.utils import (
     iter_weisfeiler_lehman,
     logcumsumexp,
     merge_kwargs,
+    normalize_path,
     project_entity,
     resolve_device,
     set_random_seed,
@@ -580,3 +585,58 @@ class LogCumSumExpTests(unittest.TestCase):
             with self.subTest(axis=axis):
                 expected = torch.logcumsumexp(torch.as_tensor(a), dim=axis).numpy()
                 numpy.testing.assert_allclose(logcumsumexp(a, axis=axis), expected)
+class TestNormalizePath(unittest.TestCase):
+    """Tests for :func:`pykeen.utils.normalize_path`."""
+
+    def setUp(self) -> None:
+        """Create a temporary directory with a file."""
+        self._tmp = tempfile.TemporaryDirectory()
+        self.directory = pathlib.Path(self._tmp.name).resolve()
+        self.file_path = self.directory.joinpath("file.txt")
+        self.file_path.write_text("hello")
+
+    def tearDown(self) -> None:
+        """Clean up the temporary directory."""
+        self._tmp.cleanup()
+
+    def test_str(self) -> None:
+        """Test normalizing a string path."""
+        assert normalize_path(str(self.file_path)) == self.file_path
+
+    def test_text_file_handle(self) -> None:
+        """Test normalizing a text-mode file handle."""
+        with self.file_path.open() as file:
+            assert normalize_path(file) == self.file_path
+
+    def test_binary_file_handle(self) -> None:
+        """Test normalizing a binary-mode file handle."""
+        with self.file_path.open("rb") as file:
+            assert normalize_path(file) == self.file_path
+
+    def test_file_handle_other(self) -> None:
+        """Test normalizing a file handle with additional parts."""
+        with self.file_path.open() as file:
+            assert normalize_path(file, "a", "b") == self.file_path.joinpath("a", "b")
+
+    def test_file_handle_mkdir_is_file(self) -> None:
+        """Test normalizing a file handle with ``mkdir=True, is_file=True``, which must not touch the file."""
+        with self.file_path.open() as file:
+            assert normalize_path(file, mkdir=True, is_file=True) == self.file_path
+        assert self.file_path.is_file()
+
+    def test_file_handle_as_default(self) -> None:
+        """Test using a file handle as default."""
+        with self.file_path.open() as file:
+            assert normalize_path(None, default=file) == self.file_path
+
+    def test_in_memory_buffer(self) -> None:
+        """Test that in-memory buffers without a file name raise a clear error."""
+        for buffer in (io.StringIO("hello"), io.BytesIO(b"hello")):
+            with self.subTest(buffer=type(buffer)), pytest.raises(TypeError, match="file handle"):
+                normalize_path(buffer)
+
+    def test_file_descriptor_handle(self) -> None:
+        """Test that handles opened from a file descriptor (with an integer name) raise a clear error."""
+        fd = os.open(self.file_path, os.O_RDONLY)
+        with os.fdopen(fd) as file, pytest.raises(TypeError, match="file handle"):
+            normalize_path(file)

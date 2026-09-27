@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import ftplib
 import functools
+import io
 import itertools as itt
 import json
 import logging
@@ -1182,7 +1183,7 @@ def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collect
     return list(result.values())
 
 
-PathType = str | pathlib.Path | IO[str]
+PathType = str | pathlib.Path | IO[str] | IO[bytes]
 
 
 def normalize_path(
@@ -1207,7 +1208,7 @@ def normalize_path(
         the default to use if path is None
 
     :raises TypeError:
-        if `path` is of unsuitable type
+        if `path` is of unsuitable type, or a file handle without a usable file name, e.g., :class:`io.StringIO`
     :raises ValueError:
         if `path` and `default` are both `None`
 
@@ -1218,8 +1219,17 @@ def normalize_path(
         if default is None:
             raise ValueError("If no default is provided, path cannot be None.")
         path = default
-    if isinstance(path, IO):
-        path = path.name
+    if isinstance(path, io.IOBase):
+        # file handles, e.g., from open(); note that `typing.IO` cannot be used for isinstance checks
+        name = getattr(path, "name", None)
+        if isinstance(name, bytes):
+            name = os.fsdecode(name)
+        if not isinstance(name, str):
+            raise TypeError(
+                f"Cannot determine a path for file handle {path!r}, since it does not have a name attribute of "
+                f"type str (got {name!r}). Only handles to files on disk, e.g., from open(), are supported.",
+            )
+        path = name
     if isinstance(path, str):
         path = pathlib.Path(path)
     if not isinstance(path, pathlib.Path):
