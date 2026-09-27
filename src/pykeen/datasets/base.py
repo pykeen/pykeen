@@ -204,7 +204,7 @@ class Dataset(ExtraReprMixin):
         )
 
     # defining __eq__ implicitly sets __hash__ to None; make this explicit
-    __hash__ = None
+    __hash__ = None  # type: ignore[assignment]
 
     @property
     def factory_dict(self) -> Mapping[str, CoreTriplesFactory]:
