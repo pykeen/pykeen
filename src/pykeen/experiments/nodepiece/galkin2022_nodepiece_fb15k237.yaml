@@ -12,6 +12,7 @@ pipeline:
     reduction: 'mean'
   model: NodePiece
   model_kwargs:
+    use_inverse_triples: true
     entity_initializer: xavier_uniform_
     relation_initializer: init_phases
     relation_constrainer: complex_normalize
