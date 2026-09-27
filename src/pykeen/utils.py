@@ -399,24 +399,18 @@ def view_complex(x: FloatTensor) -> torch.Tensor:
     dimension contains interleaved pairs of real and imaginary part, i.e., the layout of :func:`torch.view_as_real`
     after flattening the last two dimensions.
 
-    In contrast to :func:`view_complex_native`, this function also works for input with arbitrary strides, but always
-    creates a copy.
-
     :param x: shape: ``(..., 2 * d)``
         the real-valued tensor. If it is already complex, it is returned unchanged.
 
     :return: shape: ``(..., d)``
-        the complex tensor.
+        the complex tensor. It shares memory with ``x`` whenever the strides permit it; otherwise, it is a copy.
 
     :raises ValueError:
         if the last dimension of a real-valued input is not even.
     """
     if x.is_complex():
         return x
-    if x.ndim == 0 or x.shape[-1] % 2:
-        raise ValueError(f"The last dimension of a real-valued input must be even, but {x.shape=}")
-    x = x.unflatten(-1, (-1, 2))
-    return torch.complex(real=x[..., 0], imag=x[..., 1])
+    return _real_to_complex(x)
 
 
 def _real_to_complex(x: FloatTensor) -> torch.Tensor:
