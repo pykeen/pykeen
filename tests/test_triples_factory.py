@@ -734,8 +734,8 @@ _LABELED_TRIPLES = np.array([["a", "r", "b"], ["b", "s", "c"]], dtype=str)
         *(
             (kwargs, match, compact_id)
             for kwargs, match in [
-                ({"entity_to_id": {"a": 0, "b": 0, "c": 1}}, r"not injective.*\d+, \['a', 'b'\]"),
-                ({"relation_to_id": {"r": 3, "s": 3}}, r"not injective.*\d+, \['r', 's'\]"),
+                ({"entity_to_id": {"a": 0, "b": 0, "c": 1}}, r"not injective.*\d+: \['a', 'b'\]"),
+                ({"relation_to_id": {"r": 3, "s": 3}}, r"not injective.*\d+: \['r', 's'\]"),
             ]
             for compact_id in (False, True)
         ),
@@ -752,8 +752,15 @@ def test_invalid_label_to_id(kwargs: dict[str, Any], match: str, compact_id: boo
 
 def test_non_injective_labeling_truncated_message() -> None:
     """Test that the error message for many collisions is truncated."""
-    with pytest.raises(ValueError, match=r"100 IDs are shared.*\.\.\. \(95 more\)"):
+    with pytest.raises(ValueError, match=r"100 ID\(s\) shared.*\.\.\. \(95 more\)"):
         Labeling(label_to_id={f"{prefix}{i}": i for i in range(100) for prefix in "xy"})
+
+
+def test_non_injective_labeling_message_bounded() -> None:
+    """Test that the error message stays short when many labels share a single ID."""
+    with pytest.raises(ValueError, match=r"1 ID\(s\) shared.*\.\.\. \(99995 more\)") as exc_info:
+        Labeling(label_to_id={f"x{i}": 0 for i in range(100_000)})
+    assert len(str(exc_info.value)) < 500
 
 
 def test_non_contiguous_label_to_id() -> None:

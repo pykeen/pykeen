@@ -163,9 +163,9 @@ def _ensure_ids(
     return [label_to_id[l_or_i] if isinstance(l_or_i, str) else l_or_i for l_or_i in labels_or_ids]
 
 
-def _format_truncated(items: Sequence[Any], max_items: int = 5) -> str:
+def _format_truncated(items: Sequence[Any], max_items: int = 5, formatter: Callable[[Any], str] = repr) -> str:
     """Format a sequence of items for an error message, truncating if necessary."""
-    text = ", ".join(map(repr, items[:max_items]))
+    text = ", ".join(map(formatter, items[:max_items]))
     if len(items) > max_items:
         text += f", ... ({len(items) - max_items} more)"
     return text
@@ -208,9 +208,9 @@ def _validate_and_invert_label_to_id(label_to_id: Mapping[str, int]) -> dict[int
             id_to_labels.setdefault(i, []).append(label)
         collisions = [(i, labels) for i, labels in id_to_labels.items() if len(labels) > 1]
         raise ValueError(
-            f"The label-to-ID mapping is not injective: {len(collisions)} IDs are shared by multiple labels "
-            f"(only {len(id_to_label)} unique IDs for {len(label_to_id)} labels). Offending ID -> labels: "
-            f"{_format_truncated(collisions)}",
+            f"The label-to-ID mapping is not injective: {len(collisions)} ID(s) shared by multiple labels "
+            f"(only {len(id_to_label)} unique IDs for {len(label_to_id)} labels). Offending ID: [labels]: "
+            + _format_truncated(collisions, formatter=lambda pair: f"{pair[0]!r}: [{_format_truncated(pair[1])}]"),
         )
     return id_to_label
 
