@@ -59,6 +59,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_RATIO: tuple[float, float, float] = (0.8, 0.1, 0.1)
 
+
 class LazyDatasetKwargs(TypedDict):
     """Keyword arguments for a lazy dataset."""
 
