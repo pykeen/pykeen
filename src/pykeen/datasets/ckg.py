@@ -47,12 +47,7 @@ class CKG(TabbedDataset):
     def __init__(self, *, force: bool = False, **kwargs: Unpack[TabbedDatasetKwargs]) -> None:
         """Initialize the `CKG <https://github.com/MannLabs/CKG>`_ dataset from [santos2020]_."""
         kwargs.setdefault("random_state", 0)
-        cache_root_ = self._help_cache(None)
-        source = CKGSimpleSource(
-            path=cache_root_.joinpath("preloaded.tsv.gz"),
-            url=URL,
-            force=force,
-        )
+        source = CKGSimpleSource(path=self.cache_root.joinpath("preloaded.tsv.gz"), url=URL, force=force)
         super().__init__(source, **kwargs)
 
 
