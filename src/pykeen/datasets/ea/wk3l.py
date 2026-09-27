@@ -1,4 +1,10 @@
-"""The Wk3l-15k dataset family.
+"""The Wk3l and Cn3l dataset family.
+
+.. seealso::
+
+    - https://github.com/muhaochen/MTransE for Wk3l-15k, Wk3l-120k, and Cn3l
+    - https://github.com/muhaochen/MTransE-tf for Wk3l-60k in
+      https://github.com/muhaochen/MTransE-tf/raw/refs/heads/master/preprocess/wk3l_60k.zip
 
 Get a summary with ``python -m pykeen.datasets.wk3l``
 """
@@ -129,10 +135,7 @@ class MTransEDataset(EADataset, ABC):
         """Load entity alignment information for the given graph pair."""
         logger.info("Loading alignment information")
         # load mappings for both sides
-        dfs = [
-            self._load_df(key=key, names=list(key))
-            for key in (EA_SIDES, EA_SIDES_R)
-        ]
+        dfs = [self._load_df(key=key, names=list(key)) for key in (EA_SIDES, EA_SIDES_R)]
         # load triple alignments
         df = self._load_df(key=None, names=[(side, column) for side in EA_SIDES for column in COLUMN_LABELS])
         # extract entity alignments
