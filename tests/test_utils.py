@@ -35,6 +35,7 @@ from pykeen.utils import (
     resolve_device,
     set_random_seed,
     split_complex,
+    split_workload,
     tensor_product,
     tensor_sum,
 )
@@ -166,6 +167,32 @@ def _generate_shapes(
             this_array_shape = this_max_shape * mask + this_min_shape * (1 - mask)
             shapes.append(tuple(this_array_shape.tolist()))
         yield tuple(shapes)
+
+
+class SplitWorkloadTests(unittest.TestCase):
+    """Tests for :func:`pykeen.utils.split_workload`."""
+
+    def test_single_process(self):
+        """Test that the full workload is returned outside of worker processes."""
+        assert split_workload(n=17) == range(17)
+
+    def test_partition(self):
+        """Test that the workloads of all workers form an exact partition."""
+        for n, num_workers in itertools.chain(
+            [(25, 11), (0, 3), (1, 4), (3, 7), (100, 3)],
+            itertools.product(range(0, 50, 7), range(1, 13)),
+        ):
+            with self.subTest(n=n, num_workers=num_workers):
+                workloads = []
+                for worker_id in range(num_workers):
+                    worker_info = mock.Mock(id=worker_id, num_workers=num_workers)
+                    with mock.patch("torch.utils.data.get_worker_info", return_value=worker_info):
+                        workloads.append(split_workload(n=n))
+                # contiguous & exact partition of range(n)
+                assert [i for workload in workloads for i in workload] == list(range(n))
+                # balanced
+                sizes = [len(workload) for workload in workloads]
+                assert max(sizes) - min(sizes) <= 1
 
 
 class TestUtils(unittest.TestCase):
