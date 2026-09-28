@@ -51,9 +51,9 @@ class TestCompGCN(cases.ModelTestCase):
     """Test the CompGCN model."""
 
     cls = pykeen.models.CompGCN
-    create_inverse_triples = True
+    use_inverse_triples = True
     num_constant_init = 3  # BN(2) + Bias
-    cli_extras = ["--create-inverse-triples"]
+    cli_extras = ["--use-inverse-triples"]
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -80,7 +80,7 @@ class TestConvE(cases.ModelTestCase):
 
     cls = pykeen.models.ConvE
     embedding_dim = 12
-    create_inverse_triples = True
+    use_inverse_triples = True
     kwargs = {
         "output_channels": 2,
         "embedding_height": 3,
@@ -192,10 +192,8 @@ class TestNodePiece(cases.BaseNodePieceTest):
         edges = torch.tensor(
             [[0, 0, 1], [1, 1, 0], [3, 1, 0], [3, 2, 1]], dtype=torch.long
         )  # node ID 2 is missing as a disconnected node
-        factory = CoreTriplesFactory.create(
-            mapped_triples=edges, num_entities=4, num_relations=3, create_inverse_triples=True
-        )
-        pykeen.models.NodePiece(triples_factory=factory, num_tokens=2)
+        factory = CoreTriplesFactory.create(mapped_triples=edges, num_entities=4, num_relations=3)
+        pykeen.models.NodePiece(triples_factory=factory, num_tokens=2, use_inverse_triples=True)
 
 
 class TestNodePieceMLP(cases.BaseNodePieceTest):
@@ -273,7 +271,7 @@ class TestInductiveNodePiece(cases.InductiveModelTestCase):
     """Test the InductiveNodePiece model."""
 
     cls = pykeen.models.InductiveNodePiece
-    create_inverse_triples = True
+    use_inverse_triples = True
 
     def test_create_entity_representation_for_new_triples(self):
         """Test create_entity_representation_for_new_triples."""
@@ -292,7 +290,6 @@ class TestInductiveNodePiece(cases.InductiveModelTestCase):
             mapped_triples=mapped_triples,
             num_entities=self.factory.num_entities,
             num_relations=self.factory.real_num_relations,
-            create_inverse_triples=True,
         )
         new_instance = self.instance.create_entity_representation_for_new_triples(factory)
         assert isinstance(new_instance, pykeen.nn.NodePieceRepresentation)
@@ -303,7 +300,7 @@ class TestInductiveNodePieceGNN(cases.InductiveModelTestCase):
 
     cls = pykeen.models.InductiveNodePieceGNN
     num_constant_init = 6
-    create_inverse_triples = True
+    use_inverse_triples = True
     train_batch_size = 8
 
 

@@ -508,7 +508,6 @@ def test_inductive_pipeline_evaluation_uses_local_entity_ids():
         num_entities_inductive=5,
         num_triples_inference=20,
         num_triples_testing=20,
-        create_inverse_triples=True,
     )
 
     result = pipeline(

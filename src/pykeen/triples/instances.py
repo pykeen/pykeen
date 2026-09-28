@@ -247,12 +247,12 @@ class BaseBatchedSLCWAInstances(
         return num_batches
 
     @classmethod
-    def from_triples_factory(cls, tf: CoreTriplesFactory, create_inverse_triples: bool | None = None, **kwargs) -> Self:
+    def from_triples_factory(cls, tf: CoreTriplesFactory, create_inverse_triples: bool = False, **kwargs) -> Self:
         """Create sLCWA instances for triples factory.
 
         :param tf: The triples factory.
         :param create_inverse_triples:
-            Whether to add inverse triples. If None, defaults to the triples factory's ``create_inverse_triples``.
+            Whether to add inverse triples.
         :param kwargs: Additional keyword-based parameters passed to :meth:`__init__`
 
         :returns: The instances.
@@ -265,8 +265,6 @@ class BaseBatchedSLCWAInstances(
                 raise AssertionError("If shuffle is provided, it must be True.")
         if kwargs.pop("sampler", None):
             raise AssertionError("sampler is not handled in sLCWA instances")
-        if create_inverse_triples is None:
-            create_inverse_triples = tf.create_inverse_triples
 
         return cls(
             mapped_triples=tf._add_inverse_triples_if_necessary(
@@ -281,12 +279,42 @@ class BaseBatchedSLCWAInstances(
 class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
     """Random pre-batched training instances for the sLCWA training loop."""
 
+    #: the number of iterations started in this (worker) process; used to vary the shared permutation across epochs
+    #: when the data loader's workers are persistent (and thus their base seed does not change between epochs).
+    #: note: this class-level default is shadowed by an instance attribute upon the first increment. This relies on
+    #: each worker process operating on its own copy of the dataset, and starting its iterator exactly once per epoch,
+    #: such that all workers share the same counter value in each epoch.
+    _num_worker_iterations: int = 0
+
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
-        yield from data.BatchSampler(
-            sampler=data.RandomSampler(data_source=split_workload(len(self.mapped_triples))),
-            batch_size=self.batch_size,
-            drop_last=self.drop_last,
-        )
+        worker_info = data.get_worker_info()
+        if worker_info is None:
+            # single-process data loading
+            yield from data.BatchSampler(
+                sampler=data.RandomSampler(data_source=range(len(self.mapped_triples))),
+                batch_size=self.batch_size,
+                drop_last=self.drop_last,
+            )
+            return
+
+        # multi-process data loading: to obtain the same batches (in particular, the same number of batches, and at
+        # most one incomplete batch) as for single-process loading, all workers generate the same random permutation
+        # of *all* triple IDs, split it into batches, and each worker only yields its share of these batches.
+        # The workers' seeds are `base_seed + worker_id`, where `base_seed` is drawn anew for each data loader
+        # iterator, cf. https://docs.pytorch.org/docs/stable/data.html#randomness-in-multi-process-data-loading
+        # This means for each epoch, unless `persistent_workers=True`, in which case the workers (and their seeds) are
+        # reused across epochs; hence, we additionally mix in the number of iterations started by this worker.
+        base_seed = worker_info.seed - worker_info.id
+        generator = np.random.default_rng([base_seed, self._num_worker_iterations])
+        self._num_worker_iterations += 1
+        permutation = generator.permutation(len(self.mapped_triples))
+        # batch b consists of the triple IDs permutation[b * batch_size : (b + 1) * batch_size]; __len__ already
+        # accounts for dropping an incomplete last batch.
+        # note: with `in_order=True` (the default), the data loader fetches from the workers in a round-robin fashion;
+        # hence assigning batches round-robin, too, retains the batch order of the shared permutation. With
+        # `in_order=False`, the batches' contents are still the same, but their order may differ.
+        for batch_id in range(worker_info.id, len(self), worker_info.num_workers):
+            yield permutation[batch_id * self.batch_size : (batch_id + 1) * self.batch_size].tolist()
 
 
 class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
@@ -433,7 +461,7 @@ class LCWAInstances(Instances[LCWABatch]):
         cls,
         tf: CoreTriplesFactory,
         *,
-        create_inverse_triples: bool | None = None,
+        create_inverse_triples: bool = False,
         target: TargetHint = None,
         loss_weighter: HintOrType[LossWeighter] = None,
         loss_weighter_kwargs: OptionalKwargs = None,
@@ -442,15 +470,13 @@ class LCWAInstances(Instances[LCWABatch]):
 
         :param tf: The triples factory.
         :param create_inverse_triples:
-            Whether to add inverse triples. If None, defaults to the triples factory's ``create_inverse_triples``.
+            Whether to add inverse triples.
         :param target: The column to predict
         :param loss_weighter: The method to determine sample weights.
         :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
 
         :returns: The instances.
         """
-        if create_inverse_triples is None:
-            create_inverse_triples = tf.create_inverse_triples
         return cls.from_triples(
             mapped_triples=tf._add_inverse_triples_if_necessary(
                 mapped_triples=tf.mapped_triples,
