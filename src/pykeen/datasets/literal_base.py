@@ -41,7 +41,6 @@ class NumericPathDataset(LazyDataset):
         self._training = self.triples_factory_cls.from_path(
             path=self.training_path,
             path_to_numeric_triples=self.literals_path,
-            create_inverse_triples=self.create_inverse_triples,
         )
         self._testing = self.triples_factory_cls.from_path(
             path=self.testing_path,

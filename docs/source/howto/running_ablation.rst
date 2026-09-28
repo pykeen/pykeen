@@ -37,18 +37,18 @@ We can provide arbitrary additional information about our study with the ``metad
     :lines: 22-37
 
 As mentioned above, we also want to measure the effect of explicitly modeling inverse relations on the model's
-performance. Therefore, we extend the ablation study by including the ``create_inverse_triples`` argument:
+performance. Therefore, we extend the ablation study by including the ``use_inverse_triples`` argument:
 
 .. literalinclude:: /examples/howto/running_ablation.py
     :lines: 40-53
 
 .. note::
 
-    Unlike ``models``, ``datasets``, ``losses``, ``training_loops``, and ``optimizers``, ``create_inverse_triples`` has
-    a default value, which is ``False``.
+    Unlike ``models``, ``datasets``, ``losses``, ``training_loops``, and ``optimizers``, ``use_inverse_triples`` has a
+    default value, which is ``False``.
 
 If there is only one value for either the ``models``, ``datasets``, ``losses``, ``training_loops``, ``optimizers``, or
-``create_inverse_triples`` argument, it can be given as a single value instead of the list.
+``use_inverse_triples`` argument, it can be given as a single value instead of the list.
 
 .. literalinclude:: /examples/howto/running_ablation.py
     :lines: 56-68
@@ -170,7 +170,7 @@ configuration are defined. Besides, similar to the programmatic interface, the `
 The configuration file corresponding to the ablation study that we previously defined within our program would look as
 follows:
 
-.. code-block:: javascript
+.. code-block:: json
 
     {
         "metadata": {
@@ -182,7 +182,7 @@ follows:
             "losses": ["BCEAfterSigmoidLoss", "CrossEntropyLoss"]
             "training_loops": ["lcwa"],
             "optimizers": ["adam"],
-            "create_inverse_triples": [true,false],
+            "use_inverse_triples": [true, false],
             "stopper": "early"
             "stopper_kwargs": {
                 "frequency": 5,

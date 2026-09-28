@@ -1655,18 +1655,22 @@ def add_cudnn_error_hint(func: Callable[P, X]) -> Callable[P, X]:
 
 
 def split_workload(n: int) -> range:
-    """Split workload for multi-processing."""
+    """Split workload for multi-processing.
+
+    :param n: the total number of work items
+    :returns: the range of work items for the current data loader worker. If not in a worker process, this is
+        ``range(n)``; otherwise, the ranges of all workers form an exact, contiguous partition of ``range(n)``.
+    """
     # cf. https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset
     worker_info = torch.utils.data.get_worker_info()
     if worker_info is None:  # single-process data loading, return the full iterator
-        workload = range(n)
-    else:
-        num_workers = worker_info.num_workers
-        worker_id = worker_info.id  # 1-based
-        start = math.ceil(n / num_workers * worker_id)
-        stop = math.ceil(n / num_workers * (worker_id + 1))
-        workload = range(start, stop)
-    return workload
+        return range(n)
+    num_workers = worker_info.num_workers
+    worker_id = worker_info.id  # 0-based
+    # use exact integer arithmetic to avoid floating point rounding issues
+    start = n * worker_id // num_workers
+    stop = n * (worker_id + 1) // num_workers
+    return range(start, stop)
 
 
 def batched_dot(a: FloatTensor, b: FloatTensor) -> FloatTensor:
