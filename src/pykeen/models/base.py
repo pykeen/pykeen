@@ -15,7 +15,8 @@ from class_resolver import HintOrType
 from docdata import parse_docdata
 from torch import nn
 
-from ..constants import TARGET_TO_KEYS
+from .scoring import ScoringBatch, TargetScoringBatch, TripleScoringBatch
+from ..constants import COLUMN_LABELS, TARGET_TO_KEYS
 from ..inverse import RelationInverter, relation_inverter_resolver
 from ..losses import Loss, MarginRankingLoss, loss_resolver
 from ..triples import KGInfo
@@ -60,8 +61,10 @@ class Model(nn.Module, ABC):
         expect the *real* relation IDs, i.e., the ones stored in the triples factory's
         :attr:`~pykeen.triples.TriplesFactory.relation_to_id` and ``mapped_triples``, accept
         batches on any device, and additionally take care of setting the evaluation mode and of
-        optionally applying a sigmoid. Internally, they delegate to the ``score_*`` methods after
-        converting the batch via ``_prepare_batch``.
+        optionally applying a sigmoid. Internally, they translate the request into a
+        :class:`~pykeen.models.scoring.ScoringBatch`, convert it to the internal relation IDs, and,
+        for head prediction with inverse relations, to the inverse triples, before passing it to
+        ``_score``. The ``score_*_inverse`` methods share this code path, cf. ``_score_extended``.
 
         Unless the model uses inverse relations, the two ID spaces coincide.
     """
@@ -300,6 +303,64 @@ class Model(nn.Module, ABC):
             For each r-t pair, the scores for all possible heads.
         """
 
+    def _score(
+        self,
+        batch: ScoringBatch,
+        *,
+        slice_size: int | None = None,
+        mode: InductiveMode | None = None,
+    ) -> FloatTensor:
+        """Calculate the scores for a scoring request.
+
+        The default implementation dispatches to the ``score_*`` methods, and hence only supports
+        requests with a single batch dimension. Subclasses may override it with a native implementation,
+        cf. :meth:`pykeen.models.ERModel._score`.
+
+        :param batch:
+            the scoring request, with internal relation IDs
+        :param slice_size: >0
+            the maximum number of candidates to score at once; only supported for 1:n scoring
+        :param mode:
+            the pass mode, which is None in the transductive setting and one of "training", "validation", or
+            "testing" in the inductive setting
+
+        :raises NotImplementedError:
+            if the request has more than one batch dimension
+        :raises ValueError:
+            if slicing is requested for a batch without a scoring target
+
+        :return: shape: (*batch_shape,) or (*batch_shape, num)
+            the scores
+        """
+        if batch.batch_ndim != 1:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} only supports scoring requests with a single batch dimension, but got "
+                f"batch_shape={batch.batch_shape}"
+            )
+        match batch:
+            case TripleScoringBatch():
+                if slice_size:
+                    raise ValueError("Slicing requires a target; there is nothing to slice along.")
+                hrt_batch = torch.stack([index.expand(batch.batch_shape) for index in batch.indices], dim=-1)
+                return self.score_hrt(hrt_batch, mode=mode).squeeze(dim=-1)
+            case TargetScoringBatch():
+                pair_batch = torch.stack(
+                    [
+                        index.expand(batch.batch_shape)
+                        for label, index in zip(COLUMN_LABELS, batch.indices, strict=True)
+                        if label != batch.target and index is not None
+                    ],
+                    dim=-1,
+                )
+                return self.score(
+                    pair_batch,
+                    target=batch.target,
+                    ids=batch.target_ids,
+                    full_batch=False,
+                    slice_size=slice_size,
+                    mode=mode,
+                )
+
     @abstractmethod
     def collect_regularization_term(self) -> FloatTensor:
         """Get the regularization term for the loss function."""
@@ -366,6 +427,68 @@ class Model(nn.Module, ABC):
         # when trained on inverse relations, the internal relation ID is twice the original relation ID
         return self.relation_inverter.to_internal_batch(batch=batch, index=index_relation)
 
+    def _score_extended(
+        self,
+        batch: ScoringBatch,
+        *,
+        real: bool = False,
+        invert: bool = False,
+        slice_size: int | None = None,
+        mode: InductiveMode | None = None,
+    ) -> FloatTensor:
+        r"""Calculate the scores for a scoring request, handling relation ID spaces and inverse relations.
+
+        This is the single code path behind the ``predict_*`` and the ``score_*_inverse`` methods.
+
+        :param batch:
+            the scoring request, on the model's device
+        :param real:
+            whether the request uses the *real* relation IDs, cf. :class:`~pykeen.inverse.RelationInverter`,
+            rather than the model's internal ones
+        :param invert:
+            whether to score the request by means of the inverse triples, i.e., compute $f(h,r,t)$ via
+            $f(t,r_{inv},h)$. Requires the model to use inverse relations.
+        :param slice_size: >0
+            the maximum number of candidates to score at once; only supported for 1:n scoring
+        :param mode:
+            the pass mode, which is None in the transductive setting and one of "training", "validation", or
+            "testing" in the inductive setting
+
+        :raises ValueError:
+            if inversion is requested, but the model does not use inverse relations
+
+        :return: shape: (*batch_shape,) or (*batch_shape, num)
+            the scores
+        """
+        # the two relation ID spaces only differ if the model uses inverse relations
+        if real and self.use_inverse_triples:
+            batch = batch.to_internal(self.relation_inverter)
+        if invert:
+            if not self.use_inverse_triples:
+                raise ValueError(
+                    "Your model is not configured to predict with inverse relations."
+                    " Set ``use_inverse_triples=True`` when creating the model.",
+                )
+            batch = batch.invert(self.relation_inverter)
+        return self._score(batch, slice_size=slice_size, mode=mode)
+
+    def _predict(self, batch: ScoringBatch, **kwargs) -> FloatTensor:
+        """Calculate the scores for a scoring request with real relation IDs, in evaluation mode.
+
+        :param batch:
+            the scoring request, on the model's device, with the *real* relation IDs
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Model._score_extended`
+
+        :return: shape: (*batch_shape,) or (*batch_shape, num)
+            the scores, passed through a sigmoid if :attr:`predict_with_sigmoid` is set
+        """
+        self.eval()  # Enforce evaluation mode
+        scores = self._score_extended(batch, real=True, **kwargs)
+        if self.predict_with_sigmoid:
+            scores = torch.sigmoid(scores)
+        return scores
+
     def predict_hrt(self, hrt_batch: LongTensor, *, mode: InductiveMode | None = None) -> FloatTensor:
         """Calculate the scores for triples.
 
@@ -381,15 +504,13 @@ class Model(nn.Module, ABC):
         :return: shape: (number of triples, 1), dtype: float
             The score for each triple.
         """
-        self.eval()  # Enforce evaluation mode
-        scores = self.score_hrt(self._prepare_batch(batch=hrt_batch, index_relation=1), mode=mode)
-        if self.predict_with_sigmoid:
-            scores = torch.sigmoid(scores)
-        return scores
+        return self._predict(TripleScoringBatch.from_batch(hrt_batch.to(self.device)), mode=mode).unsqueeze(dim=-1)
 
     def predict_h(
         self,
         rt_batch: LongTensor,
+        *,
+        heads: LongTensor | None = None,
         **kwargs,
     ) -> FloatTensor:
         """Forward pass using left side (head) prediction for obtaining scores of all possible heads.
@@ -406,25 +527,25 @@ class Model(nn.Module, ABC):
 
         :param rt_batch: shape: (batch_size, 2), dtype: long
             The indices of (relation, tail) pairs.
+        :param heads: shape: (num_heads,) | (batch_size, num_heads)
+            head entity indices to score against. If None, scores against all entities (from the given mode).
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Model.score_h`
+            additional keyword-based parameters passed to :meth:`Model._score`, e.g., ``slice_size`` or ``mode``
 
         :return: shape: (batch_size, num_heads), dtype: float
             For each r-t pair, the scores for all possible heads.
         """
-        self.eval()  # Enforce evaluation mode
-        rt_batch = self._prepare_batch(batch=rt_batch, index_relation=0)
-        if self.use_inverse_triples:
-            scores = self.score_h_inverse(rt_batch=rt_batch, **kwargs)
-        else:
-            scores = self.score_h(rt_batch, **kwargs)
-        if self.predict_with_sigmoid:
-            scores = torch.sigmoid(scores)
-        return scores
+        rt_batch = rt_batch.to(self.device)
+        batch = TargetScoringBatch.from_transposed_batch(
+            head=heads, relation=rt_batch[:, 0], tail=rt_batch[:, 1], target=LABEL_HEAD
+        )
+        return self._predict(batch, invert=self.use_inverse_triples, **kwargs)
 
     def predict_t(
         self,
         hr_batch: LongTensor,
+        *,
+        tails: LongTensor | None = None,
         **kwargs,
     ) -> FloatTensor:
         """Forward pass using right side (tail) prediction for obtaining scores of all possible tails.
@@ -435,8 +556,10 @@ class Model(nn.Module, ABC):
 
         :param hr_batch: shape: (batch_size, 2), dtype: long
             The indices of (head, relation) pairs.
+        :param tails: shape: (num_tails,) | (batch_size, num_tails)
+            tail entity indices to score against. If None, scores against all entities (from the given mode).
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Model.score_t`
+            additional keyword-based parameters passed to :meth:`Model._score`, e.g., ``slice_size`` or ``mode``
 
         :return: shape: (batch_size, num_tails), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -450,12 +573,11 @@ class Model(nn.Module, ABC):
             if inverse triples were used in training, and why this function has the same
             behavior regardless of the use of inverse triples.
         """
-        self.eval()  # Enforce evaluation mode
-        hr_batch = self._prepare_batch(batch=hr_batch, index_relation=1)
-        scores = self.score_t(hr_batch, **kwargs)
-        if self.predict_with_sigmoid:
-            scores = torch.sigmoid(scores)
-        return scores
+        hr_batch = hr_batch.to(self.device)
+        batch = TargetScoringBatch.from_transposed_batch(
+            head=hr_batch[:, 0], relation=hr_batch[:, 1], tail=tails, target=LABEL_TAIL
+        )
+        return self._predict(batch, **kwargs)
 
     def predict_r(
         self,
@@ -476,26 +598,23 @@ class Model(nn.Module, ABC):
             The relations to score against, given as *real* relation IDs. If None, scores against
             all real relations.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Model.score_r`
+            additional keyword-based parameters passed to :meth:`Model._score`, e.g., ``slice_size`` or ``mode``
 
         :return: shape: (batch_size, num_real_relations), dtype: float
             For each h-t pair, the scores for all possible relations, with the columns indexed by
             *real* relation ID. The artificial inverse relations are never scored against; use
             :meth:`Model.score_r` directly to obtain their scores.
         """
-        self.eval()  # Enforce evaluation mode
         ht_batch = ht_batch.to(self.device)
-        if self.use_inverse_triples:
-            # score_r operates on the model's internal relations, which comprise the artificial
-            # inverse ones. Asking for the forward IDs explicitly keeps the columns indexed by
-            # "real" relation ID, without computing the inverse scores just to discard them.
-            if relations is None:
-                relations = torch.arange(self.num_real_relations, device=self.device)
-            relations = self.relation_inverter.to_internal(relations)
-        scores = self.score_r(ht_batch, relations=relations, **kwargs)
-        if self.predict_with_sigmoid:
-            scores = torch.sigmoid(scores)
-        return scores
+        if self.use_inverse_triples and relations is None:
+            # the model's internal relations comprise the artificial inverse ones. Asking for the
+            # forward IDs explicitly keeps the columns indexed by "real" relation ID, without
+            # computing the inverse scores just to discard them.
+            relations = torch.arange(self.num_real_relations, device=self.device)
+        batch = TargetScoringBatch.from_transposed_batch(
+            head=ht_batch[:, 0], relation=relations, tail=ht_batch[:, 1], target=LABEL_RELATION
+        )
+        return self._predict(batch, **kwargs)
 
     def predict(
         self,
@@ -592,14 +711,6 @@ class Model(nn.Module, ABC):
 
     """Inverse scoring"""
 
-    def _prepare_inverse_batch(self, batch: LongTensor, index_relation: int) -> LongTensor:
-        if not self.use_inverse_triples:
-            raise ValueError(
-                "Your model is not configured to predict with inverse relations."
-                " Set ``use_inverse_triples=True`` when creating the model.",
-            )
-        return self.relation_inverter.invert_internal_batch(batch=batch, index=index_relation).flip(1)
-
     def score_hrt_inverse(
         self,
         hrt_batch: LongTensor,
@@ -621,15 +732,18 @@ class Model(nn.Module, ABC):
         :return:
             the triple scores obtained by inverse relations
         """
-        t_r_inv_h = self._prepare_inverse_batch(batch=hrt_batch, index_relation=1)
-        return self.score_hrt(hrt_batch=t_r_inv_h, mode=mode)
+        return self._score_extended(TripleScoringBatch.from_batch(hrt_batch), invert=True, mode=mode).unsqueeze(dim=-1)
 
     def score_t_inverse(self, hr_batch: LongTensor, *, tails: LongTensor | None = None, **kwargs):
         """Score all tails for a batch of (h,r)-pairs using the head predictions for the inverses $(*,r_{inv},h)$."""
-        r_inv_h = self._prepare_inverse_batch(batch=hr_batch, index_relation=1)
-        return self.score_h(rt_batch=r_inv_h, heads=tails, **kwargs)
+        batch = TargetScoringBatch.from_transposed_batch(
+            head=hr_batch[:, 0], relation=hr_batch[:, 1], tail=tails, target=LABEL_TAIL
+        )
+        return self._score_extended(batch, invert=True, **kwargs)
 
     def score_h_inverse(self, rt_batch: LongTensor, *, heads: LongTensor | None = None, **kwargs):
         """Score all heads for a batch of (r,t)-pairs using the tail predictions for the inverses $(t,r_{inv},*)$."""
-        t_r_inv = self._prepare_inverse_batch(batch=rt_batch, index_relation=0)
-        return self.score_t(hr_batch=t_r_inv, tails=heads, **kwargs)
+        batch = TargetScoringBatch.from_transposed_batch(
+            head=heads, relation=rt_batch[:, 0], tail=rt_batch[:, 1], target=LABEL_HEAD
+        )
+        return self._score_extended(batch, invert=True, **kwargs)
