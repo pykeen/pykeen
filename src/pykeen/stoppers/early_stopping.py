@@ -248,9 +248,6 @@ class EarlyStopper(Stopper):
             slice_size=self.evaluation_slice_size,
             **{key: value for key, value in self.evaluation_kwargs.items() if key != "targets"},
         )
-        # After the first evaluation pass the optimal batch and slice size is obtained and saved for re-use
-        self.evaluation_batch_size = self.evaluator.batch_size
-        self.evaluation_slice_size = self.evaluator.slice_size
 
         if self.result_tracker is not None:
             self.result_tracker.log_metrics(

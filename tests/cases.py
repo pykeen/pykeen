@@ -2632,6 +2632,14 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
         assert "prefix" in call_args
         assert call_args["prefix"] == "validation"
 
+    def test_keeps_evaluation_sizes(self):
+        """Test that explicitly set evaluation batch and slice sizes are not overwritten by an evaluation."""
+        self.instance.evaluation_batch_size = 7
+        self.instance.evaluation_slice_size = 3
+        self.instance.should_stop(epoch=0)
+        assert self.instance.evaluation_batch_size == 7
+        assert self.instance.evaluation_slice_size == 3
+
     def test_serialization(self):
         """Test for serialization."""
         summary = self.instance.get_summary_dict()
