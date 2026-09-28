@@ -88,6 +88,7 @@ from pykeen.typing import (
     EA_SIDE_LEFT,
     EA_SIDE_RIGHT,
     LABEL_HEAD,
+    LABEL_RELATION,
     LABEL_TAIL,
     RANK_REALISTIC,
     SIDE_BOTH,
@@ -2139,6 +2140,16 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
         batch = next(iter(self.instance.get_loader(batch_size=self.batch_size)))
         self.instance.process_batch(batch=batch)
 
+    def test_equivalence(self) -> None:
+        """Test equivalence between Evaluator.evaluate and evaluation loop."""
+        if LABEL_RELATION in self.instance.targets:
+            raise unittest.SkipTest("Evaluator.evaluate does not support relation prediction")
+        result = self.instance.evaluator.evaluate(
+            model=self.instance.model, mapped_triples=self.factory.mapped_triples, targets=self.instance.targets
+        )
+        result2 = self.instance.evaluate()
+        assert result.to_flat_dict() == result2.to_flat_dict()
+
 
 class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.models.EvaluationOnlyModel]):
     """Test case for evaluation only models."""
@@ -2620,6 +2631,14 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
         assert call_args["step"] == 0
         assert "prefix" in call_args
         assert call_args["prefix"] == "validation"
+
+    def test_keeps_evaluation_sizes(self):
+        """Test that explicitly set evaluation batch and slice sizes are not overwritten by an evaluation."""
+        self.instance.evaluation_batch_size = 7
+        self.instance.evaluation_slice_size = 3
+        self.instance.should_stop(epoch=0)
+        assert self.instance.evaluation_batch_size == 7
+        assert self.instance.evaluation_slice_size == 3
 
     def test_serialization(self):
         """Test for serialization."""

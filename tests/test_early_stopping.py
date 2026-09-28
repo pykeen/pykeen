@@ -11,7 +11,7 @@ from torch.optim import Adam
 
 from pykeen.datasets import Nations
 from pykeen.evaluation import RankBasedEvaluator
-from pykeen.evaluation.evaluator import Evaluator
+from pykeen.evaluation.evaluation_loop import LCWAEvaluationLoop
 from pykeen.models import Model, TransE
 from pykeen.pipeline import pipeline
 from pykeen.stoppers.early_stopping import EarlyStopper, EarlyStoppingLogic, is_improvement
@@ -151,19 +151,19 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
 
 @pytest.mark.slow
 def test_pipeline_forwards_evaluation_kwargs_to_stopper():
-    """Verify that evaluation_kwargs passed to pipeline() reach every evaluator.evaluate() call.
+    """Verify that evaluation_kwargs passed to pipeline() reach every evaluation loop.
 
     Regression test for https://github.com/pykeen/pykeen/issues/1587.
     """
     targets = ("tail",)
     observed_targets: list = []
-    _original_evaluate = Evaluator.evaluate
+    _original_init = LCWAEvaluationLoop.__init__
 
-    def spy_evaluate(self, *args, **kwargs):
+    def spy_init(self, *args, **kwargs):
         observed_targets.append(kwargs.get("targets"))
-        return _original_evaluate(self, *args, **kwargs)
+        return _original_init(self, *args, **kwargs)
 
-    with patch.object(Evaluator, "evaluate", spy_evaluate):
+    with patch.object(LCWAEvaluationLoop, "__init__", spy_init):
         pipeline(
             dataset="nations",
             model="TransE",
@@ -174,7 +174,8 @@ def test_pipeline_forwards_evaluation_kwargs_to_stopper():
             use_testing_data=False,
         )
 
-    assert observed_targets, "evaluator.evaluate() was never called"
+    # one loop for the early stopper, and one for the final evaluation
+    assert len(observed_targets) == 2, observed_targets
     assert all(t == targets for t in observed_targets), (
-        f"Expected all evaluate() calls to use targets={targets!r}, got {observed_targets!r}"
+        f"Expected all evaluation loops to use targets={targets!r}, got {observed_targets!r}"
     )
