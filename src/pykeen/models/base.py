@@ -62,9 +62,9 @@ class Model(nn.Module, ABC):
         :attr:`~pykeen.triples.TriplesFactory.relation_to_id` and ``mapped_triples``, accept
         batches on any device, and additionally take care of setting the evaluation mode and of
         optionally applying a sigmoid. Internally, they translate the request into a
-        :class:`~pykeen.models.scoring.ScoringBatch`, convert it to the internal relation IDs, and,
+        :class:`~pykeen.models.ScoringBatch`, convert it to the internal relation IDs, and,
         for head prediction with inverse relations, to the inverse triples, before passing it to
-        ``_score``. The ``score_*_inverse`` methods share this code path, cf. ``_score_extended``.
+        ``_score()``. The ``score_*_inverse`` methods share this code path, cf. ``_score_extended()``.
 
         Unless the model uses inverse relations, the two ID spaces coincide.
     """
@@ -314,7 +314,7 @@ class Model(nn.Module, ABC):
 
         The default implementation dispatches to the ``score_*`` methods, and hence only supports
         requests with a single batch dimension. Subclasses may override it with a native implementation,
-        cf. :meth:`~pykeen.models.ERModel._score`.
+        cf. in :class:`~pykeen.models.ERModel`.
 
         :param batch:
             the scoring request, with internal relation IDs
@@ -478,7 +478,7 @@ class Model(nn.Module, ABC):
         :param batch:
             the scoring request, on the model's device, with the *real* relation IDs
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Model._score_extended`
+            additional keyword-based parameters passed to ``_score_extended()``
 
         :return: shape: (*batch_shape,) or (*batch_shape, num)
             the scores, passed through a sigmoid if :attr:`predict_with_sigmoid` is set
@@ -530,7 +530,7 @@ class Model(nn.Module, ABC):
         :param heads: shape: (num_heads,) | (batch_size, num_heads)
             head entity indices to score against. If None, scores against all entities (from the given mode).
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Model._score`, e.g., ``slice_size`` or ``mode``
+            additional keyword-based parameters passed to ``_score()``, e.g., ``slice_size`` or ``mode``
 
         :return: shape: (batch_size, num_heads), dtype: float
             For each r-t pair, the scores for all possible heads.
@@ -559,7 +559,7 @@ class Model(nn.Module, ABC):
         :param tails: shape: (num_tails,) | (batch_size, num_tails)
             tail entity indices to score against. If None, scores against all entities (from the given mode).
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Model._score`, e.g., ``slice_size`` or ``mode``
+            additional keyword-based parameters passed to ``_score()``, e.g., ``slice_size`` or ``mode``
 
         :return: shape: (batch_size, num_tails), dtype: float
             For each h-r pair, the scores for all possible tails.
@@ -598,7 +598,7 @@ class Model(nn.Module, ABC):
             The relations to score against, given as *real* relation IDs. If None, scores against
             all real relations.
         :param kwargs:
-            additional keyword-based parameters passed to :meth:`Model._score`, e.g., ``slice_size`` or ``mode``
+            additional keyword-based parameters passed to ``_score()``, e.g., ``slice_size`` or ``mode``
 
         :return: shape: (batch_size, num_real_relations), dtype: float
             For each h-t pair, the scores for all possible relations, with the columns indexed by
