@@ -131,6 +131,7 @@ __all__ = [
     "unpack_singletons",
     "upgrade_to_sequence",
     "view_complex",
+    "view_complex_native",
 ]
 
 logger = logging.getLogger(__name__)
