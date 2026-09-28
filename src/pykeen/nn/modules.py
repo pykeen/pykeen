@@ -579,9 +579,11 @@ class ComplExInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         Official implementation: https://github.com/ttrouill/complex/
 
     .. note::
-        this method generally expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
-        `True`. However, for backwards compatibility and convenience in use, you can also pass real tensors whose shape
-        is compliant with :func:`torch.view_as_complex`, cf. :func:`~pykeen.utils.ensure_complex`.
+        this method expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to `True`.
+        Real tensors are *not* converted: they are treated as complex numbers with zero imaginary part, such that the
+        interaction reduces to :class:`~pykeen.nn.modules.DistMultInteraction`. To use real tensors of shape
+        ``(*, 2 * d)`` holding interleaved pairs of real and imaginary parts, convert them first, e.g., using
+        :func:`~pykeen.utils.view_complex`.
 
     ---
     citation:
@@ -1460,8 +1462,9 @@ class RotatEInteraction(NormBasedInteraction[FloatTensor, FloatTensor, FloatTens
 
     .. note::
         this method generally expects all tensors to be of complex datatype, i.e., `torch.is_complex(x)` to evaluate to
-        `True`. However, for backwards compatibility and convenience in use, you can also pass real tensors whose shape
-        is compliant with :func:`torch.view_as_complex`, cf. :func:`~pykeen.utils.ensure_complex`.
+        `True`. However, for backwards compatibility and convenience in use, you can also pass real tensors with an
+        even last dimension holding interleaved pairs of real and imaginary parts, i.e., a real tensor of shape
+        ``(*, 2 * d)`` is interpreted as a complex tensor of shape ``(*, d)``, cf. :func:`~pykeen.utils.ensure_complex`.
 
     ---
     citation:

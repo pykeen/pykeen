@@ -414,10 +414,10 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: s
             doc = cls.__doc__
             reference = f"[`{path}`]({link_fmt.format(path)})" if link_fmt else f"`{path}`"
 
-            yield name, reference, get_until_first_blank(doc)
+            yield name, reference, get_until_first_blank(doc or "")
         else:
             doc = cls.__doc__
-            yield name, path, get_until_first_blank(doc)
+            yield name, path, get_until_first_blank(doc or "")
 
 
 @ls.command()
