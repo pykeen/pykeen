@@ -200,7 +200,11 @@ class EarlyStopper(Stopper):
 
     @functools.cached_property
     def evaluation_loop(self) -> LCWAEvaluationLoop:
-        """Return the evaluation loop, which is created lazily on first access."""
+        """Return the evaluation loop, which is created lazily on first access.
+
+        Creating the loop builds the filter index over the training and evaluation triples. Doing this lazily avoids
+        paying this cost if the stopper never evaluates, e.g., when ``frequency`` exceeds the number of epochs.
+        """
         loop_kwargs = {}
         if "targets" in self.evaluation_kwargs:
             loop_kwargs["targets"] = self.evaluation_kwargs["targets"]
