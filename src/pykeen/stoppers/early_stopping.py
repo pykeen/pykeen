@@ -173,8 +173,8 @@ class EarlyStopper(Stopper):
     use_tqdm: bool = False
     #: Keyword arguments for the tqdm progress bar
     tqdm_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
-    #: Additional keyword arguments passed to :meth:`~pykeen.evaluation.evaluation_loop.EvaluationLoop.evaluate`.
-    #: ``targets`` is passed to the constructor of :class:`~pykeen.evaluation.evaluation_loop.LCWAEvaluationLoop`.
+    #: Additional keyword arguments passed to :meth:`~pykeen.evaluation.EvaluationLoop.evaluate`.
+    #: ``targets`` is passed to the constructor of :class:`~pykeen.evaluation.LCWAEvaluationLoop`.
     #: Do not include ``batch_size`` or ``slice_size`` here; use the dedicated fields instead.
     evaluation_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
 
