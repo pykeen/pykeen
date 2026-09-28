@@ -314,7 +314,7 @@ class Model(nn.Module, ABC):
 
         The default implementation dispatches to the ``score_*`` methods, and hence only supports
         requests with a single batch dimension. Subclasses may override it with a native implementation,
-        cf. :meth:`pykeen.models.ERModel._score`.
+        cf. :meth:`~pykeen.models.ERModel._score`.
 
         :param batch:
             the scoring request, with internal relation IDs
