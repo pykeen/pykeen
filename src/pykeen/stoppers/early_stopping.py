@@ -1,6 +1,7 @@
 """Implementation of early stopping."""
 
 import dataclasses
+import functools
 import logging
 import math
 import pathlib
@@ -172,7 +173,8 @@ class EarlyStopper(Stopper):
     use_tqdm: bool = False
     #: Keyword arguments for the tqdm progress bar
     tqdm_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
-    #: Additional keyword arguments passed to :meth:`~pykeen.evaluation.Evaluator.evaluate`.
+    #: Additional keyword arguments passed to :meth:`~pykeen.evaluation.evaluation_loop.EvaluationLoop.evaluate`.
+    #: ``targets`` is passed to the constructor of :class:`~pykeen.evaluation.evaluation_loop.LCWAEvaluationLoop`.
     #: Do not include ``batch_size`` or ``slice_size`` here; use the dedicated fields instead.
     evaluation_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
 
@@ -195,12 +197,19 @@ class EarlyStopper(Stopper):
             logger.warning(
                 f"Checkpoint path for best weights does already exist ({self.best_model_path}). It will be overwritten."
             )
-        self.evaluation_loop = LCWAEvaluationLoop(
+
+    @functools.cached_property
+    def evaluation_loop(self) -> LCWAEvaluationLoop:
+        """Return the evaluation loop, which is created lazily on first access."""
+        loop_kwargs = {}
+        if "targets" in self.evaluation_kwargs:
+            loop_kwargs["targets"] = self.evaluation_kwargs["targets"]
+        return LCWAEvaluationLoop(
             model=self.model,
             triples_factory=self.evaluation_triples_factory,
             evaluator=self.evaluator,
-            # TODO: targets?
             additional_filter_triples=[self.training_triples_factory.mapped_triples],
+            **loop_kwargs,
         )
 
     @property
@@ -237,7 +246,7 @@ class EarlyStopper(Stopper):
             tqdm_kwargs=self.tqdm_kwargs,
             batch_size=self.evaluation_batch_size,
             slice_size=self.evaluation_slice_size,
-            **self.evaluation_kwargs,
+            **{key: value for key, value in self.evaluation_kwargs.items() if key != "targets"},
         )
         # After the first evaluation pass the optimal batch and slice size is obtained and saved for re-use
         self.evaluation_batch_size = self.evaluator.batch_size

@@ -111,6 +111,7 @@ class EvaluationLoop(Generic[BatchType]):
         self.evaluator = evaluator
         self.dataset = dataset
 
+    @property
     def mode(self) -> InductiveMode | None:
         """Get the mode from the evaluator."""
         return self.evaluator.mode

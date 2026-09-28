@@ -88,6 +88,7 @@ from pykeen.typing import (
     EA_SIDE_LEFT,
     EA_SIDE_RIGHT,
     LABEL_HEAD,
+    LABEL_RELATION,
     LABEL_TAIL,
     RANK_REALISTIC,
     SIDE_BOTH,
@@ -2141,7 +2142,11 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
 
     def test_equivalence(self) -> None:
         """Test equivalence between Evaluator.evaluate and evaluation loop."""
-        result = self.instance.evaluator.evaluate(model=self.instance.model, mapped_triples=self.factory.mapped_triples)
+        if LABEL_RELATION in self.instance.targets:
+            raise unittest.SkipTest("Evaluator.evaluate does not support relation prediction")
+        result = self.instance.evaluator.evaluate(
+            model=self.instance.model, mapped_triples=self.factory.mapped_triples, targets=self.instance.targets
+        )
         result2 = self.instance.evaluate()
         assert result.to_flat_dict() == result2.to_flat_dict()
 
