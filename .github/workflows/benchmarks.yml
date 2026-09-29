@@ -70,29 +70,34 @@ jobs:
           echo "head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Compare
-        # e.g., the weekly comparison when master did not change within the week
-        if: steps.commits.outputs.base != steps.commits.outputs.head
+        env:
+          BASE: ${{ steps.commits.outputs.base }}
+          HEAD: ${{ steps.commits.outputs.head }}
         run: |
+          echo '## Benchmark comparison' >> "$GITHUB_STEP_SUMMARY"
+          # e.g., the weekly comparison when master did not change within the week
+          if [ "${BASE}" = "${HEAD}" ]; then
+            echo "Nothing to compare: both commits are ${HEAD}." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           asv machine --yes
-          # note: exits with a non-zero code if a benchmark got slower by more than the factor
-          asv continuous --factor 1.2 --interleave-rounds --show-stderr ${{ steps.commits.outputs.base }} ${{ steps.commits.outputs.head }}
-
-      - name: Summarize
-        if: always() && steps.commits.outputs.base != steps.commits.outputs.head
-        run: |
+          # exits with a non-zero code if a benchmark got slower by more than the factor; summarize anyway
+          status=0
+          asv continuous --factor 1.2 --interleave-rounds --show-stderr "${BASE}" "${HEAD}" || status=$?
           {
-            echo '## Benchmark comparison'
             echo '```'
-            asv compare --factor 1.2 --split ${{ steps.commits.outputs.base }} ${{ steps.commits.outputs.head }}
+            asv compare --factor 1.2 --split "${BASE}" "${HEAD}"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          exit "${status}"
 
       - name: Upload results
-        if: always() && steps.commits.outputs.base != steps.commits.outputs.head
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: asv-results
           path: benchmarking/.asv/results
+          if-no-files-found: ignore
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
