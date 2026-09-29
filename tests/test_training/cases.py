@@ -83,7 +83,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
 
     def test_sub_batching_support(self):
         """Test if sub-batching works as expected."""
-        model = ConvE(triples_factory=self.triples_factory)
+        model = ConvE(triples_factory=self.triples_factory, use_inverse_triples=True)
         training_loop = self._with_model(model)
 
         with pytest.raises(NotImplementedError):

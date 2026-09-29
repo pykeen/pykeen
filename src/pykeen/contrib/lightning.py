@@ -10,9 +10,8 @@ embedding models that has some nice features:
 
     model = LitLCWAModule(
         dataset="fb15k237",
-        dataset_kwargs=dict(create_inverse_triples=True),
         model="mure",
-        model_kwargs=dict(embedding_dim=128, loss="bcewithlogits"),
+        model_kwargs=dict(embedding_dim=128, loss="bcewithlogits", use_inverse_triples=True),
         batch_size=128,
     )
     trainer = pytorch_lightning.Trainer(
@@ -198,6 +197,7 @@ class SLCWALitModule(LitModule):
         return torch.utils.data.DataLoader(
             dataset=BatchedSLCWAInstances.from_triples_factory(
                 triples_factory,
+                create_inverse_triples=self.model.use_inverse_triples,
                 batch_size=self.batch_size,
                 # TODO:
                 # shuffle=shuffle,
@@ -241,7 +241,9 @@ class LCWALitModule(LitModule):
 
     def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:
         return torch.utils.data.DataLoader(
-            dataset=LCWAInstances.from_triples_factory(triples_factory),
+            dataset=LCWAInstances.from_triples_factory(
+                triples_factory, create_inverse_triples=self.model.use_inverse_triples
+            ),
             batch_size=self.batch_size,
             shuffle=shuffle,
         )
@@ -293,7 +295,7 @@ def lit_pipeline(
 def _main(
     training_loop: HintOrType[LitModule],
     dataset: HintOrType[Dataset],
-    create_inverse_triples: bool,
+    use_inverse_triples: bool,
     model: HintOrType[Model],
     loss: HintOrType[Loss],
     batch_size: int,
@@ -306,9 +308,12 @@ def _main(
         training_loop=training_loop,
         training_loop_kwargs={
             "dataset": dataset,
-            "dataset_kwargs": {"create_inverse_triples": create_inverse_triples},
             "model": model,
-            "model_kwargs": {"embedding_dim": embedding_dim, "loss": loss},
+            "model_kwargs": {
+                "embedding_dim": embedding_dim,
+                "loss": loss,
+                "use_inverse_triples": use_inverse_triples,
+            },
             "batch_size": batch_size,
         },
         trainer_kwargs={

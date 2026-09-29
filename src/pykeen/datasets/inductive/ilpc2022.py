@@ -41,7 +41,6 @@ class ILPC2022Small(UnpackedRemoteDisjointInductiveDataset):
 
     def __init__(self, **kwargs: Unpack[UnpackedRemoteDataSetKwargs]) -> None:
         """Initialize the inductive link prediction dataset."""
-        kwargs.setdefault("create_inverse_triples", True)
         super().__init__(
             transductive_training_url=SMALL_TRAIN_URL,
             inductive_inference_url=SMALL_INFERENCE_URL,
@@ -66,7 +65,6 @@ class ILPC2022Large(UnpackedRemoteDisjointInductiveDataset):
 
     def __init__(self, **kwargs: Unpack[UnpackedRemoteDataSetKwargs]):
         """Initialize the inductive link prediction dataset."""
-        kwargs.setdefault("create_inverse_triples", True)
         super().__init__(
             transductive_training_url=LARGE_TRAIN_URL,
             inductive_inference_url=LARGE_INFERENCE_URL,

@@ -2,18 +2,26 @@
 
 import contextlib
 import functools
+import io
 import itertools
 import operator
+import os
+import pathlib
 import random
 import string
+import tempfile
 import timeit
 import unittest
-from collections.abc import Iterable
+import warnings
+from collections.abc import Callable, Iterable
 from typing import Any
 from unittest import mock
 
 import numpy as np
 import pytest
+import scipy.sparse
+import scipy.sparse.csgraph
+import scipy.special
 import torch
 
 from pykeen.utils import (
@@ -23,20 +31,28 @@ from pykeen.utils import (
     clamp_norm,
     combine_complex,
     compact_mapping,
+    complex_normalize,
     compose,
+    ensure_complex,
     estimate_cost_of_sequence,
+    find,
     flatten_dictionary,
     get_connected_components,
     get_optimal_sequence,
     get_until_first_blank,
     iter_weisfeiler_lehman,
+    logcumsumexp,
     merge_kwargs,
+    normalize_path,
     project_entity,
     resolve_device,
     set_random_seed,
     split_complex,
+    split_workload,
     tensor_product,
     tensor_sum,
+    view_complex,
+    view_complex_native,
 )
 
 
@@ -143,6 +159,35 @@ class TestGetUntilFirstBlank(unittest.TestCase):
         r = get_until_first_blank(s)
         assert r == "Broken line."
 
+    def test_multi_line_first_paragraph(self):
+        """Test a first paragraph spanning more than two lines."""
+        assert get_until_first_blank("A\nB\nC\n\nD") == "A B C"
+
+    def test_whitespace_only_blank_line(self):
+        """Test that a line consisting of whitespace only counts as blank."""
+        assert get_until_first_blank("A\n  B\n  C\n    \n  D") == "A B C"
+
+    def test_no_blank_line(self):
+        """Test a string without any blank line."""
+        assert get_until_first_blank("A\n  B\n  C") == "A B C"
+
+    def test_leading_blank_lines(self):
+        """Test that leading blank lines are skipped."""
+        assert get_until_first_blank("\n   \n  A\n  B\n  C\n\n  D") == "A B C"
+
+    def test_class_docstring(self):
+        """Test a typical indented class docstring."""
+        doc = """
+            A model with a summary
+            spanning several lines.
+
+            Some more details, which are not part of the summary.
+
+            ---
+            name: A
+        """
+        assert get_until_first_blank(doc) == "A model with a summary spanning several lines."
+
 
 def _generate_shapes(
     n_dim: int = 5,
@@ -168,6 +213,32 @@ def _generate_shapes(
         yield tuple(shapes)
 
 
+class SplitWorkloadTests(unittest.TestCase):
+    """Tests for :func:`pykeen.utils.split_workload`."""
+
+    def test_single_process(self):
+        """Test that the full workload is returned outside of worker processes."""
+        assert split_workload(n=17) == range(17)
+
+    def test_partition(self):
+        """Test that the workloads of all workers form an exact partition."""
+        for n, num_workers in itertools.chain(
+            [(25, 11), (0, 3), (1, 4), (3, 7), (100, 3)],
+            itertools.product(range(0, 50, 7), range(1, 13)),
+        ):
+            with self.subTest(n=n, num_workers=num_workers):
+                workloads = []
+                for worker_id in range(num_workers):
+                    worker_info = mock.Mock(id=worker_id, num_workers=num_workers)
+                    with mock.patch("torch.utils.data.get_worker_info", return_value=worker_info):
+                        workloads.append(split_workload(n=n))
+                # contiguous & exact partition of range(n)
+                assert [i for workload in workloads for i in workload] == list(range(n))
+                # balanced
+                sizes = [len(workload) for workload in workloads]
+                assert max(sizes) - min(sizes) <= 1
+
+
 class TestUtils(unittest.TestCase):
     """Tests for :mod:`pykeen.utils`."""
 
@@ -180,6 +251,40 @@ class TestUtils(unittest.TestCase):
         assert set(compacted_mapping.values()) == set(range(len(mapping)))
         assert set(id_remapping.keys()) == set(mapping.values())
         assert set(id_remapping.values()) == set(compacted_mapping.values())
+
+    def test_compact_mapping_injective(self):
+        """Test ``compact_mapping()`` on an injective mapping."""
+        compacted_mapping, id_remapping = compact_mapping(mapping={"a": 7, "b": 3, "c": 10})
+        assert compacted_mapping == {"a": 1, "b": 0, "c": 2}
+        assert id_remapping == {3: 0, 7: 1, 10: 2}
+
+    def test_compact_mapping_non_injective(self):
+        """Test ``compact_mapping()`` on a non-injective mapping."""
+        compacted_mapping, id_remapping = compact_mapping(mapping={"a": 0, "b": 0, "c": 5})
+        assert compacted_mapping == {"a": 0, "b": 0, "c": 1}
+        assert id_remapping == {0: 0, 5: 1}
+
+        mapping = {letter: i // 3 * 2 + 1 for i, letter in enumerate(string.ascii_letters)}
+        compacted_mapping, id_remapping = compact_mapping(mapping=mapping)
+        num_unique = len(set(mapping.values()))
+        assert set(compacted_mapping.values()) == set(range(num_unique))
+        assert set(id_remapping.keys()) == set(mapping.values())
+        assert set(id_remapping.values()) == set(range(num_unique))
+        # keys sharing an old ID share the new ID
+        for key, old_id in mapping.items():
+            assert compacted_mapping[key] == id_remapping[old_id]
+
+    def test_compact_mapping_empty(self):
+        """Test ``compact_mapping()`` on an empty mapping."""
+        assert compact_mapping(mapping={}) == ({}, {})
+
+    def test_compact_mapping_order_preserving(self):
+        """Test that ``compact_mapping()`` preserves the relative order of IDs."""
+        mapping = {letter: (i * 7) % 11 * 3 for i, letter in enumerate(string.ascii_letters)}
+        _, id_remapping = compact_mapping(mapping=mapping)
+        old_ids = sorted(id_remapping.keys())
+        new_ids = [id_remapping[old_id] for old_id in old_ids]
+        assert new_ids == list(range(len(old_ids)))
 
     def test_clamp_norm(self):
         """Test clamp_norm() ."""
@@ -262,6 +367,56 @@ class TestUtils(unittest.TestCase):
                 c = a + b
                 exp_shape = c.shape
                 assert shape == exp_shape
+
+    def test_calculate_broadcasted_elementwise_result_shape_edge_cases(self):
+        """Test calculate_broadcasted_elementwise_result_shape for differing ndims, size-0 dims, and incompatibility."""
+        for first, second, expected in (
+            # differing number of dimensions (right-aligned)
+            ((3, 4), (4,), (3, 4)),
+            ((4,), (3, 4), (3, 4)),
+            ((2, 1, 5), (3, 1), (2, 3, 5)),
+            ((), (2, 3), (2, 3)),
+            ((2, 3), (), (2, 3)),
+            # size-0 dimensions
+            ((1,), (0,), (0,)),
+            ((0,), (1,), (0,)),
+            ((0, 3), (1, 1), (0, 3)),
+            ((2, 0), (0,), (2, 0)),
+        ):
+            with self.subTest(first=first, second=second):
+                assert calculate_broadcasted_elementwise_result_shape(first=first, second=second) == expected
+                assert expected == tuple(torch.broadcast_shapes(first, second))
+        for first, second in (
+            ((2,), (3,)),
+            ((3, 4), (3,)),
+            ((0,), (2,)),
+            ((2, 3), (4, 3, 1)),
+        ):
+            with self.subTest(first=first, second=second), pytest.raises(ValueError, match="not broadcastable"):
+                calculate_broadcasted_elementwise_result_shape(first=first, second=second)
+
+    def test_calculate_broadcasted_elementwise_result_shape_random(self):
+        """Compare calculate_broadcasted_elementwise_result_shape against torch.broadcast_shapes on random shapes."""
+        rng = random.Random(42)  # noqa: S311
+        choices = (0, 1, 1, 2, 3)
+        for _ in range(500):
+            first = tuple(rng.choice(choices) for _ in range(rng.randrange(5)))
+            second = tuple(rng.choice(choices) for _ in range(rng.randrange(5)))
+            try:
+                expected = tuple(torch.broadcast_shapes(first, second))
+            except RuntimeError:
+                with pytest.raises(ValueError, match="not broadcastable"):
+                    calculate_broadcasted_elementwise_result_shape(first=first, second=second)
+            else:
+                assert calculate_broadcasted_elementwise_result_shape(first=first, second=second) == expected
+
+    def test_estimate_cost_of_sequence_differing_ndim(self):
+        """Test estimate_cost_of_sequence for shapes with differing number of dimensions."""
+        # (3, 4) + (4,) -> (3, 4), i.e., cost 12
+        assert estimate_cost_of_sequence((3, 4), (4,)) == 12
+        assert estimate_cost_of_sequence((4,), (3, 4)) == 12
+        # (5, 1, 1) + (3, 1) -> (5, 3, 1): 15; (5, 3, 1) + (2,) -> (5, 3, 2): 30
+        assert estimate_cost_of_sequence((5, 1, 1), (3, 1), (2,)) == 15 + 30
 
     @unittest.skip("This is often failing non-deterministically")
     def test_estimate_cost_of_add_sequence(self):
@@ -455,3 +610,295 @@ def test_get_connected_components(pairs: list[tuple[int, int]], expected: list[l
     """Test calculation of connected components."""
     components = get_connected_components(pairs)
     assert sorted(sorted(component) for component in components) == expected
+
+
+def _normalize_components(components: Iterable[Iterable[int]]) -> set[frozenset[int]]:
+    """Convert components to a set of frozensets, and verify that there are no duplicates."""
+    components = [list(component) for component in components]
+    result = {frozenset(component) for component in components}
+    # no duplicate nodes, neither within nor across components
+    assert sum(map(len, components)) == sum(map(len, result))
+    assert len(result) == len(components)
+    return result
+
+
+def _reference_connected_components(pairs: list[tuple[int, int]]) -> set[frozenset[int]]:
+    """Calculate connected components with scipy."""
+    nodes = sorted({node for pair in pairs for node in pair})
+    node_to_id = {node: i for i, node in enumerate(nodes)}
+    row, col = np.asarray([(node_to_id[x], node_to_id[y]) for x, y in pairs]).T
+    matrix = scipy.sparse.coo_matrix((np.ones_like(row), (row, col)), shape=(len(nodes), len(nodes)))
+    _, labels = scipy.sparse.csgraph.connected_components(matrix, directed=False)
+    result: dict[int, set[int]] = {}
+    for node, label in zip(nodes, labels, strict=True):
+        result.setdefault(label, set()).add(node)
+    return {frozenset(component) for component in result.values()}
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_get_connected_components_random(seed: int) -> None:
+    """Compare get_connected_components against scipy on random graphs."""
+    generator = np.random.default_rng(seed=seed)
+    num_nodes = int(generator.integers(2, 50))
+    num_edges = int(generator.integers(1, 2 * num_nodes))
+    pairs = [(int(x), int(y)) for x, y in generator.integers(num_nodes, size=(num_edges, 2))]
+    assert _normalize_components(get_connected_components(pairs)) == _reference_connected_components(pairs)
+
+
+def test_find_path_compression() -> None:
+    """Test that find compresses the path to the root."""
+    # chain 4 -> 3 -> 2 -> 1 -> 0
+    parent = {0: 0, 1: 0, 2: 1, 3: 2, 4: 3}
+    assert find(x=4, parent=parent) == 0
+    assert parent == dict.fromkeys(range(5), 0)
+    with pytest.raises(ValueError, match="Unknown element"):
+        find(x=5, parent=parent)
+
+
+class TestLogCumSumExp(unittest.TestCase):
+    """Tests for :func:`pykeen.utils.logcumsumexp`."""
+
+    def setUp(self) -> None:
+        """Set up the random number generator."""
+        self.generator = np.random.default_rng(seed=42)
+
+    def test_large_spread(self):
+        """Test that small prefixes do not underflow when a much larger value follows."""
+        np.testing.assert_allclose(logcumsumexp(np.asarray([-1000.0, 0.0])), [-1000.0, 0.0])
+
+    def test_prefix_logsumexp(self):
+        """Test agreement with :func:`scipy.special.logsumexp` on prefixes."""
+        for scale, ascending in itertools.product((1.0, 100.0, 1000.0), (False, True)):
+            a = scale * self.generator.normal(size=(17,))
+            if ascending:
+                # early prefixes are far below the global maximum
+                a = np.sort(a)
+            result = logcumsumexp(a)
+            expected = np.asarray([scipy.special.logsumexp(a[: i + 1]) for i in range(len(a))])
+            with self.subTest(scale=scale, ascending=ascending):
+                assert np.isfinite(result).all()
+                np.testing.assert_allclose(result, expected)
+
+    def test_all_neg_inf(self):
+        """Test that all ``-inf`` input yields ``-inf`` output (and not nan)."""
+        np.testing.assert_array_equal(logcumsumexp(np.full(shape=(3,), fill_value=-np.inf)), -np.inf)
+
+    def test_shape(self):
+        """Test the output shape for ND input."""
+        a = self.generator.normal(size=(2, 3, 4))
+        # default: flatten, like np.cumsum
+        np.testing.assert_allclose(logcumsumexp(a), logcumsumexp(a.ravel()))
+        assert logcumsumexp(a).shape == (a.size,)
+        for axis in (0, 1, 2, -1):
+            with self.subTest(axis=axis):
+                result = logcumsumexp(a, axis=axis)
+                assert result.shape == a.shape
+                expected = np.log(np.cumsum(np.exp(a), axis=axis))
+                np.testing.assert_allclose(result, expected)
+
+    def test_torch(self):
+        """Test agreement with :func:`torch.logcumsumexp`."""
+        a = 100.0 * self.generator.normal(size=(5, 7))
+        for axis in (0, 1):
+            with self.subTest(axis=axis):
+                expected = torch.logcumsumexp(torch.as_tensor(a), dim=axis).numpy()
+                np.testing.assert_allclose(logcumsumexp(a, axis=axis), expected)
+
+
+class TestNormalizePath(unittest.TestCase):
+    """Tests for :func:`pykeen.utils.normalize_path`."""
+
+    def setUp(self) -> None:
+        """Create a temporary directory with a file."""
+        self._tmp = tempfile.TemporaryDirectory()
+        self.directory = pathlib.Path(self._tmp.name).resolve()
+        self.file_path = self.directory.joinpath("file.txt")
+        self.file_path.write_text("hello")
+
+    def tearDown(self) -> None:
+        """Clean up the temporary directory."""
+        self._tmp.cleanup()
+
+    def test_str(self) -> None:
+        """Test normalizing a string path."""
+        assert normalize_path(str(self.file_path)) == self.file_path
+
+    def test_text_file_handle(self) -> None:
+        """Test normalizing a text-mode file handle."""
+        with self.file_path.open() as file:
+            assert normalize_path(file) == self.file_path
+
+    def test_binary_file_handle(self) -> None:
+        """Test normalizing a binary-mode file handle."""
+        with self.file_path.open("rb") as file:
+            assert normalize_path(file) == self.file_path
+
+    def test_file_handle_other(self) -> None:
+        """Test normalizing a file handle with additional parts."""
+        with self.file_path.open() as file:
+            assert normalize_path(file, "a", "b") == self.file_path.joinpath("a", "b")
+
+    def test_file_handle_mkdir_is_file(self) -> None:
+        """Test normalizing a file handle with ``mkdir=True, is_file=True``, which must not touch the file."""
+        with self.file_path.open() as file:
+            assert normalize_path(file, mkdir=True, is_file=True) == self.file_path
+        assert self.file_path.is_file()
+
+    def test_file_handle_as_default(self) -> None:
+        """Test using a file handle as default."""
+        with self.file_path.open() as file:
+            assert normalize_path(None, default=file) == self.file_path
+
+    def test_in_memory_buffer(self) -> None:
+        """Test that in-memory buffers without a file name raise a clear error."""
+        for buffer in (io.StringIO("hello"), io.BytesIO(b"hello")):
+            with self.subTest(buffer=type(buffer)), pytest.raises(TypeError, match="file handle"):
+                normalize_path(buffer)
+
+    def test_file_descriptor_handle(self) -> None:
+        """Test that handles opened from a file descriptor (with an integer name) raise a clear error."""
+        fd = os.open(self.file_path, os.O_RDONLY)
+        with os.fdopen(fd) as file, pytest.raises(TypeError, match="file handle"):
+            normalize_path(file)
+
+
+def _ensure_complex_single(x: torch.Tensor) -> torch.Tensor:
+    """Apply :func:`ensure_complex` to a single tensor, ignoring its warning."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        (y,) = ensure_complex(x)
+    return y
+
+
+#: the functions converting real tensors with interleaved real/imaginary parts to complex ones
+REAL_TO_COMPLEX_FUNCTIONS = pytest.mark.parametrize(
+    "func",
+    [view_complex, view_complex_native, _ensure_complex_single],
+    ids=["view_complex", "view_complex_native", "ensure_complex"],
+)
+
+
+def _assert_interleaved(x: torch.Tensor, y: torch.Tensor) -> None:
+    """Assert that the complex ``y`` of shape ``(*, d)`` corresponds to the real ``x`` of shape ``(*, 2 * d)``."""
+    assert y.is_complex()
+    assert y.shape == (*x.shape[:-1], x.shape[-1] // 2)
+    assert torch.equal(y.real, x[..., 0::2])
+    assert torch.equal(y.imag, x[..., 1::2])
+    # round-trip
+    assert torch.equal(torch.view_as_real(y).reshape(x.shape), x)
+
+
+@REAL_TO_COMPLEX_FUNCTIONS
+@pytest.mark.parametrize("shape", [(2,), (6,), (3, 2), (3, 4), (2, 3, 6), (2, 3, 8), (0, 4)])
+def test_real_to_complex_shape(func: Callable[[torch.Tensor], torch.Tensor], shape: tuple[int, ...]) -> None:
+    """Test that a real tensor of shape ``(*, 2 * d)`` is mapped to a complex one of shape ``(*, d)``."""
+    x = torch.rand(*shape)
+    y = func(x)
+    _assert_interleaved(x, y)
+    # contiguous input is viewed without copying
+    if x.numel():
+        assert y.data_ptr() == x.data_ptr()
+
+
+@REAL_TO_COMPLEX_FUNCTIONS
+@pytest.mark.parametrize(
+    ("dtype", "expected_dtype"),
+    [(torch.float16, torch.complex32), (torch.float32, torch.complex64), (torch.float64, torch.complex128)],
+)
+def test_real_to_complex_dtype(
+    func: Callable[[torch.Tensor], torch.Tensor], dtype: torch.dtype, expected_dtype: torch.dtype
+) -> None:
+    """Test conversion of the supported floating point dtypes."""
+    x = torch.rand(3, 4, dtype=dtype)
+    y = func(x)
+    assert y.dtype == expected_dtype
+    assert torch.equal(torch.view_as_real(y).reshape(x.shape), x)
+
+
+@REAL_TO_COMPLEX_FUNCTIONS
+@pytest.mark.parametrize(
+    "make_x",
+    [
+        pytest.param(lambda: torch.rand(6, 5).t(), id="transposed-odd-rows"),
+        pytest.param(lambda: torch.rand(4, 6).t(), id="transposed"),
+        pytest.param(lambda: torch.rand(3, 8)[:, 1:7], id="odd-storage-offset"),
+        pytest.param(lambda: torch.rand(3, 8)[:, ::2], id="strided-last-dim"),
+        pytest.param(lambda: torch.rand(3, 1).expand(3, 4), id="expanded-last-dim"),
+        pytest.param(lambda: torch.rand(4)[None].expand(3, 4), id="expanded-batch-dim"),
+    ],
+)
+def test_real_to_complex_non_contiguous(
+    func: Callable[[torch.Tensor], torch.Tensor], make_x: Callable[[], torch.Tensor]
+) -> None:
+    """Test conversion of inputs which cannot necessarily be viewed as complex without copying."""
+    x = make_x()
+    assert not x.is_contiguous()
+    _assert_interleaved(x, func(x))
+
+
+@REAL_TO_COMPLEX_FUNCTIONS
+@pytest.mark.parametrize("shape", [(), (5,), (2, 5), (3, 0, 1)])
+def test_real_to_complex_odd_dimension(func: Callable[[torch.Tensor], torch.Tensor], shape: tuple[int, ...]) -> None:
+    """Test that an odd (or missing) last dimension raises a clear error."""
+    with pytest.raises(ValueError, match="even"):
+        func(torch.rand(shape))
+
+
+@REAL_TO_COMPLEX_FUNCTIONS
+@pytest.mark.parametrize("dtype", [torch.bfloat16, torch.int64, torch.bool])
+def test_real_to_complex_unsupported_dtype(func: Callable[[torch.Tensor], torch.Tensor], dtype: torch.dtype) -> None:
+    """Test that unsupported dtypes raise a clear error naming the dtype."""
+    with pytest.raises(TypeError, match=str(dtype)):
+        func(torch.zeros(3, 4, dtype=dtype))
+
+
+def test_view_complex_native_complex_input() -> None:
+    """Test that view_complex_native rejects complex input with a clear error."""
+    with pytest.raises(TypeError, match="complex64"):
+        view_complex_native(torch.rand(3, 4, dtype=torch.cfloat))
+
+
+def test_view_complex_complex_input() -> None:
+    """Test that complex input is passed through unchanged."""
+    x = torch.rand(3, 4, dtype=torch.cfloat)
+    assert view_complex(x) is x
+
+
+def test_ensure_complex_passthrough() -> None:
+    """Test that complex tensors are passed through unchanged and without warning."""
+    x = torch.rand(3, 4, dtype=torch.cfloat)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("default")
+        (y,) = ensure_complex(x)
+    assert y is x
+    assert not caught
+
+
+def _call_ensure_complex(*xs: torch.Tensor) -> list[torch.Tensor]:
+    return list(ensure_complex(*xs))
+
+
+def test_ensure_complex_warns_once_per_site() -> None:
+    """Test that repeated conversions from the same call site only warn once."""
+    # note: catch_warnings invalidates the once-per-location registries, so no manual reset is necessary
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("default")
+        for batch_size in (2, 3, 5):
+            _call_ensure_complex(torch.rand(batch_size, 4), torch.rand(batch_size, 6))
+    assert len(caught) == 1
+
+
+@pytest.mark.parametrize("shape", [(3, 2), (3, 8), (2, 3, 4)])
+def test_complex_normalize_real(shape: tuple[int, ...]) -> None:
+    """Test complex normalization on real input."""
+    x = torch.rand(*shape) + 0.1
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        y = complex_normalize(x)
+    assert len(caught) == 1
+    assert y.shape == x.shape
+    assert not y.is_complex()
+    pairs = y.view(*shape[:-1], -1, 2)
+    assert torch.allclose(pairs.norm(dim=-1), torch.ones(pairs.shape[:-1]))
+    # directions are preserved
+    assert torch.allclose(pairs, torch.nn.functional.normalize(x.view(*shape[:-1], -1, 2), dim=-1))

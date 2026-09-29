@@ -76,7 +76,6 @@ class LazyDatasetKwargs(TypedDict):
     """Keyword arguments for a lazy dataset."""
 
     eager: NotRequired[bool]
-    create_inverse_triples: NotRequired[bool]
     metadata: NotRequired[Metadata | None]
 
 
@@ -139,7 +138,6 @@ def _update_eval_triples_factory(
         mapped_triples=mapped_triples,
         entity_to_id=entity_to_id,
         relation_to_id=relation_to_id,
-        create_inverse_triples=factory.create_inverse_triples,
         metadata=factory.metadata,
         num_entities=len(kept_old_entity_ids_t),
         num_relations=len(kept_old_relation_ids_t),
@@ -158,7 +156,6 @@ def _update_eval_core_factory(
     )
     return CoreTriplesFactory(
         mapped_triples=mapped_triples,
-        create_inverse_triples=factory.create_inverse_triples,
         metadata=factory.metadata,
         num_entities=len(kept_old_entity_ids_t),
         num_relations=len(kept_old_relation_ids_t),
@@ -195,16 +192,12 @@ class Dataset(ExtraReprMixin):
     metadata_file_name: ClassVar[str] = "metadata.pth"
     triples_factory_cls: ClassVar[type[CoreTriplesFactory]] = TriplesFactory
 
-    #: should inverse triples be created?
-    create_inverse_triples: bool
-
     def __eq__(self, __o: object, /) -> bool:
         return (
             isinstance(__o, Dataset)
             and (self.training == __o.training)
             and (self.testing == __o.testing)
             and ((self.validation is None and __o.validation is None) or (self.validation == __o.validation))
-            and (self.create_inverse_triples == __o.create_inverse_triples)
         )
 
     # defining __eq__ implicitly sets __hash__ to None; make this explicit
@@ -286,7 +279,7 @@ class Dataset(ExtraReprMixin):
         n_triples = sum(count for *_, count in rows)
         rows.append(("Total", "-", "-", n_triples))
         t = tabulate(rows, headers=["Name", "Entities", "Relations", "Triples"])
-        rv = f"{title or self.__class__.__name__} (create_inverse_triples={self.create_inverse_triples})\n{t}"
+        rv = f"{title or self.__class__.__name__}\n{t}"
         if show_examples:
             if not isinstance(self.training, TriplesFactory):
                 raise AttributeError(f"{self.training.__class__} does not have labeling information.")
@@ -310,7 +303,6 @@ class Dataset(ExtraReprMixin):
         """Yield extra entries for the instance's string representation."""
         yield f"num_entities={self.num_entities}"
         yield f"num_relations={self.num_relations}"
-        yield f"create_inverse_triples={self.create_inverse_triples}"
 
     @classmethod
     def from_path(
@@ -367,7 +359,6 @@ class Dataset(ExtraReprMixin):
             tuple[TriplesFactory, TriplesFactory, TriplesFactory],
             tf.split(ratios or DEFAULT_RATIOS),
         )
-        # TODO create_inverse_triples?
         return EagerDataset(training=training, testing=testing, validation=validation, metadata=metadata)
 
     @classmethod
@@ -493,7 +484,6 @@ class Dataset(ExtraReprMixin):
                 mapped_triples=cast(MappedTriples, new_training_triples),
                 entity_to_id=entity_to_id,
                 relation_to_id=relation_to_id,
-                create_inverse_triples=training.create_inverse_triples,
                 metadata=training.metadata,
                 num_entities=num_entities,
                 num_relations=num_relations,
@@ -520,7 +510,6 @@ class Dataset(ExtraReprMixin):
         else:
             training = CoreTriplesFactory(
                 mapped_triples=cast(MappedTriples, new_training_triples),
-                create_inverse_triples=training.create_inverse_triples,
                 metadata=training.metadata,
                 num_entities=num_entities,
                 num_relations=num_relations,
@@ -589,7 +578,6 @@ class EagerDataset(Dataset):
         self.testing = testing
         self.validation = validation
         self.metadata = metadata
-        self.create_inverse_triples = training.create_inverse_triples
 
     def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
         yield from super().iter_extra_repr()
@@ -608,12 +596,10 @@ class LazyDataset(Dataset, ABC):
 
     def __init__(
         self,
-        create_inverse_triples: bool = False,
         metadata: Metadata | None = None,
         eager: bool = False,
     ) -> None:
         """Construct the lazy dataset."""
-        self.create_inverse_triples = create_inverse_triples
         self.metadata = metadata
         if eager:
             self._load()
@@ -713,7 +699,6 @@ class SourceDataSet(LazyDataset):
         with self.training_source.open() as training_file:
             self._training = TriplesFactory.from_path(
                 training_file,
-                create_inverse_triples=self.create_inverse_triples,
                 load_triples_kwargs=self.load_triples_kwargs,
             )
         with self.testing_source.open() as testing_file:
@@ -721,8 +706,6 @@ class SourceDataSet(LazyDataset):
                 testing_file,
                 entity_to_id=self._training.entity_to_id,  # share entity index with training
                 relation_to_id=self._training.relation_to_id,  # share relation index with training
-                # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                create_inverse_triples=False,
                 load_triples_kwargs=self.load_triples_kwargs,
             )
 
@@ -738,8 +721,6 @@ class SourceDataSet(LazyDataset):
                     file,
                     entity_to_id=self._training.entity_to_id,  # share entity index with training
                     relation_to_id=self._training.relation_to_id,  # share relation index with training
-                    # do not explicitly create inverse triples for testing; this is handled by the evaluation code
-                    create_inverse_triples=False,
                     load_triples_kwargs=self.load_triples_kwargs,
                 )
 
@@ -923,7 +904,6 @@ class SplittingLazyDataset(LazyDataset, ABC):
     def _load(self) -> None:
         tf = self._get_triples_factory()
         self._training, self._testing, self._validation = tf.split(ratios=self.ratios, random_state=self.random_state)
-        self._training.create_inverse_triples = self.create_inverse_triples
 
     def _load_validation(self) -> None:
         pass  # already loaded by _load()
@@ -964,7 +944,6 @@ class TabbedDataset(SplittingLazyDataset):
         path = self._get_path()
         return TriplesFactory.from_labeled_triples(
             triples=df.values,
-            create_inverse_triples=self.create_inverse_triples,
             metadata={"path": path} if path else None,
         )
 

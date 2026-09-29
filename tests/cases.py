@@ -88,6 +88,7 @@ from pykeen.typing import (
     EA_SIDE_LEFT,
     EA_SIDE_RIGHT,
     LABEL_HEAD,
+    LABEL_RELATION,
     LABEL_TAIL,
     RANK_REALISTIC,
     SIDE_BOTH,
@@ -1042,8 +1043,8 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     #: The embedding dimensionality
     embedding_dim: int = 3
 
-    #: Whether to create inverse triples (needed e.g. by ConvE)
-    create_inverse_triples: bool = False
+    #: Whether the model uses inverse relations (needed e.g. by ConvE)
+    use_inverse_triples: bool = False
 
     #: The sampler to use for sLCWA (different e.g. for R-GCN)
     sampler: str | None = None
@@ -1077,11 +1078,12 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
-        dataset = Nations(create_inverse_triples=self.create_inverse_triples)
+        dataset = Nations()
         self.factory = dataset.training
         # insert shared parameters
         kwargs["triples_factory"] = self.factory
         kwargs["embedding_dim"] = self.embedding_dim
+        kwargs["use_inverse_triples"] = self.use_inverse_triples
         return kwargs
 
     def post_instantiation_hook(self) -> None:
@@ -1146,7 +1148,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 self.skipTest(str(e))
             else:
                 raise
-        if score is self.instance.score_r and self.create_inverse_triples:
+        if score is self.instance.score_r and self.use_inverse_triples:
             # TODO: look into score_r for inverse relations
             logger.warning("score_r's shape is not clear yet for models with inverse relations")
         else:
@@ -1309,9 +1311,9 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         ]
         extras.extend(self.cli_extras)
 
-        # Make sure that inverse triples are created if create_inverse_triples=True
-        if self.create_inverse_triples:
-            extras.append("--create-inverse-triples")
+        # Make sure to pass the flag for using inverse triples
+        if self.use_inverse_triples:
+            extras.append("--use-inverse-triples")
 
         return [str(e) for e in extras]
 
@@ -1330,7 +1332,6 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             model=self.cls,
             model_kwargs=model_kwargs,
             dataset="nations",
-            dataset_kwargs={"create_inverse_triples": self.create_inverse_triples},
             stopper="early",
             training_loop_kwargs=self.training_loop_kwargs,
             stopper_kwargs={"frequency": 1},
@@ -1477,7 +1478,7 @@ class BaseNodePieceTest(ModelTestCase):
     """Test the NodePiece model."""
 
     cls = pykeen.models.NodePiece
-    create_inverse_triples = True
+    use_inverse_triples = True
 
     def _help_test_cli(self, args):
         if self.instance_kwargs.get("tokenizers_kwargs"):
@@ -1504,14 +1505,13 @@ class InductiveModelTestCase(ModelTestCase):
             num_triples_training=self.num_triples_training,
             num_triples_inference=self.num_triples_inference,
             num_triples_testing=self.num_triples_testing,
-            create_inverse_triples=self.create_inverse_triples,
         )
         training_loop_kwargs = dict(self.training_loop_kwargs or {})
         training_loop_kwargs["mode"] = self.mode
         InductiveModelTestCase.training_loop_kwargs = training_loop_kwargs
-        # dataset = InductiveFB15k237(create_inverse_triples=self.create_inverse_triples)
         kwargs["triples_factory"] = self.factory = dataset.transductive_training
         kwargs["inference_factory"] = dataset.inductive_inference
+        kwargs["use_inverse_triples"] = self.use_inverse_triples
         return kwargs
 
     def _help_test_cli(self, args):
@@ -1596,10 +1596,9 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
     """Tests for representations requiring triples factories."""
 
-    num_entities: ClassVar[int]
+    num_entities: int
     num_relations: ClassVar[int] = 7
     num_triples: ClassVar[int] = 31
-    create_inverse_triples: bool = False
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         self.num_entities = self.max_id
@@ -1608,7 +1607,6 @@ class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
             num_entities=self.max_id,
             num_relations=self.num_relations,
             num_triples=self.num_triples,
-            create_inverse_triples=self.create_inverse_triples,
         )
         return kwargs
 
@@ -2111,10 +2109,7 @@ class NodePieceTestCase(RepresentationTestCase):
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["triples_factory"] = generation.generate_triples_factory(
-            num_entities=self.max_id,
-            num_relations=self.num_relations,
-            num_triples=self.num_triples,
-            create_inverse_triples=False,
+            num_entities=self.max_id, num_relations=self.num_relations, num_triples=self.num_triples
         )
         # inferred from triples factory
         kwargs.pop("max_id")
@@ -2144,6 +2139,16 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
         """Test processing a single batch."""
         batch = next(iter(self.instance.get_loader(batch_size=self.batch_size)))
         self.instance.process_batch(batch=batch)
+
+    def test_equivalence(self) -> None:
+        """Test equivalence between Evaluator.evaluate and evaluation loop."""
+        if LABEL_RELATION in self.instance.targets:
+            raise unittest.SkipTest("Evaluator.evaluate does not support relation prediction")
+        result = self.instance.evaluator.evaluate(
+            model=self.instance.model, mapped_triples=self.factory.mapped_triples, targets=self.instance.targets
+        )
+        result2 = self.instance.evaluate()
+        assert result.to_flat_dict() == result2.to_flat_dict()
 
 
 class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.models.EvaluationOnlyModel]):
@@ -2626,6 +2631,14 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
         assert call_args["step"] == 0
         assert "prefix" in call_args
         assert call_args["prefix"] == "validation"
+
+    def test_keeps_evaluation_sizes(self):
+        """Test that explicitly set evaluation batch and slice sizes are not overwritten by an evaluation."""
+        self.instance.evaluation_batch_size = 7
+        self.instance.evaluation_slice_size = 3
+        self.instance.should_stop(epoch=0)
+        assert self.instance.evaluation_batch_size == 7
+        assert self.instance.evaluation_slice_size == 3
 
     def test_serialization(self):
         """Test for serialization."""
