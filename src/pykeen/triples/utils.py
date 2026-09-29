@@ -140,7 +140,10 @@ def tensor_to_df(
     # Additional columns
     for key, values in kwargs.items():
         # convert PyTorch tensors to numpy
-        data[key] = values.cpu().numpy() if isinstance(values, torch.Tensor) else values
+        if isinstance(values, torch.Tensor):
+            data[key] = values.cpu().numpy()
+        else:
+            data[key] = values
 
     # convert to dataframe
     rv = pd.DataFrame(data=data)

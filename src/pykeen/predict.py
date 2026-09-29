@@ -869,7 +869,10 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
                 continue
             if restriction is None:
                 raise NotImplementedError("Requires size info")
-            parts.append(torch.as_tensor([restriction] if isinstance(restriction, int) else restriction))
+            if isinstance(restriction, int):
+                parts.append(torch.as_tensor([restriction]))
+            else:
+                parts.append(torch.as_tensor(restriction))
         assert len(parts) == 2
         self.parts = (parts[0], parts[1])  # for mypy
 
