@@ -1,9 +1,10 @@
 """Benchmarks for training on Kinships."""
 
+from pykeen.datasets import Kinships
 from pykeen.models import model_resolver
 from pykeen.training import training_loop_resolver
 
-from .common import EMBEDDING_DIM, SEED, load_kinships
+from .common import EMBEDDING_DIM, SEED
 
 #: the training batch size
 BATCH_SIZE = 256
@@ -20,7 +21,7 @@ class TrainingSuite:
 
     def setup(self, training_loop: str, model: str) -> None:
         """Prepare the model and training loop."""
-        self.factory = load_kinships().training
+        self.factory = Kinships().training
         self.model = model_resolver.make(
             model, triples_factory=self.factory, embedding_dim=EMBEDDING_DIM, random_seed=SEED
         )

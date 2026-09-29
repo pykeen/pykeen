@@ -1,8 +1,7 @@
 """Benchmarks for negative sampling on Kinships."""
 
+from pykeen.datasets import Kinships
 from pykeen.sampling import negative_sampler_resolver
-
-from .common import load_kinships
 
 #: the batch size of positive triples
 BATCH_SIZE = 1024
@@ -18,7 +17,7 @@ class NegativeSamplingSuite:
 
     def setup(self, negative_sampler: str, filterer: str) -> None:
         """Prepare the negative sampler and positive batch."""
-        factory = load_kinships().training
+        factory = Kinships().training
         self.sampler = negative_sampler_resolver.make(
             negative_sampler,
             mapped_triples=factory.mapped_triples,

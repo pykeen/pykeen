@@ -7,17 +7,12 @@ Evaluation additionally uses UMLS, since the number of filtered candidates per q
 Kinships, and almost always one for the synthetic graph.
 """
 
-import torch
-
-from pykeen.datasets import UMLS, Kinships
 from pykeen.triples import CoreTriplesFactory
 from pykeen.triples.generation import generate_triples_factory
 
 __all__ = [
     "EMBEDDING_DIM",
     "SEED",
-    "load_kinships",
-    "load_umls",
     "make_factory",
 ]
 
@@ -27,25 +22,12 @@ EMBEDDING_DIM = 64
 SEED = 42
 
 
-def load_kinships() -> Kinships:
-    """Load the Kinships dataset, which is shipped with PyKEEN, and use a single thread for more stable timings."""
-    torch.set_num_threads(1)
-    return Kinships()
-
-
-def load_umls() -> UMLS:
-    """Load the UMLS dataset, which is shipped with PyKEEN, and use a single thread for more stable timings."""
-    torch.set_num_threads(1)
-    return UMLS()
-
-
 def make_factory(
     num_entities: int = 1_000,
     num_relations: int = 20,
     num_triples: int = 10_000,
 ) -> CoreTriplesFactory:
-    """Generate a synthetic triples factory, and use a single thread for more stable timings."""
-    torch.set_num_threads(1)
+    """Generate a synthetic triples factory."""
     return generate_triples_factory(
         num_entities=num_entities,
         num_relations=num_relations,

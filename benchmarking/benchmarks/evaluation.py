@@ -1,10 +1,11 @@
 """Benchmarks for evaluation."""
 
+from pykeen.datasets import UMLS
 from pykeen.evaluation import RankBasedEvaluator
 from pykeen.models import DistMult
 from pykeen.triples import CoreTriplesFactory
 
-from .common import EMBEDDING_DIM, SEED, load_umls, make_factory
+from .common import EMBEDDING_DIM, SEED, make_factory
 
 #: the number of evaluation triples of the synthetic graph
 NUM_EVALUATION_TRIPLES = 1_000
@@ -29,7 +30,7 @@ class RankBasedEvaluationSuite:
         """Prepare the model and evaluation triples."""
         factory: CoreTriplesFactory
         if dataset == "umls":
-            umls = load_umls()
+            umls = UMLS()
             assert umls.validation is not None
             factory = umls.training
             self.mapped_triples = umls.testing.mapped_triples
