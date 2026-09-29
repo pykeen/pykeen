@@ -54,7 +54,7 @@ jobs:
           python-version: "3.14"
 
       - name: Install asv
-        run: pip install asv virtualenv
+        run: pip install "asv>=0.6.5" virtualenv
 
       - name: Determine the commits to compare
         id: commits

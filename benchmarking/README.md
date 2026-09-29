@@ -4,13 +4,37 @@
 
 The [`benchmarks`](benchmarks) package contains benchmarks for
 [airspeed velocity (asv)](https://asv.readthedocs.io), covering scoring,
-training, evaluation, negative sampling, and triples factories. They use
-synthetic graphs, so they do not require dataset downloads, and are sized to
-run on a CPU.
+training, evaluation, negative sampling, and triples factories. They are sized
+to run on a CPU, and do not require dataset downloads:
 
-Timings on shared machines, such as CI runners, are noisy. The benchmarks are
-therefore meant for *relative* comparisons of two commits on the same machine,
-rather than for absolute numbers.
+- Benchmarks whose cost depends on the graph structure (training, negative
+  sampling, triples factories) use Kinships, the largest dataset shipped with
+  PyKEEN, since synthetic graphs hardly reproduce the patterns of real graphs,
+  e.g., the number of triples per (head, relation) pair.
+- Benchmarks whose cost mainly grows with the number of entities (scoring
+  against all entities, evaluation) use a larger synthetic graph, since
+  Kinships only has 104 entities, which would hide such costs.
+
+The configuration is in [`asv.conf.jsonc`](asv.conf.jsonc).
+
+### Intended use and limitations
+
+The benchmarks are meant to detect *regressions* by comparing two commits, not
+as targets for optimization:
+
+- Timings on shared machines, such as CI runners, are noisy. Only compare
+  two commits run on the same machine, rather than absolute numbers.
+- Small datasets exaggerate fixed costs, such as Python overhead and setup,
+  and hide costs which grow with the size of the data. A change that looks
+  small here may be large on a real dataset, and vice versa.
+- The benchmarks run on a CPU, whereas PyKEEN models are typically trained and
+  evaluated on a GPU, where costs are dominated by kernel launches, memory
+  transfers, and memory usage instead. Speed-ups on a CPU need not carry over,
+  and can even be slowdowns on a GPU.
+
+Hence, justify optimizations with realistic workloads, i.e., real datasets, a
+GPU where relevant, and profiling. Code that runs on the CPU in any case, such
+as the computation of metrics with numpy, is well represented, though.
 
 ### Check that the benchmarks run
 
@@ -25,7 +49,7 @@ $ tox -e benchmarks
 From this directory, run
 
 ```console
-$ pip install asv virtualenv
+$ pip install "asv>=0.6.5" virtualenv
 $ asv machine --yes
 $ asv continuous --factor 1.2 master HEAD
 ```
