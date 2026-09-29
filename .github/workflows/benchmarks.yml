@@ -1,0 +1,97 @@
+name: Benchmarks
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  # compare the selected branch against a base, e.g., for a pull request touching performance
+  workflow_dispatch:
+    inputs:
+      base:
+        description: The git ref to compare against
+        required: true
+        default: master
+  # weekly, compare master against its state one week earlier
+  schedule:
+    - cron: "0 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check benchmarks
+    # run each benchmark once, so that API changes which break the benchmarks are noticed
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup-tox
+        with:
+          python-version: "3.14"
+
+      - name: Run each benchmark once
+        run: tox -e benchmarks
+
+  compare:
+    name: Compare benchmarks
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: benchmarking
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # asv needs the history to check out the compared commits
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install asv
+        run: pip install asv virtualenv
+
+      - name: Determine the commits to compare
+        id: commits
+        env:
+          BASE: ${{ inputs.base }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            base=$(git rev-list -n 1 --before="7 days ago" origin/master)
+          else
+            base=$(git rev-parse "origin/${BASE}" 2>/dev/null || git rev-parse "${BASE}")
+          fi
+          echo "base=${base}" >> "$GITHUB_OUTPUT"
+          echo "head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Compare
+        run: |
+          asv machine --yes
+          # note: exits with a non-zero code if a benchmark got slower by more than the factor
+          asv continuous --factor 1.2 --interleave-rounds --show-stderr ${{ steps.commits.outputs.base }} ${{ steps.commits.outputs.head }}
+
+      - name: Summarize
+        if: always()
+        run: |
+          {
+            echo '## Benchmark comparison'
+            echo '```'
+            asv compare --factor 1.2 --split ${{ steps.commits.outputs.base }} ${{ steps.commits.outputs.head }}
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asv-results
+          path: benchmarking/.asv/results
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}

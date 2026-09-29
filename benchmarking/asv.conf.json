@@ -1,0 +1,21 @@
+{
+    // cf. https://asv.readthedocs.io/en/stable/asv.conf.json.html
+    "version": 1,
+    "project": "pykeen",
+    "project_url": "https://github.com/pykeen/pykeen",
+    "show_commit_url": "https://github.com/pykeen/pykeen/commit/",
+    // the repository root, relative to this file
+    "repo": "..",
+    "branches": ["master"],
+    "dvcs": "git",
+    "environment_type": "virtualenv",
+    "build_command": ["python -m build --wheel -o {build_cache_dir} {build_dir}"],
+    // install the CPU-only version of torch, as in tox.ini
+    "install_command": [
+        "in-dir={env_dir} python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu {wheel_file}"
+    ],
+    "benchmark_dir": "benchmarks",
+    "env_dir": ".asv/env",
+    "results_dir": ".asv/results",
+    "html_dir": ".asv/html"
+}
