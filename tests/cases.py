@@ -540,7 +540,7 @@ class GMRLTestCase(PairwiseLossTestCase):
         with pytest.raises(UnsupportedLabelSmoothingError):
             self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
         with pytest.raises(UnsupportedLabelSmoothingError):
-            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
+            self.instance.process_slcwa_scores(..., ..., label_smoothing=5)
 
 
 class SetwiseLossTestCase(LossTestCase):
@@ -1272,14 +1272,15 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             **self.instance_kwargs,
         )
 
-        def _equal_embeddings(a: Representation, b: Representation) -> bool:
-            """Test whether two embeddings are equal."""
-            return (a(indices=None) == b(indices=None)).all()
-
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_path = pathlib.Path(tmpdirname) / "test.pt"
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
+
+        original_state, loaded_state = original_model.state_dict(), loaded_model.state_dict()
+        assert original_state.keys() == loaded_state.keys()
+        for key, value in original_state.items():
+            assert torch.equal(value, loaded_state[key]), key
 
     @property
     def _cli_extras(self):
@@ -1590,7 +1591,7 @@ class RepresentationTestCase(GenericTestCase[Representation]):
     def test_str(self):
         """Test generating the string representation."""
         # this implicitly tests extra_repr / iter_extra_repr
-        assert isinstance(str(self), str)
+        assert isinstance(str(self.instance), str)
 
 
 class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
@@ -1875,7 +1876,15 @@ class SplitterTestCase(GenericTestCase[Splitter]):
             *(triple_tensor_to_set(triples) for triples in splitted)
         )
         # check that all entities are covered in first part
-        assert triple_tensor_to_set(splitted[0]) == self.all_entities
+        assert get_entities(splitted[0]) == self.all_entities
+
+    def test_split_two(self):
+        """Test splitting into two parts."""
+        self._test_split(ratios=0.8, exp_parts=2)
+
+    def test_split_three(self):
+        """Test splitting into three parts."""
+        self._test_split(ratios=(0.8, 0.1), exp_parts=3)
 
 
 class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
