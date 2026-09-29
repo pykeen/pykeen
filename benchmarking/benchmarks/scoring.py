@@ -20,7 +20,10 @@ class ScoringSuite:
     """Benchmark scoring triples and all tails with different interactions."""
 
     param_names = ["model"]
-    params = [["DistMult", "TransE", "ComplEx", "RotatE"]]
+    # one model per implementation pattern of the interaction function, rather than all models: product and sum
+    # (DistMult), einsum (ComplEx), distance (TransE), complex rotation and distance (RotatE), and neural network
+    # (ConvE). Code shared by all models is covered by any of them.
+    params = [["DistMult", "TransE", "ComplEx", "RotatE", "ConvE"]]
 
     def setup(self, model: str) -> None:
         """Prepare the model and batch."""
