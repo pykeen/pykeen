@@ -286,98 +286,69 @@ def weighted_median(a: np.ndarray, weights: np.ndarray | None = None) -> np.floa
 
 
 def compute_log_expected_power(k_values: np.ndarray, powers: np.ndarray, memory_limit_elements: int = 10**7) -> float:
-    """
-    Compute $sum( ln( E[X_i^p_i] ) )$.
+    r"""
+    Compute $\sum_i \ln \mathbb{E}[X_i^{p_i}]$ for independent $X_i$ uniformly distributed on $\{1, \ldots, k_i\}$.
 
-    Does so efficiently by using sorted batching and vectorization.
+    Each summand is given by
+
+    .. math::
+
+        \ln \mathbb{E}[X_i^{p_i}] = \ln \sum \limits_{j=1}^{k_i} \exp(p_i \cdot \ln j) - \ln k_i
+
+    For each unique power $p$, the log-sums for all $k \leq \max_i k_i$ are obtained at once by a single cumulative sum,
+    and then looked up for each $k_i$. Hence, for $u$ unique powers, the cost is $\mathcal{O}(u \cdot \max_i k_i + n)$
+    rather than $\mathcal{O}(n \cdot \max_i k_i)$. In particular, $u = 1$ for the unweighted geometric mean rank.
 
     :param k_values: shape: (n,)
         Upper bounds.
     :param powers: shape: (n,)
         Exponents.
     :param memory_limit_elements:
-        Max number of float elements in the temporary matrix buffer.
+        Max number of float elements in the temporary buffer of log-cumulative sums, which has one row per unique power.
         10^7 elements ~ 80MB RAM.
 
     :return:
         The scalar log-value.
     """
-    # 1. Sort inputs by k.
-    # This minimizes the 'masking waste' when we batch variables together.
-    # Small k's are processed with small k's; large with large.
-    sort_idx = np.argsort(k_values)
-    k_sorted = np.asarray(k_values)[sort_idx]
-    p_sorted = np.asarray(powers)[sort_idx]
+    k_values = np.asarray(k_values).astype(np.int64, copy=False)
+    unique_powers, inverse = np.unique(np.asarray(powers, dtype=np.float64), return_inverse=True)
+    inverse = inverse.reshape(-1)
+    num_unique = len(unique_powers)
 
-    n = len(k_sorted)
-    total_log_moment = 0.0
+    # the largest k per unique power, which determines the length of its log-cumulative sum
+    max_k = np.zeros(num_unique, dtype=np.int64)
+    np.maximum.at(max_k, inverse, k_values)
 
-    start_idx = 0
-    while start_idx < n:
-        # 2. Determine Batch Size dynamically based on Memory Limit.
-        # We want to find 'end_idx' such that:
-        # (rows in batch) * (max_k in batch) <= memory_limit
-        # Since k is sorted ascending, max_k_in_batch is simply k_sorted[end_idx-1].
+    # process unique powers sorted by their largest k, to reduce padding when batching them
+    order = np.argsort(max_k, kind="stable")
+    max_k_sorted = max_k[order]
+    # position of each unique power in the processing order
+    position = np.empty(num_unique, dtype=np.int64)
+    position[order] = np.arange(num_unique)
+    task_position = position[inverse]
 
-        end_idx = start_idx + 1
+    # log sum_{j=1}^{k_i} j^{p_i} for each task
+    log_sums = np.empty(len(k_values), dtype=np.float64)
+    start = 0
+    while start < num_unique:
+        # choose the batch such that (number of rows) * (largest k) stays within the memory limit (but >= 1 row)
+        # note: since max_k_sorted is ascending, the required size increases with the number of rows
+        sizes = np.arange(1, num_unique - start + 1) * max_k_sorted[start:]
+        stop = start + max(1, int(np.searchsorted(sizes, memory_limit_elements, side="right")))
+        batch_powers = unique_powers[order[start:stop], None]
+        log_j = np.log(np.arange(1, max_k_sorted[stop - 1] + 1, dtype=np.float64))
+        # shape: (stop - start, max_k); entry [b, k - 1] = exp(-shift_b) * sum_{j=1}^{k} j^{p_b}
+        # note: we shift by the largest exponent per row, p * log(max_k) for p > 0, and 0 otherwise, to avoid overflow;
+        #       this is faster than a log-cumsum-exp, which matters when there are many unique powers.
+        shift = np.maximum(batch_powers * log_j[-1], 0.0)
+        table = np.cumsum(np.exp(batch_powers * log_j[None, :] - shift), axis=1)
+        # look up the log-sums for all tasks whose power is in this batch
+        in_batch = (task_position >= start) & (task_position < stop)
+        rows = task_position[in_batch] - start
+        log_sums[in_batch] = np.log(table[rows, k_values[in_batch] - 1]) + shift[rows, 0]
+        start = stop
 
-        # We peek ahead to see how many rows we can fit.
-        # This is a heuristic: we check if adding the next block of rows
-        # would explode the matrix size required.
-        while end_idx < n:
-            current_max_k = k_sorted[end_idx]  # This would be the new width
-            current_rows = end_idx - start_idx + 1
-
-            # Check budget
-            if current_rows * current_max_k > memory_limit_elements:
-                break
-            end_idx += 1
-
-        # 3. Process the Batch
-        k_batch = k_sorted[start_idx:end_idx]
-        p_batch = p_sorted[start_idx:end_idx]
-
-        # Max k in this specific batch (determines matrix columns)
-        max_k_batch = int(k_batch[-1])
-
-        # TODO: check if we are 0- or 1-based
-        # Create base grid [1, 2, ..., max_k_batch]
-        # Shape: (1, max_k)
-        j_grid = np.arange(1, max_k_batch + 1, dtype=np.float64).reshape(1, -1)
-
-        # Reshape powers for broadcasting
-        # Shape: (batch_rows, 1)
-        p_col = p_batch.reshape(-1, 1)
-
-        # 4. Compute Powers (Broadcasting)
-        # Matrix Result: (batch_rows, max_k)
-        # value[i, j] = (j+1) ^ p_i
-        values = j_grid**p_col
-
-        # 5. Masking
-        # Since k is sorted, we have a "lower triangular" style validity mask
-        # (roughly), but strictly we just need to zero out j > k_i.
-        # Shape: (batch_rows, 1) compared to (1, max_k)
-        mask = j_grid <= k_batch.reshape(-1, 1)
-
-        # Apply mask (zero out values strictly greater than k_i)
-        # We use 'where' or multiplication. Multiplication is faster for floats usually.
-        values *= mask
-
-        # 6. Summation
-        # Sum along columns to get sum(j^p) for each variable
-        row_sums = np.sum(values, axis=1)
-
-        # Compute log terms: log(sum) - log(k)
-        # We use np.log with a safety for the 0 sums (though sums of j^p >= 1 are never 0)
-        batch_log_moments = np.log(row_sums) - np.log(k_batch)
-
-        total_log_moment += np.sum(batch_log_moments)
-
-        # Move to next batch
-        start_idx = end_idx
-
-    return total_log_moment
+    return float(np.sum(log_sums - np.log(k_values)))
 
 
 def compute_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
