@@ -997,7 +997,9 @@ def check_shapes(
     dims: dict[str, tuple[int, ...]] = {}
     errors = []
     for tensor_or_shape, shape in x:
-        actual_shape = tensor_or_shape.shape if isinstance(tensor_or_shape, torch.Tensor) else tensor_or_shape
+        actual_shape = tensor_or_shape
+        if isinstance(tensor_or_shape, torch.Tensor):
+            actual_shape = tensor_or_shape.shape
         if len(actual_shape) != len(shape):
             errors.append(f"Invalid number of dimensions: {actual_shape} vs. {shape}")
             continue
