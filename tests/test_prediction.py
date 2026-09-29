@@ -244,7 +244,7 @@ def test_predict_top_k_consistency() -> None:
         .reset_index(drop=True)
         for k in ks
     ]
-    assert set(dfs[0].columns) == set(dfs[0].columns)
+    assert set(dfs[0].columns) == set(dfs[1].columns)
     for column in dfs[0].columns:
         np.testing.assert_equal(dfs[0][column].values, dfs[1][column].values)
 
