@@ -3,11 +3,13 @@
 Benchmarks whose cost depends on the graph structure, e.g., on the number of triples per (head, relation) pair, use
 Kinships, the largest dataset shipped with PyKEEN. Benchmarks whose cost mainly grows with the number of entities, such
 as scoring against all entities and evaluation, use a larger synthetic graph, since Kinships only has 104 entities.
+Evaluation additionally uses UMLS, since the number of filtered candidates per query is much more skewed than for
+Kinships, and almost always one for the synthetic graph.
 """
 
 import torch
 
-from pykeen.datasets import Kinships
+from pykeen.datasets import UMLS, Kinships
 from pykeen.triples import CoreTriplesFactory
 from pykeen.triples.generation import generate_triples_factory
 
@@ -15,6 +17,7 @@ __all__ = [
     "EMBEDDING_DIM",
     "SEED",
     "load_kinships",
+    "load_umls",
     "make_factory",
 ]
 
@@ -28,6 +31,12 @@ def load_kinships() -> Kinships:
     """Load the Kinships dataset, which is shipped with PyKEEN, and use a single thread for more stable timings."""
     torch.set_num_threads(1)
     return Kinships()
+
+
+def load_umls() -> UMLS:
+    """Load the UMLS dataset, which is shipped with PyKEEN, and use a single thread for more stable timings."""
+    torch.set_num_threads(1)
+    return UMLS()
 
 
 def make_factory(

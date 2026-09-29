@@ -14,6 +14,10 @@ to run on a CPU, and do not require dataset downloads:
 - Benchmarks whose cost mainly grows with the number of entities (scoring
   against all entities, evaluation) use a larger synthetic graph, since
   Kinships only has 104 entities, which would hide such costs.
+- Evaluation additionally uses UMLS, since the cost of filtering depends on
+  the number of known answers per query. In the synthetic graph, almost all
+  queries have a single known answer, whereas UMLS has a skewed distribution,
+  as real graphs do.
 
 The configuration is in [`asv.conf.jsonc`](asv.conf.jsonc).
 
