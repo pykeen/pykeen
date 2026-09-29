@@ -54,6 +54,7 @@ class TestCompGCN(cases.ModelTestCase):
     cls = pykeen.models.CompGCN
     use_inverse_triples = True
     num_constant_init = 3  # BN(2) + Bias
+    cli_extras = ["--use-inverse-triples"]
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
