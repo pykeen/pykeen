@@ -24,12 +24,19 @@ class EveryCheckpointScheduleTests(CheckpointScheduleTests):
 
     cls = schedule.EveryCheckpointSchedule
 
+    def expected_checkpoint_steps(self) -> set[int]:
+        # default frequency: 10
+        return {0, 10}
+
 
 class ExplicitCheckpointScheduleTests(CheckpointScheduleTests):
     """Test for explicit."""
 
     cls = schedule.ExplicitCheckpointSchedule
     kwargs = {"steps": (4, 6)}
+
+    def expected_checkpoint_steps(self) -> set[int]:
+        return {4, 6}
 
 
 class BestCheckpointScheduleTests(CheckpointScheduleTests):
@@ -44,10 +51,21 @@ class BestCheckpointScheduleTests(CheckpointScheduleTests):
         return kwargs
 
     def iter_steps(self) -> Iterator[int]:
+        self.losses: dict[int, float] = {}
         for step in super().iter_steps():
             loss = torch.rand(1, generator=self.generator)
+            self.losses[step] = loss.item()
             self.result_tracker.log_metrics(metrics={"loss": loss}, step=step, prefix="validation")
             yield step
+
+    def expected_checkpoint_steps(self) -> set[int]:
+        # the metric is maximized by default => checkpoint whenever a new maximum is reached
+        best, expected = float("-inf"), set()
+        for step, loss in self.losses.items():
+            if loss > best:
+                best = loss
+                expected.add(step)
+        return expected
 
 
 class UnionCheckpointScheduleTests(CheckpointScheduleTests):
@@ -55,6 +73,10 @@ class UnionCheckpointScheduleTests(CheckpointScheduleTests):
 
     cls = schedule.UnionCheckpointSchedule
     kwargs = {"bases": ["every", "explicit"], "bases_kwargs": [None, {"steps": (3,)}]}
+
+    def expected_checkpoint_steps(self) -> set[int]:
+        # every 10 steps, and explicitly at step 3
+        return {0, 3, 10}
 
 
 class CheckpointKeeperMetaTestCase(unittest_templates.MetaTestCase[keeper.CheckpointKeeper]):

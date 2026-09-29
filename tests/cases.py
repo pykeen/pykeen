@@ -5,7 +5,6 @@ import itertools
 import logging
 import pathlib
 import tempfile
-import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
@@ -198,14 +197,10 @@ class DatasetTestCase(unittest.TestCase):
             assert self.exp_num_triples == pytest.approx(num_triples, abs=self.exp_num_triples_tolerance)
 
         # Test caching
-        start = timeit.default_timer()
-        _ = self.dataset.training
-        end = timeit.default_timer()
-        # assert (end - start) < 1.0e-02
-        assert start == pytest.approx(end, abs=1.0e-02), "Caching should have made this operation fast"
+        training = self.dataset.training
+        assert self.dataset.training is training, "Repeated access should return the cached triples factory"
 
         # Test consistency of training / validation / testing mapping
-        training = self.dataset.training
         for part, factory in self.dataset.factory_dict.items():
             if not isinstance(factory, TriplesFactory):
                 logger.warning("Skipping mapping consistency checks since triples factory does not provide mappings.")
@@ -292,8 +287,8 @@ class LossWeightTestCase(GenericTestCase[LossWeighter]):
         result = self.instance(h=h, r=r, t=t)
         assert torch.is_tensor(result)
         assert torch.is_floating_point(result)
-        # assert the result is of appropriate shape
-        torch.broadcast_shapes(result.shape, expected_shape)
+        # assert the result is of appropriate shape, i.e., broadcastable to the expected shape
+        assert torch.broadcast_shapes(result.shape, expected_shape) == expected_shape
 
     def test_lcwa_heads(self) -> None:
         """Test calculating weights for LCWA head prediction."""
@@ -977,9 +972,9 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         )
 
     def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
-        """Calculate the expected updated regularization term."""
+        """Calculate the expected updated (unweighted) regularization term."""
         exp_penalties = torch.stack([self._expected_penalty(x) for x in inputs])
-        expected_term = torch.sum(exp_penalties).view(1) * self.instance.weight
+        expected_term = torch.sum(exp_penalties).view(1)
         assert expected_term.shape == (1,)
         return expected_term
 
@@ -997,6 +992,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # check result
         expected_term = self._expected_updated_term(inputs=inputs)
         assert self.instance.regularization_term.item() == pytest.approx(expected_term.item())
+        assert self.instance.term.item() == pytest.approx((self.instance.weight * expected_term).item())
 
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
@@ -1028,7 +1024,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
 
         # check that the expected term is returned
         exp = (self.instance.weight * self._expected_updated_term(inputs)).item()
-        assert exp == self.instance.pop_regularization_term().item()
+        assert self.instance.pop_regularization_term().item() == pytest.approx(exp)
 
         # check that the regularizer is now reset
         self._check_reset()
@@ -2814,24 +2810,33 @@ class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.Score
         batch = torch.randint(self.num_entities, size=(self.batch_size, 2), generator=generator)
         scores = torch.rand(self.batch_size, self.num_entities)
         self.instance(batch=batch, target=self.target, scores=scores)
-        self.check()
+        self.check(batch=batch, scores=scores)
 
-    def check(self):
-        """Perform additional verification."""
-        pass
+    def check(self, batch: LongTensor, scores: FloatTensor) -> None:
+        """Verify the consumer's state after consuming the scores for the given batch."""
+        raise NotImplementedError
 
 
 class CheckpointScheduleTests(GenericTestCase[CheckpointSchedule]):
     """Generic tests for checkpoint schedules."""
 
     def test_call(self) -> None:
-        """Smoke-test for calling."""
+        """Test calling."""
+        checkpoint_steps = set()
         for step in self.iter_steps():
-            _result = self.instance(step=step)
+            result = self.instance(step=step)
+            assert isinstance(result, bool)
+            if result:
+                checkpoint_steps.add(step)
+        assert checkpoint_steps == self.expected_checkpoint_steps()
 
     def iter_steps(self) -> Iterator[int]:
         """Iterate over steps."""
         yield from range(20)
+
+    def expected_checkpoint_steps(self) -> set[int]:
+        """Return the steps from :meth:`iter_steps` for which a checkpoint should be created."""
+        raise NotImplementedError
 
 
 class CheckpointKeeperTests(GenericTestCase[CheckpointKeeper]):
