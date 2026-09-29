@@ -70,7 +70,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:
     :returns: a click command for training a model of the given class
     """
     signature = inspect.signature(model.__init__)
-    # models which require inverse triples declare them as their default
+    # some models (e.g., ConvE, CompGCN, NodePiece) use inverse triples by default
     inverse_triples_parameter = signature.parameters.get("use_inverse_triples")
     use_inverse_triples_default = False if inverse_triples_parameter is None else inverse_triples_parameter.default
 
@@ -128,8 +128,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:
     @_decorate_model_kwargs
     @click.option(
         "-I",
-        "--use-inverse-triples",
-        is_flag=True,
+        "--use-inverse-triples/--no-use-inverse-triples",
         default=use_inverse_triples_default,
         show_default=True,
         help="Model inverse triples",
