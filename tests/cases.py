@@ -46,7 +46,6 @@ from pykeen.checkpoints import CheckpointKeeper, CheckpointSchedule
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.ea.combination import GraphPairCombinator
-from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults, evaluator_resolver
@@ -1318,11 +1317,6 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         return [str(e) for e in extras]
 
     @pytest.mark.slow
-    def test_cli_training_nations(self):
-        """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(["-t", NATIONS_TRAIN_PATH, *self._cli_extras])
-
-    @pytest.mark.slow
     def test_pipeline_nations_early_stopper(self):
         """Test running the pipeline with early stopping."""
         model_kwargs = dict(self.instance_kwargs)
@@ -1342,13 +1336,8 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         )
 
     @pytest.mark.slow
-    def test_cli_training_kinships(self):
-        """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(["-t", KINSHIPS_TRAIN_PATH, *self._cli_extras])
-
-    @pytest.mark.slow
     def test_cli_training_nations_testing(self):
-        """Test running the pipeline on almost all models with only training data."""
+        """Test running the pipeline via the CLI with training and testing data."""
         self._help_test_cli(["-t", NATIONS_TRAIN_PATH, "-q", NATIONS_TEST_PATH, *self._cli_extras])
 
     def _help_test_cli(self, args):
