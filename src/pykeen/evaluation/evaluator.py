@@ -608,8 +608,7 @@ def _evaluate_batch(
         positive_filter = relation_filter = None
 
     if evaluator.filtered:
-        if positive_filter is None:
-            raise ValueError("positive_filter must not be None.")
+        assert positive_filter is not None
         # overwrite filtered scores
         scores = filter_scores_(scores=scores, filter_batch=positive_filter)
         # The scores for the true triples have to be rewritten to the scores tensor
@@ -617,8 +616,7 @@ def _evaluate_batch(
 
     # Create a positive mask with the size of the scores from the positive filter
     if evaluator.requires_positive_mask:
-        if positive_filter is None:
-            raise ValueError("positive_filter must not be None.")
+        assert positive_filter is not None
         positive_mask = create_dense_positive_mask_(zero_tensor=torch.zeros_like(scores), filter_batch=positive_filter)
     else:
         positive_mask = None

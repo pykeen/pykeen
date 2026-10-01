@@ -216,8 +216,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         kwargs = {}
         if issubclass(metric_cls, HITS_METRICS):
             k = int(k or 10)
-            if k <= 0:
-                raise ValueError("Expected k > 0.")
+            assert k > 0
             kwargs["k"] = k
 
         metric = rank_based_metric_resolver.make(metric_cls, kwargs)

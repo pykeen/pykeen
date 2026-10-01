@@ -280,8 +280,7 @@ class GatedCombination(Combination):
         )
 
     def forward(self, xs: Sequence[FloatTensor]) -> FloatTensor:  # noqa: D102
-        if len(xs) != 2:
-            raise ValueError("Expected len(xs) == 2.")
+        assert len(xs) == 2
         z = self.gate(xs)
         h = self.combination(xs)
         return self.dropout(z * h + (1 - z) * xs[0])

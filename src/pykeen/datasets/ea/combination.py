@@ -107,8 +107,7 @@ def merge_label_to_id_mapping(
             key = f"{prefix}:{key}"
             if offsets is None:
                 # for mypy
-                if mappings is None:
-                    raise ValueError("mappings must not be None.")
+                assert mappings is not None
                 value = mappings[i][value]
             else:
                 value = value + offsets[i].item()

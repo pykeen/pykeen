@@ -125,8 +125,7 @@ class TrainingCallback:
     @property
     def result_tracker(self) -> ResultTracker:
         """The result tracker, accessed via the training loop."""
-        if self.training_loop.result_tracker is None:
-            raise ValueError("self.training_loop.result_tracker must not be None.")
+        assert self.training_loop.result_tracker is not None
         return self.training_loop.result_tracker
 
     def register_training_loop(self, training_loop: training.TrainingLoop) -> None:

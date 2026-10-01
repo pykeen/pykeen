@@ -73,8 +73,7 @@ class InductiveNodePieceGNN(InductiveNodePiece):
         self.gnn_encoder = nn.ModuleList(gnn_encoder)
 
         # Saving edge indices for all the supplied splits
-        if train_factory is None:
-            raise ValueError("train_factory must be a valid triples factory")
+        assert train_factory is not None, "train_factory must be a valid triples factory"
         self.register_buffer(name="training_edge_index", tensor=get_edge_index(triples_factory=train_factory))
         self.register_buffer(name="training_edge_type", tensor=train_factory.mapped_triples[:, 1])
 
@@ -87,10 +86,8 @@ class InductiveNodePieceGNN(InductiveNodePiece):
             self.register_buffer(name="testing_edge_index", tensor=inference_edge_index)
             self.register_buffer(name="testing_edge_type", tensor=inference_edge_type)
         else:
-            if validation_factory is None:
-                raise ValueError("Validation factory must be triples factory")
-            if test_factory is None:
-                raise ValueError("Test factory must be triple factory")
+            assert validation_factory is not None, "Validation factory must be triples factory"
+            assert test_factory is not None, "Test factory must be triple factory"
             self.register_buffer(
                 name="validation_edge_index", tensor=get_edge_index(triples_factory=validation_factory)
             )

@@ -796,8 +796,7 @@ def hpo_pipeline(
     negative_sampler_cls: type[NegativeSampler] | None
     if training_loop_cls is SLCWATrainingLoop:
         negative_sampler_cls = negative_sampler_resolver.lookup(negative_sampler)
-        if negative_sampler_cls is None:
-            raise ValueError("negative_sampler_cls must not be None.")
+        assert negative_sampler_cls is not None
         study.set_user_attr("negative_sampler", negative_sampler_cls.get_normalized_name())
         logger.info(f"Using negative sampler: {negative_sampler_cls}")
     else:

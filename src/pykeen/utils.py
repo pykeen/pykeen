@@ -791,8 +791,7 @@ def negative_norm(
         The scores.
     """
     if power_norm:
-        if isinstance(p, str):
-            raise TypeError(f"power_norm requires a numeric p, but got {p!r}.")
+        assert not isinstance(p, str)
         return -(x.abs() ** p).sum(dim=-1)
 
     return -x.norm(p=p, dim=-1)
@@ -954,8 +953,7 @@ def extend_batch(
         ids = torch.arange(max_id, device=batch.device)
     if ids.ndimension() < 2:
         ids = ids.unsqueeze(dim=0)
-    if ids.ndimension() != 2:
-        raise ValueError("Expected ids.ndimension() == 2.")
+    assert ids.ndimension() == 2
 
     # normalize batch -> batch.shape: (batch_size, 1, 3)
     batch = batch.unsqueeze(dim=1)

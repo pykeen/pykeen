@@ -76,6 +76,5 @@ class ConcatMLP(TwoLayerMLP):
 
         :returns: The tensor after applying this MLP
         """
-        if dim != -2:
-            raise ValueError("Expected dim == -2.")
+        assert dim == -2
         return super().forward(xs.view(*xs.shape[: -self.flatten_dims], -1))

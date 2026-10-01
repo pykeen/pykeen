@@ -118,8 +118,7 @@ class LazyInductiveDataset(InductiveDataset):
         """The training triples factory."""
         if not self._loaded:
             self._load()
-        if self._transductive_training is None:
-            raise ValueError("self._transductive_training must not be None.")
+        assert self._transductive_training is not None
         return self._transductive_training
 
     @property
@@ -127,8 +126,7 @@ class LazyInductiveDataset(InductiveDataset):
         """The inductive inference triples factory. MIGHT or MIGHT NOT share indices with the transductive train."""
         if not self._loaded:
             self._load()
-        if self._inductive_inference is None:
-            raise ValueError("self._inductive_inference must not be None.")
+        assert self._inductive_inference is not None
         return self._inductive_inference
 
     @property
@@ -136,8 +134,7 @@ class LazyInductiveDataset(InductiveDataset):
         """The testing triples factory that share indices with the INDUCTIVE INFERENCE triples factory."""
         if not self._loaded:
             self._load()
-        if self._inductive_testing is None:
-            raise ValueError("self._inductive_testing must not be None.")
+        assert self._inductive_testing is not None
         return self._inductive_testing
 
     @property

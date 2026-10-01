@@ -313,8 +313,7 @@ def _translate_triples(
         ],
         dim=-1,
     )
-    if not (triples >= 0).all():
-        raise ValueError("Expected (triples >= 0).all().")
+    assert (triples >= 0).all()
     return triples
 
 

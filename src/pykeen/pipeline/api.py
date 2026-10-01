@@ -663,8 +663,7 @@ class ResolutionResult:
             clear_optimizer=self.clear_optimizer,
             **self.training_kwargs,
         )
-        if losses is None:
-            raise ValueError("losses must not be None.")
+        assert losses is not None
         train_seconds = time.time() - training_start_time
         step = self.training_kwargs.get("num_epochs")
         self.result_tracker.log_metrics(metrics={"total_training": train_seconds}, step=step, prefix="times")
@@ -1096,8 +1095,7 @@ def _handle_dataset(
             }
         )
     else:
-        if dataset_instance is None:
-            raise ValueError("dataset_instance must not be None.")
+        assert dataset_instance is not None
         _result_tracker.log_params(
             {"dataset": dataset_instance.get_normalized_name(), "dataset_kwargs": dataset_kwargs}
         )

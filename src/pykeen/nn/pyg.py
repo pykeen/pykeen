@@ -208,8 +208,7 @@ class MessagePassingRepresentation(Representation, ABC):
         if self.restrict_k_hop and indices is not None:
             # we can restrict the message passing to the k-hop neighborhood of the desired indices;
             # this does only make sense if we do not request *all* indices
-            if k_hop_subgraph is None:
-                raise ValueError("k_hop_subgraph must not be None.")
+            assert k_hop_subgraph is not None
             # k_hop_subgraph returns:
             # (1) the nodes involved in the subgraph
             # (2) the filtered edge_index connectivity

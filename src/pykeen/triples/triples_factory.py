@@ -629,8 +629,7 @@ class CoreTriplesFactory(KGInfo):
         """
         logger.info(f"applying cutoff of {n} to {self}")
         if isinstance(n, float):
-            if not (0 < n < 1):
-                raise ValueError("Expected 0 < n < 1.")
+            assert 0 < n < 1
             n = int(self.num_relations * n)
         elif not isinstance(n, int):
             raise TypeError("n must be either an integer or a float")
@@ -1519,8 +1518,7 @@ class TriplesFactory(CoreTriplesFactory):
             "relation": self.relation_labeling,
             "tail": self.entity_labeling,
         }.items():
-            if labeling is None:
-                raise ValueError("labeling must not be None.")
+            assert labeling is not None
             data[f"{column}_label"] = labeling.label(
                 ids=data[f"{column}_id"],
                 unknown_label=("[unknown_" + column + "]").upper(),

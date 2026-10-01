@@ -496,8 +496,7 @@ class Embedding(Representation):
         if self.is_complex:
             x = torch.view_as_complex(x)
         # verify that contiguity is preserved
-        if not x.is_contiguous():
-            raise ValueError("Expected x.is_contiguous().")
+        assert x.is_contiguous()
         return x
 
 

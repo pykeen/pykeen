@@ -184,8 +184,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
     def _create_training_data_loader(
         self, triples_factory: CoreTriplesFactory, sampler: str | None, **kwargs
     ) -> DataLoader[tuple[MappedTriples]]:
-        if sampler is not None:
-            raise ValueError("Expected sampler is None.")
+        assert sampler is None
         return DataLoader(dataset=TensorDataset(triples_factory.mapped_triples), **kwargs)
 
     def _process_batch(
@@ -225,8 +224,7 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
 
     @staticmethod
     def _get_batch_size(batch: tuple[MappedTriples]) -> int:
-        if len(batch) != 1:
-            raise ValueError("Expected len(batch) == 1.")
+        assert len(batch) == 1
         return batch[0].shape[0]
 
     def _slice_size_search(self, **kwargs) -> int:

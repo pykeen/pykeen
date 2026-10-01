@@ -214,8 +214,7 @@ class MetisAnchorTokenizer(AnchorTokenizer):
             this_vocabulary_size, this_assignment = super()._call(
                 edge_index=edge_index, num_tokens=num_tokens, num_entities=num_entities
             )
-            if this_assignment.shape[0] != num_entities:
-                raise ValueError("Expected this_assignment.shape[0] == num_entities.")
+            assert this_assignment.shape[0] == num_entities
 
             # offset
             mask = this_assignment < 0
