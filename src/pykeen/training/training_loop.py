@@ -147,6 +147,21 @@ def _make_optimizer_and_lr_scheduler(
     return optimizer_instance, lr_scheduler_instance
 
 
+def _config_repr(value: Any) -> str:
+    """Return a representation of a configuration value which is stable across Python sessions.
+
+    The default representation of functions, e.g., the ``lr_lambda`` of :class:`torch.optim.lr_scheduler.LambdaLR`,
+    contains their memory address, and is thus replaced by their qualified name.
+    """
+    if isinstance(value, Mapping):
+        return "{" + ", ".join(f"{key!r}: {_config_repr(v)}" for key, v in sorted(value.items())) + "}"
+    if isinstance(value, list | tuple):
+        return "[" + ", ".join(map(_config_repr, value)) + "]"
+    if callable(value):
+        return getattr(value, "__qualname__", type(value).__qualname__)
+    return repr(value)
+
+
 def _restore_state_after_probing(
     func: "Callable[Concatenate[TrainingLoop, P], R]",
 ) -> "Callable[Concatenate[TrainingLoop, P], R]":
@@ -202,6 +217,9 @@ class TrainingLoop(ABC, Generic[BatchType]):
 
     #: whether the current optimizer has already been used for training
     _optimizer_used: bool
+
+    #: the LR scheduler's configuration, which is part of the checksum
+    _lr_scheduler_config: str
 
     losses_per_epochs: list[float]
 
@@ -271,6 +289,16 @@ class TrainingLoop(ABC, Generic[BatchType]):
         # that clearing the optimizer releases the instances.
         pre_instantiated = isinstance(optimizer, Optimizer) or isinstance(lr_scheduler, LRScheduler)
         self._optimizer_factory = None if pre_instantiated else factory
+        # the LR scheduler's state mixes its configuration with its training progress, so the configuration is taken
+        # from the constructor parameters instead, which are unknown for a pre-instantiated LR scheduler
+        if self.lr_scheduler is None:
+            self._lr_scheduler_config = str(None)
+        elif isinstance(lr_scheduler, LRScheduler):
+            self._lr_scheduler_config = self.lr_scheduler.__class__.__name__
+        else:
+            self._lr_scheduler_config = (
+                f"{self.lr_scheduler.__class__.__name__}({_config_repr(lr_scheduler_kwargs or {})})"
+            )
         self.losses_per_epochs = []
         self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
@@ -319,10 +347,11 @@ class TrainingLoop(ABC, Generic[BatchType]):
 
     @property
     def checksum(self) -> str:
-        """The checksum of the model and optimizer the training loop was configured with.
+        """The checksum of the model, optimizer, and LR scheduler the training loop was configured with.
 
         For the optimizer, only its class and default hyperparameters are considered, since its parameter groups are
-        modified during training, e.g., by learning rate schedulers.
+        modified during training, e.g., by learning rate schedulers. For the LR scheduler, its class and constructor
+        parameters are considered; the latter only if the LR scheduler was not passed pre-instantiated.
         """
         h = md5()  # noqa: S324
         h.update(str(self.model).encode("utf-8"))
@@ -333,6 +362,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
             # unlike the parameter groups, not modified during training
             optimizer_config = f"{self.optimizer.__class__.__name__}({sorted(self.optimizer.defaults.items())})"
         h.update(optimizer_config.encode("utf-8"))
+        h.update(self._lr_scheduler_config.encode("utf-8"))
         return h.hexdigest()
 
     @property

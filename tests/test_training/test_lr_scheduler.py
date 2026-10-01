@@ -1,7 +1,9 @@
 """Tests for LR schedulers."""
 
 import pathlib
+from collections.abc import Callable
 from hashlib import md5
+from typing import Any
 
 import pytest
 import torch
@@ -42,15 +44,27 @@ def triples_factory() -> CoreTriplesFactory:
     return Nations().training
 
 
-def _make_training_loop(triples_factory: CoreTriplesFactory, lr: float = 0.1) -> SLCWATrainingLoop:
+def _make_lr_lambda() -> Callable[[int], float]:
+    # a new function object, i.e., with a different memory address, for every call
+    return lambda epoch: 0.5**epoch
+
+
+def _make_training_loop(
+    triples_factory: CoreTriplesFactory,
+    lr: float = 0.1,
+    lr_scheduler: HintOrType[lr_scheduler.LRScheduler] = "ExponentialLR",
+    lr_scheduler_kwargs: OptionalKwargs = None,
+) -> SLCWATrainingLoop:
+    if lr_scheduler_kwargs is None and lr_scheduler == "ExponentialLR":
+        lr_scheduler_kwargs = {"gamma": 0.5}
     model = TransE(triples_factory=triples_factory, embedding_dim=8, random_seed=0)
     return SLCWATrainingLoop(
         model=model,
         triples_factory=triples_factory,
         optimizer="Adam",
         optimizer_kwargs={"lr": lr},
-        lr_scheduler="ExponentialLR",
-        lr_scheduler_kwargs={"gamma": 0.5},
+        lr_scheduler=lr_scheduler,
+        lr_scheduler_kwargs=lr_scheduler_kwargs,
         automatic_memory_optimization=False,
     )
 
@@ -69,21 +83,52 @@ def _train(
     )
 
 
-def test_resume_from_checkpoint(triples_factory: CoreTriplesFactory, tmp_path: pathlib.Path) -> None:
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {},
+        {"lr_scheduler": "LambdaLR", "lr_scheduler_kwargs": {"lr_lambda": _make_lr_lambda}},
+    ],
+)
+def test_resume_from_checkpoint(
+    triples_factory: CoreTriplesFactory, tmp_path: pathlib.Path, kwargs: dict[str, Any]
+) -> None:
     """Test that training with an LR scheduler can be resumed from a checkpoint."""
-    losses = _make_training_loop(triples_factory).train(
-        triples_factory=triples_factory, num_epochs=NUM_EPOCHS, batch_size=128, use_tqdm=False
-    )
-    _train(_make_training_loop(triples_factory), triples_factory, tmp_path, num_epochs=NUM_EPOCHS // 2)
-    losses_resumed = _train(_make_training_loop(triples_factory), triples_factory, tmp_path, num_epochs=NUM_EPOCHS)
+    # keep all LR lambdas alive, such that they cannot share the same memory address
+    lr_scheduler_kwargs_list: list[dict[str, Any]] = []
+
+    def make() -> SLCWATrainingLoop:
+        # replace the lambda factory by a fresh lambda for every training loop
+        lr_scheduler_kwargs = {key: value() for key, value in kwargs.get("lr_scheduler_kwargs", {}).items()}
+        lr_scheduler_kwargs_list.append(lr_scheduler_kwargs)
+        return _make_training_loop(
+            triples_factory,
+            lr_scheduler=kwargs.get("lr_scheduler", "ExponentialLR"),
+            lr_scheduler_kwargs=lr_scheduler_kwargs or None,
+        )
+
+    losses = make().train(triples_factory=triples_factory, num_epochs=NUM_EPOCHS, batch_size=128, use_tqdm=False)
+    _train(make(), triples_factory, tmp_path, num_epochs=NUM_EPOCHS // 2)
+    losses_resumed = _train(make(), triples_factory, tmp_path, num_epochs=NUM_EPOCHS)
     assert losses == pytest.approx(losses_resumed)
 
 
-def test_resume_from_checkpoint_mismatch(triples_factory: CoreTriplesFactory, tmp_path: pathlib.Path) -> None:
-    """Test that resuming from a checkpoint with a different optimizer configuration fails."""
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"lr": 0.01},
+        {"lr_scheduler_kwargs": {"gamma": 0.9}},
+        {"lr_scheduler": "StepLR", "lr_scheduler_kwargs": {"step_size": 1, "gamma": 0.5}},
+        {"lr_scheduler": None},
+    ],
+)
+def test_resume_from_checkpoint_mismatch(
+    triples_factory: CoreTriplesFactory, tmp_path: pathlib.Path, kwargs: dict[str, Any]
+) -> None:
+    """Test that resuming from a checkpoint with a different optimizer or LR scheduler configuration fails."""
     _train(_make_training_loop(triples_factory), triples_factory, tmp_path, num_epochs=NUM_EPOCHS // 2)
     with pytest.raises(CheckpointMismatchError):
-        _train(_make_training_loop(triples_factory, lr=0.01), triples_factory, tmp_path, num_epochs=NUM_EPOCHS)
+        _train(_make_training_loop(triples_factory, **kwargs), triples_factory, tmp_path, num_epochs=NUM_EPOCHS)
 
 
 def test_resume_from_legacy_checkpoint(triples_factory: CoreTriplesFactory, tmp_path: pathlib.Path) -> None:
