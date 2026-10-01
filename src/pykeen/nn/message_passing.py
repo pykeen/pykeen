@@ -253,7 +253,8 @@ def _make_dim_divisible(dim: int, divisor: int, name: str) -> int:
     if remainder:
         logger.warning(f"{name}={dim} not divisible by {divisor}.")
     dim = dim_div * divisor
-    assert dim % divisor == 0
+    if dim % divisor != 0:
+        raise ValueError("Expected dim % divisor == 0.")
     return dim
 
 

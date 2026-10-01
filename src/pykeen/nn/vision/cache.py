@@ -84,17 +84,20 @@ class WikidataImageCache(WikidataTextCache):
         for entry in res_json:
             # entity ID
             wikidata_id = nested_get(entry, "item", "value", default="")
-            assert isinstance(wikidata_id, str)  # for mypy
+            if not isinstance(wikidata_id, str):  # for mypy
+                raise TypeError(f"Expected wikidata_id to be of type str, but got {type(wikidata_id).__name__}.")
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
 
             # relation ID
             relation_id = nested_get(entry, "relation", "value", default="")
-            assert isinstance(relation_id, str)  # for mypy
+            if not isinstance(relation_id, str):  # for mypy
+                raise TypeError(f"Expected relation_id to be of type str, but got {type(relation_id).__name__}.")
             relation_id = relation_id.rsplit("/", maxsplit=1)[-1]
 
             # image URL
             image_url = nested_get(entry, "image", "value", default=None)
-            assert image_url is not None
+            if image_url is None:
+                raise ValueError("image_url must not be None.")
             images.setdefault(wikidata_id, {}).setdefault(relation_id, []).append(image_url)
 
         # check whether images are still missing

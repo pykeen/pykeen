@@ -243,7 +243,8 @@ class EarlyStopper(Stopper):
     def should_stop(self, epoch: int) -> bool:
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
         # for mypy
-        assert self.best_model_path is not None
+        if self.best_model_path is None:
+            raise ValueError("self.best_model_path must not be None.")
         # Evaluate
         metric_results = self.evaluation_loop.evaluate(
             use_tqdm=self.use_tqdm,

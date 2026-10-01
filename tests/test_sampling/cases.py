@@ -1,8 +1,8 @@
 """Test cases for sampling."""
 
 import unittest
-from collections.abc import MutableMapping
-from typing import Any
+from collections.abc import Mapping, MutableMapping
+from typing import Any, ClassVar
 
 import numpy as np
 import torch
@@ -43,7 +43,7 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
     #: A positive batch
     positive_batch: torch.LongTensor
     #: Kwargs
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "num_negs_per_pos": 10,
     }
 

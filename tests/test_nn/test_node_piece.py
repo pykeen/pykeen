@@ -1,8 +1,8 @@
 """Tests for node piece."""
 
 import random
-from collections.abc import MutableMapping
-from typing import Any
+from collections.abc import Collection, Mapping, MutableMapping
+from typing import Any, ClassVar
 
 import numpy as np
 import pytest
@@ -36,7 +36,7 @@ class MixtureAnchorSelectionTestCase(cases.AnchorSelectionTestCase):
     """Tests for mixture anchor selection."""
 
     cls = pykeen.nn.node_piece.MixtureAnchorSelection
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "selections": [
             pykeen.nn.node_piece.DegreeAnchorSelection,
             pykeen.nn.node_piece.PageRankAnchorSelection,
@@ -49,7 +49,7 @@ class AnchorSelectionMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node
 
     base_cls = pykeen.nn.node_piece.AnchorSelection
     base_test = cases.AnchorSelectionTestCase
-    skip_cls = {pykeen.nn.node_piece.SingleSelection}
+    skip_cls: ClassVar[Collection[type]] = {pykeen.nn.node_piece.SingleSelection}
 
 
 class CSGraphAnchorSearcherTests(cases.AnchorSearcherTestCase):

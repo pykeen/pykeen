@@ -114,7 +114,8 @@ class Metric(ExtraReprMixin):
         docdata = get_docdata(cls)
         if docdata is not None and "description" in docdata:
             return docdata["description"]
-        assert cls.__doc__ is not None
+        if cls.__doc__ is None:
+            raise ValueError("cls.__doc__ must not be None.")
         return cls.__doc__.splitlines()[0]
 
     @classmethod

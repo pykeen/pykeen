@@ -1,6 +1,6 @@
 """Tests for checkpointing."""
 
-from collections.abc import Iterator, MutableMapping
+from collections.abc import Iterator, Mapping, MutableMapping
 from typing import Any, ClassVar
 
 import torch
@@ -29,14 +29,14 @@ class ExplicitCheckpointScheduleTests(CheckpointScheduleTests):
     """Test for explicit."""
 
     cls = schedule.ExplicitCheckpointSchedule
-    kwargs = {"steps": (4, 6)}
+    kwargs: ClassVar[Mapping[str, Any]] = {"steps": (4, 6)}
 
 
 class BestCheckpointScheduleTests(CheckpointScheduleTests):
     """Test for best."""
 
     cls = schedule.BestCheckpointSchedule
-    kwargs = {"metric_selection": MetricSelection(metric="loss", prefix="validation")}
+    kwargs: ClassVar[Mapping[str, Any]] = {"metric_selection": MetricSelection(metric="loss", prefix="validation")}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
@@ -54,7 +54,7 @@ class UnionCheckpointScheduleTests(CheckpointScheduleTests):
     """Test for union."""
 
     cls = schedule.UnionCheckpointSchedule
-    kwargs = {"bases": ["every", "explicit"], "bases_kwargs": [None, {"steps": (3,)}]}
+    kwargs: ClassVar[Mapping[str, Any]] = {"bases": ["every", "explicit"], "bases_kwargs": [None, {"steps": (3,)}]}
 
 
 class CheckpointKeeperMetaTestCase(unittest_templates.MetaTestCase[keeper.CheckpointKeeper]):
@@ -68,7 +68,7 @@ class ExplicitCheckpointKeeperTests(CheckpointKeeperTests):
     """Tests for explicit."""
 
     cls = keeper.ExplicitCheckpointKeeper
-    kwargs = {"keep": (3, 6)}
+    kwargs: ClassVar[Mapping[str, Any]] = {"keep": (3, 6)}
 
 
 class LastCheckpointKeeperTests(CheckpointKeeperTests):
@@ -81,7 +81,7 @@ class BestCheckpointKeeperTests(CheckpointKeeperTests):
     """Tests for best."""
 
     cls = keeper.BestCheckpointKeeper
-    kwargs = {"metric_selection": MetricSelection(metric="loss", prefix="validation")}
+    kwargs: ClassVar[Mapping[str, Any]] = {"metric_selection": MetricSelection(metric="loss", prefix="validation")}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
@@ -106,7 +106,7 @@ class UnionCheckpointKeeperTests(CheckpointKeeperTests):
     """Tests for union."""
 
     cls = keeper.UnionCheckpointKeeper
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "bases": ["last", "explicit"],
         "bases_kwargs": [
             {"keep": 1},

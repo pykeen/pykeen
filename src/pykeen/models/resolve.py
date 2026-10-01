@@ -164,7 +164,8 @@ def _normalize_representation_kwargs(
     # TODO: update to hint + kwargs
     if isinstance(dimensions, int):
         dimensions = {"d": dimensions}
-    assert isinstance(dimensions, dict)
+    if not isinstance(dimensions, dict):
+        raise TypeError(f"Expected dimensions to be of type dict, but got {type(dimensions).__name__}.")
     if set(dimensions) < interaction.dimensions:
         raise DimensionError(set(dimensions), interaction.dimensions)
     if entity_representations_kwargs is None:

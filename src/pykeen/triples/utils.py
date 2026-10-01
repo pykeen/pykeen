@@ -182,7 +182,8 @@ def compute_compressed_adjacency_list(
         adj_lists[s].append((i, o.item()))
         adj_lists[o].append((i, s.item()))
     degrees = torch.tensor([len(a) for a in adj_lists], dtype=torch.long)
-    assert torch.sum(degrees) == 2 * num_triples
+    if torch.sum(degrees) != 2 * num_triples:
+        raise ValueError("Expected torch.sum(degrees) == 2 * num_triples.")
 
     offset = torch.empty(num_entities, dtype=torch.long)
     offset[0] = 0

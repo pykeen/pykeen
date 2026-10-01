@@ -310,8 +310,6 @@ select = [
 ]
 ignore = [
     "D105", # Missing docstring in magic method
-    "S101", # Use of assert detected, TODO remove
-    "RUF012", # FIXME
     "PYI041", # "int | float" annotations should be not be replaced by "float"
     "TRY003", # long error messages (doesn't make sense)
 ]
@@ -323,6 +321,7 @@ ignore = [
     "E402",   # allow imports not at top for narrative purposes
     "T201",   # allow prints
     "PTH",    # allow os.path
+    "S101",   # asserts narrow types in narrative examples
 ]
 "notebooks/**" = [
     "INP001", # notebooks are not a package
@@ -334,6 +333,7 @@ ignore = [
     "INP001", # tests are not a package
     "PIE790", # allow pass in test stubs/abstract methods
     "D102",   # test methods document intent via their name, not a docstring
+    "S101",   # pytest uses assert
 ]
 
 [tool.ruff.lint.pydocstyle]

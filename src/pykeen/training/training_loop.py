@@ -202,7 +202,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
 
     losses_per_epochs: list[float]
 
-    hpo_default = {
+    hpo_default: ClassVar[Mapping[str, Any]] = {
         "num_epochs": {"type": int, "low": 100, "high": 1000, "q": 100},
         "batch_size": {"type": int, "low": 4, "high": 12, "scale": "power_two"},  # [16, 4096]
     }
@@ -651,9 +651,14 @@ class TrainingLoop(ABC, Generic[BatchType]):
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
         # When using early stopping models have to be saved separately at the best epoch, since the training loop will
         # due to the patience continue to train after the best epoch and thus alter the model
-        # -> the temporay file has to be created outside, which we assert here
-        if stopper is not None and not only_size_probing and last_best_epoch is None:
-            assert best_epoch_model_file_path is not None
+        # -> the temporay file has to be created outside, which we check here
+        if (
+            stopper is not None
+            and not only_size_probing
+            and last_best_epoch is None
+            and best_epoch_model_file_path is None
+        ):
+            raise ValueError("best_epoch_model_file_path must not be None when using early stopping.")
 
         if isinstance(self.model, RGCN) and sampler != "schlichtkrull":
             logger.warning(
@@ -869,7 +874,8 @@ class TrainingLoop(ABC, Generic[BatchType]):
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints and checkpoint_path is not None:
-                assert checkpoint_frequency is not None
+                if checkpoint_frequency is None:
+                    raise ValueError("checkpoint_frequency must not be None.")
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 # MyPy overrides are because you should
                 if minutes_since_last_checkpoint >= checkpoint_frequency or self._should_stop or epoch == num_epochs:

@@ -52,7 +52,8 @@ class NumericPathDataset(LazyDataset):
     def _load_validation(self) -> None:
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
-        assert self._training is not None
+        if self._training is None:
+            raise ValueError("self._training must not be None.")
         self._validation = self.triples_factory_cls.from_path(
             path=self.validation_path,
             path_to_numeric_triples=self.literals_path,
@@ -69,7 +70,8 @@ class NumericPathDataset(LazyDataset):
     def _summary_rows(self):
         rv = super()._summary_rows()
         tf = self.training
-        assert isinstance(tf, TriplesNumericLiteralsFactory)
+        if not isinstance(tf, TriplesNumericLiteralsFactory):
+            raise TypeError(f"Expected tf to be of type TriplesNumericLiteralsFactory, but got {type(tf).__name__}.")
         n_relations = len(tf.literals_to_id)
         n_triples = n_relations * tf.num_entities
         rv.append(("Literals", "-", n_relations, n_triples))

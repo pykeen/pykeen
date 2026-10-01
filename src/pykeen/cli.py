@@ -148,10 +148,12 @@ def _get_resolver_lines2(
             click.secho(message=f"{name} not visible in {module}", err=True)
         # get docdata and extract name & citation
         docdata = resolver.docdata(clsx) or {}
-        assert isinstance(docdata, dict)
+        if not isinstance(docdata, dict):
+            raise TypeError(f"Expected docdata to be of type dict, but got {type(docdata).__name__}.")
         # fallback for name: capitalized class name without base suffix
         name = docdata.get("name", clsx.__name__.replace(resolver.base.__name__, ""))
-        assert isinstance(name, str)
+        if not isinstance(name, str):
+            raise TypeError(f"Expected name to be of type str, but got {type(name).__name__}.")
         # extract citation information and warn about lack thereof
         citation = _citation(docdata)
         if not citation:
@@ -537,7 +539,8 @@ def _get_resolver_lines(
 
             yield name, reference, doc
         else:
-            assert isinstance(value.__doc__, str)
+            if not isinstance(value.__doc__, str):
+                raise TypeError(f"Expected value.__doc__ to be of type str, but got {type(value.__doc__).__name__}.")
             yield name, value.__doc__.splitlines()[0]
 
 

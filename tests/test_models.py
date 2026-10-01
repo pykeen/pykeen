@@ -4,8 +4,8 @@ import contextlib
 import importlib
 import pathlib
 import unittest
-from collections.abc import Iterable, MutableMapping
-from typing import Any
+from collections.abc import Iterable, Mapping, MutableMapping, Sequence
+from typing import Any, ClassVar
 
 import pytest
 import torch
@@ -53,7 +53,7 @@ class TestCompGCN(cases.ModelTestCase):
     cls = pykeen.models.CompGCN
     use_inverse_triples = True
     num_constant_init = 3  # BN(2) + Bias
-    cli_extras = ["--use-inverse-triples"]
+    cli_extras: ClassVar[Sequence[str]] = ["--use-inverse-triples"]
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -81,7 +81,7 @@ class TestConvE(cases.ModelTestCase):
     cls = pykeen.models.ConvE
     embedding_dim = 12
     use_inverse_triples = True
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "output_channels": 2,
         "embedding_height": 3,
         "embedding_width": 4,
@@ -97,7 +97,7 @@ class TestConvKB(cases.ModelTestCase):
     """Test the ConvKB model."""
 
     cls = pykeen.models.ConvKB
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "num_filters": 2,
     }
     # two bias terms, one conv-filter
@@ -128,7 +128,7 @@ class TestERMLP(cases.ModelTestCase):
     """Test the ERMLP model."""
 
     cls = pykeen.models.ERMLP
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "hidden_dim": 4,
     }
     # Two linear layer biases
@@ -139,7 +139,7 @@ class TestERMLPE(cases.ModelTestCase):
     """Test the extended ERMLP model."""
 
     cls = pykeen.models.ERMLPE
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "hidden_dim": 4,
     }
     # Two BN layers, bias & scale
@@ -164,7 +164,7 @@ class TestHolE(cases.ModelTestCase):
 class TestKG2EWithKL(cases.BaseKG2ETest):
     """Test the KG2E model with KL similarity."""
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "dist_similarity": "negativekullbackleiblerdivergence",
     }
 
@@ -179,7 +179,7 @@ class TestMuRE(cases.ModelTestCase):
 class TestKG2EWithEL(cases.BaseKG2ETest):
     """Test the KG2E model with EL similarity."""
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "dist_similarity": "expectedlikelihood",
     }
 
@@ -199,7 +199,7 @@ class TestNodePiece(cases.BaseNodePieceTest):
 class TestNodePieceMLP(cases.BaseNodePieceTest):
     """Test the NodePiece model with MLP aggregation."""
 
-    kwargs = {"aggregation": "mlp"}
+    kwargs: ClassVar[Mapping[str, Any]] = {"aggregation": "mlp"}
 
     def test_aggregation(self):
         """Test that the MLP gets registered properly and is trainable."""
@@ -224,7 +224,7 @@ class TestNodePieceMLP(cases.BaseNodePieceTest):
 class TestNodePieceAnchors(cases.BaseNodePieceTest):
     """Test the NodePiece model with anchors."""
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "tokenizers": "anchor",
     }
 
@@ -238,8 +238,8 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
     """Test the NodePiece model with joint anchor and relation tokenization."""
 
     num_anchors = 5
-    num_tokens = [3, 2]
-    kwargs = {
+    num_tokens: ClassVar[Sequence[int]] = [3, 2]
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "tokenizers": ["anchor", "relation"],
         "tokenizers_kwargs": [
             {
@@ -309,7 +309,7 @@ class TestNTN(cases.ModelTestCase):
 
     cls = pykeen.models.NTN
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "num_slices": 2,
     }
 
@@ -343,7 +343,7 @@ class TestRESCAL(cases.ModelTestCase):
 class TestRGCNBasis(cases.BaseRGCNTest):
     """Test the R-GCN model."""
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "interaction": "transe",
         "interaction_kwargs": {"p": 1},
         "decomposition": "bases",
@@ -357,7 +357,7 @@ class TestRGCNBlock(cases.BaseRGCNTest):
     """Test the R-GCN model with block decomposition."""
 
     embedding_dim = 6
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "interaction": "distmult",
         "decomposition": "block",
         "decomposition_kwargs": {
@@ -411,7 +411,7 @@ class TestTransD(cases.DistanceModelTestCase):
     """Test the TransD model."""
 
     cls = pykeen.models.TransD
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "relation_dim": 4,
     }
 
@@ -585,7 +585,7 @@ class TestTransR(cases.DistanceModelTestCase):
     """Test the TransR model."""
 
     cls = pykeen.models.TransR
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "relation_dim": 4,
     }
 
@@ -602,7 +602,7 @@ class TestTuckEr(cases.ModelTestCase):
     """Test the TuckEr model."""
 
     cls = pykeen.models.TuckER
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "relation_dim": 4,
     }
     #: 2xBN (bias & scale)
@@ -760,7 +760,7 @@ class ERModelTests(cases.ModelTestCase):
     """Tests for the general ER-Model."""
 
     cls = pykeen.models.ERModel
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "interaction": "distmult",  # use name to test interaction resolution
     }
 

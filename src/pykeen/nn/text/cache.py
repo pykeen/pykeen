@@ -219,12 +219,15 @@ class WikidataTextCache(TextCache):
         result = {}
         for entry in res_json:
             wikidata_id = nested_get(entry, "item", "value", default="")
-            assert isinstance(wikidata_id, str)  # for mypy
+            if not isinstance(wikidata_id, str):  # for mypy
+                raise TypeError(f"Expected wikidata_id to be of type str, but got {type(wikidata_id).__name__}.")
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
             label = nested_get(entry, "itemLabel", "value", default="")
-            assert isinstance(label, str)  # for mypy
+            if not isinstance(label, str):  # for mypy
+                raise TypeError(f"Expected label to be of type str, but got {type(label).__name__}.")
             description = nested_get(entry, "itemDescription", "value", default="")
-            assert isinstance(description, str)  # for mypy
+            if not isinstance(description, str):  # for mypy
+                raise TypeError(f"Expected description to be of type str, but got {type(description).__name__}.")
             result[wikidata_id] = {"label": label, "description": description}
         return result
 
@@ -271,7 +274,8 @@ class WikidataTextCache(TextCache):
             result[w_to_i[wikidata_id]] = entry[component]
         # for mypy
         for item in result:
-            assert isinstance(item, str)
+            if not isinstance(item, str):
+                raise TypeError(f"Expected item to be of type str, but got {type(item).__name__}.")
         return cast(Sequence[str], result)
 
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str]:
