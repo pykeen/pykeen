@@ -324,7 +324,7 @@ def reindex(*triples_factories: CoreTriplesFactory) -> list[CoreTriplesFactory]:
 
     if not all(isinstance(f, TriplesFactory) for f in triples_factories):
         raise NotImplementedError("reindex has not been updated for non-TriplesFactory yet.")
-    triples_factories = cast(tuple[TriplesFactory, ...], triples_factories)
+    triples_factories = cast("tuple[TriplesFactory, ...]", triples_factories)
 
     # generate ID translation and new label to Id mappings
     one_factory = triples_factories[0]

@@ -1949,7 +1949,7 @@ def parallel_prefix_unsqueeze(x: FloatTensor | Sequence[FloatTensor], ndim: int)
     prefix = (1,) * ndim
     if not isinstance(x, Sequence):
         return x.view(prefix + x.shape)
-    return cast(Sequence[FloatTensor], [xx.view(prefix + xx.shape) for xx in x])
+    return cast("Sequence[FloatTensor]", [xx.view(prefix + xx.shape) for xx in x])
 
 
 def prefix_unsqueeze_target(

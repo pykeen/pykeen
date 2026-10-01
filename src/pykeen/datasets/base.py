@@ -115,7 +115,7 @@ def _filter_mapped_triples(
 ) -> MappedTriples:
     heads, tails = _map_ids(mapped_triples[:, ::2], kept_old_ids=kept_old_entity_ids_t).unbind(dim=-1)
     relations = _map_ids(mapped_triples[:, 1], kept_old_ids=kept_old_relation_ids_t)
-    mapped_triples = cast(MappedTriples, torch.stack([heads, relations, tails], dim=-1))
+    mapped_triples = cast("MappedTriples", torch.stack([heads, relations, tails], dim=-1))
     # We can only keep triples where none of the IDs have been filtered.
     keep_mask = (mapped_triples >= 0).all(dim=-1)
     logger.info(f"keeping {format_relative_comparison(keep_mask.sum().item(), keep_mask.numel())} triples.")
@@ -353,7 +353,7 @@ class Dataset(ExtraReprMixin):
     ) -> Dataset:
         """Create a dataset from a single triples factory by splitting it in 3."""
         training, testing, validation = cast(
-            tuple[TriplesFactory, TriplesFactory, TriplesFactory],
+            "tuple[TriplesFactory, TriplesFactory, TriplesFactory]",
             tf.split(ratios or DEFAULT_RATIOS),
         )
         return EagerDataset(training=training, testing=testing, validation=validation, metadata=metadata)
@@ -478,7 +478,7 @@ class Dataset(ExtraReprMixin):
                 kept_ids=kept_relation_ids_t.tolist(),
             )
             training = TriplesFactory(
-                mapped_triples=cast(MappedTriples, new_training_triples),
+                mapped_triples=cast("MappedTriples", new_training_triples),
                 entity_to_id=entity_to_id,
                 relation_to_id=relation_to_id,
                 metadata=training.metadata,
@@ -506,7 +506,7 @@ class Dataset(ExtraReprMixin):
             )
         else:
             training = CoreTriplesFactory(
-                mapped_triples=cast(MappedTriples, new_training_triples),
+                mapped_triples=cast("MappedTriples", new_training_triples),
                 metadata=training.metadata,
                 num_entities=num_entities,
                 num_relations=num_relations,
@@ -795,7 +795,7 @@ class UnpackedRemoteDataset(SourceDataSet):
                 path=cache_root_.joinpath(name_from_url(url)),
                 url=url,
                 force=force,
-                download_kwargs=cast(DownloadKwargs, download_kwargs),
+                download_kwargs=cast("DownloadKwargs", download_kwargs),
             )
 
         super().__init__(
