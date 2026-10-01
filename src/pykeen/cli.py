@@ -147,7 +147,7 @@ def _get_resolver_lines2(
         if name not in dir(importlib.import_module(module)):
             click.secho(message=f"{name} not visible in {module}", err=True)
         # get docdata and extract name & citation
-        docdata = resolver.docdata(clsx) or {}
+        docdata: dict[str, Any] = resolver.docdata(clsx) or {}
         # fallback for name: capitalized class name without base suffix
         name = docdata.get("name", clsx.__name__.replace(resolver.base.__name__, ""))
         # extract citation information and warn about lack thereof

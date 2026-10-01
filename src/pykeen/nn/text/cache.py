@@ -218,10 +218,10 @@ class WikidataTextCache(TextCache):
         )
         result = {}
         for entry in res_json:
-            wikidata_id = nested_get(entry, "item", "value", default="")
+            wikidata_id: str = nested_get(entry, "item", "value", default="")
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
-            label = nested_get(entry, "itemLabel", "value", default="")
-            description = nested_get(entry, "itemDescription", "value", default="")
+            label: str = nested_get(entry, "itemLabel", "value", default="")
+            description: str = nested_get(entry, "itemDescription", "value", default="")
             result[wikidata_id] = {"label": label, "description": description}
         return result
 

@@ -45,9 +45,8 @@ def _hasher(d: Mapping[str, Any]) -> int:
 
     :returns: the dataset's ID
     """
-    obj = d["loop"]
-    obj = obj.dataset
-    return id(obj)
+    loop: EvaluationLoop = d["loop"]
+    return id(loop.dataset)
 
 
 @maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
