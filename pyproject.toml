@@ -90,7 +90,6 @@ opt_einsum = ["opt_einsum"]
 mlflow = ["mlflow>=1.8.0"]
 ogb = ["ogb>=1.3.4"]
 wandb = ["wandb"]
-neptune = ["neptune-client"]
 tensorboard = ["tensorboard"]
 transformers = ["transformers"]
 lightning = [
