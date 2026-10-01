@@ -42,7 +42,7 @@ def main(
 
     if seed is None:
         seed = random_non_negative_int()
-    sub_triples_factories = cast(Sequence[TriplesFactory], triples_factory.split(ratios, random_state=seed))
+    sub_triples_factories = cast("Sequence[TriplesFactory]", triples_factory.split(ratios, random_state=seed))
 
     for subset_name, subset_tf in zip(LABELS, sub_triples_factories, strict=False):
         output_path = directory.joinpath(subset_name).with_suffix(".txt")
