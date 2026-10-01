@@ -87,3 +87,9 @@ def test_wandb_log_params_allow_val_change(tmp_path: pathlib.Path, monkeypatch: 
     with pytest.raises(wandb.sdk.lib.config_util.ConfigError):
         tracker.log_params(params={"num_epochs": 10})
     tracker.end_run()
+
+
+def test_console_log_params_prefix(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test that the console tracker prepends the prefix to logged parameters."""
+    ConsoleResultTracker(writer="builtin").log_params(params={"loss": {"margin": 1.0}}, prefix="model")
+    assert capsys.readouterr().out == "Parameter: model.loss.margin = 1.0\n"
