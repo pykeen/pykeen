@@ -203,7 +203,7 @@ select = [
     # flake8-bandit (S)
     "S",
     # flake8-blind-except (BLE)
-    # "BLE",
+    "BLE",
     # flake8-boolean-trap (FBT)
     # "FBT",
     # flake8-bugbear (B)
