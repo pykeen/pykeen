@@ -311,8 +311,8 @@ class NodePieceRepresentation(CombinedRepresentation):
         :param kwargs:
             Additional keyword-based parameters passed to :class:`~pykeen.nn.representation.CombinedRepresentation`.
         """
-        if max_id:
-            assert max_id == triples_factory.num_entities
+        if max_id and max_id != triples_factory.num_entities:
+            raise ValueError("Expected max_id == triples_factory.num_entities.")
 
         # note: the factory's triples never contain the artificial inverse triples -- those are only
         # materialized when creating training instances -- so we always tokenize on "real" relation IDs

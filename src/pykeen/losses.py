@@ -1539,7 +1539,8 @@ class AdversarialLoss(SetwiseLoss):
         )
 
         # compute weights (without gradient tracking)
-        assert negative_scores.ndimension() == 2
+        if negative_scores.ndimension() != 2:
+            raise ValueError("Expected negative_scores.ndimension() == 2.")
         neg_weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
 
         # fill negative scores with some finite value, e.g., 0 (they will get masked out anyway)

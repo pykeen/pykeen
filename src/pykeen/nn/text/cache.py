@@ -219,12 +219,9 @@ class WikidataTextCache(TextCache):
         result = {}
         for entry in res_json:
             wikidata_id = nested_get(entry, "item", "value", default="")
-            assert isinstance(wikidata_id, str)  # for mypy
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
             label = nested_get(entry, "itemLabel", "value", default="")
-            assert isinstance(label, str)  # for mypy
             description = nested_get(entry, "itemDescription", "value", default="")
-            assert isinstance(description, str)  # for mypy
             result[wikidata_id] = {"label": label, "description": description}
         return result
 
@@ -269,9 +266,11 @@ class WikidataTextCache(TextCache):
         w_to_i = {wikidata_id: i for i, wikidata_id in enumerate(ids)}
         for wikidata_id, entry in entries.items():
             result[w_to_i[wikidata_id]] = entry[component]
-        # for mypy
-        for item in result:
-            assert isinstance(item, str)
+        still_missing = [
+            wikidata_id for wikidata_id, item in zip(ids, result, strict=True) if not isinstance(item, str)
+        ]
+        if still_missing:
+            raise ValueError(f"Could not retrieve {component} for Wikidata IDs: {still_missing}")
         return cast(Sequence[str], result)
 
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str]:

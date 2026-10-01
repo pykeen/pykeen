@@ -46,7 +46,6 @@ def _hasher(d: Mapping[str, Any]) -> int:
     :returns: the dataset's ID
     """
     obj = d["loop"]
-    assert isinstance(obj, EvaluationLoop)
     obj = obj.dataset
     return id(obj)
 
