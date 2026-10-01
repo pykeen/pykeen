@@ -2847,8 +2847,8 @@ class MonotonicAffineTransformationInteraction(
         # forward entity/relation shapes
         self.entity_shape = base.entity_shape
         self.relation_shape = base.relation_shape
-        self._head_indices = base._head_indices
-        self._tail_indices = base._tail_indices
+        self._head_indices = base._head_indices  # noqa: SLF001
+        self._tail_indices = base._tail_indices  # noqa: SLF001
 
         # The parameters of the affine transformation: bias
         self.bias = nn.Parameter(torch.empty(size=()), requires_grad=trainable_bias)

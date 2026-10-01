@@ -135,9 +135,9 @@ class Metric(ExtraReprMixin):
         """Get the math notation for the range of this metric."""
         docdata = get_docdata(cls) or {}
         left_bracket = "(" if cls.value_range.lower is None or not cls.value_range.lower_inclusive else "["
-        left = docdata.get("tight_lower", cls.value_range._coerce(cls.value_range.lower, low=True))
+        left = docdata.get("tight_lower", cls.value_range._coerce(cls.value_range.lower, low=True))  # noqa: SLF001
         right_bracket = ")" if cls.value_range.upper is None or not cls.value_range.upper_inclusive else "]"
-        right = docdata.get("tight_upper", cls.value_range._coerce(cls.value_range.upper, low=False))
+        right = docdata.get("tight_upper", cls.value_range._coerce(cls.value_range.upper, low=False))  # noqa: SLF001
         return f"{left_bracket}{left}, {right}{right_bracket}".replace("inf", "∞")
 
 

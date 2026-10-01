@@ -93,7 +93,7 @@ class CooccurrenceFilteredModel(Model):
             triples_factory=triples_factory,
             loss=base.loss,
             predict_with_sigmoid=base.predict_with_sigmoid,
-            random_seed=base._random_seed,
+            random_seed=base._random_seed,  # noqa: SLF001
             use_inverse_triples=base.use_inverse_triples,
         )
         # assign *after* nn.Module.__init__
@@ -157,7 +157,7 @@ class CooccurrenceFilteredModel(Model):
         return new_scores
 
     def _get_entity_len(self, *, mode: InductiveMode | None) -> int:
-        return self.base._get_entity_len(mode=mode)
+        return self.base._get_entity_len(mode=mode)  # noqa: SLF001
 
     def _reset_parameters_(self):
         return self.base._reset_parameters_()

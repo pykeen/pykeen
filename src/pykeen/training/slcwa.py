@@ -188,7 +188,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
                 negative_scores=negative_scores,
                 label_smoothing=label_smoothing,
                 batch_filter=positive_filter,
-                num_entities=model._get_entity_len(mode=mode),
+                num_entities=model._get_entity_len(mode=mode),  # noqa: SLF001
                 pos_weights=pos_weights,
                 neg_weights=neg_weights,
             )
@@ -266,7 +266,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
                 negative_scores=negative_scores,
                 label_smoothing=label_smoothing,
                 batch_filter=positive_filter,
-                num_entities=model._get_entity_len(mode=mode),
+                num_entities=model._get_entity_len(mode=mode),  # noqa: SLF001
                 pos_weights=pos_weights,
                 neg_weights=neg_weights,
             )

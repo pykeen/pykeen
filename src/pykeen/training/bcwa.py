@@ -245,7 +245,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
         drop_last: bool,
         **kwargs: Any,
     ) -> DataLoader[BatchCWABatch]:
-        mapped_triples = triples_factory._add_inverse_triples_if_necessary(
+        mapped_triples = triples_factory._add_inverse_triples_if_necessary(  # noqa: SLF001
             mapped_triples=triples_factory.mapped_triples,
             create_inverse_triples=self.model.use_inverse_triples,
         )
