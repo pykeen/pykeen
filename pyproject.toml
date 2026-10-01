@@ -199,7 +199,7 @@ select = [
     # flake8-annotations (ANN)
     # "ANN",
     # flake8-async (ASYNC)
-    # "ASYNC",
+    "ASYNC",
     # flake8-bandit (S)
     "S",
     # flake8-blind-except (BLE)
