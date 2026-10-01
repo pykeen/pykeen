@@ -44,7 +44,7 @@ sys.path.insert(0, os.path.abspath("../../src"))
 # -- Project information -----------------------------------------------------
 
 project = "pykeen"
-copyright = f"2019-{date.today().year}, PyKEEN Project Team"  # noqa: A001
+copyright = f"2019-{date.today().year}, PyKEEN Project Team"  # noqa: A001, DTZ011
 author = "PyKEEN Project Team"
 
 # The full version, including alpha/beta/rc tags.
