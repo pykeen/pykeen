@@ -179,7 +179,7 @@ class SLCWALitModule(LitModule):
         self.grouped = grouped
 
     def _step(self, batch, prefix: str):
-        loss = SLCWATrainingLoop._process_batch_static(
+        loss = SLCWATrainingLoop._process_batch_static(  # noqa: SLF001
             model=self.model,
             loss=self.loss,
             mode=self.mode,
@@ -223,7 +223,7 @@ class LCWALitModule(LitModule):
     """
 
     def _step(self, batch, prefix: str):
-        loss = LCWATrainingLoop._process_batch_static(
+        loss = LCWATrainingLoop._process_batch_static(  # noqa: SLF001
             model=self.model,
             score_method=self.model.score_t,
             loss=self.loss,

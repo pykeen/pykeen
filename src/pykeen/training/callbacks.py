@@ -375,12 +375,12 @@ class StopperTrainingCallback(TrainingCallback):
         if self.stopper.should_evaluate(epoch):
             # TODO how to pass inductive mode
             if self.stopper.should_stop(epoch):
-                self.training_loop._should_stop = True
+                self.training_loop._should_stop = True  # noqa: SLF001
             # Since the model is also used within the stopper, its graph and cache have to be cleared
-            self.model._free_graph_and_cache()
+            self.model._free_graph_and_cache()  # noqa: SLF001
             # When the stopper obtained a new best epoch, this model has to be saved for reconstruction
         if self.stopper.best_epoch != self.last_best_epoch and self.best_epoch_model_file_path is not None:
-            self.training_loop._save_state(path=self.best_epoch_model_file_path, triples_factory=self.triples_factory)
+            self.training_loop._save_state(path=self.best_epoch_model_file_path, triples_factory=self.triples_factory)  # noqa: SLF001
             self.last_best_epoch = epoch
 
 
@@ -447,9 +447,9 @@ def _validation_loss_amo_wrapper(
     **kwargs,
 ) -> float:
     """Calculate validation loss with automatic batch size optimization."""
-    return training_loop._train_epoch(
+    return training_loop._train_epoch(  # noqa: SLF001
         # todo: create dataset only once
-        batches=training_loop._create_training_data_loader(
+        batches=training_loop._create_training_data_loader(  # noqa: SLF001
             triples_factory=triples_factory, batch_size=batch_size, drop_last=False, **kwargs
         ),
         label_smoothing=label_smoothing,

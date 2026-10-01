@@ -997,7 +997,7 @@ def predict_all(
         f"score evaluations.",
     )
 
-    num_entities = model._get_entity_len(mode=mode)
+    num_entities = model._get_entity_len(mode=mode)  # noqa: SLF001
     if num_entities is None:
         raise ValueError(f"Could not determine num_entities for {mode=}")
 

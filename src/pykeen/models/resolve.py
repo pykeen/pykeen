@@ -150,7 +150,7 @@ def make_model_cls(
                 **kwargs,
             )
 
-    ChildERModel._interaction = interaction_instance
+    ChildERModel._interaction = interaction_instance  # noqa: SLF001
 
     return ChildERModel
 

@@ -257,7 +257,7 @@ select = [
     # flake8-return (RET)
     "RET",
     # flake8-self (SLF)
-    # "SLF",
+    "SLF",
     # flake8-simplify (SIM)
     "SIM",
     # flake8-slots (SLOT)
@@ -334,6 +334,7 @@ ignore = [
     "INP001", # tests are not a package
     "PIE790", # allow pass in test stubs/abstract methods
     "D102",   # test methods document intent via their name, not a docstring
+    "SLF001", # tests may inspect private members
 ]
 
 [tool.ruff.lint.pydocstyle]
