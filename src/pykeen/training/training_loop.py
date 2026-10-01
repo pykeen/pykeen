@@ -329,6 +329,8 @@ class TrainingLoop(ABC, Generic[BatchType]):
         if self.optimizer is None:
             optimizer_config = str(None)
         else:
+            # the optimizer's defaults are its constructor arguments (merged with the class' default values), which are,
+            # unlike the parameter groups, not modified during training
             optimizer_config = f"{self.optimizer.__class__.__name__}({sorted(self.optimizer.defaults.items())})"
         h.update(optimizer_config.encode("utf-8"))
         return h.hexdigest()
