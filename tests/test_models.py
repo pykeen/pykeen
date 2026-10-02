@@ -756,7 +756,7 @@ class ERModelTests(cases.ModelTestCase):
         )
         sliced_ts = self.instance.score_t(hr_batch=hr_batch, slice_size=2, tails=tails)
         ts = self.instance.score_t(hr_batch=hr_batch, tails=tails)
-        torch.allclose(sliced_ts, ts)
+        assert torch.allclose(sliced_ts, ts)
 
 
 class CooccurrenceFilteredModelTests(cases.ModelTestCase):
