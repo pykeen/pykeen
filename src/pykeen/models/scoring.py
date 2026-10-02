@@ -13,6 +13,12 @@ given.
 This lets :class:`~pykeen.models.ERModel` implement the three ``1:n`` scoring methods
 once, cf. :meth:`~pykeen.models.ERModel._score`, instead of maintaining three
 near-identical copies of the same broadcasting, slicing, and repetition logic.
+
+Both kinds of requests can also be translated between relation ID spaces, cf.
+:class:`~pykeen.inverse.RelationInverter`: :meth:`TargetScoringBatch.to_internal` maps
+the *real* relation IDs of a triples factory to a model's *internal* ones, and
+:meth:`TargetScoringBatch.invert` turns a request into the equivalent one on the
+inverse triples, i.e., $(h, r, t)$ into $(t, r_{inv}, h)$.
 """
 
 from __future__ import annotations
@@ -22,7 +28,8 @@ from typing import Generic, NamedTuple, Self, TypeAlias, TypeVar, overload
 import torch
 
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
-from ..typing import LongTensor, Target
+from ..inverse import RelationInverter
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, LongTensor, Target
 from ..utils import broadcast_index_shapes, pad_trailing_dims
 
 __all__ = [
@@ -47,6 +54,14 @@ class Indices(NamedTuple):
     def from_batch(cls, batch: LongTensor) -> Self:
         """Construct indices from an HRT batch."""
         return cls(batch[:, 0], batch[:, 1], batch[:, 2])
+
+    def to_internal(self, relation_inverter: RelationInverter) -> Self:
+        """Convert the real relation IDs to the corresponding internal (forward) ones."""
+        return self.__class__(self.head, relation_inverter.to_internal(self.relation), self.tail)
+
+    def invert(self, relation_inverter: RelationInverter) -> Self:
+        """Swap head and tail, and replace the internal relation IDs by the IDs of their inverses."""
+        return self.__class__(self.tail, relation_inverter.get_inverse_id(self.relation), self.head)
 
 
 class OptionalIndices(NamedTuple):
@@ -84,6 +99,42 @@ class OptionalIndices(NamedTuple):
             case "tail":
                 return self.__class__(self.head, self.relation, ids)
         raise ValueError(f"Unknown target={target}; must be one of {COLUMN_LABELS}")
+
+    def to_internal(self, relation_inverter: RelationInverter) -> Self:
+        """Convert the real relation IDs to the corresponding internal (forward) ones.
+
+        :param relation_inverter: the relation inverter defining the ID mapping
+
+        :returns: the new indices
+
+        :raises ValueError: if the relation IDs are missing; they would denote *all* internal relations
+        """
+        if self.relation is None:
+            raise ValueError("Cannot convert missing relation IDs; materialize the real relation IDs first.")
+        return self.__class__(self.head, relation_inverter.to_internal(self.relation), self.tail)
+
+    def invert(self, relation_inverter: RelationInverter) -> Self:
+        """Swap head and tail, and replace the internal relation IDs by the IDs of their inverses.
+
+        :param relation_inverter: the relation inverter defining the ID mapping
+
+        :returns: the new indices
+
+        :raises ValueError: if the relation IDs are missing; there is no ID-wise mapping between all
+            internal relations and all of their inverses, which keeps the candidates' order
+        """
+        if self.relation is None:
+            raise ValueError("Cannot invert missing relation IDs; materialize the internal relation IDs first.")
+        return self.__class__(self.tail, relation_inverter.get_inverse_id(self.relation), self.head)
+
+
+#: the target of the inverse scoring request, e.g., predicting heads of $(*, r, t)$ is
+#: predicting tails of $(t, r_{inv}, *)$
+_INVERSE_TARGET: dict[Target, Target] = {
+    LABEL_HEAD: LABEL_TAIL,
+    LABEL_RELATION: LABEL_RELATION,
+    LABEL_TAIL: LABEL_HEAD,
+}
 
 
 _IndicesType = TypeVar("_IndicesType", Indices, OptionalIndices)
@@ -190,6 +241,24 @@ class TripleScoringBatch(NamedTuple):
         """Construct from an indices object."""
         indices_, batch_ndim, batch_shape = _align_batch_indices(indices)
         return cls(indices_, batch_ndim, batch_shape)
+
+    def to_internal(self, relation_inverter: RelationInverter) -> Self:
+        """Convert the real relation IDs to the corresponding internal (forward) ones.
+
+        :param relation_inverter: the relation inverter defining the ID mapping
+
+        :returns: the new batch
+        """
+        return self._replace(indices=self.indices.to_internal(relation_inverter))
+
+    def invert(self, relation_inverter: RelationInverter) -> Self:
+        r"""Return the equivalent request on the inverse triples, i.e., score $(t, r_{inv}, h)$ instead of $(h, r, t)$.
+
+        :param relation_inverter: the relation inverter defining the ID mapping
+
+        :returns: the new batch; since head and tail are swapped in place, the batch shape is unchanged
+        """
+        return self._replace(indices=self.indices.invert(relation_inverter))
 
 
 class TargetScoringBatch(NamedTuple):
@@ -300,6 +369,30 @@ class TargetScoringBatch(NamedTuple):
             self.batch_ndim,
             self.batch_shape,
         )
+
+    def to_internal(self, relation_inverter: RelationInverter) -> Self:
+        """Convert the real relation IDs to the corresponding internal (forward) ones.
+
+        :param relation_inverter: the relation inverter defining the ID mapping
+
+        :returns: the new batch
+
+        :raises ValueError: if scoring against *all* relations, cf. :meth:`OptionalIndices.to_internal`
+        """
+        return self._replace(indices=self.indices.to_internal(relation_inverter))
+
+    def invert(self, relation_inverter: RelationInverter) -> Self:
+        r"""Return the equivalent request on the inverse triples, i.e., score $(t, r_{inv}, h)$ instead of $(h, r, t)$.
+
+        Scoring heads becomes scoring tails, and vice versa, with the candidates staying the same.
+
+        :param relation_inverter: the relation inverter defining the ID mapping
+
+        :returns: the new batch; since head and tail are swapped in place, the batch shape is unchanged
+
+        :raises ValueError: if scoring against *all* relations, cf. :meth:`OptionalIndices.invert`
+        """
+        return self._replace(indices=self.indices.invert(relation_inverter), target=_INVERSE_TARGET[self.target])
 
 
 #: A scoring request: either the given triples, or one position scored against many candidates.
