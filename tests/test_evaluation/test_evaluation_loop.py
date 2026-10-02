@@ -1,7 +1,7 @@
 """Tests for evaluation loops."""
 
-from collections.abc import MutableMapping
-from typing import Any
+from collections.abc import Mapping, MutableMapping
+from typing import Any, ClassVar
 
 import pytest
 import torch
@@ -32,7 +32,7 @@ class RelationPredictionLinkPredictionEvaluationLoopTestCase(LinkPredictionEvalu
     """Test the link prediction evaluation loop for relation prediction."""
 
     cls = pykeen.evaluation.evaluation_loop.LCWAEvaluationLoop
-    kwargs = {"targets": (LABEL_RELATION,)}
+    kwargs: ClassVar[Mapping[str, Any]] = {"targets": (LABEL_RELATION,)}
 
 
 @pytest.mark.parametrize(

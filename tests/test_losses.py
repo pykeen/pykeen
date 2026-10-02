@@ -1,6 +1,8 @@
 """Test the PyKEEN custom loss functions."""
 
 import unittest
+from collections.abc import Collection, Mapping
+from typing import Any, ClassVar
 
 import numpy as np
 import torch
@@ -64,7 +66,7 @@ class NSSALossTests(cases.SetwiseLossTestCase):
     """Unit test for NSSALoss."""
 
     cls = pykeen.losses.NSSALoss
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "margin": 1.0,
         "adversarial_temperature": 1.0,
     }
@@ -143,7 +145,7 @@ class TestLosses(unittest_templates.MetaTestCase[Loss]):
 
     base_cls = Loss
     base_test = cases.LossTestCase
-    skip_cls = {
+    skip_cls: ClassVar[Collection[type]] = {
         # abstract classes
         pykeen.losses.PairwiseLoss,
         pykeen.losses.PointwiseLoss,

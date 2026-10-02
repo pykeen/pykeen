@@ -583,7 +583,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
     name: Binary cross entropy (with logits)
     """
 
-    synonyms = {"Negative Log Likelihood Loss"}
+    synonyms: ClassVar[set[str]] = {"Negative Log Likelihood Loss"}
 
     hpo_default: ClassVar[Mapping[str, Any]] = {
         "reduction": DEFAULT_HPO_STRATEGY_REDUCTION,
@@ -624,7 +624,7 @@ class MSELoss(PointwiseLoss):
     name: Mean squared error
     """
 
-    synonyms = {"Mean Square Error Loss", "Mean Squared Error Loss"}
+    synonyms: ClassVar[set[str]] = {"Mean Square Error Loss", "Mean Squared Error Loss"}
 
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         if weight is None:
@@ -773,7 +773,7 @@ class MarginRankingLoss(MarginPairwiseLoss):
     name: Margin ranking
     """
 
-    synonyms = {"Pairwise Hinge Loss"}
+    synonyms: ClassVar[set[str]] = {"Pairwise Hinge Loss"}
 
     hpo_default: ClassVar[Mapping[str, Any]] = {
         "margin": DEFAULT_MARGIN_HPO_STRATEGY,
@@ -1539,7 +1539,8 @@ class AdversarialLoss(SetwiseLoss):
         )
 
         # compute weights (without gradient tracking)
-        assert negative_scores.ndimension() == 2
+        if negative_scores.ndimension() != 2:
+            raise ValueError("Expected negative_scores.ndimension() == 2.")
         neg_weights = negative_scores.detach().mul(self.inverse_softmax_temperature).softmax(dim=-1)
 
         # fill negative scores with some finite value, e.g., 0 (they will get masked out anyway)
@@ -1610,7 +1611,10 @@ class NSSALoss(AdversarialLoss):
     name: Self-adversarial negative sampling
     """
 
-    synonyms = {"Self-Adversarial Negative Sampling Loss", "Negative Sampling Self-Adversarial Loss"}
+    synonyms: ClassVar[set[str]] = {
+        "Self-Adversarial Negative Sampling Loss",
+        "Negative Sampling Self-Adversarial Loss",
+    }
 
     hpo_default: ClassVar[Mapping[str, Any]] = {
         "margin": {"type": int, "low": 3, "high": 30, "q": 3},

@@ -171,7 +171,7 @@ class WK3l15k(MTransEDataset):
     """
 
     DATASET_NAME = "WK3l-15k"
-    FILE_NAMES = {
+    FILE_NAMES: ClassVar[Mapping[tuple[GraphPair, Key], str]] = {
         (EN_DE, EA_SIDE_LEFT): "P_en_v6.csv",
         (EN_DE, EA_SIDE_RIGHT): "P_de_v6.csv",
         (EN_DE, EA_SIDES): "en2de_fk.csv",  # left-to-right entity alignment
@@ -209,7 +209,7 @@ class WK3l120k(MTransEDataset):
     """
 
     DATASET_NAME = "WK3l-120k"
-    FILE_NAMES = {
+    FILE_NAMES: ClassVar[Mapping[tuple[GraphPair, Key], str]] = {
         (EN_DE, EA_SIDE_LEFT): "P_en_v6_120k.csv",
         (EN_DE, EA_SIDE_RIGHT): "P_de_v6_120k.csv",
         (EN_DE, EA_SIDES): "en2de_fk_120k.csv",  # left-to-right entity alignment
@@ -244,7 +244,7 @@ class CN3l(MTransEDataset):
     """
 
     DATASET_NAME = "CN3l"
-    FILE_NAMES = {
+    FILE_NAMES: ClassVar[Mapping[tuple[GraphPair, Key], str]] = {
         (EN_DE, EA_SIDE_LEFT): "C_en_d.csv",
         (EN_DE, EA_SIDE_RIGHT): "C_de.csv",
         (EN_DE, EA_SIDES): "en2de_cn.csv",  # left-to-right entity alignment

@@ -1,5 +1,8 @@
 """Tests for result trackers."""
 
+from collections.abc import Mapping
+from typing import Any, ClassVar
+
 from pykeen.trackers import TensorBoardResultTracker
 from pykeen.trackers.base import ConsoleResultTracker, MultiResultTracker, PythonResultTracker
 from pykeen.trackers.file import CSVResultTracker, JSONResultTracker
@@ -36,7 +39,7 @@ class MultiResultTrackerTests(cases.ResultTrackerTests):
     """Tests for multi tracker."""
 
     cls = MultiResultTracker
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "trackers": (
             ConsoleResultTracker(),
             ConsoleResultTracker(),
