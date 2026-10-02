@@ -5,7 +5,6 @@ import itertools
 import logging
 import pathlib
 import tempfile
-import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
@@ -43,6 +42,7 @@ import pykeen.nn.text
 import pykeen.nn.weighting
 import pykeen.predict
 from pykeen.checkpoints import CheckpointKeeper, CheckpointSchedule
+from pykeen.constants import TARGET_TO_INDEX
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.ea.combination import GraphPairCombinator
@@ -197,14 +197,10 @@ class DatasetTestCase(unittest.TestCase):
             assert self.exp_num_triples == pytest.approx(num_triples, abs=self.exp_num_triples_tolerance)
 
         # Test caching
-        start = timeit.default_timer()
-        _ = self.dataset.training
-        end = timeit.default_timer()
-        # assert (end - start) < 1.0e-02
-        assert start == pytest.approx(end, abs=1.0e-02), "Caching should have made this operation fast"
+        training = self.dataset.training
+        assert self.dataset.training is training, "Repeated access should return the cached triples factory"
 
         # Test consistency of training / validation / testing mapping
-        training = self.dataset.training
         for part, factory in self.dataset.factory_dict.items():
             if not isinstance(factory, TriplesFactory):
                 logger.warning("Skipping mapping consistency checks since triples factory does not provide mappings.")
@@ -291,8 +287,8 @@ class LossWeightTestCase(GenericTestCase[LossWeighter]):
         result = self.instance(h=h, r=r, t=t)
         assert torch.is_tensor(result)
         assert torch.is_floating_point(result)
-        # assert the result is of appropriate shape
-        torch.broadcast_shapes(result.shape, expected_shape)
+        # assert the result is of appropriate shape, i.e., broadcastable to the expected shape
+        assert torch.broadcast_shapes(result.shape, expected_shape) == expected_shape
 
     def test_lcwa_heads(self) -> None:
         """Test calculating weights for LCWA head prediction."""
@@ -801,28 +797,54 @@ class ResultTrackerTests(GenericTestCase[ResultTracker], unittest.TestCase):
     def test_start_run(self):
         """Test start_run."""
         self.instance.start_run(run_name="my_test.run")
+        self._verify_start_run(run_name="my_test.run")
+
+    def _verify_start_run(self, run_name: str) -> None:
+        """Verify the tracked state after start_run; override for trackers whose output can be inspected."""
 
     def test_end_run(self):
         """Test end_run."""
         self.instance.end_run()
+        self._verify_end_run()
+
+    def _verify_end_run(self) -> None:
+        """Verify the tracked state after end_run; override for trackers whose output can be inspected."""
 
     def test_log_metrics(self):
         """Test log_metrics."""
-        for metrics, step, prefix in (
+        for metrics, step, prefix, flat_metrics in (
             (
                 # simple
                 {"a": 1.0},
                 0,
                 None,
+                {"a": 1.0},
             ),
             (
                 # nested
                 {"a": {"b": 5.0}, "c": -1.0},
                 2,
                 "test",
+                {"test.a.b": 5.0, "test.c": -1.0},
             ),
         ):
             self.instance.log_metrics(metrics=metrics, step=step, prefix=prefix)
+            self._verify_log_metrics(metrics=metrics, step=step, prefix=prefix, flat_metrics=flat_metrics)
+
+    def _verify_log_metrics(
+        self,
+        metrics: Mapping[str, Any],
+        step: int,
+        prefix: str | None,
+        flat_metrics: Mapping[str, float],
+    ) -> None:
+        """Verify the tracked state after log_metrics; override for trackers whose output can be inspected.
+
+        :param metrics: the logged (potentially nested) metrics
+        :param step: the logged step
+        :param prefix: the logged prefix
+        :param flat_metrics: the metrics flattened, with the prefix applied
+        """
 
     def test_log_params(self):
         """Test log_params."""
@@ -835,8 +857,23 @@ class ResultTrackerTests(GenericTestCase[ResultTracker], unittest.TestCase):
                 "activation": "relu",  # a string
             },
         }
-        prefix = None
-        self.instance.log_params(params=params, prefix=prefix)
+        self.instance.log_params(params=params, prefix=None)
+        self._verify_log_params(
+            params=params,
+            flat_params={
+                "num_epochs": 12,
+                "loss.margin": 2.0,
+                "loss.normalize": True,
+                "loss.activation": "relu",
+            },
+        )
+
+    def _verify_log_params(self, params: Mapping[str, Any], flat_params: Mapping[str, Any]) -> None:
+        """Verify the tracked state after log_params; override for trackers whose output can be inspected.
+
+        :param params: the logged (nested) parameters
+        :param flat_params: the parameters flattened
+        """
 
 
 class FileResultTrackerTests(ResultTrackerTests):
@@ -853,6 +890,14 @@ class FileResultTrackerTests(ResultTrackerTests):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["path"] = self.path
         return kwargs
+
+    def _verify_end_run(self) -> None:
+        assert self.instance.file.closed
+
+    def _read(self) -> str:
+        """Read the tracker's output file."""
+        self.instance.file.flush()
+        return self.path.read_text(encoding="utf8")
 
     def tearDown(self) -> None:
         # check that file was created
@@ -927,9 +972,9 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         )
 
     def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
-        """Calculate the expected updated regularization term."""
+        """Calculate the expected updated (unweighted) regularization term."""
         exp_penalties = torch.stack([self._expected_penalty(x) for x in inputs])
-        expected_term = torch.sum(exp_penalties).view(1) * self.instance.weight
+        expected_term = torch.sum(exp_penalties).view(1)
         assert expected_term.shape == (1,)
         return expected_term
 
@@ -947,6 +992,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # check result
         expected_term = self._expected_updated_term(inputs=inputs)
         assert self.instance.regularization_term.item() == pytest.approx(expected_term.item())
+        assert self.instance.term.item() == pytest.approx((self.instance.weight * expected_term).item())
 
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
@@ -978,7 +1024,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
 
         # check that the expected term is returned
         exp = (self.instance.weight * self._expected_updated_term(inputs)).item()
-        assert exp == self.instance.pop_regularization_term().item()
+        assert self.instance.pop_regularization_term().item() == pytest.approx(exp)
 
         # check that the regularizer is now reset
         self._check_reset()
@@ -1937,29 +1983,31 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
 
         return hrt_batch, scores, mask
 
-    def test_process_tail_scores_(self) -> None:
-        """Test the evaluator's ``process_tail_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input()
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
+    def _test_process_scores(self, target: Target) -> None:
+        """Test processing the scores for a single side, and finalizing afterwards."""
+        inverse = target == LABEL_HEAD
+        hrt_batch, scores, mask = self._get_input(inverse=inverse)
+        column = 0 if inverse else 2
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, column]][:, None]
         self.instance.process_scores_(
             hrt_batch=hrt_batch,
-            target=LABEL_TAIL,
+            target=target,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
         )
+        # note: finalizing fails if no scores have been stored
+        result = self.instance.finalize()
+        assert isinstance(result, MetricResults)
+        self._validate_result(result=result, data={"batch": hrt_batch, "scores": scores, "mask": mask})
+
+    def test_process_tail_scores_(self) -> None:
+        """Test the evaluator's ``process_scores_()`` function for tail prediction."""
+        self._test_process_scores(target=LABEL_TAIL)
 
     def test_process_head_scores_(self) -> None:
-        """Test the evaluator's ``process_head_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input(inverse=True)
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
-        self.instance.process_scores_(
-            hrt_batch=hrt_batch,
-            target=LABEL_HEAD,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
+        """Test the evaluator's ``process_scores_()`` function for head prediction."""
+        self._test_process_scores(target=LABEL_HEAD)
 
     def _process_batches(self):
         """Process one batch per side."""
@@ -2138,7 +2186,17 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
     def test_process_batch(self):
         """Test processing a single batch."""
         batch = next(iter(self.instance.get_loader(batch_size=self.batch_size)))
-        self.instance.process_batch(batch=batch)
+        evaluator = self.instance.evaluator
+        with patch.object(evaluator, "process_scores_", wraps=evaluator.process_scores_) as process_scores_:
+            self.instance.process_batch(batch=batch)
+        # the scores for each target in the batch are passed on to the evaluator
+        assert process_scores_.call_count == len(batch)
+        assert {call.kwargs["target"] for call in process_scores_.call_args_list} == set(batch.keys())
+        for call in process_scores_.call_args_list:
+            hrt_batch, scores, true_scores = (call.kwargs[key] for key in ("hrt_batch", "scores", "true_scores"))
+            target_ids = hrt_batch[:, TARGET_TO_INDEX[call.kwargs["target"]]]
+            assert true_scores.shape == (hrt_batch.shape[0], 1)
+            assert torch.equal(true_scores[:, 0], scores[torch.arange(hrt_batch.shape[0]), target_ids])
 
     def test_equivalence(self) -> None:
         """Test equivalence between Evaluator.evaluate and evaluation loop."""
@@ -2752,24 +2810,33 @@ class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.Score
         batch = torch.randint(self.num_entities, size=(self.batch_size, 2), generator=generator)
         scores = torch.rand(self.batch_size, self.num_entities)
         self.instance(batch=batch, target=self.target, scores=scores)
-        self.check()
+        self.check(batch=batch, scores=scores)
 
-    def check(self):
-        """Perform additional verification."""
-        pass
+    def check(self, batch: LongTensor, scores: FloatTensor) -> None:
+        """Verify the consumer's state after consuming the scores for the given batch."""
+        raise NotImplementedError
 
 
 class CheckpointScheduleTests(GenericTestCase[CheckpointSchedule]):
     """Generic tests for checkpoint schedules."""
 
     def test_call(self) -> None:
-        """Smoke-test for calling."""
+        """Test calling."""
+        checkpoint_steps = set()
         for step in self.iter_steps():
-            _result = self.instance(step=step)
+            result = self.instance(step=step)
+            assert isinstance(result, bool)
+            if result:
+                checkpoint_steps.add(step)
+        assert checkpoint_steps == self.expected_checkpoint_steps()
 
     def iter_steps(self) -> Iterator[int]:
         """Iterate over steps."""
         yield from range(20)
+
+    def expected_checkpoint_steps(self) -> set[int]:
+        """Return the steps from :meth:`iter_steps` for which a checkpoint should be created."""
+        raise NotImplementedError
 
 
 class CheckpointKeeperTests(GenericTestCase[CheckpointKeeper]):
