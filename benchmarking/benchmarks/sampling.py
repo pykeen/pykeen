@@ -1,5 +1,8 @@
 """Benchmarks for negative sampling on Kinships."""
 
+from collections.abc import Sequence
+from typing import Any, ClassVar
+
 from pykeen.datasets import Kinships
 from pykeen.sampling import negative_sampler_resolver
 
@@ -12,8 +15,8 @@ NUM_NEGS_PER_POS = 32
 class NegativeSamplingSuite:
     """Benchmark sampling negatives for a batch, with different filterers."""
 
-    param_names = ["negative_sampler", "filterer"]
-    params = [["basic", "bernoulli"], ["none", "python-set", "bloom"]]
+    param_names: ClassVar[Sequence[str]] = ["negative_sampler", "filterer"]
+    params: ClassVar[Sequence[Sequence[Any]]] = [["basic", "bernoulli"], ["none", "python-set", "bloom"]]
 
     def setup(self, negative_sampler: str, filterer: str) -> None:
         """Prepare the negative sampler and positive batch."""

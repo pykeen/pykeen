@@ -1,5 +1,8 @@
 """Benchmarks for evaluation."""
 
+from collections.abc import Sequence
+from typing import Any, ClassVar
+
 from pykeen.datasets import UMLS
 from pykeen.evaluation import RankBasedEvaluator
 from pykeen.models import DistMult
@@ -21,10 +24,10 @@ class RankBasedEvaluationSuite:
     answer, whereas in UMLS about 15% of the candidates are filtered on average, and all but one for some queries.
     """
 
-    param_names = ["dataset", "filtered"]
-    params = [["synthetic", "umls"], [False, True]]
-    repeat = (1, 5, 60.0)
-    number = 1
+    param_names: ClassVar[Sequence[str]] = ["dataset", "filtered"]
+    params: ClassVar[Sequence[Sequence[Any]]] = [["synthetic", "umls"], [False, True]]
+    repeat: ClassVar[Sequence[int | float]] = (1, 5, 60.0)
+    number: ClassVar[int] = 1
 
     def setup(self, dataset: str, filtered: bool) -> None:
         """Prepare the model and evaluation triples."""

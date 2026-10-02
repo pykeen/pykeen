@@ -1,5 +1,8 @@
 """Benchmarks for scoring with models."""
 
+from collections.abc import Sequence
+from typing import Any, ClassVar
+
 import torch
 
 from pykeen.models import Model, model_resolver
@@ -19,11 +22,11 @@ BATCH_SIZE = 256
 class ScoringSuite:
     """Benchmark scoring triples and all tails with different interactions."""
 
-    param_names = ["model"]
+    param_names: ClassVar[Sequence[str]] = ["model"]
     # one model per implementation pattern of the interaction function, rather than all models: product and sum
     # (DistMult), einsum (ComplEx), distance (TransE), complex rotation and distance (RotatE), and neural network
     # (ConvE). Code shared by all models is covered by any of them.
-    params = [["DistMult", "TransE", "ComplEx", "RotatE", "ConvE"]]
+    params: ClassVar[Sequence[Sequence[Any]]] = [["DistMult", "TransE", "ComplEx", "RotatE", "ConvE"]]
 
     model: Model
     hrt_batch: torch.Tensor

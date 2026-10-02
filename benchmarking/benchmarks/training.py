@@ -1,7 +1,7 @@
 """Benchmarks for training on Kinships."""
 
 from collections.abc import Sequence
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from pykeen.datasets import Kinships
 from pykeen.models import Model, model_resolver
@@ -18,9 +18,9 @@ class TrainingSuite:
     """Benchmark a single training epoch."""
 
     param_names: ClassVar[Sequence[str]] = ["training_loop", "model"]
-    params: ClassVar[Sequence[Sequence[str]]] = [["slcwa", "lcwa"], ["DistMult", "RotatE"]]
+    params: ClassVar[Sequence[Sequence[Any]]] = [["slcwa", "lcwa"], ["DistMult", "RotatE"]]
     # an epoch takes up to a few seconds; limit the number of repetitions
-    repeat: ClassVar[Sequence[int]] = (1, 5, 60.0)
+    repeat: ClassVar[Sequence[int | float]] = (1, 5, 60.0)
     number: ClassVar[int] = 1
 
     factory: TriplesFactory
