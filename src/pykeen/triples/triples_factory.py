@@ -538,6 +538,9 @@ class CoreTriplesFactory(KGInfo):
             and bool((self.mapped_triples == __o.mapped_triples).all().item())
         )
 
+    # defining __eq__ implicitly sets __hash__ to None; make this explicit
+    __hash__ = None  # type: ignore[assignment]
+
     @property
     def num_triples(self) -> int:
         """The number of triples."""
@@ -548,9 +551,10 @@ class CoreTriplesFactory(KGInfo):
         yield from super().iter_extra_repr()
         yield f"num_triples={self.num_triples}"
         for k, v in sorted(self.metadata.items()):
+            v_repr = v
             if isinstance(v, str | pathlib.Path):
-                v = f'"{v}"'
-            yield f"{k}={v}"
+                v_repr = f'"{v}"'
+            yield f"{k}={v_repr}"
 
     def with_labels(
         self,
@@ -1271,6 +1275,9 @@ class TriplesFactory(CoreTriplesFactory):
             and (self.entity_to_id == __o.entity_to_id)
             and (self.relation_to_id == __o.relation_to_id)
         )
+
+    # defining __eq__ implicitly sets __hash__ to None; make this explicit
+    __hash__ = None
 
     def apply_condenser(self, condenser: TripleCondenser) -> Self:  # noqa: D102
         if not condenser:

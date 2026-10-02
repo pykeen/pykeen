@@ -298,6 +298,8 @@ select = [
     "PGH",
     # Pylint (PL)
     # "PL",
+    "PLE", # pylint errors
+    "PLW", # pylint warnings
     # pyupgrade (UP)
     "UP",
     # refurb (FURB)
