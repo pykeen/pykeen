@@ -394,10 +394,11 @@ def test_negative_sampler_kwargs():
 
     # save a reference to the old init *before* mocking
     old_init = NegativeSampler.__init__
+    observed_num_negs_per_pos = []
 
     def mock_init(*args, **kwargs):
-        """Mock init method to check if kwarg arrives."""
-        assert kwargs.get("num_negs_per_pos") == _num_neg_per_pos
+        """Mock init method to record which kwarg arrives."""
+        observed_num_negs_per_pos.append(kwargs.get("num_negs_per_pos"))
         old_init(*args, **kwargs)
 
     # run a small pipline
@@ -414,6 +415,9 @@ def test_negative_sampler_kwargs():
             model="distmult",
             epochs=0,
         )
+    # the negative sampler must have been created, and always with the custom kwargs
+    assert observed_num_negs_per_pos
+    assert all(value == _num_neg_per_pos for value in observed_num_negs_per_pos), observed_num_negs_per_pos
 
 
 def test_resolve_pipeline():

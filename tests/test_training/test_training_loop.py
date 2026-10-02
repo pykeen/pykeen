@@ -1,5 +1,8 @@
 """Tests for training loops."""
 
+from collections.abc import Mapping
+from typing import Any, ClassVar
+
 import pytest
 
 from pykeen.datasets import Nations
@@ -74,7 +77,7 @@ class GroupedSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
     cls = SLCWATrainingLoop
     filterer_cls = None
     loss_cls = MarginRankingLoss
-    kwargs = {"grouped": True}
+    kwargs: ClassVar[Mapping[str, Any]] = {"grouped": True}
 
 
 class MRLossLCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
@@ -138,7 +141,7 @@ class CrossEntropyLossHeadBatchCWATrainingLoopTestCase(cases.TrainingLoopTestCas
 
     cls = BatchCWATrainingLoop
     loss_cls = CrossEntropyLoss
-    kwargs = {"target": "head"}
+    kwargs: ClassVar[Mapping[str, Any]] = {"target": "head"}
 
 
 class CrossEntropyLossRelationBatchCWATrainingLoopTestCase(cases.TrainingLoopTestCase):
@@ -146,7 +149,7 @@ class CrossEntropyLossRelationBatchCWATrainingLoopTestCase(cases.TrainingLoopTes
 
     cls = BatchCWATrainingLoop
     loss_cls = CrossEntropyLoss
-    kwargs = {"target": "relation"}
+    kwargs: ClassVar[Mapping[str, Any]] = {"target": "relation"}
 
 
 @pytest.mark.parametrize(

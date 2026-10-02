@@ -121,7 +121,7 @@ def _in_jupyter() -> bool:
             raise ImportError("console")  # noqa:TRY301
         if "VSCODE_PID" in os.environ:
             raise ImportError("vscode")  # noqa:TRY301
-    except Exception:
+    except Exception:  # noqa: BLE001 -- any failure means "not in Jupyter"
         return False
     else:
         return True

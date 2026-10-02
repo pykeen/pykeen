@@ -1,7 +1,7 @@
 """Tests for prediction tools."""
 
-from collections.abc import Collection, Iterable, MutableMapping, Sequence
-from typing import Any
+from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
+from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -89,7 +89,7 @@ class TargetPredictionsTests(cases.PredictionTestCase):
     """Tests for target prediction post-processing."""
 
     cls = pykeen.predict.TargetPredictions
-    kwargs = {"target": pykeen.typing.LABEL_HEAD, "other_columns_fixed_ids": (0, 1)}
+    kwargs: ClassVar[Mapping[str, Any]] = {"target": pykeen.typing.LABEL_HEAD, "other_columns_fixed_ids": (0, 1)}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
@@ -152,7 +152,7 @@ class AllScoreConsumerTestCase(cases.ScoreConsumerTests):
     """Test all score consumer."""
 
     cls = pykeen.predict.AllScoreConsumer
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "num_entities": cases.ScoreConsumerTests.num_entities,
         "num_relations": cases.ScoreConsumerTests.num_entities,
     }
@@ -192,10 +192,10 @@ def _iter_predict_all_inputs() -> Iterable[tuple[pykeen.models.Model, int | None
     yield model, 3, pykeen.typing.LABEL_TAIL, None
     # top 3 scores, fixed batch size, head scoring
     yield model, 3, pykeen.typing.LABEL_HEAD, 2
-    # all scores, relation scoring
+    # top 3 scores, relation scoring
     yield model, 3, pykeen.typing.LABEL_RELATION, None
     # all scores, relation scoring
-    yield model, 3, pykeen.typing.LABEL_RELATION, None
+    yield model, None, pykeen.typing.LABEL_RELATION, None
     # model with inverse relations
     model = pykeen.models.mocks.FixedModel(
         triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations),
@@ -244,7 +244,7 @@ def test_predict_top_k_consistency() -> None:
         .reset_index(drop=True)
         for k in ks
     ]
-    assert set(dfs[0].columns) == set(dfs[0].columns)
+    assert set(dfs[0].columns) == set(dfs[1].columns)
     for column in dfs[0].columns:
         np.testing.assert_equal(dfs[0][column].values, dfs[1][column].values)
 
