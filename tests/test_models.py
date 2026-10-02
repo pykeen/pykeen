@@ -4,10 +4,8 @@ import contextlib
 import importlib
 import pathlib
 import unittest
-from collections.abc import Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from typing import Any, ClassVar
-from collections.abc import MutableMapping
-from typing import Any
 
 import pytest
 import torch
