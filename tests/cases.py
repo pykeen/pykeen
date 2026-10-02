@@ -569,7 +569,7 @@ class InteractionTestCase(
     # the absolute tolerance for checking close results, cf. torch.allclose
     atol: float = 1.0e-8
 
-    shape_kwargs = {}
+    shape_kwargs: ClassVar[Mapping[str, int]] = {}
 
     def post_instantiation_hook(self) -> None:
         """Initialize parameters."""
@@ -786,7 +786,7 @@ class InteractionTestCase(
 class TranslationalInteractionTests(InteractionTestCase, ABC):
     """Common tests for translational interaction."""
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "p": 2,
     }
 
@@ -1062,7 +1062,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
     num_constant_init: int = 0
 
     #: Static extras to append to the CLI
-    cli_extras: Sequence[str] = ()
+    cli_extras: ClassVar[Sequence[str]] = ()
 
     #: the model's device
     device: torch.device
@@ -2406,7 +2406,7 @@ class BatchSLCWATrainingInstancesTestCase(unittest_templates.GenericTestCase[Bas
 
     batch_size: int = 2
     num_negatives_per_positive: int = 3
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "batch_size": batch_size,
         "negative_sampler_kwargs": {
             "num_negs_per_pos": num_negatives_per_positive,
@@ -2556,13 +2556,13 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
     #: The window size used by the early stopper
     patience: int = 2
     #: The mock losses the mock evaluator will return
-    mock_losses: list[float] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
+    mock_losses: ClassVar[list[float]] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
     #: The (zeroed) index  - 1 at which stopping will occur
     stop_constant: int = 4
     #: The minimum improvement
     delta: float = 0.0
     #: The best results
-    best_results: list[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
+    best_results: ClassVar[list[float]] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)

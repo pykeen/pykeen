@@ -309,7 +309,6 @@ select = [
 ]
 ignore = [
     "D105", # Missing docstring in magic method
-    "RUF012", # FIXME
     "PYI041", # "int | float" annotations should be not be replaced by "float"
     "TRY003", # long error messages (doesn't make sense)
 ]

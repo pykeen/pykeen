@@ -583,7 +583,7 @@ class BCEWithLogitsLoss(PointwiseLoss):
     name: Binary cross entropy (with logits)
     """
 
-    synonyms = {"Negative Log Likelihood Loss"}
+    synonyms: ClassVar[set[str]] = {"Negative Log Likelihood Loss"}
 
     hpo_default: ClassVar[Mapping[str, Any]] = {
         "reduction": DEFAULT_HPO_STRATEGY_REDUCTION,
@@ -624,7 +624,7 @@ class MSELoss(PointwiseLoss):
     name: Mean squared error
     """
 
-    synonyms = {"Mean Square Error Loss", "Mean Squared Error Loss"}
+    synonyms: ClassVar[set[str]] = {"Mean Square Error Loss", "Mean Squared Error Loss"}
 
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         if weight is None:
@@ -773,7 +773,7 @@ class MarginRankingLoss(MarginPairwiseLoss):
     name: Margin ranking
     """
 
-    synonyms = {"Pairwise Hinge Loss"}
+    synonyms: ClassVar[set[str]] = {"Pairwise Hinge Loss"}
 
     hpo_default: ClassVar[Mapping[str, Any]] = {
         "margin": DEFAULT_MARGIN_HPO_STRATEGY,
@@ -1611,7 +1611,10 @@ class NSSALoss(AdversarialLoss):
     name: Self-adversarial negative sampling
     """
 
-    synonyms = {"Self-Adversarial Negative Sampling Loss", "Negative Sampling Self-Adversarial Loss"}
+    synonyms: ClassVar[set[str]] = {
+        "Self-Adversarial Negative Sampling Loss",
+        "Negative Sampling Self-Adversarial Loss",
+    }
 
     hpo_default: ClassVar[Mapping[str, Any]] = {
         "margin": {"type": int, "low": 3, "high": 30, "q": 3},

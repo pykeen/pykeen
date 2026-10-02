@@ -205,7 +205,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
 
     losses_per_epochs: list[float]
 
-    hpo_default = {
+    hpo_default: ClassVar[Mapping[str, Any]] = {
         "num_epochs": {"type": int, "low": 100, "high": 1000, "q": 100},
         "batch_size": {"type": int, "low": 4, "high": 12, "scale": "power_two"},  # [16, 4096]
     }

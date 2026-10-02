@@ -1,7 +1,7 @@
 """Tests for prediction tools."""
 
-from collections.abc import Collection, Iterable, MutableMapping, Sequence
-from typing import Any
+from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
+from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -89,7 +89,7 @@ class TargetPredictionsTests(cases.PredictionTestCase):
     """Tests for target prediction post-processing."""
 
     cls = pykeen.predict.TargetPredictions
-    kwargs = {"target": pykeen.typing.LABEL_HEAD, "other_columns_fixed_ids": (0, 1)}
+    kwargs: ClassVar[Mapping[str, Any]] = {"target": pykeen.typing.LABEL_HEAD, "other_columns_fixed_ids": (0, 1)}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
@@ -152,7 +152,7 @@ class AllScoreConsumerTestCase(cases.ScoreConsumerTests):
     """Test all score consumer."""
 
     cls = pykeen.predict.AllScoreConsumer
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "num_entities": cases.ScoreConsumerTests.num_entities,
         "num_relations": cases.ScoreConsumerTests.num_entities,
     }
