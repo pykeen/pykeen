@@ -6,13 +6,15 @@ import pathlib
 import unittest
 from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 from typing import Any, ClassVar
+from collections.abc import MutableMapping
+from typing import Any
 
 import pytest
 import torch
 import unittest_templates
 
-import pykeen.experiments
 import pykeen.models
+from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.models import (
     ERModel,
     EvaluationOnlyModel,
@@ -560,6 +562,11 @@ class TestTransE(cases.DistanceModelTestCase):
         entity_norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
+    @pytest.mark.slow
+    def test_cli_training_nations(self):
+        """Test running the pipeline via the CLI with only training data, i.e., evaluating on the training data."""
+        self._help_test_cli(["-t", NATIONS_TRAIN_PATH, *self._cli_extras])
+
 
 class TestTransF(cases.ModelTestCase):
     """Test the TransF model."""
@@ -689,43 +696,6 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
         model_names.difference_update(m.__name__ for m in SKIP_MODULES)
         assert model_names.issubset(pykeen.models.__all__), "Forgot to add some imports"
 
-    @unittest.skip("no longer necessary?")
-    def test_models_have_experiments(self):
-        """Test that each model has an experiment folder in :mod:`pykeen.experiments`."""
-        experiments_path = pathlib.Path(pykeen.experiments.__file__).parent.absolute()
-        experiment_blacklist = {
-            "DistMultLiteral",  # FIXME
-            "ComplExLiteral",  # FIXME
-            "UnstructuredModel",
-            "StructuredEmbedding",
-            "RESCAL",
-            "NTN",
-            "ERMLP",
-            "ProjE",  # FIXME
-            "ERMLPE",  # FIXME
-            "PairRE",
-            "QuatE",
-        }
-        model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist)
-        for model in _remove_non_models(model_names):
-            model_name = model_resolver.normalize_cls(model)
-            with self.subTest(model=model):
-                assert experiments_path.joinpath(model_name.lower()).exists(), (
-                    f"Missing experimental configuration for {model}"
-                )
-
-
-def _remove_non_models(elements: Iterable[str | type[Model]]) -> set[type[Model]]:
-    rv = set()
-    for element in elements:
-        try:
-            model_cls = model_resolver.lookup(element)
-        except KeyError:  # invalid model name - aka not actually a model
-            continue
-        else:
-            rv.add(model_cls)
-    return rv
-
 
 class TestModelUtilities(unittest.TestCase):
     """Extra tests for utility functions."""
@@ -788,7 +758,7 @@ class ERModelTests(cases.ModelTestCase):
         )
         sliced_ts = self.instance.score_t(hr_batch=hr_batch, slice_size=2, tails=tails)
         ts = self.instance.score_t(hr_batch=hr_batch, tails=tails)
-        torch.allclose(sliced_ts, ts)
+        assert torch.allclose(sliced_ts, ts)
 
 
 class CooccurrenceFilteredModelTests(cases.ModelTestCase):

@@ -104,7 +104,6 @@ Name             Description
 ``plotting``     Plotting with ``seaborn`` and generation of word clouds
 ``mlflow``       Tracking of results with ``mlflow``
 ``wandb``        Tracking of results with ``wandb``
-``neptune``      Tracking of results with ``neptune``
 ``tensorboard``  Tracking of results with :mod:`tensorboard` via :mod:`torch.utils.tensorboard`
 ``transformers`` Label-based initialization with ``transformers``.
 ``tests``        Code needed to run tests. Typically handled with ``tox -e py``

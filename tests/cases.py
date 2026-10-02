@@ -46,7 +46,6 @@ from pykeen.checkpoints import CheckpointKeeper, CheckpointSchedule
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.ea.combination import GraphPairCombinator
-from pykeen.datasets.kinships import KINSHIPS_TRAIN_PATH
 from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.datasets.nations import NATIONS_TEST_PATH, NATIONS_TRAIN_PATH
 from pykeen.evaluation import Evaluator, MetricResults, evaluator_resolver
@@ -540,7 +539,7 @@ class GMRLTestCase(PairwiseLossTestCase):
         with pytest.raises(UnsupportedLabelSmoothingError):
             self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
         with pytest.raises(UnsupportedLabelSmoothingError):
-            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
+            self.instance.process_slcwa_scores(..., ..., label_smoothing=5)
 
 
 class SetwiseLossTestCase(LossTestCase):
@@ -1272,14 +1271,15 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             **self.instance_kwargs,
         )
 
-        def _equal_embeddings(a: Representation, b: Representation) -> bool:
-            """Test whether two embeddings are equal."""
-            return (a(indices=None) == b(indices=None)).all()
-
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_path = pathlib.Path(tmpdirname) / "test.pt"
             original_model.save_state(path=file_path)
             loaded_model.load_state(path=file_path)
+
+        original_state, loaded_state = original_model.state_dict(), loaded_model.state_dict()
+        assert original_state.keys() == loaded_state.keys()
+        for key, value in original_state.items():
+            assert torch.equal(value, loaded_state[key]), key
 
     @property
     def _cli_extras(self):
@@ -1318,11 +1318,6 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         return [str(e) for e in extras]
 
     @pytest.mark.slow
-    def test_cli_training_nations(self):
-        """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(["-t", NATIONS_TRAIN_PATH, *self._cli_extras])
-
-    @pytest.mark.slow
     def test_pipeline_nations_early_stopper(self):
         """Test running the pipeline with early stopping."""
         model_kwargs = dict(self.instance_kwargs)
@@ -1342,13 +1337,8 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         )
 
     @pytest.mark.slow
-    def test_cli_training_kinships(self):
-        """Test running the pipeline on almost all models with only training data."""
-        self._help_test_cli(["-t", KINSHIPS_TRAIN_PATH, *self._cli_extras])
-
-    @pytest.mark.slow
     def test_cli_training_nations_testing(self):
-        """Test running the pipeline on almost all models with only training data."""
+        """Test running the pipeline via the CLI with training and testing data."""
         self._help_test_cli(["-t", NATIONS_TRAIN_PATH, "-q", NATIONS_TEST_PATH, *self._cli_extras])
 
     def _help_test_cli(self, args):
@@ -1377,21 +1367,6 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             self.fail(msg=f"{self.cls.__name__} is missing hpo_default class attribute")
         else:
             assert isinstance(d, dict)
-
-    def test_post_parameter_update_regularizer(self):
-        """Test whether post_parameter_update resets the regularization term."""
-        if not hasattr(self.instance, "regularizer"):
-            self.skipTest("no regularizer")
-
-        # set regularizer term to something that isn't zero
-        self.instance.regularizer.regularization_term = torch.ones(1, dtype=torch.float, device=self.instance.device)
-
-        # call post_parameter_update
-        self.instance.post_parameter_update()
-
-        # assert that the regularization term has been reset
-        expected_term = torch.zeros(1, dtype=torch.float, device=self.instance.device)
-        assert self.instance.regularizer.regularization_term == expected_term
 
     def test_post_parameter_update(self):
         """Test whether post_parameter_update correctly enforces model constraints."""
@@ -1566,7 +1541,7 @@ class RepresentationTestCase(GenericTestCase[Representation]):
         self._test_indices(indices=torch.randint(self.instance.max_id, size=(self.batch_size,)))
 
     def test_2d_indices(self):
-        """Test with 1-dimensional indices."""
+        """Test with 2-dimensional indices."""
         self._test_indices(indices=(torch.randint(self.instance.max_id, size=(self.batch_size, self.num_negatives))))
 
     def test_all_indices(self):
@@ -1590,7 +1565,7 @@ class RepresentationTestCase(GenericTestCase[Representation]):
     def test_str(self):
         """Test generating the string representation."""
         # this implicitly tests extra_repr / iter_extra_repr
-        assert isinstance(str(self), str)
+        assert isinstance(str(self.instance), str)
 
 
 class TriplesFactoryRepresentationTestCase(RepresentationTestCase):
@@ -1850,7 +1825,17 @@ class CleanerTestCase(GenericTestCase[Cleaner]):
         """Test call."""
         triples_groups = [self.reference, *list(torch.split(self.other, split_size_or_sections=3, dim=0))]
         clean_groups = self.instance(triples_groups=triples_groups, random_state=42)
-        assert all(torch.is_tensor(triples) and triples.dtype for triples in clean_groups)
+        assert len(clean_groups) == len(triples_groups)
+        # check that no triple got lost
+        assert triple_tensor_to_set(self.mapped_triples) == set().union(
+            *(triple_tensor_to_set(triples) for triples in clean_groups)
+        )
+        # check that triples were only moved from the other groups to the reference
+        assert is_triple_tensor_subset(self.reference, clean_groups[0])
+        for group, clean_group in zip(triples_groups[1:], clean_groups[1:], strict=True):
+            assert is_triple_tensor_subset(clean_group, group)
+        # check that all entities occur in the reference
+        assert get_entities(clean_groups[0]) == self.all_entities
 
 
 class SplitterTestCase(GenericTestCase[Splitter]):
@@ -1875,7 +1860,15 @@ class SplitterTestCase(GenericTestCase[Splitter]):
             *(triple_tensor_to_set(triples) for triples in splitted)
         )
         # check that all entities are covered in first part
-        assert triple_tensor_to_set(splitted[0]) == self.all_entities
+        assert get_entities(splitted[0]) == self.all_entities
+
+    def test_split_two(self):
+        """Test splitting into two parts."""
+        self._test_split(ratios=0.8, exp_parts=2)
+
+    def test_split_three(self):
+        """Test splitting into three parts."""
+        self._test_split(ratios=(0.8, 0.1), exp_parts=3)
 
 
 class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):

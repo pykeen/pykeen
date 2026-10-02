@@ -58,8 +58,8 @@ class TestInvalidConfigurations(unittest.TestCase):
 class TestHPOObjective(unittest.TestCase):
     """Test HPO objective."""
 
-    def _test_re_raise(self, MockTrial, exception: type[Exception]):  # noqa: N803
-        """Test whether the given exception is raised when evaluating with the mocked trial."""
+    def _test_re_raise(self, exception_cls: type[Exception]) -> None:
+        """Test that an exception raised by the pipeline is re-raised, after ending the tracker's run."""
         objective = Objective(
             dataset=Nations,
             model=FixedModel,
@@ -71,20 +71,24 @@ class TestHPOObjective(unittest.TestCase):
             result_tracker=PythonResultTracker,
             metric="...",
         )
-        with pytest.raises(exception):
-            objective(trial=MockTrial())
+        error = exception_cls("pipeline failed")
+        with (
+            patch("pykeen.hpo.hpo.pipeline", side_effect=error) as mock_pipeline,
+            patch.object(PythonResultTracker, "end_run") as mock_end_run,
+            pytest.raises(exception_cls) as exc_info,
+        ):
+            objective(trial=MagicMock())
+        assert exc_info.value is error
+        mock_pipeline.assert_called_once()
+        mock_end_run.assert_called_once_with(success=False)
 
-    @patch("pykeen.pipeline.pipeline", side_effect=MemoryError)
-    @patch("optuna.Trial")
-    def test_re_raise_memory_error(self, _mock_pipeline, MockTrial):  # noqa: N803, PT019
+    def test_re_raise_memory_error(self):
         """Check that memory errors are re-raised (to be catched by study.optimize)."""
-        self._test_re_raise(MockTrial=MockTrial, exception=MemoryError)
+        self._test_re_raise(exception_cls=MemoryError)
 
-    @patch("pykeen.pipeline.pipeline", side_effect=RuntimeError)
-    @patch("optuna.Trial")
-    def test_re_raise_runtime_error(self, _mock_pipeline, MockTrial):  # noqa: N803, PT019
+    def test_re_raise_runtime_error(self):
         """Check that runtime errors are re-raised (to be catched by study.optimize)."""
-        self._test_re_raise(MockTrial=MockTrial, exception=RuntimeError)
+        self._test_re_raise(exception_cls=RuntimeError)
 
 
 @pytest.mark.slow

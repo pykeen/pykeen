@@ -192,10 +192,10 @@ def _iter_predict_all_inputs() -> Iterable[tuple[pykeen.models.Model, int | None
     yield model, 3, pykeen.typing.LABEL_TAIL, None
     # top 3 scores, fixed batch size, head scoring
     yield model, 3, pykeen.typing.LABEL_HEAD, 2
-    # all scores, relation scoring
+    # top 3 scores, relation scoring
     yield model, 3, pykeen.typing.LABEL_RELATION, None
     # all scores, relation scoring
-    yield model, 3, pykeen.typing.LABEL_RELATION, None
+    yield model, None, pykeen.typing.LABEL_RELATION, None
     # model with inverse relations
     model = pykeen.models.mocks.FixedModel(
         triples_factory=KGInfo(num_entities=num_entities, num_relations=num_relations),
@@ -244,7 +244,7 @@ def test_predict_top_k_consistency() -> None:
         .reset_index(drop=True)
         for k in ks
     ]
-    assert set(dfs[0].columns) == set(dfs[0].columns)
+    assert set(dfs[0].columns) == set(dfs[1].columns)
     for column in dfs[0].columns:
         np.testing.assert_equal(dfs[0][column].values, dfs[1][column].values)
 

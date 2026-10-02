@@ -113,14 +113,6 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
         instance = self.cls(**self.instance_kwargs, filterer=BloomFilterer)
         self.check_sample(instance)
 
-    def _update_positive_batch(self, positive_batch, batch_filter):
-        # shape: (batch_size, 1, num_neg)
-        positive_batch = positive_batch.unsqueeze(dim=1)
-
-        if batch_filter is not None:
-            positive_batch = positive_batch[batch_filter]
-        return positive_batch
-
     def test_small_batch(self):
         """Test on a small batch."""
         self.instance.sample(positive_batch=self.positive_batch[:1])

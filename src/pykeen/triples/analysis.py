@@ -89,7 +89,8 @@ def _add_labels(
         if not triples_factory:
             raise ValueError
         label_to_id = getattr(triples_factory, label_to_id_mapping_name)
-    assert label_to_id is not None
+    if label_to_id is None:
+        raise ValueError("label_to_id must not be None.")
     return df.merge(
         right=pd.DataFrame(
             data=list(label_to_id.items()),
