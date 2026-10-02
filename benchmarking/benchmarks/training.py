@@ -1,8 +1,11 @@
 """Benchmarks for training on Kinships."""
 
+from collections.abc import Sequence
+from typing import ClassVar
+
 from pykeen.datasets import Kinships
-from pykeen.models import model_resolver
-from pykeen.training import training_loop_resolver
+from pykeen.models import Model, model_resolver
+from pykeen.training import TrainingLoop, training_loop_resolver
 from pykeen.triples import TriplesFactory
 
 from .common import EMBEDDING_DIM, SEED

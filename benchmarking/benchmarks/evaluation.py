@@ -31,7 +31,8 @@ class RankBasedEvaluationSuite:
         factory: CoreTriplesFactory
         if dataset == "umls":
             umls = UMLS()
-            assert umls.validation is not None
+            if umls.validation is None:
+                raise RuntimeError
             factory = umls.training
             self.mapped_triples = umls.testing.mapped_triples
             filter_triples = [umls.training.mapped_triples, umls.validation.mapped_triples]

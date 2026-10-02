@@ -2,7 +2,7 @@
 
 import torch
 
-from pykeen.models import model_resolver, Model
+from pykeen.models import Model, model_resolver
 
 from .common import EMBEDDING_DIM, SEED, make_factory
 
