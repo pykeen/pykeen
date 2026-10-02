@@ -12,6 +12,9 @@ from .common import SEED
 class TriplesFactorySuite:
     """Benchmark creating triples factories from labeled triples, and splitting them."""
 
+    labeled_triples: np.ndarray
+    factory: TriplesFactory
+
     def setup(self) -> None:
         """Prepare the labeled triples of all splits."""
         self.labeled_triples = np.concatenate(

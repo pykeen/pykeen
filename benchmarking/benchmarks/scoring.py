@@ -2,7 +2,7 @@
 
 import torch
 
-from pykeen.models import model_resolver
+from pykeen.models import model_resolver, Model
 
 from .common import EMBEDDING_DIM, SEED, make_factory
 
@@ -24,6 +24,9 @@ class ScoringSuite:
     # (DistMult), einsum (ComplEx), distance (TransE), complex rotation and distance (RotatE), and neural network
     # (ConvE). Code shared by all models is covered by any of them.
     params = [["DistMult", "TransE", "ComplEx", "RotatE", "ConvE"]]
+
+    model: Model
+    hrt_batch: torch.Tensor
 
     def setup(self, model: str) -> None:
         """Prepare the model and batch."""

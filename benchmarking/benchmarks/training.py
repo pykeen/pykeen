@@ -3,6 +3,7 @@
 from pykeen.datasets import Kinships
 from pykeen.models import model_resolver
 from pykeen.training import training_loop_resolver
+from pykeen.triples import TriplesFactory
 
 from .common import EMBEDDING_DIM, SEED
 
@@ -13,11 +14,15 @@ BATCH_SIZE = 256
 class TrainingSuite:
     """Benchmark a single training epoch."""
 
-    param_names = ["training_loop", "model"]
-    params = [["slcwa", "lcwa"], ["DistMult", "RotatE"]]
+    param_names: ClassVar[Sequence[str]] = ["training_loop", "model"]
+    params: ClassVar[Sequence[Sequence[str]]] = [["slcwa", "lcwa"], ["DistMult", "RotatE"]]
     # an epoch takes up to a few seconds; limit the number of repetitions
-    repeat = (1, 5, 60.0)
-    number = 1
+    repeat: ClassVar[Sequence[int]] = (1, 5, 60.0)
+    number: ClassVar[int] = 1
+
+    factory: TriplesFactory
+    model: Model
+    training_loop: TrainingLoop
 
     def setup(self, training_loop: str, model: str) -> None:
         """Prepare the model and training loop."""
