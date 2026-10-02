@@ -217,8 +217,9 @@ def test_schlichtkrull_sampler() -> None:
 def test_requires_er_model() -> None:
     """Test that a model which is not an ERModel is rejected."""
     triples_factory = Nations().training
-    with pytest.raises(TypeError):
-        bcwa.BatchCWATrainingLoop(model=FixedModel(triples_factory=triples_factory), triples_factory=triples_factory)
+    model = FixedModel(triples_factory=triples_factory)
+    with pytest.raises(TypeError, match="requires an ERModel"):
+        bcwa.BatchCWATrainingLoop(model=model, triples_factory=triples_factory)
 
 
 def test_unknown_batch_triples() -> None:

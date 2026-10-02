@@ -6,7 +6,6 @@ Tracking Results during Training
     :caption: Result Trackers
 
     using_mlflow
-    using_neptune
     using_wandb
     using_tensorboard
     using_file

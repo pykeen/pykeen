@@ -1,7 +1,8 @@
 """Test that regularizers can be executed."""
 
 import unittest
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any, ClassVar
 
 import pytest
 import torch
@@ -29,13 +30,13 @@ class NoRegularizerTest(cases.RegularizerTestCase):
 class L1RegularizerTest(cases.LpRegularizerTest):
     """Test an L_1 normed regularizer."""
 
-    kwargs = {"p": 1}
+    kwargs: ClassVar[Mapping[str, Any]] = {"p": 1}
 
 
 class NormedL2RegularizerTest(cases.LpRegularizerTest):
     """Test an L_2 normed regularizer."""
 
-    kwargs = {"p": 2, "normalize": True}
+    kwargs: ClassVar[Mapping[str, Any]] = {"p": 2, "normalize": True}
 
     @pytest.mark.slow
     def test_expected_norm(self):
@@ -59,7 +60,7 @@ class CombinedRegularizerTest(cases.RegularizerTestCase):
     """Test the combined regularizer."""
 
     cls = pykeen.regularizers.CombinedRegularizer
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "regularizers": [
             pykeen.regularizers.LpRegularizer(weight=0.1, p=1),
             pykeen.regularizers.LpRegularizer(weight=0.7, p=2),
@@ -76,7 +77,7 @@ class PowerSumRegularizerTest(cases.RegularizerTestCase):
     """Test the power sum regularizer."""
 
     cls = pykeen.regularizers.PowerSumRegularizer
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "apply_only_once": True,
     }
 
@@ -107,7 +108,7 @@ class OrthogonalityRegularizerTest(cases.RegularizerTestCase):
     """Test the orthogonaliy regularizer."""
 
     cls = pykeen.regularizers.OrthogonalityRegularizer
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "weight": 0.5,
         "epsilon": 1.0e-05,
         # there is an extra test for this case

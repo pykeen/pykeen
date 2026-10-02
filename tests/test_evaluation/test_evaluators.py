@@ -6,7 +6,7 @@ import itertools
 import unittest
 from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, MutableMapping
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -127,7 +127,7 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the SampledRankBasedEvaluator."""
 
     cls = SampledRankBasedEvaluator
-    kwargs = {"num_negatives": 3}
+    kwargs: ClassVar[Mapping[str, Any]] = {"num_negatives": 3}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -141,7 +141,7 @@ class OGBEvaluatorTests(RankBasedEvaluatorTests):
     """Unit test for OGB evaluator."""
 
     cls = OGBEvaluator
-    kwargs = {"num_negatives": 3}
+    kwargs: ClassVar[Mapping[str, Any]] = {"num_negatives": 3}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -841,7 +841,7 @@ class MetricResultMetaTestCase(unittest_templates.MetaTestCase):
 
     base_cls = MetricResults
     base_test = cases.MetricResultTestCase
-    skip_cls = {DummyMetricResults}
+    skip_cls: ClassVar[Collection[type]] = {DummyMetricResults}
 
 
 class EvaluatorMetaTestCase(unittest_templates.MetaTestCase):
@@ -849,7 +849,7 @@ class EvaluatorMetaTestCase(unittest_templates.MetaTestCase):
 
     base_cls = Evaluator
     base_test = cases.EvaluatorTestCase
-    skip_cls = {
+    skip_cls: ClassVar[Collection[type]] = {
         mocks.MockEvaluator,
         DummyEvaluator,
     }

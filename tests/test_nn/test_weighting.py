@@ -1,5 +1,8 @@
 """Tests for edge weightings."""
 
+from collections.abc import Mapping
+from typing import Any, ClassVar
+
 import unittest_templates
 
 import pykeen.nn.weighting
@@ -33,7 +36,7 @@ class AttentionWeightingTests(cases.EdgeWeightingTestCase):
     cls = pykeen.nn.weighting.AttentionEdgeWeighting
     # message_dim must be divisible by num_heads
     message_dim = 4
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "message_dim": 4,
         "num_heads": 2,
     }
