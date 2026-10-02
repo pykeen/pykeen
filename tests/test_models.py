@@ -12,6 +12,7 @@ import torch
 import unittest_templates
 
 import pykeen.models
+from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.models import (
     ERModel,
     EvaluationOnlyModel,
@@ -558,6 +559,11 @@ class TestTransE(cases.DistanceModelTestCase):
         """
         entity_norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
+
+    @pytest.mark.slow
+    def test_cli_training_nations(self):
+        """Test running the pipeline via the CLI with only training data, i.e., evaluating on the training data."""
+        self._help_test_cli(["-t", NATIONS_TRAIN_PATH, *self._cli_extras])
 
 
 class TestTransF(cases.ModelTestCase):
