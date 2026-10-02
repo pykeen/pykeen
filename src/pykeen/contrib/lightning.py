@@ -309,7 +309,6 @@ def _main(
     model_kwargs = {
         "embedding_dim": embedding_dim,
         "loss": loss,
-        "use_inverse_triples": use_inverse_triples,
     }
     if use_inverse_triples is not None:
         model_kwargs["use_inverse_triples"] = use_inverse_triples
