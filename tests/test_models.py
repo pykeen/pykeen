@@ -4,14 +4,13 @@ import contextlib
 import importlib
 import pathlib
 import unittest
-from collections.abc import Iterable, MutableMapping
+from collections.abc import MutableMapping
 from typing import Any
 
 import pytest
 import torch
 import unittest_templates
 
-import pykeen.experiments
 import pykeen.models
 from pykeen.models import (
     ERModel,
@@ -688,43 +687,6 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
         # remove skip modules
         model_names.difference_update(m.__name__ for m in SKIP_MODULES)
         assert model_names.issubset(pykeen.models.__all__), "Forgot to add some imports"
-
-    @unittest.skip("no longer necessary?")
-    def test_models_have_experiments(self):
-        """Test that each model has an experiment folder in :mod:`pykeen.experiments`."""
-        experiments_path = pathlib.Path(pykeen.experiments.__file__).parent.absolute()
-        experiment_blacklist = {
-            "DistMultLiteral",  # FIXME
-            "ComplExLiteral",  # FIXME
-            "UnstructuredModel",
-            "StructuredEmbedding",
-            "RESCAL",
-            "NTN",
-            "ERMLP",
-            "ProjE",  # FIXME
-            "ERMLPE",  # FIXME
-            "PairRE",
-            "QuatE",
-        }
-        model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist)
-        for model in _remove_non_models(model_names):
-            model_name = model_resolver.normalize_cls(model)
-            with self.subTest(model=model):
-                assert experiments_path.joinpath(model_name.lower()).exists(), (
-                    f"Missing experimental configuration for {model}"
-                )
-
-
-def _remove_non_models(elements: Iterable[str | type[Model]]) -> set[type[Model]]:
-    rv = set()
-    for element in elements:
-        try:
-            model_cls = model_resolver.lookup(element)
-        except KeyError:  # invalid model name - aka not actually a model
-            continue
-        else:
-            rv.add(model_cls)
-    return rv
 
 
 class TestModelUtilities(unittest.TestCase):

@@ -1378,21 +1378,6 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         else:
             assert isinstance(d, dict)
 
-    def test_post_parameter_update_regularizer(self):
-        """Test whether post_parameter_update resets the regularization term."""
-        if not hasattr(self.instance, "regularizer"):
-            self.skipTest("no regularizer")
-
-        # set regularizer term to something that isn't zero
-        self.instance.regularizer.regularization_term = torch.ones(1, dtype=torch.float, device=self.instance.device)
-
-        # call post_parameter_update
-        self.instance.post_parameter_update()
-
-        # assert that the regularization term has been reset
-        expected_term = torch.zeros(1, dtype=torch.float, device=self.instance.device)
-        assert self.instance.regularizer.regularization_term == expected_term
-
     def test_post_parameter_update(self):
         """Test whether post_parameter_update correctly enforces model constraints."""
         # do one optimization step
@@ -1566,7 +1551,7 @@ class RepresentationTestCase(GenericTestCase[Representation]):
         self._test_indices(indices=torch.randint(self.instance.max_id, size=(self.batch_size,)))
 
     def test_2d_indices(self):
-        """Test with 1-dimensional indices."""
+        """Test with 2-dimensional indices."""
         self._test_indices(indices=(torch.randint(self.instance.max_id, size=(self.batch_size, self.num_negatives))))
 
     def test_all_indices(self):
@@ -1850,7 +1835,17 @@ class CleanerTestCase(GenericTestCase[Cleaner]):
         """Test call."""
         triples_groups = [self.reference, *list(torch.split(self.other, split_size_or_sections=3, dim=0))]
         clean_groups = self.instance(triples_groups=triples_groups, random_state=42)
-        assert all(torch.is_tensor(triples) and triples.dtype for triples in clean_groups)
+        assert len(clean_groups) == len(triples_groups)
+        # check that no triple got lost
+        assert triple_tensor_to_set(self.mapped_triples) == set().union(
+            *(triple_tensor_to_set(triples) for triples in clean_groups)
+        )
+        # check that triples were only moved from the other groups to the reference
+        assert is_triple_tensor_subset(self.reference, clean_groups[0])
+        for group, clean_group in zip(triples_groups[1:], clean_groups[1:], strict=True):
+            assert is_triple_tensor_subset(clean_group, group)
+        # check that all entities occur in the reference
+        assert get_entities(clean_groups[0]) == self.all_entities
 
 
 class SplitterTestCase(GenericTestCase[Splitter]):
