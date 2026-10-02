@@ -638,7 +638,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
         num_workers: int | None = None,
         save_checkpoints: bool = False,
         checkpoint_path: str | pathlib.Path | None = None,
-        checkpoint_frequency: int = _DEFAULT_CHECKPOINT_FREQUENCY,
+        checkpoint_frequency: int | None = None,
         checkpoint_on_failure_file_path: str | pathlib.Path | None = None,
         best_epoch_model_file_path: pathlib.Path | None = None,
         last_best_epoch: int | None = None,
@@ -667,6 +667,9 @@ class TrainingLoop(ABC, Generic[BatchType]):
                 'Using RGCN without graph-based sampling! Please select sampler="schlichtkrull" instead of %s.',
                 sampler,
             )
+
+        if checkpoint_frequency is None:
+            checkpoint_frequency = _DEFAULT_CHECKPOINT_FREQUENCY
 
         # Prepare all of the callbacks
         callback = MultiTrainingCallback(callbacks=callbacks, callbacks_kwargs=callbacks_kwargs)
