@@ -22,8 +22,6 @@ embedding models that has some nice features:
     trainer.fit(model=model)
 """
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 
 import click
