@@ -1,0 +1,56 @@
+# Opens (or updates) a tracking issue when a scheduled run on master fails.
+#
+# A scheduled failure means the repository did not change but CI did, so there is no
+# pull request to attach the failure to and nobody is watching for a red run. Filing an
+# issue turns it into one tracked item per workflow instead of a badge.
+name: Report scheduled failure
+
+on:
+  workflow_call:
+    inputs:
+      workflow:
+        description: The human-readable name of the workflow that failed
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  report:
+    name: Open or update the tracking issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: File the failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TITLE: "Scheduled CI failure: ${{ inputs.workflow }}"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          gh label create ci-failure \
+            --repo "$REPO" \
+            --color B60205 \
+            --description "A scheduled run on master failed" \
+            --force
+
+          # one issue per workflow, reopened by commenting rather than by filing again
+          number="$(gh issue list --repo "$REPO" --label ci-failure --state open --limit 200 \
+            --json number,title \
+            --jq "[.[] | select(.title == \"$TITLE\")] | first | .number // empty")"
+
+          body="$(printf '%s\n' \
+            "The scheduled run of \`${{ inputs.workflow }}\` on \`master\` failed: $RUN_URL" \
+            "" \
+            "No commit landed between this run and the last green one, so the cause is" \
+            "upstream — a dependency release, a runner image change, or a new version of" \
+            "a linter — rather than anything in the repository.")"
+
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --repo "$REPO" --body "$body"
+          else
+            gh issue create --repo "$REPO" --title "$TITLE" --label ci-failure --body "$body"
+          fi
