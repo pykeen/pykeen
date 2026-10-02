@@ -22,6 +22,8 @@ embedding models that has some nice features:
     trainer.fit(model=model)
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 
 import click
@@ -295,7 +297,7 @@ def lit_pipeline(
 def _main(
     training_loop: HintOrType[LitModule],
     dataset: HintOrType[Dataset],
-    use_inverse_triples: bool,
+    use_inverse_triples: bool | None,
     model: HintOrType[Model],
     loss: HintOrType[Loss],
     batch_size: int,
@@ -304,16 +306,20 @@ def _main(
     number_epochs: int,
 ) -> None:
     """Run PyTorch lightning model."""
+    model_kwargs = {
+        "embedding_dim": embedding_dim,
+        "loss": loss,
+        "use_inverse_triples": use_inverse_triples,
+    }
+    if use_inverse_triples is not None:
+        model_kwargs["use_inverse_triples"] = use_inverse_triples
+
     lit_pipeline(
         training_loop=training_loop,
         training_loop_kwargs={
             "dataset": dataset,
             "model": model,
-            "model_kwargs": {
-                "embedding_dim": embedding_dim,
-                "loss": loss,
-                "use_inverse_triples": use_inverse_triples,
-            },
+            "model_kwargs": model_kwargs,
             "batch_size": batch_size,
         },
         trainer_kwargs={

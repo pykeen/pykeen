@@ -156,7 +156,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:
         num_workers,
         random_seed,
         silent: bool,
-        **model_kwargs,
+        **model_kwargs: Any,
     ) -> None:
         """CLI for PyKEEN."""
         click.echo(
