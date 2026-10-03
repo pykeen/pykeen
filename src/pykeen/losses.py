@@ -231,7 +231,7 @@ def apply_label_smoothing(
     :param num_classes:
         The number of classes.
     :returns: A smoothed label tensor
-    :raises ValueError: if epsilon is negative or if num_classes is None
+    :raises ValueError: if epsilon is negative
 
     ..seealso:
         https://www.deeplearningbook.org/contents/regularization.html, chapter 7.5.1
@@ -240,8 +240,6 @@ def apply_label_smoothing(
         return labels
     if epsilon < 0.0:
         raise ValueError(f"epsilon must be positive, but is {epsilon}")
-    if num_classes is None:
-        raise ValueError("must pass num_classes to perform label smoothing")
 
     new_label_true = 1.0 - epsilon
     new_label_false = epsilon / (num_classes - 1)
