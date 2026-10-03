@@ -139,7 +139,7 @@ def test_process_bcwa_scores(loss_cls: type[Loss], generator: torch.Generator) -
     if not loss.bcwa_keep_rows_without_positives:
         mask = labels_2d.any(dim=-1)
         predictions_2d, labels_2d = predictions_2d[mask], labels_2d[mask]
-    expected = loss.process_lcwa_scores(predictions=predictions_2d, labels=labels, num_entities=num_entities)
+    expected = loss.process_lcwa_scores(predictions=predictions_2d, labels=labels_2d, num_entities=num_entities)
     assert torch.allclose(loss.process_bcwa_scores(predictions=predictions, positives=targets), expected)
 
 
