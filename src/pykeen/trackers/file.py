@@ -56,7 +56,7 @@ class FileResultTracker(ResultTracker):
             used.
         """
         if name is None:
-            name = datetime.datetime.now().isoformat()
+            name = datetime.datetime.now().isoformat()  # noqa: DTZ005 -- local time is intended for file names
         path = normalize_path(path, default=PYKEEN_LOGS.joinpath(f"{name}.{self.extension}"), mkdir=True, is_file=True)
         logger.info(f"Logging to {path.as_uri()}.")
         self.file = path.open(mode="w", newline="", encoding="utf8")
