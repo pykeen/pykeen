@@ -214,7 +214,7 @@ DEFAULT_HPO_STRATEGY_POS_WEIGHT = {"type": float, "low": 2**-2, "high": 2**10, "
 def apply_label_smoothing(
     labels: FloatTensor,
     *,
-    epsilon: float | None = None,
+    epsilon: float,
     num_classes: int,
 ) -> FloatTensor:
     """Apply label smoothing to a target tensor.
@@ -227,7 +227,7 @@ def apply_label_smoothing(
         The one-hot label tensor.
     :param epsilon:
         The smoothing parameter. Determines how much probability should be transferred from the true class to the
-        other classes.
+        other classes, between 0 (inclusive) and 1 (exclusive).
     :param num_classes:
         The number of classes.
     :returns: A smoothed label tensor
@@ -236,7 +236,7 @@ def apply_label_smoothing(
     ..seealso:
         https://www.deeplearningbook.org/contents/regularization.html, chapter 7.5.1
     """
-    if not epsilon:  # either none or zero
+    if not epsilon:  # if it's zero
         return labels
     if epsilon < 0.0:
         raise ValueError(f"epsilon must be positive, but is {epsilon}")
@@ -505,7 +505,8 @@ class PointwiseLoss(Loss):
         num_entities: int,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
-        labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=num_entities)
+        if label_smoothing is not None:
+            labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=num_entities)
         return self(x=predictions, target=labels, weight=weights)
 
 
@@ -1066,13 +1067,8 @@ class DoubleMarginLoss(PointwiseLoss):
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
         # Sanity check
-        if label_smoothing:
-            labels = apply_label_smoothing(
-                labels=labels,
-                epsilon=label_smoothing,
-                num_classes=num_entities,
-            )
-
+        if label_smoothing is not None:
+            labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=num_entities)
         return self(x=predictions, target=labels, weight=weights)
 
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
@@ -1704,12 +1700,11 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
         label_smoothing: float | None = None,
         num_entities: int,
     ) -> FloatTensor:
-        return functional.binary_cross_entropy_with_logits(
-            pos_scores,
-            # TODO: maybe we can make this more efficient?
-            apply_label_smoothing(torch.ones_like(pos_scores), epsilon=label_smoothing, num_classes=num_entities),
-            reduction=self.reduction,
-        )
+        # TODO: maybe we can make this more efficient?
+        second = torch.ones_like(pos_scores)
+        if label_smoothing is not None:
+            second = apply_label_smoothing(second, epsilon=label_smoothing, num_classes=num_entities)
+        return functional.binary_cross_entropy_with_logits(pos_scores, second, reduction=self.reduction)
 
     def negative_loss_term_unreduced(  # noqa: D102
         self,
@@ -1718,12 +1713,11 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
         label_smoothing: float | None = None,
         num_entities: int,
     ) -> FloatTensor:
-        return functional.binary_cross_entropy_with_logits(
-            neg_scores,
-            # TODO: maybe we can make this more efficient?
-            apply_label_smoothing(torch.zeros_like(neg_scores), epsilon=label_smoothing, num_classes=num_entities),
-            reduction="none",
-        )
+        # TODO: maybe we can make this more efficient?
+        second = torch.zeros_like(neg_scores)
+        if label_smoothing is not None:
+            second = apply_label_smoothing(second, epsilon=label_smoothing, num_classes=num_entities)
+        return functional.binary_cross_entropy_with_logits(neg_scores, second, reduction="none")
 
 
 @parse_docdata
