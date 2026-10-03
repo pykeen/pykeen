@@ -357,6 +357,7 @@ class Loss(_Loss):
         :return:
             A scalar loss term.
         """
+        raise NotImplementedError
 
     @abstractmethod
     def process_lcwa_scores(
@@ -385,6 +386,7 @@ class Loss(_Loss):
         :return:
             A scalar loss value.
         """
+        raise NotImplementedError
 
     def process_bcwa_scores(
         self,

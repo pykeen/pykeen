@@ -464,6 +464,7 @@ class LossTestCase(GenericTestCase[Loss]):
             loss = self.instance.process_slcwa_scores(
                 positive_scores=positive_scores,
                 negative_scores=negative_scores,
+                num_entities=self.num_entities,
             )
             loss.backward()
             optimizer.step()
