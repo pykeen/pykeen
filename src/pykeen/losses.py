@@ -212,9 +212,10 @@ DEFAULT_HPO_STRATEGY_POS_WEIGHT = {"type": float, "low": 2**-2, "high": 2**10, "
 
 
 def apply_label_smoothing(
+    *,
     labels: FloatTensor,
     epsilon: float | None = None,
-    num_classes: int | None = None,
+    num_classes: int,
 ) -> FloatTensor:
     """Apply label smoothing to a target tensor.
 
@@ -327,10 +328,11 @@ class Loss(_Loss):
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        *,
         # TODO: why is label smoothing part of the process_*_scores call?!
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
@@ -357,15 +359,15 @@ class Loss(_Loss):
         :return:
             A scalar loss term.
         """
-        raise NotImplementedError
 
     @abstractmethod
     def process_lcwa_scores(
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
         """
@@ -385,7 +387,6 @@ class Loss(_Loss):
         :return:
             A scalar loss value.
         """
-        raise NotImplementedError
 
     def process_bcwa_scores(
         self,
@@ -462,10 +463,11 @@ class PointwiseLoss(Loss):
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        *,
         # TODO: why is label smoothing part of the process_*_scores call?!
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
@@ -498,8 +500,9 @@ class PointwiseLoss(Loss):
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
         labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=num_entities)
@@ -679,9 +682,10 @@ class MarginPairwiseLoss(PairwiseLoss):
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        *,
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
@@ -703,8 +707,9 @@ class MarginPairwiseLoss(PairwiseLoss):
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
         # Sanity check
@@ -1054,8 +1059,9 @@ class DoubleMarginLoss(PointwiseLoss):
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
         # Sanity check

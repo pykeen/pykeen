@@ -445,7 +445,9 @@ class LossTestCase(GenericTestCase[Loss]):
         optimizer = optimizer_resolver.make(query=None, params=[predictions])
         for _ in range(10):
             optimizer.zero_grad()
-            loss = self.instance.process_lcwa_scores(predictions=predictions, labels=labels)
+            loss = self.instance.process_lcwa_scores(
+                predictions=predictions, labels=labels, num_entities=self.num_entities
+            )
             loss.backward()
             optimizer.step()
 
@@ -537,9 +539,9 @@ class GMRLTestCase(PairwiseLossTestCase):
     def test_label_smoothing_raise(self):
         """Test errors are raised if label smoothing is given."""
         with pytest.raises(UnsupportedLabelSmoothingError):
-            self.instance.process_lcwa_scores(..., ..., label_smoothing=5)
+            self.instance.process_lcwa_scores(..., ..., label_smoothing=5, num_entities=self.num_entities)
         with pytest.raises(UnsupportedLabelSmoothingError):
-            self.instance.process_slcwa_scores(..., ..., label_smoothing=5)
+            self.instance.process_slcwa_scores(..., ..., label_smoothing=5, num_entities=self.num_entities)
 
 
 class SetwiseLossTestCase(LossTestCase):
