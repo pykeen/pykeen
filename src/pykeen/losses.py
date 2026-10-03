@@ -1701,10 +1701,10 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
         num_entities: int,
     ) -> FloatTensor:
         # TODO: maybe we can make this more efficient?
-        second = torch.ones_like(pos_scores)
+        target = torch.ones_like(pos_scores)
         if label_smoothing is not None:
-            second = apply_label_smoothing(second, epsilon=label_smoothing, num_classes=num_entities)
-        return functional.binary_cross_entropy_with_logits(pos_scores, second, reduction=self.reduction)
+            target = apply_label_smoothing(target, epsilon=label_smoothing, num_classes=num_entities)
+        return functional.binary_cross_entropy_with_logits(pos_scores, target, reduction=self.reduction)
 
     def negative_loss_term_unreduced(  # noqa: D102
         self,
@@ -1714,10 +1714,10 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
         num_entities: int,
     ) -> FloatTensor:
         # TODO: maybe we can make this more efficient?
-        second = torch.zeros_like(neg_scores)
+        target = torch.zeros_like(neg_scores)
         if label_smoothing is not None:
-            second = apply_label_smoothing(second, epsilon=label_smoothing, num_classes=num_entities)
-        return functional.binary_cross_entropy_with_logits(neg_scores, second, reduction="none")
+            target = apply_label_smoothing(target, epsilon=label_smoothing, num_classes=num_entities)
+        return functional.binary_cross_entropy_with_logits(neg_scores, target, reduction="none")
 
 
 @parse_docdata
