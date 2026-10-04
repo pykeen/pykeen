@@ -803,28 +803,54 @@ class ResultTrackerTests(GenericTestCase[ResultTracker], unittest.TestCase):
     def test_start_run(self):
         """Test start_run."""
         self.instance.start_run(run_name="my_test.run")
+        self._verify_start_run(run_name="my_test.run")
+
+    def _verify_start_run(self, run_name: str) -> None:
+        """Verify the tracked state after start_run; override for trackers whose output can be inspected."""
 
     def test_end_run(self):
         """Test end_run."""
         self.instance.end_run()
+        self._verify_end_run()
+
+    def _verify_end_run(self) -> None:
+        """Verify the tracked state after end_run; override for trackers whose output can be inspected."""
 
     def test_log_metrics(self):
         """Test log_metrics."""
-        for metrics, step, prefix in (
+        for metrics, step, prefix, flat_metrics in (
             (
                 # simple
                 {"a": 1.0},
                 0,
                 None,
+                {"a": 1.0},
             ),
             (
                 # nested
                 {"a": {"b": 5.0}, "c": -1.0},
                 2,
                 "test",
+                {"test.a.b": 5.0, "test.c": -1.0},
             ),
         ):
             self.instance.log_metrics(metrics=metrics, step=step, prefix=prefix)
+            self._verify_log_metrics(metrics=metrics, step=step, prefix=prefix, flat_metrics=flat_metrics)
+
+    def _verify_log_metrics(
+        self,
+        metrics: Mapping[str, Any],
+        step: int,
+        prefix: str | None,
+        flat_metrics: Mapping[str, float],
+    ) -> None:
+        """Verify the tracked state after log_metrics; override for trackers whose output can be inspected.
+
+        :param metrics: the logged (potentially nested) metrics
+        :param step: the logged step
+        :param prefix: the logged prefix
+        :param flat_metrics: the metrics flattened, with the prefix applied
+        """
 
     def test_log_params(self):
         """Test log_params."""
@@ -837,8 +863,23 @@ class ResultTrackerTests(GenericTestCase[ResultTracker], unittest.TestCase):
                 "activation": "relu",  # a string
             },
         }
-        prefix = None
-        self.instance.log_params(params=params, prefix=prefix)
+        self.instance.log_params(params=params, prefix=None)
+        self._verify_log_params(
+            params=params,
+            flat_params={
+                "num_epochs": 12,
+                "loss.margin": 2.0,
+                "loss.normalize": True,
+                "loss.activation": "relu",
+            },
+        )
+
+    def _verify_log_params(self, params: Mapping[str, Any], flat_params: Mapping[str, Any]) -> None:
+        """Verify the tracked state after log_params; override for trackers whose output can be inspected.
+
+        :param params: the logged (nested) parameters
+        :param flat_params: the parameters flattened
+        """
 
 
 class FileResultTrackerTests(ResultTrackerTests):
@@ -855,6 +896,14 @@ class FileResultTrackerTests(ResultTrackerTests):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["path"] = self.path
         return kwargs
+
+    def _verify_end_run(self) -> None:
+        assert self.instance.file.closed
+
+    def _read(self) -> str:
+        """Read the tracker's output file."""
+        self.instance.file.flush()
+        return self.path.read_text(encoding="utf8")
 
     def tearDown(self) -> None:
         # check that file was created
