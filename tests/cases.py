@@ -2748,11 +2748,11 @@ class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.Score
         batch = torch.randint(self.num_entities, size=(self.batch_size, 2), generator=generator)
         scores = torch.rand(self.batch_size, self.num_entities)
         self.instance(batch=batch, target=self.target, scores=scores)
-        self.check()
+        self.check(batch=batch, scores=scores)
 
-    def check(self):
-        """Perform additional verification."""
-        pass
+    def check(self, batch: LongTensor, scores: FloatTensor) -> None:
+        """Verify the consumer's state after consuming the scores for the given batch."""
+        raise NotImplementedError
 
 
 class CheckpointScheduleTests(GenericTestCase[CheckpointSchedule]):
