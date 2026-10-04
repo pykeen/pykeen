@@ -58,6 +58,9 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+#: the default checkpoint frequency (in minutes)
+_DEFAULT_CHECKPOINT_FREQUENCY = 30
+
 BatchType = TypeVar("BatchType")
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -202,7 +205,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
 
     losses_per_epochs: list[float]
 
-    hpo_default = {
+    hpo_default: ClassVar[Mapping[str, Any]] = {
         "num_epochs": {"type": int, "low": 100, "high": 1000, "q": 100},
         "batch_size": {"type": int, "low": 4, "high": 12, "scale": "power_two"},  # [16, 4096]
     }
@@ -387,7 +390,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
         :param checkpoint_name: The filename for saving checkpoints. If the given filename exists already, that file
             will be loaded and used to continue training.
         :param checkpoint_frequency: The frequency of saving checkpoints in minutes. Setting it to 0 will save a
-            checkpoint after every epoch.
+            checkpoint after every epoch. Defaults to 30 minutes if a checkpoint name is given.
         :param checkpoint_on_failure: Whether to save a checkpoint in cases of a RuntimeError or MemoryError. This
             option differs from ordinary checkpoints, since ordinary checkpoints are only saved after a successful
             epoch. When saving checkpoints due to failure of the training loop there is no guarantee that all random
@@ -451,9 +454,6 @@ class TrainingLoop(ABC, Generic[BatchType]):
                 continue_training = True
             else:
                 logger.info(f"=> no checkpoint found at '{checkpoint_path}'. Creating a new file.")
-            # The checkpoint frequency needs to be set to save checkpoints
-            if checkpoint_frequency is None:
-                checkpoint_frequency = 30
             save_checkpoints = True
         elif checkpoint_frequency is not None:
             logger.warning(
@@ -516,7 +516,9 @@ class TrainingLoop(ABC, Generic[BatchType]):
                     num_workers=num_workers,
                     save_checkpoints=save_checkpoints,
                     checkpoint_path=checkpoint_path,
-                    checkpoint_frequency=checkpoint_frequency,
+                    checkpoint_frequency=(
+                        _DEFAULT_CHECKPOINT_FREQUENCY if checkpoint_frequency is None else checkpoint_frequency
+                    ),
                     checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
                     best_epoch_model_file_path=best_epoch_model_file_path,
                     last_best_epoch=last_best_epoch,
@@ -651,15 +653,23 @@ class TrainingLoop(ABC, Generic[BatchType]):
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
         # When using early stopping models have to be saved separately at the best epoch, since the training loop will
         # due to the patience continue to train after the best epoch and thus alter the model
-        # -> the temporay file has to be created outside, which we assert here
-        if stopper is not None and not only_size_probing and last_best_epoch is None:
-            assert best_epoch_model_file_path is not None
+        # -> the temporay file has to be created outside, which we check here
+        if (
+            stopper is not None
+            and not only_size_probing
+            and last_best_epoch is None
+            and best_epoch_model_file_path is None
+        ):
+            raise ValueError("best_epoch_model_file_path must not be None when using early stopping.")
 
         if isinstance(self.model, RGCN) and sampler != "schlichtkrull":
             logger.warning(
                 'Using RGCN without graph-based sampling! Please select sampler="schlichtkrull" instead of %s.',
                 sampler,
             )
+
+        if checkpoint_frequency is None:
+            checkpoint_frequency = _DEFAULT_CHECKPOINT_FREQUENCY
 
         # Prepare all of the callbacks
         callback = MultiTrainingCallback(callbacks=callbacks, callbacks_kwargs=callbacks_kwargs)
@@ -869,7 +879,6 @@ class TrainingLoop(ABC, Generic[BatchType]):
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints and checkpoint_path is not None:
-                assert checkpoint_frequency is not None
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 # MyPy overrides are because you should
                 if minutes_since_last_checkpoint >= checkpoint_frequency or self._should_stop or epoch == num_epochs:

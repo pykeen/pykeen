@@ -1,7 +1,7 @@
 """Implementation of the R-GCN model."""
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, ClassVar
 
 from class_resolver import Hint, HintOrType
 from torch import nn
@@ -60,7 +60,7 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = {
+    hpo_default: ClassVar[Mapping[str, Any]] = {
         "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         "num_layers": {"type": int, "low": 1, "high": 5, "q": 1},
         "use_bias": {"type": "bool"},

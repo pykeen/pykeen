@@ -331,7 +331,10 @@ class CombinedRegularizer(Regularizer):
     # The normalization factor to balance individual regularizers' contribution.
     normalization_factor: FloatTensor
 
-    hpo_default = {"total_weight": {"type": float, "low": 0.01, "high": 1.0, "scale": "log"}, "regularizers": ()}
+    hpo_default: ClassVar[Mapping[str, Any]] = {
+        "total_weight": {"type": float, "low": 0.01, "high": 1.0, "scale": "log"},
+        "regularizers": (),
+    }
 
     def __init__(
         self,
