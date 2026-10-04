@@ -90,14 +90,14 @@ def main(replicates: int, force: bool) -> None:
 
         _log(f"loading {dataset}")
         t = time.time()
-        dataset = get_dataset(dataset=dataset)
-        dataset_name = dataset.__class__.__name__
+        dataset_instance = get_dataset(dataset=dataset)
+        dataset_name = dataset_instance.__class__.__name__
         ccl = [
-            dataset.training.mapped_triples,
-            dataset.testing.mapped_triples,
+            dataset_instance.training.mapped_triples,
+            dataset_instance.testing.mapped_triples,
         ]
-        if dataset.validation is not None:
-            ccl.append(dataset.validation.mapped_triples)
+        if dataset_instance.validation is not None:
+            ccl.append(dataset_instance.validation.mapped_triples)
         load_time = time.time() - t
         _log(f"done loading {dataset_name} after {load_time:.3f} seconds")
         _log(f"concatenating {dataset_name}")
@@ -106,7 +106,7 @@ def main(replicates: int, force: bool) -> None:
         concat_time = time.time() - t
         _log(f"done concatenating {dataset_name} after {concat_time:.3f} seconds")
         _log(f"deleting {dataset_name}")
-        del dataset
+        del dataset_instance
         _log(f"done deleting {dataset_name}")
 
         dataset_rows = []

@@ -170,8 +170,8 @@ def evaluate_ogb(
     # iterate over prediction targets
     tqdm_kwargs = dict(tqdm_kwargs or {})
     tqdm_kwargs["disable"] = not use_tqdm
-    for target, negatives in evaluator.negative_samples.items():
-        negatives = negatives.to(device)
+    for target, target_negatives in evaluator.negative_samples.items():
+        negatives = target_negatives.to(device)
         with tqdm(**tqdm_kwargs) as progress_bar:
             y_pred_pos[target], y_pred_neg[target] = _evaluate_ogb(
                 evaluator=evaluator,
@@ -204,11 +204,11 @@ def evaluate_ogb(
         # delegate to OGB evaluator
         ogb_result = ogb_evaluator.eval(input_dict=input_dict)
         # post-processing
-        for key, value in ogb_result.items():
+        for ogb_key, ogb_value in ogb_result.items():
             # normalize name
-            key = RankBasedMetricResults.key_from_string(key.replace("_list", "")).metric
+            key = RankBasedMetricResults.key_from_string(ogb_key.replace("_list", "")).metric
             # OGB does not aggregate values across triples
-            value = value.mean().item()
+            value = ogb_value.mean().item()
             result[RankBasedMetricKey(side=ext_target, rank_type=rank_type, metric=key)] = value
     return RankBasedMetricResults(data=result)
 
