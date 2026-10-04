@@ -929,9 +929,9 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         )
 
     def _expected_updated_term(self, inputs: Sequence[torch.FloatTensor]) -> torch.FloatTensor:
-        """Calculate the expected updated regularization term."""
+        """Calculate the expected updated (unweighted) regularization term."""
         exp_penalties = torch.stack([self._expected_penalty(x) for x in inputs])
-        expected_term = torch.sum(exp_penalties).view(1) * self.instance.weight
+        expected_term = torch.sum(exp_penalties).view(1)
         assert expected_term.shape == (1,)
         return expected_term
 
@@ -949,6 +949,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         # check result
         expected_term = self._expected_updated_term(inputs=inputs)
         assert self.instance.regularization_term.item() == pytest.approx(expected_term.item())
+        assert self.instance.term.item() == pytest.approx((self.instance.weight * expected_term).item())
 
     def test_forward(self) -> None:
         """Test the regularizer's `forward` method."""
@@ -980,7 +981,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
 
         # check that the expected term is returned
         exp = (self.instance.weight * self._expected_updated_term(inputs)).item()
-        assert exp == self.instance.pop_regularization_term().item()
+        assert self.instance.pop_regularization_term().item() == pytest.approx(exp)
 
         # check that the regularizer is now reset
         self._check_reset()
