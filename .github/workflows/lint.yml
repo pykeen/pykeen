@@ -72,7 +72,7 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: ./.github/workflows/scheduled-failure-issue.yml
+    uses: $/.github/workflows/scheduled-failure-issue.yml
     with:
       workflow: Lint
 

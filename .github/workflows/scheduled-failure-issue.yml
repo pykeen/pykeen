@@ -27,6 +27,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           TITLE: "Scheduled CI failure: ${{ inputs.workflow }}"
+          WORKFLOW: ${{ inputs.workflow }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -43,7 +44,7 @@ jobs:
             --jq "[.[] | select(.title == \"$TITLE\")] | first | .number // empty")"
 
           body="$(printf '%s\n' \
-            "The scheduled run of \`${{ inputs.workflow }}\` on \`master\` failed: $RUN_URL" \
+            "The scheduled run of \`$WORKFLOW\` on \`master\` failed: $RUN_URL" \
             "" \
             "No commit landed between this run and the last green one, so the cause is" \
             "upstream — a dependency release, a runner image change, or a new version of" \
