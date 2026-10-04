@@ -6,12 +6,9 @@ PR #1684 enables the flake8-self (`SLF`) ruff rules. It ignores `SLF001` in `tes
 `inspect._empty` with `inspect.Parameter.empty`, and adds `# noqa: SLF001` to every remaining private access in
 `src` (36 sites).
 
-Review comment (cthoyt): the rule did not improve the codebase, it only added many ignores, so the rule should not be
-enabled.
-
-The objection is fair: only one change fixes real code. The question investigated here is whether the private accesses
-are symptoms of a sub-optimal split of responsibilities, so that fixing them improves the design and leaves the rule
-with real value.
+Only one of those changes fixes real code; the rest are ignores. The question investigated here is whether the private
+accesses are symptoms of a sub-optimal split of responsibilities, so that fixing them improves the design and gives the
+rule real value.
 
 Line numbers refer to master at 5006a2bf. The claims were checked against the code by a separate review pass.
 
