@@ -360,7 +360,6 @@ nitpick_ignore = [
     ("py:func", "np.random.seed"),
     # Third-party libraries with no reachable Sphinx inventory, or that don't document the referenced object at
     # a public path.
-    ("py:class", "neptune.OfflineBackend"),
     ("py:class", "optuna.storages._base.BaseStorage"),
     ("py:class", "pandas.core.frame.DataFrame"),
     ("py:class", "pytorch_lightning.core.module.LightningModule"),

@@ -243,12 +243,14 @@ class TestPipelineCheckpoints(unittest.TestCase):
         # pinned to cpu: exact loss reproducibility across separate runs relies on deterministic floating-point
         # reduction order, which accelerator backends (cuda, mps) do not guarantee.
         device = "cpu"
+        # the interrupted run checkpoints after the first epoch; the resumed run has to continue for the second
+        num_epochs = 2
 
         result_standard = pipeline(
             model=self.model,
             dataset=self.dataset,
             training_loop=training_loop_type,
-            training_kwargs={"num_epochs": 10, "use_tqdm": False, "use_tqdm_batch": False},
+            training_kwargs={"num_epochs": num_epochs, "use_tqdm": False, "use_tqdm_batch": False},
             random_seed=self.random_seed,
             device=device,
         )
@@ -259,7 +261,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
             dataset=self.dataset,
             training_loop=training_loop_type,
             training_kwargs={
-                "num_epochs": 5,
+                "num_epochs": num_epochs // 2,
                 "use_tqdm": False,
                 "use_tqdm_batch": False,
                 "checkpoint_name": self.checkpoint_name,
@@ -276,7 +278,7 @@ class TestPipelineCheckpoints(unittest.TestCase):
             dataset=self.dataset,
             training_loop=training_loop_type,
             training_kwargs={
-                "num_epochs": 10,
+                "num_epochs": num_epochs,
                 "use_tqdm": False,
                 "use_tqdm_batch": False,
                 "checkpoint_name": self.checkpoint_name,
@@ -394,10 +396,11 @@ def test_negative_sampler_kwargs():
 
     # save a reference to the old init *before* mocking
     old_init = NegativeSampler.__init__
+    observed_num_negs_per_pos = []
 
     def mock_init(*args, **kwargs):
-        """Mock init method to check if kwarg arrives."""
-        assert kwargs.get("num_negs_per_pos") == _num_neg_per_pos
+        """Mock init method to record which kwarg arrives."""
+        observed_num_negs_per_pos.append(kwargs.get("num_negs_per_pos"))
         old_init(*args, **kwargs)
 
     # run a small pipline
@@ -414,6 +417,9 @@ def test_negative_sampler_kwargs():
             model="distmult",
             epochs=0,
         )
+    # the negative sampler must have been created, and always with the custom kwargs
+    assert observed_num_negs_per_pos
+    assert all(value == _num_neg_per_pos for value in observed_num_negs_per_pos), observed_num_negs_per_pos
 
 
 def test_resolve_pipeline():

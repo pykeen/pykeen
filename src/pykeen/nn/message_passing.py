@@ -252,9 +252,7 @@ def _make_dim_divisible(dim: int, divisor: int, name: str) -> int:
     dim_div, remainder = divmod(dim, divisor)
     if remainder:
         logger.warning(f"{name}={dim} not divisible by {divisor}.")
-    dim = dim_div * divisor
-    assert dim % divisor == 0
-    return dim
+    return dim_div * divisor
 
 
 def _pad_if_necessary(x: torch.Tensor, dim: int) -> torch.Tensor:
