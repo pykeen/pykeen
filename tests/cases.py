@@ -2759,13 +2759,22 @@ class CheckpointScheduleTests(GenericTestCase[CheckpointSchedule]):
     """Generic tests for checkpoint schedules."""
 
     def test_call(self) -> None:
-        """Smoke-test for calling."""
+        """Test calling."""
+        checkpoint_steps = set()
         for step in self.iter_steps():
-            _result = self.instance(step=step)
+            result = self.instance(step=step)
+            assert isinstance(result, bool)
+            if result:
+                checkpoint_steps.add(step)
+        assert checkpoint_steps == self.expected_checkpoint_steps()
 
     def iter_steps(self) -> Iterator[int]:
         """Iterate over steps."""
         yield from range(20)
+
+    def expected_checkpoint_steps(self) -> set[int]:
+        """Return the steps from :meth:`iter_steps` for which a checkpoint should be created."""
+        raise NotImplementedError
 
 
 class CheckpointKeeperTests(GenericTestCase[CheckpointKeeper]):
