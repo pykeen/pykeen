@@ -311,6 +311,8 @@ def compute_log_expected_power(k_values: np.ndarray, powers: np.ndarray, memory_
         The scalar log-value.
     """
     k_values = np.asarray(k_values).astype(np.int64, copy=False)
+    if (k_values < 1).any():
+        raise ValueError(f"All upper bounds must be at least 1, but the minimum is {k_values.min()}.")
     unique_powers, inverse = np.unique(np.asarray(powers, dtype=np.float64), return_inverse=True)
     inverse = inverse.reshape(-1)
     num_unique = len(unique_powers)

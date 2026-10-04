@@ -362,6 +362,13 @@ def test_compute_log_expected_power_large_powers(memory_limit_elements: int) -> 
     assert result == pytest.approx(expected, rel=1e-10)
 
 
+@pytest.mark.parametrize("k", [0, -1])
+def test_compute_log_expected_power_invalid_k(k: int) -> None:
+    """Test that non-positive upper bounds are rejected."""
+    with pytest.raises(ValueError, match="at least 1"):
+        compute_log_expected_power(np.array([5, k]), np.array([1.0, 1.0]))
+
+
 def _assert_valid_survival_function(sf: np.ndarray, k_max: int, atol: float = 0.0) -> None:
     """Assert that the given array is a valid survival function.
 
