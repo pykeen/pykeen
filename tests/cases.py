@@ -5,7 +5,6 @@ import itertools
 import logging
 import pathlib
 import tempfile
-import timeit
 import traceback
 import unittest
 from abc import ABC, abstractmethod
@@ -196,14 +195,10 @@ class DatasetTestCase(unittest.TestCase):
             assert self.exp_num_triples == pytest.approx(num_triples, abs=self.exp_num_triples_tolerance)
 
         # Test caching
-        start = timeit.default_timer()
-        _ = self.dataset.training
-        end = timeit.default_timer()
-        # assert (end - start) < 1.0e-02
-        assert start == pytest.approx(end, abs=1.0e-02), "Caching should have made this operation fast"
+        training = self.dataset.training
+        assert self.dataset.training is training, "Repeated access should return the cached triples factory"
 
         # Test consistency of training / validation / testing mapping
-        training = self.dataset.training
         for part, factory in self.dataset.factory_dict.items():
             if not isinstance(factory, TriplesFactory):
                 logger.warning("Skipping mapping consistency checks since triples factory does not provide mappings.")
