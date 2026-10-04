@@ -343,9 +343,19 @@ def compute_log_expected_power(k_values: np.ndarray, powers: np.ndarray, memory_
         shift = np.maximum(batch_powers * log_j[-1], 0.0)
         table = np.cumsum(np.exp(batch_powers * log_j[None, :] - shift), axis=1)
         # look up the log-sums for all tasks whose power is in this batch
-        in_batch = (task_position >= start) & (task_position < stop)
-        rows = task_position[in_batch] - start
-        log_sums[in_batch] = np.log(table[rows, k_values[in_batch] - 1]) + shift[rows, 0]
+        task_idx = np.flatnonzero((task_position >= start) & (task_position < stop))
+        rows = task_position[task_idx] - start
+        cols = k_values[task_idx] - 1
+        with np.errstate(divide="ignore"):  # log(0) for underflowed entries, which are replaced below
+            log_sums[task_idx] = np.log(table[rows, cols]) + shift[rows, 0]
+        # for large powers, small j underflow after shifting, i.e., table[:, 0] == 0; as the cumulative sums are
+        # monotone, only these rows are affected. They are rare, so we recompute them exactly in log-space.
+        underflowed = table[:, 0] == 0.0
+        if underflowed.any():
+            log_table = np.logaddexp.accumulate(batch_powers[underflowed] * log_j[None, :], axis=1)
+            row_to_log_row = np.cumsum(underflowed) - 1
+            selected = underflowed[rows]
+            log_sums[task_idx[selected]] = log_table[row_to_log_row[rows[selected]], cols[selected]]
         start = stop
 
     return float(np.sum(log_sums - np.log(k_values)))
