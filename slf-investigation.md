@@ -12,13 +12,29 @@ rule real value.
 
 Line numbers refer to master at 5006a2bf. The claims were checked against the code by a separate review pass.
 
+## Guiding principle
+
+A leading underscore keeps *users* from relying on a member, so the internals can change freely. Making a member public
+to satisfy the linter widens the supported API and defeats that purpose. Each site therefore gets one of three
+treatments:
+
+- **Public API:** the member is useful to users or is a real extension point. Making it public is a feature.
+- **Private module function:** the logic is shared between PyKEEN classes but has no user value. Move it into a
+  module-level function (e.g. in a `_`-prefixed module) and import it. Verified with ruff: `from _helpers import _f`
+  followed by `_f()` is not flagged by `SLF001`, while `_helpers._f()` (attribute access on the module) is. This fixes the
+  responsibility split without growing the public surface.
+- **Keep `noqa: SLF001`:** the access is a legitimate cross-class or third-party internal and the refactor is not
+  worth it.
+
 Policy positions (choices, not code facts):
 
-- Private members are not public API, so the proposal is to rename them directly, without deprecated aliases.
-- Consequence for downstream subclasses: renaming an *abstract* method (`Representation._plain_forward`,
+- Private members are not public API, so renames need no deprecated aliases.
+- Downstream impact of renames: renaming an *abstract* method (`Representation._plain_forward`,
   `Model._get_entity_len`) breaks subclasses loudly (instantiation raises `TypeError`). Renaming a *non-abstract hook*
   (`Model._free_graph_and_cache`, `Stopper._write_from_summary_dict`) makes an existing override silently stop being
   called. Both warrant a changelog note.
+- Because the principle above favours not growing the public API, the strength of the case for enabling `SLF` rests on
+  the design cleanups (items 1, 2, 4, 6), not on renaming.
 
 ## Findings that point at a design problem
 
@@ -32,6 +48,8 @@ Policy positions (choices, not code facts):
   non-abstract hook (see the silent-override note above).
 - Fix: make the apply step public (e.g. `load_summary_dict` / `set_summary_dict`), symmetric to `get_summary_dict`, and
   expose `Model.random_seed` as a read-only property. `models/meta/filtered.py:96` (`base._random_seed`) is covered too.
+- Recommendation: **public API.** The stopper's state export is already public, so the apply step completes a symmetric
+  interface, and `Model.random_seed` is plainly useful to users (reproducibility).
 
 ### 2. Callbacks driving the training loop: `_should_stop`, `_save_state`, `_train_epoch`, `_create_training_data_loader`
 
@@ -45,6 +63,9 @@ Policy positions (choices, not code facts):
     `# todo: create dataset only once`. A public `evaluate_loss(triples_factory, batch_size, slice_size)` on the loop
     would remove the callbacks' access to loop internals, but it would have to carry the memory-utilization wrapping
     and its caching key.
+- Recommendation: **public API for `request_stop` and `save_checkpoint`**, since callbacks are an extension point and
+  users write their own. `evaluate_loss` is borderline: it is only needed by one built-in callback, so a private module
+  function taking the loop is the more conservative choice.
 
 ### 3. `Model._free_graph_and_cache`
 
@@ -55,6 +76,9 @@ Policy positions (choices, not code facts):
   callback's call currently does nothing.
 - Fix options: make the model method public (needed for the wrapper at 1258 anyway). Switching the callback to the loop's
   wrapper is a behaviour change (it would also empty the CUDA cache), not a pure refactor.
+- Recommendation: **keep `noqa`** (or fold into item 2). The model method is a no-op hook with no user-facing purpose,
+  so making it public adds API for nothing. If the early-stopping callback moves behind the loop's control surface
+  (item 2), this access disappears without any new public member.
 
 ### 4. Inverse triples: `TriplesFactory._add_inverse_triples_if_necessary`
 
@@ -65,8 +89,11 @@ Policy positions (choices, not code facts):
 - The real duplication is the expression
   `num_relations = 2 * tf.real_num_relations if create_inverse_triples else tf.real_num_relations`
   (`instances.py:274` and `:486`), which must stay consistent with the triples produced by the method.
-- Fix: one public factory method returning the triples together with the matching relation count, still taking the flag
+- Fix: one factory method returning the triples together with the matching relation count, still taking the flag
   (e.g. `tf.get_training_triples(create_inverse_triples)`).
+- Recommendation: **private module function.** Training-data construction is internal. A helper in the triples package
+  that returns `(mapped_triples, num_relations)` removes both the `noqa` comments and the duplicated expression without
+  extending `TriplesFactory`'s public surface.
 
 ### 5. `Model._prepare_batch` in `models/uncertainty.py`
 
@@ -76,6 +103,10 @@ Policy positions (choices, not code facts):
   concern than item 4 (appending inverse triples), though both deal with inverse-relation handling.
 - Fix: either a public `Model` method, or `predict_uncertain_helper` accepts real IDs and translates itself. The latter
   needs an `index_relation` argument and special handling for `predict_r_uncertain`'s (h, t) batch.
+- Recommendation: **private module function** (or move the translation into `predict_uncertain_helper`). The
+  user-facing entry points are the `predict_*_uncertain` functions; the ID translation is an implementation detail.
+  Note that `Model.predict_*` already uses `_prepare_batch` internally, so it can stay private on `Model` if the helper
+  lives next to it.
 
 ### 6. `_process_batch_static` in `contrib/lightning.py` (`:182`, `:226`)
 
@@ -84,6 +115,8 @@ Policy positions (choices, not code facts):
   `lcwa.py:98-99`). The loops call these themselves too (`slcwa.py:284`, `lcwa.py:143`).
 - This suggests the batch-to-loss logic belongs in a standalone function (or loss helper) shared by the training loop and
   Lightning, instead of a class-level method that Lightning has to reach into.
+- Recommendation: **private module function** shared by the loops and Lightning. This is the clearest case where a
+  split-of-responsibilities fix removes the access without any public API.
 
 ### 7. `Model._get_entity_len`
 
@@ -93,6 +126,9 @@ Policy positions (choices, not code facts):
 - It is abstract-ish API for subclasses (renaming is loud for downstream models). A plain public `get_entity_len(mode)`
   is sufficient. Making the mode-dependent count an attribute of the mode or the triples factory would be cleaner but is
   a larger refactor.
+- Recommendation: **keep `noqa`** or rename to a public `get_entity_len`. Renaming is loud for downstream models
+  (abstract method) and adds to the API; the count is a reasonable thing to expose, but there is no user demand evident
+  in the code. Low priority.
 
 ## Findings that were checked
 
@@ -107,8 +143,9 @@ Policy positions (choices, not code facts):
   instead would apply them twice where both base and wrapper configure them.
 - The bypass is probably deliberate, but nothing in the code documents it; this is an inference. The wrapper's `unique`
   is handled by the inherited `Representation.forward` (defaulting to all bases' `unique`).
-- Option: rename to a public name (e.g. `get_raw_representations`) and document the contract. Alternatively keep the
-  2 `noqa` comments; the rule then does not reach zero outside torch internals.
+- Recommendation: **keep `noqa`.** It is an extension hook used between representation classes, and the underscore
+  keeps users from calling it and bypassing normalization and dropout. Renaming it to a public name would invite exactly
+  the misuse the underscore prevents. The rule then does not reach zero outside torch internals.
 
 ### `_head_indices` / `_tail_indices` in `nn/modules.py:2850-2851`
 
@@ -116,6 +153,7 @@ Policy positions (choices, not code facts):
   the same information, except a `None` field becomes `range(len(entity_shape))`. That substitution is semantically
   identical for `head_shape` / `tail_shape`.
 - Fix: `self._head_indices = base.head_indices`, `self._tail_indices = base.tail_indices`. No new API.
+- Recommendation: **use the existing public properties.**
 - Side finding (`modules.py:205-216`): `tail_indices` uses `range(len(self.tail_shape))` while `head_indices` uses
   `range(len(self.entity_shape))`. Same value today, but inconsistent; use `entity_shape` for symmetry.
 
@@ -127,6 +165,8 @@ Policy positions (choices, not code facts):
   (`assert isinstance(model_cls._interaction, TransEInteraction)`, `model_cls._interaction.p == 2`). It is therefore not
   dead code. Removing it requires changing that test (e.g. check the instantiated model's interaction instead), or
   keeping the attribute with a `noqa`.
+- Recommendation: **change the test** to assert on an instantiated model's interaction, then delete the attribute and
+  its `noqa`. The attribute exists only for the test, so it is not worth keeping.
 
 ## Smaller renames
 
@@ -135,6 +175,9 @@ Policy positions (choices, not code facts):
 - `Dataset._tup` (`datasets/base.py:412`): called 3 times on `self` (`:382`, `:392`, `:559`), twice in the module-level
   `dataset_similarity` (`:96`, `a._tup(), b._tup()`), and 4 times in tests (`tests/test_deteriorate.py:31`, `:49`).
   Making it a property (e.g. `factories`) changes the call syntax at all of these.
+- Recommendation: **`ValueRange._coerce` as a private module function; `Dataset._tup` stays private with a private
+  module function for `dataset_similarity`** (or keep the single `noqa`). Neither has user value, and `_tup` is used in
+  tests, which are exempt from the rule.
 
 ## Not fixable: torch internals (5 sites)
 
@@ -142,20 +185,38 @@ Sparse `_nnz` / `_indices` / `_values` in `nn/utils.py` (3 sites) and `torch.nn.
 `torch.nn.modules.dropout._DropoutNd` in `utils.py` (2 sites). No public equivalents. These keep their
 `noqa: SLF001`.
 
+## Summary of recommendations
+
+| Site | Treatment |
+|---|---|
+| `head_indices` / `tail_indices` in `nn/modules.py` | Use existing public properties (no new API) |
+| `ChildERModel._interaction` | Change the test, delete the attribute |
+| `Model.random_seed`, stopper state apply step | Public API |
+| Loop control for callbacks (`request_stop`, `save_checkpoint`) | Public API |
+| `evaluate_loss` for the validation-loss callback | Private module function |
+| Inverse-triples training data | Private module function |
+| `_prepare_batch` in `uncertainty.py` | Private module function |
+| `_process_batch_static` for Lightning | Private module function |
+| `ValueRange._coerce`, `Dataset._tup` in `dataset_similarity` | Private module function |
+| `Model._free_graph_and_cache` | Keep `noqa` (disappears if item 2 is done) |
+| `Model._get_entity_len` | Keep `noqa` (low priority) |
+| `Representation._plain_forward` | Keep `noqa` |
+| Torch internals (5 sites) | Keep `noqa` |
+
 ## Suggested sequencing
 
-Self-contained, no API change, could go into #1684 right away (removes 2 `noqa`):
+Self-contained, no new API, could go into #1684 right away (removes 2 `noqa`):
 
 - `modules.py:2850-2851` use the public `head_indices` / `tail_indices` (and fix the `tail_indices` asymmetry).
 
 Design PRs, one concern each:
 
-1. Stopper and checkpoint state (item 1), including `Model.random_seed`.
-2. Training loop control surface for callbacks (items 2 and 3; note the `empty_cache` behaviour change).
-3. Inverse-triples handling in the triples factory (item 4) and `_prepare_batch` (item 5).
-4. Batch-to-loss function shared with Lightning (item 6).
-5. Small renames: `get_entity_len`, `ValueRange._coerce`, `Dataset._tup`, `ChildERModel._interaction` (with its test),
-   and optionally `_plain_forward`.
+1. Stopper and checkpoint state (item 1), including `Model.random_seed`. Adds public API.
+2. Training loop control surface for callbacks (items 2 and 3; note the `empty_cache` behaviour change). Adds public API.
+3. Private module functions for inverse-triples data (item 4), ID translation (item 5) and batch-to-loss shared with
+   Lightning (item 6). No public API change.
+4. Small cleanups: `ChildERModel._interaction` (with its test), `ValueRange._coerce`, `Dataset._tup`.
 
-After these land, #1684 reduces to the ruff config plus the 5 torch `noqa` comments, plus the 2 `_plain_forward`
-comments unless that rename is done as well.
+After these land, #1684 reduces to the ruff config plus about 10 remaining `noqa` comments: 5 torch internals,
+2 `_plain_forward`, and the `_get_entity_len` and `_free_graph_and_cache` sites if left as is. That is much smaller than
+the current 36, but it is not zero, so whether the rule is worth enabling at that point remains a maintainer judgment.
