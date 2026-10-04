@@ -141,8 +141,9 @@ def tensor_to_df(
     for key, values in kwargs.items():
         # convert PyTorch tensors to numpy
         if isinstance(values, torch.Tensor):
-            values = values.cpu().numpy()
-        data[key] = values
+            data[key] = values.cpu().numpy()
+        else:
+            data[key] = values
 
     # convert to dataframe
     rv = pd.DataFrame(data=data)
