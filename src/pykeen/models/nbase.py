@@ -435,8 +435,10 @@ class ERModel(  # noqa:PYI059
             if isinstance(param, str):
                 if param not in weights:
                     raise KeyError(f"Invalid parameter_name={parameter}. Available are: {sorted(weights.keys())}.")
-                param = weights[param]
-            regularizer.add_parameter(parameter=param)
+                weight = weights[param]
+            else:
+                weight = param
+            regularizer.add_parameter(parameter=weight)
         self.weight_regularizers.append(regularizer)
 
     def forward(
