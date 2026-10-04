@@ -213,8 +213,9 @@ DEFAULT_HPO_STRATEGY_POS_WEIGHT = {"type": float, "low": 2**-2, "high": 2**10, "
 
 def apply_label_smoothing(
     labels: FloatTensor,
-    epsilon: float | None = None,
-    num_classes: int | None = None,
+    *,
+    epsilon: float,
+    num_classes: int,
 ) -> FloatTensor:
     """Apply label smoothing to a target tensor.
 
@@ -226,21 +227,19 @@ def apply_label_smoothing(
         The one-hot label tensor.
     :param epsilon:
         The smoothing parameter. Determines how much probability should be transferred from the true class to the
-        other classes.
+        other classes, between 0 (inclusive) and 1 (exclusive).
     :param num_classes:
         The number of classes.
     :returns: A smoothed label tensor
-    :raises ValueError: if epsilon is negative or if num_classes is None
+    :raises ValueError: if epsilon is negative
 
     ..seealso:
         https://www.deeplearningbook.org/contents/regularization.html, chapter 7.5.1
     """
-    if not epsilon:  # either none or zero
+    if not epsilon:  # if it's zero
         return labels
     if epsilon < 0.0:
         raise ValueError(f"epsilon must be positive, but is {epsilon}")
-    if num_classes is None:
-        raise ValueError("must pass num_classes to perform label smoothing")
 
     new_label_true = 1.0 - epsilon
     new_label_false = epsilon / (num_classes - 1)
@@ -327,10 +326,11 @@ class Loss(_Loss):
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        *,
         # TODO: why is label smoothing part of the process_*_scores call?!
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
@@ -364,8 +364,9 @@ class Loss(_Loss):
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
         """
@@ -462,10 +463,11 @@ class PointwiseLoss(Loss):
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        *,
         # TODO: why is label smoothing part of the process_*_scores call?!
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
@@ -498,11 +500,13 @@ class PointwiseLoss(Loss):
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
-        labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=num_entities)
+        if label_smoothing is not None:
+            labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=num_entities)
         return self(x=predictions, target=labels, weight=weights)
 
 
@@ -679,9 +683,10 @@ class MarginPairwiseLoss(PairwiseLoss):
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        *,
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
@@ -703,8 +708,9 @@ class MarginPairwiseLoss(PairwiseLoss):
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
         # Sanity check
@@ -1016,9 +1022,10 @@ class DoubleMarginLoss(PointwiseLoss):
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        *,
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
@@ -1054,18 +1061,14 @@ class DoubleMarginLoss(PointwiseLoss):
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
         # Sanity check
-        if label_smoothing:
-            labels = apply_label_smoothing(
-                labels=labels,
-                epsilon=label_smoothing,
-                num_classes=num_entities,
-            )
-
+        if label_smoothing is not None:
+            labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=num_entities)
         return self(x=predictions, target=labels, weight=weights)
 
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
@@ -1290,9 +1293,10 @@ class CrossEntropyLoss(SetwiseLoss):
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        *,
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
@@ -1327,8 +1331,9 @@ class CrossEntropyLoss(SetwiseLoss):
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
         # make sure labels form a proper probability distribution
@@ -1413,8 +1418,9 @@ class InfoNCELoss(CrossEntropyLoss):
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
         # determine positive; do not check with == since the labels are floats
@@ -1435,9 +1441,10 @@ class InfoNCELoss(CrossEntropyLoss):
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        *,
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
@@ -1479,8 +1486,9 @@ class AdversarialLoss(SetwiseLoss):
         self,
         predictions: FloatTensor,
         labels: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         weights: FloatTensor | None = None,
     ) -> FloatTensor:
         self._raise_on_weights(weights)
@@ -1514,9 +1522,10 @@ class AdversarialLoss(SetwiseLoss):
         self,
         positive_scores: FloatTensor,
         negative_scores: FloatTensor,
+        *,
         label_smoothing: float | None = None,
         batch_filter: BoolTensor | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
         pos_weights: FloatTensor | None = None,
         neg_weights: FloatTensor | None = None,
     ) -> FloatTensor:
@@ -1560,8 +1569,9 @@ class AdversarialLoss(SetwiseLoss):
     def positive_loss_term(
         self,
         pos_scores: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
     ) -> FloatTensor:
         """
         Calculate the loss for the positive scores.
@@ -1582,8 +1592,9 @@ class AdversarialLoss(SetwiseLoss):
     def negative_loss_term_unreduced(
         self,
         neg_scores: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
     ) -> FloatTensor:
         """
         Calculate the loss for the negative scores *without* reduction.
@@ -1644,8 +1655,9 @@ class NSSALoss(AdversarialLoss):
     def positive_loss_term(  # noqa: D102
         self,
         pos_scores: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
     ) -> FloatTensor:
         # Sanity check
         if label_smoothing:
@@ -1655,8 +1667,9 @@ class NSSALoss(AdversarialLoss):
     def negative_loss_term_unreduced(  # noqa: D102
         self,
         neg_scores: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
     ) -> FloatTensor:
         # Sanity check
         if label_smoothing:
@@ -1683,28 +1696,28 @@ class AdversarialBCEWithLogitsLoss(AdversarialLoss):
     def positive_loss_term(  # noqa: D102
         self,
         pos_scores: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
     ) -> FloatTensor:
-        return functional.binary_cross_entropy_with_logits(
-            pos_scores,
-            # TODO: maybe we can make this more efficient?
-            apply_label_smoothing(torch.ones_like(pos_scores), epsilon=label_smoothing, num_classes=num_entities),
-            reduction=self.reduction,
-        )
+        # TODO: maybe we can make this more efficient?
+        target = torch.ones_like(pos_scores)
+        if label_smoothing is not None:
+            target = apply_label_smoothing(target, epsilon=label_smoothing, num_classes=num_entities)
+        return functional.binary_cross_entropy_with_logits(pos_scores, target, reduction=self.reduction)
 
     def negative_loss_term_unreduced(  # noqa: D102
         self,
         neg_scores: FloatTensor,
+        *,
         label_smoothing: float | None = None,
-        num_entities: int | None = None,
+        num_entities: int,
     ) -> FloatTensor:
-        return functional.binary_cross_entropy_with_logits(
-            neg_scores,
-            # TODO: maybe we can make this more efficient?
-            apply_label_smoothing(torch.zeros_like(neg_scores), epsilon=label_smoothing, num_classes=num_entities),
-            reduction="none",
-        )
+        # TODO: maybe we can make this more efficient?
+        target = torch.zeros_like(neg_scores)
+        if label_smoothing is not None:
+            target = apply_label_smoothing(target, epsilon=label_smoothing, num_classes=num_entities)
+        return functional.binary_cross_entropy_with_logits(neg_scores, target, reduction="none")
 
 
 @parse_docdata

@@ -37,7 +37,8 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
     random_seed = 0
     batch_size: int = 128
     sub_batch_size: int = 30
-    num_epochs: int = 10
+    #: the minimal number of epochs for test_checkpoints: checkpoint after the first, resume for the second
+    num_epochs: int = 2
 
     def pre_setup_hook(self) -> None:
         """Prepare case-level variables before the setup() function."""
