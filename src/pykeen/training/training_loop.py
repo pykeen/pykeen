@@ -358,13 +358,11 @@ class TrainingLoop(ABC, Generic[BatchType]):
         """
         h = md5()  # noqa: S324
         h.update(str(self.model).encode("utf-8"))
-        if self.optimizer is None:
-            optimizer_config = str(None)
-        else:
+        if self.optimizer is not None:
             # the optimizer's defaults are its constructor arguments (merged with the class' default values), which are,
             # unlike the parameter groups, not modified during training
             optimizer_config = f"{self.optimizer.__class__.__name__}({sorted(self.optimizer.defaults.items())})"
-        h.update(optimizer_config.encode("utf-8"))
+            h.update(optimizer_config.encode("utf-8"))
         h.update(self._lr_scheduler_config.encode("utf-8"))
         return h.hexdigest()
 
