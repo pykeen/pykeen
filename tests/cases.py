@@ -43,6 +43,7 @@ import pykeen.nn.text
 import pykeen.nn.weighting
 import pykeen.predict
 from pykeen.checkpoints import CheckpointKeeper, CheckpointSchedule
+from pykeen.constants import TARGET_TO_INDEX
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.ea.combination import GraphPairCombinator
@@ -1933,29 +1934,31 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
 
         return hrt_batch, scores, mask
 
-    def test_process_tail_scores_(self) -> None:
-        """Test the evaluator's ``process_tail_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input()
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
+    def _test_process_scores(self, target: Target) -> None:
+        """Test processing the scores for a single side, and finalizing afterwards."""
+        inverse = target == LABEL_HEAD
+        hrt_batch, scores, mask = self._get_input(inverse=inverse)
+        column = 0 if inverse else 2
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, column]][:, None]
         self.instance.process_scores_(
             hrt_batch=hrt_batch,
-            target=LABEL_TAIL,
+            target=target,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
         )
+        # note: finalizing fails if no scores have been stored
+        result = self.instance.finalize()
+        assert isinstance(result, MetricResults)
+        self._validate_result(result=result, data={"batch": hrt_batch, "scores": scores, "mask": mask})
+
+    def test_process_tail_scores_(self) -> None:
+        """Test the evaluator's ``process_scores_()`` function for tail prediction."""
+        self._test_process_scores(target=LABEL_TAIL)
 
     def test_process_head_scores_(self) -> None:
-        """Test the evaluator's ``process_head_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input(inverse=True)
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
-        self.instance.process_scores_(
-            hrt_batch=hrt_batch,
-            target=LABEL_HEAD,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
+        """Test the evaluator's ``process_scores_()`` function for head prediction."""
+        self._test_process_scores(target=LABEL_HEAD)
 
     def _process_batches(self):
         """Process one batch per side."""
@@ -2134,7 +2137,17 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
     def test_process_batch(self):
         """Test processing a single batch."""
         batch = next(iter(self.instance.get_loader(batch_size=self.batch_size)))
-        self.instance.process_batch(batch=batch)
+        evaluator = self.instance.evaluator
+        with patch.object(evaluator, "process_scores_", wraps=evaluator.process_scores_) as process_scores_:
+            self.instance.process_batch(batch=batch)
+        # the scores for each target in the batch are passed on to the evaluator
+        assert process_scores_.call_count == len(batch)
+        assert {call.kwargs["target"] for call in process_scores_.call_args_list} == set(batch.keys())
+        for call in process_scores_.call_args_list:
+            hrt_batch, scores, true_scores = (call.kwargs[key] for key in ("hrt_batch", "scores", "true_scores"))
+            target_ids = hrt_batch[:, TARGET_TO_INDEX[call.kwargs["target"]]]
+            assert true_scores.shape == (hrt_batch.shape[0], 1)
+            assert torch.equal(true_scores[:, 0], scores[torch.arange(hrt_batch.shape[0]), target_ids])
 
     def test_equivalence(self) -> None:
         """Test equivalence between Evaluator.evaluate and evaluation loop."""
