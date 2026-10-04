@@ -299,7 +299,6 @@ class BloomFilterer(Filterer):
         :return:
             The number of hashing rounds.
         """
-        num_bits = num_bits
         real_num_probes_k = (num_bits / num_elements) * math.log(2)
         return math.ceil(real_num_probes_k)
 

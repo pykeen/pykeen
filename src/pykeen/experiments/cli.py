@@ -257,8 +257,8 @@ def validate() -> None:
     from .validate import get_configuration_errors, iterate_config_paths
 
     has_error = False
-    for _directory_name, _config_name, path in iterate_config_paths():
-        path = path.resolve()
+    for _directory_name, _config_name, config_path in iterate_config_paths():
+        path = config_path.resolve()
         errors = get_configuration_errors(path=path)
         if errors:
             click.secho(f"Errors in {path.as_uri()}")
