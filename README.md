@@ -414,7 +414,7 @@ The following 40 metrics are implemented in PyKEEN.
 
 ### Trackers
 
-The following 8 trackers are implemented in PyKEEN.
+The following 7 trackers are implemented in PyKEEN.
 
 | Name        | Reference                                                                                                                               | Description                                               |
 |-------------|-----------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
@@ -422,7 +422,6 @@ The following 8 trackers are implemented in PyKEEN.
 | csv         | [`pykeen.trackers.CSVResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.CSVResultTracker.html)                 | Tracking results to a CSV file.                           |
 | json        | [`pykeen.trackers.JSONResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.JSONResultTracker.html)               | Tracking results to a JSON lines file.                    |
 | mlflow      | [`pykeen.trackers.MLFlowResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.MLFlowResultTracker.html)           | A tracker for MLflow.                                     |
-| neptune     | [`pykeen.trackers.NeptuneResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.NeptuneResultTracker.html)         | A tracker for Neptune.ai.                                 |
 | python      | [`pykeen.trackers.PythonResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.PythonResultTracker.html)           | A tracker which stores everything in Python dictionaries. |
 | tensorboard | [`pykeen.trackers.TensorBoardResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.TensorBoardResultTracker.html) | A tracker for TensorBoard.                                |
 | wandb       | [`pykeen.trackers.WANDBResultTracker`](https://pykeen.readthedocs.io/en/latest/api/pykeen.trackers.WANDBResultTracker.html)             | A tracker for Weights and Biases.                         |

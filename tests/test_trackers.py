@@ -2,6 +2,8 @@
 
 import json
 import pathlib
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 import pytest
 
@@ -50,7 +52,7 @@ class MultiResultTrackerTests(cases.ResultTrackerTests):
     """Tests for multi tracker."""
 
     cls = MultiResultTracker
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "trackers": (
             ConsoleResultTracker(),
             ConsoleResultTracker(),

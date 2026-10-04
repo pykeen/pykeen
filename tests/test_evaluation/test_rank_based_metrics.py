@@ -1,7 +1,8 @@
 """Tests for rank-based metrics."""
 
 import unittest
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Collection, Sequence
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -174,7 +175,7 @@ class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.metrics.rankin
 
     base_cls = pykeen.metrics.ranking.RankBasedMetric
     base_test = cases.RankBasedMetricTestCase
-    skip_cls = {
+    skip_cls: ClassVar[Collection[type]] = {
         pykeen.metrics.ranking.ExpectationNormalizedMetric,
         pykeen.metrics.ranking.ReindexedMetric,
         pykeen.metrics.ranking.ZMetric,
