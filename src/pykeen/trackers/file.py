@@ -139,7 +139,9 @@ class JSONResultTracker(FileResultTracker):
     extension = "jsonl"
 
     def _write(self, obj) -> None:
-        print(json.dumps(obj), file=self.file, flush=True)
+        # values which are not JSON serializable, e.g., loss instances or initializer functions in the model kwargs,
+        # are written as strings, as done by the CSV tracker
+        print(json.dumps(obj, default=str), file=self.file, flush=True)
 
     def log_params(  # noqa: D102
         self,
