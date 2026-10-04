@@ -290,8 +290,8 @@ class LossWeightTestCase(GenericTestCase[LossWeighter]):
         result = self.instance(h=h, r=r, t=t)
         assert torch.is_tensor(result)
         assert torch.is_floating_point(result)
-        # assert the result is of appropriate shape
-        torch.broadcast_shapes(result.shape, expected_shape)
+        # assert the result is of appropriate shape, i.e., broadcastable to the expected shape
+        assert torch.broadcast_shapes(result.shape, expected_shape) == expected_shape
 
     def test_lcwa_heads(self) -> None:
         """Test calculating weights for LCWA head prediction."""
