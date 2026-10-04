@@ -1,8 +1,8 @@
 """Test cases for sampling."""
 
 import unittest
-from collections.abc import MutableMapping
-from typing import Any
+from collections.abc import Mapping, MutableMapping
+from typing import Any, ClassVar
 
 import numpy as np
 import torch
@@ -43,7 +43,7 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
     #: A positive batch
     positive_batch: torch.LongTensor
     #: Kwargs
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "num_negs_per_pos": 10,
     }
 
@@ -112,14 +112,6 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
         """Test generating a negative sample with bloom filtering."""
         instance = self.cls(**self.instance_kwargs, filterer=BloomFilterer)
         self.check_sample(instance)
-
-    def _update_positive_batch(self, positive_batch, batch_filter):
-        # shape: (batch_size, 1, num_neg)
-        positive_batch = positive_batch.unsqueeze(dim=1)
-
-        if batch_filter is not None:
-            positive_batch = positive_batch[batch_filter]
-        return positive_batch
 
     def test_small_batch(self):
         """Test on a small batch."""

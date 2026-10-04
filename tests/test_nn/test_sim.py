@@ -1,7 +1,8 @@
 """Tests for the :mod:`pykeen.nn.sim` submodule."""
 
 import itertools
-from typing import Literal
+from collections.abc import Mapping
+from typing import Any, ClassVar, Literal
 
 import torch
 from unittest_templates import GenericTestCase
@@ -70,7 +71,7 @@ class KullbackLeiblerDivergenceKG2ESimilarityTests(GenericTestCase[NegativeKullb
     d: int = 11
 
     cls = NegativeKullbackLeiblerDivergence
-    kwargs = {"exact": True}
+    kwargs: ClassVar[Mapping[str, Any]] = {"exact": True}
 
     def _get(self, name: Literal["h", "r", "t"]):
         if name == "h":

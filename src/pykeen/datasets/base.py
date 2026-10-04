@@ -467,8 +467,15 @@ class Dataset(ExtraReprMixin):
         validation: CoreTriplesFactory | None
         # update factories
         if isinstance(training, TriplesFactory):
-            assert isinstance(self.testing, TriplesFactory)
-            assert self.validation is None or isinstance(self.validation, TriplesFactory)
+            if not isinstance(self.testing, TriplesFactory):
+                raise TypeError(
+                    f"Expected self.testing to be of type TriplesFactory, but got {type(self.testing).__name__}."
+                )
+            if not (self.validation is None or isinstance(self.validation, TriplesFactory)):
+                raise TypeError(
+                    f"Expected self.validation to be None or of type TriplesFactory, "
+                    f"but got {type(self.validation).__name__}."
+                )
             entity_to_id = _restrict_mapping(
                 id_to_label=training.entity_id_to_label,
                 kept_ids=kept_entity_ids_t.tolist(),
@@ -607,7 +614,8 @@ class LazyDataset(Dataset, ABC):
         """The training triples factory."""
         if not self._loaded:
             self._load()
-        assert self._training is not None
+        if self._training is None:
+            raise RuntimeError("The dataset did not load its training factory.")
         return self._training
 
     @property
@@ -615,7 +623,8 @@ class LazyDataset(Dataset, ABC):
         """The testing triples factory that shares indices with the training triples factory."""
         if not self._loaded:
             self._load()
-        assert self._testing is not None
+        if self._testing is None:
+            raise RuntimeError("The dataset did not load its testing factory.")
         return self._testing
 
     @property
@@ -709,7 +718,8 @@ class SourceDataSet(LazyDataset):
     def _load_validation(self) -> None:
         # don't call this function by itself. assumes called through the `validation`
         # property and the _training factory has already been loaded
-        assert self._training is not None
+        if self._training is None:
+            raise RuntimeError("The training factory has to be loaded before the validation factory.")
         if self.validation_source is None:
             self._validation = None
         else:
