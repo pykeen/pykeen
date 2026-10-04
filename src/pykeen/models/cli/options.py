@@ -1,5 +1,7 @@
 """Click options for building magical KGE model CLIs."""
 
+from __future__ import annotations
+
 import click
 
 from .. import model_resolver
@@ -184,4 +186,6 @@ random_seed_option = click.option(
     show_default=True,
     help="Random seed for PyTorch, NumPy, and Python.",
 )
-inverse_triples_option = click.option("-I", "--use-inverse-triples", is_flag=True, help="Model inverse triples")
+inverse_triples_option = click.option(
+    "-I", "--use-inverse-triples/--no-use-inverse-triples", is_flag=True, default=None, help="Model inverse triples"
+)

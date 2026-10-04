@@ -147,11 +147,9 @@ def _get_resolver_lines2(
         if name not in dir(importlib.import_module(module)):
             click.secho(message=f"{name} not visible in {module}", err=True)
         # get docdata and extract name & citation
-        docdata = resolver.docdata(clsx) or {}
-        assert isinstance(docdata, dict)
+        docdata: dict[str, Any] = resolver.docdata(clsx) or {}
         # fallback for name: capitalized class name without base suffix
         name = docdata.get("name", clsx.__name__.replace(resolver.base.__name__, ""))
-        assert isinstance(name, str)
         # extract citation information and warn about lack thereof
         citation = _citation(docdata)
         if not citation:
@@ -536,7 +534,8 @@ def _get_resolver_lines(
 
             yield name, reference, doc
         else:
-            assert isinstance(value.__doc__, str)
+            if not isinstance(value.__doc__, str):
+                raise ValueError(f"{name} has no docstring.")
             yield name, value.__doc__.splitlines()[0]
 
 

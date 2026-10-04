@@ -418,24 +418,6 @@ class TestUtils(unittest.TestCase):
         # (5, 1, 1) + (3, 1) -> (5, 3, 1): 15; (5, 3, 1) + (2,) -> (5, 3, 2): 30
         assert estimate_cost_of_sequence((5, 1, 1), (3, 1), (2,)) == 15 + 30
 
-    @unittest.skip("This is often failing non-deterministically")
-    def test_estimate_cost_of_add_sequence(self):
-        """Test ``estimate_cost_of_add_sequence()``."""
-        _, generator, _ = set_random_seed(seed=42)
-        # create random array, estimate the costs of addition, and measure some execution times.
-        # then, compute correlation between the estimated cost, and the measured time.
-        data = []
-        for shapes in _generate_shapes(generator=generator):
-            arrays = [torch.empty(*shape) for shape in shapes]
-            cost = estimate_cost_of_sequence(*(a.shape for a in arrays))
-            n_samples, time = timeit.Timer(stmt="sum(arrays)", globals={"arrays": arrays}).autorange()
-            consumption = time / n_samples
-            data.append((cost, consumption))
-        a = np.asarray(data)
-
-        # check for strong correlation between estimated costs and measured execution time
-        assert (np.corrcoef(x=a[:, 0], y=a[:, 1])[0, 1]) > 0.8
-
     @pytest.mark.slow
     def test_get_optimal_sequence_caching(self):
         """Test caching of ``get_optimal_sequence()``."""

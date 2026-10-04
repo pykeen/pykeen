@@ -2,8 +2,8 @@
 
 import logging
 import unittest
-from collections.abc import MutableMapping, Sequence
-from typing import Any
+from collections.abc import Collection, Mapping, MutableMapping, Sequence
+from typing import Any, ClassVar
 from unittest import SkipTest
 
 import numpy as np
@@ -44,7 +44,7 @@ class ConvETests(cases.InteractionTestCase):
     """Tests for ConvE interaction function."""
 
     cls = pykeen.nn.modules.ConvEInteraction
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "embedding_height": 1,
         "embedding_width": 2,
         "kernel_height": 2,
@@ -81,7 +81,7 @@ class ConvKBTests(cases.InteractionTestCase):
     """Tests for ConvKB interaction function."""
 
     cls = pykeen.nn.modules.ConvKBInteraction
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "embedding_dim": cases.InteractionTestCase.dim,
         "num_filters": 2 * cases.InteractionTestCase.dim - 1,
     }
@@ -99,7 +99,7 @@ class CPInteractionTests(cases.InteractionTestCase):
     """Test for the canonical tensor decomposition interaction."""
 
     cls = pykeen.nn.modules.CPInteraction
-    shape_kwargs = {
+    shape_kwargs: ClassVar[Mapping[str, int]] = {
         "k": 3,
     }
 
@@ -111,7 +111,7 @@ class CrossETests(cases.InteractionTestCase):
     """Tests for CrossE interaction function."""
 
     cls = pykeen.nn.modules.CrossEInteraction
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "embedding_dim": cases.InteractionTestCase.dim,
     }
 
@@ -148,7 +148,7 @@ class ERMLPTests(cases.InteractionTestCase):
     """Tests for ERMLP interaction function."""
 
     cls = pykeen.nn.modules.ERMLPInteraction
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "embedding_dim": cases.InteractionTestCase.dim,
         "hidden_dim": 2 * cases.InteractionTestCase.dim - 1,
     }
@@ -164,7 +164,7 @@ class ERMLPETests(cases.InteractionTestCase):
     """Tests for ERMLP-E interaction function."""
 
     cls = pykeen.nn.modules.ERMLPEInteraction
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "embedding_dim": cases.InteractionTestCase.dim,
         "hidden_dim": 2 * cases.InteractionTestCase.dim - 1,
     }
@@ -193,7 +193,7 @@ class NTNTests(cases.InteractionTestCase):
     cls = pykeen.nn.modules.NTNInteraction
 
     num_slices: int = 11
-    shape_kwargs = {
+    shape_kwargs: ClassVar[Mapping[str, int]] = {
         "k": 11,
     }
 
@@ -218,7 +218,7 @@ class ProjETests(cases.InteractionTestCase):
     """Tests for ProjE interaction function."""
 
     cls = pykeen.nn.modules.ProjEInteraction
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "embedding_dim": cases.InteractionTestCase.dim,
     }
 
@@ -237,7 +237,7 @@ class QuatETests(cases.InteractionTestCase):
     """Tests for QuatE interaction."""
 
     cls = pykeen.nn.modules.QuatEInteraction
-    shape_kwargs = {"k": 4}  # quaternions
+    shape_kwargs: ClassVar[Mapping[str, int]] = {"k": 4}  # quaternions
     atol = 1.0e-06
 
     def _exp_score(self, h: torch.Tensor, r: torch.Tensor, t: torch.Tensor) -> torch.FloatTensor:
@@ -281,7 +281,7 @@ class TuckerTests(cases.InteractionTestCase):
     """Tests for Tucker interaction function."""
 
     cls = pykeen.nn.modules.TuckERInteraction
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "embedding_dim": cases.InteractionTestCase.dim,
     }
 
@@ -321,7 +321,7 @@ class TransDTests(cases.TranslationalInteractionTests):
     """Tests for TransD interaction function."""
 
     cls = pykeen.nn.modules.TransDInteraction
-    shape_kwargs = {
+    shape_kwargs: ClassVar[Mapping[str, int]] = {
         "e": 3,
     }
 
@@ -392,7 +392,7 @@ class TransRTests(cases.TranslationalInteractionTests):
     """Tests for TransR interaction function."""
 
     cls = pykeen.nn.modules.TransRInteraction
-    shape_kwargs = {
+    shape_kwargs: ClassVar[Mapping[str, int]] = {
         "e": 3,
     }
 
@@ -527,7 +527,7 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
     """Tests for monotonic affine transformation interaction adapter."""
 
     cls = pykeen.nn.modules.MonotonicAffineTransformationInteraction
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "base": pykeen.nn.modules.TransEInteraction(p=2),
     }
 
@@ -556,7 +556,7 @@ class TransformerTests(cases.InteractionTestCase):
     cls = pykeen.nn.modules.TransformerInteraction
     # dimension needs to be divisible by num_heads
     dim = 8
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "num_heads": 2,
         "dim_feedforward": 7,
     }
@@ -579,7 +579,7 @@ class MultiLinearTuckerInteractionTests(cases.InteractionTestCase):
     """Tests for multi-linear TuckER."""
 
     cls = pykeen.nn.modules.MultiLinearTuckerInteraction
-    shape_kwargs = {"e": 3, "f": 5}
+    shape_kwargs: ClassVar[Mapping[str, int]] = {"e": 3, "f": 5}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
@@ -597,7 +597,7 @@ class InteractionTestsTestCase(unittest_templates.MetaTestCase[pykeen.nn.modules
 
     base_cls = pykeen.nn.modules.Interaction
     base_test = cases.InteractionTestCase
-    skip_cls = {
+    skip_cls: ClassVar[Collection[type]] = {
         pykeen.nn.modules.Interaction,
         pykeen.nn.modules.NormBasedInteraction,
         pykeen.nn.modules.ClampedInteraction,
@@ -699,7 +699,7 @@ class AutoSFTests(cases.InteractionTestCase):
     """Tests for the AutoSF interaction function."""
 
     cls = pykeen.nn.modules.AutoSFInteraction
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "coefficients": (
             (0, 0, 0, 1),
             (1, 1, 1, -1),

@@ -337,7 +337,7 @@ class TestSplit(unittest.TestCase):
                 self._compare_factories(factories_1, factories_2)
 
     def test_fully_inductive_split(self) -> None:
-        """Test semi-inductive splitting."""
+        """Test fully-inductive splitting."""
         cases = [
             (3, 0.5, 0.8),
             (3, 0.5, [0.8]),
@@ -361,8 +361,8 @@ class TestSplit(unittest.TestCase):
                 )
                 self._compare_factories(factories_1, factories_2)
 
-    def test_load_model(self):
-        """Test splitting a tabbed dataset."""
+    def test_random_dataset_split_reproducible(self):
+        """Test that splitting a single-file dataset with a fixed random state is reproducible."""
 
         class MockSingleTabbedDataset(SingleTabbedDataset):
             def __init__(self, random_state=0, **kwargs):

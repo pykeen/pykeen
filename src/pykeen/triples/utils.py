@@ -177,13 +177,11 @@ def compute_compressed_adjacency_list(
             adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
     """
     num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
-    num_triples = mapped_triples.shape[0]
     adj_lists: list[list[tuple[int, float]]] = [[] for _ in range(num_entities)]
     for i, (s, _, o) in enumerate(mapped_triples):
         adj_lists[s].append((i, o.item()))
         adj_lists[o].append((i, s.item()))
     degrees = torch.tensor([len(a) for a in adj_lists], dtype=torch.long)
-    assert torch.sum(degrees) == 2 * num_triples
 
     offset = torch.empty(num_entities, dtype=torch.long)
     offset[0] = 0

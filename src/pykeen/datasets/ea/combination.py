@@ -106,12 +106,12 @@ def merge_label_to_id_mapping(
     for i, (prefix, mapping) in enumerate(pairs):
         for key, value in mapping.items():
             prefixed_key = f"{prefix}:{key}"
-            if offsets is None:
-                # for mypy
-                assert mappings is not None
+            if mappings is not None:
                 new_value = mappings[i][value]
-            else:
+            elif offsets is not None:
                 new_value = value + offsets[i].item()
+            else:
+                raise AssertionError  # unreachable, checked above
             value_to_keys[new_value].add(prefixed_key)
     if extra:
         for k, v in extra.items():

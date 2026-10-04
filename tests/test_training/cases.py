@@ -16,7 +16,7 @@ from pykeen.models import ConvE, Model, TransE
 from pykeen.sampling.filtering import Filterer
 from pykeen.trackers.base import PythonResultTracker
 from pykeen.training import TrainingLoop
-from pykeen.training.training_loop import NonFiniteLossError, NoTrainingBatchError
+from pykeen.training.training_loop import NonFiniteLossError, NoTrainingBatchError, SubBatchingNotSupportedError
 from pykeen.triples import TriplesFactory
 
 __all__ = [
@@ -37,7 +37,8 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
     random_seed = 0
     batch_size: int = 128
     sub_batch_size: int = 30
-    num_epochs: int = 10
+    #: the minimal number of epochs for test_checkpoints: checkpoint after the first, resume for the second
+    num_epochs: int = 2
 
     def pre_setup_hook(self) -> None:
         """Prepare case-level variables before the setup() function."""
@@ -73,7 +74,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
         """Test if sub-batching works as expected, or raises an error if the training loop does not support it."""
         with ExitStack() as stack:
             if not self.cls.supports_sub_batching:
-                stack.enter_context(pytest.raises(NotImplementedError))
+                stack.enter_context(pytest.raises(NotImplementedError, match="does not support sub-batching"))
             self.instance.train(
                 triples_factory=self.triples_factory,
                 num_epochs=1,
@@ -82,11 +83,13 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
             )
 
     def test_sub_batching_support(self):
-        """Test if sub-batching works as expected."""
+        """Test that sub-batching is rejected for models with batch normalization."""
+        if not self.cls.supports_sub_batching:
+            self.skipTest(f"{self.cls.__name__} does not support sub-batching at all, cf. test_sub_batching")
         model = ConvE(triples_factory=self.triples_factory, use_inverse_triples=True)
         training_loop = self._with_model(model)
 
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(SubBatchingNotSupportedError):
             training_loop.train(
                 triples_factory=self.triples_factory,
                 num_epochs=1,

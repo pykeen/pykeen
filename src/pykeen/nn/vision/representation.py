@@ -90,7 +90,8 @@ class VisionDataset(torch.utils.data.Dataset):
             if not path.is_absolute():
                 path = self.root.joinpath(path)
             image = Image.open(path)
-        assert isinstance(image, torch.Tensor | Image.Image)
+        if not isinstance(image, torch.Tensor | Image.Image):
+            raise TypeError(f"Expected image to be of type torch.Tensor | Image.Image, but got {type(image).__name__}.")
         return self.transforms(image)
 
     def __len__(self) -> int:
