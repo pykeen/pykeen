@@ -154,9 +154,9 @@ class TopKScoreConsumerTestCase(cases.ScoreConsumerTests):
     def check(self, batch: torch.LongTensor, scores: torch.FloatTensor) -> None:
         k = self.instance.k
         assert self.instance.result.shape == (k, 3)
-        # the k largest scores are kept
-        top_scores, _ = scores.view(-1).topk(k=k)
-        assert torch.equal(self.instance.scores.sort()[0], top_scores.sort()[0])
+        # the kept scores are the k largest: fewer than k scores exceed the smallest kept one, and at least k reach it
+        threshold = self.instance.scores.min().to(scores.device)
+        assert (scores > threshold).sum() < k <= (scores >= threshold).sum()
         # each kept triple belongs to the (head, relation) pair of a batch row, and has the score of its tail
         for (h, r, t), score in zip(self.instance.result.tolist(), self.instance.scores.tolist(), strict=True):
             rows = ((batch[:, 0] == h) & (batch[:, 1] == r)).nonzero().view(-1)
