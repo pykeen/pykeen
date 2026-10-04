@@ -93,7 +93,7 @@ def dataset_similarity(a: Dataset, b: Dataset, metric: str | None = None) -> flo
         in later.
     """
     if metric == "tanimoto" or metric is None:
-        return splits_similarity(a._tup(), b._tup())
+        return splits_similarity(a._tup(), b._tup())  # noqa: SLF001
     raise ValueError(f"invalid metric: {metric}")
 
 

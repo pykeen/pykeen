@@ -591,12 +591,12 @@ def format_relative_comparison(
 
 def get_batchnorm_modules(module: torch.nn.Module) -> list[torch.nn.Module]:
     """Return all submodules which are batch normalization layers."""
-    return [submodule for submodule in module.modules() if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)]
+    return [submodule for submodule in module.modules() if isinstance(submodule, torch.nn.modules.batchnorm._BatchNorm)]  # noqa: SLF001
 
 
 def get_dropout_modules(module: torch.nn.Module) -> list[torch.nn.Module]:
     """Return all submodules which are dropout layers."""
-    return [submodule for submodule in module.modules() if isinstance(submodule, torch.nn.modules.dropout._DropoutNd)]
+    return [submodule for submodule in module.modules() if isinstance(submodule, torch.nn.modules.dropout._DropoutNd)]  # noqa: SLF001
 
 
 def calculate_broadcasted_elementwise_result_shape(

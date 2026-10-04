@@ -256,7 +256,7 @@ select = [
     # flake8-return (RET)
     "RET",
     # flake8-self (SLF)
-    # "SLF",
+    "SLF",
     # flake8-simplify (SIM)
     "SIM",
     # flake8-slots (SLOT)
@@ -333,6 +333,7 @@ ignore = [
     "PIE790", # allow pass in test stubs/abstract methods
     "D102",   # test methods document intent via their name, not a docstring
     "S101",   # pytest uses assert
+    "SLF001", # tests may inspect private members
 ]
 
 [tool.ruff.lint.pydocstyle]

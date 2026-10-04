@@ -323,7 +323,7 @@ class SubsetRepresentation(Representation):
     ) -> FloatTensor:
         if indices is None:
             indices = torch.arange(self.max_id, device=self.device)
-        return self.base._plain_forward(indices=indices)
+        return self.base._plain_forward(indices=indices)  # noqa: SLF001
 
 
 @parse_docdata
@@ -1378,7 +1378,7 @@ class CombinedRepresentation(Representation):
         :return:
             The combined representations for the given indices.
         """
-        return combination([b._plain_forward(indices=indices) for b in base])
+        return combination([b._plain_forward(indices=indices) for b in base])  # noqa: SLF001
 
     def _plain_forward(
         self,

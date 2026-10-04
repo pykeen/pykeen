@@ -40,7 +40,7 @@ def iter_matrix_power(matrix: torch.Tensor, max_iter: int) -> Iterable[torch.Ten
         # for a sparse matrix, we store 3 values per nnz (row index, column index, value)
         # performance-wise, it likely makes sense to switch even earlier
         # `torch.sparse.mm` can also deal with dense 2nd argument
-        if a.is_sparse and a._nnz() >= a.numel() // 4:
+        if a.is_sparse and a._nnz() >= a.numel() // 4:  # noqa: SLF001
             a = a.to_dense()
         # note: torch.sparse.mm only works for COO matrices;
         #       @ only works for CSR matrices
@@ -70,9 +70,9 @@ def safe_diagonal(matrix: torch.Tensor) -> torch.Tensor:
 
     n = matrix.shape[0]
     # we need to use indices here, since there may be zero diagonal entries
-    indices = matrix._indices()
+    indices = matrix._indices()  # noqa: SLF001
     mask = indices[0] == indices[1]
-    diagonal_values = matrix._values()[mask]
+    diagonal_values = matrix._values()[mask]  # noqa: SLF001
     diagonal_indices = indices[0][mask]
 
     return torch.zeros(n, device=matrix.device).scatter_add(dim=0, index=diagonal_indices, src=diagonal_values)

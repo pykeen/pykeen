@@ -128,7 +128,7 @@ def _get_num_targets(model: Model, target: TargetColumn, mode: InductiveMode | N
     """
     if target == COLUMN_RELATION:
         return model.num_relations
-    return model._get_entity_len(mode=mode)
+    return model._get_entity_len(mode=mode)  # noqa: SLF001
 
 
 def _make_optimizer_and_lr_scheduler(
@@ -445,7 +445,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
                     stopper_dict = stopper.load_summary_dict_from_training_loop_checkpoint(path=checkpoint_path)
                     # If the stopper dict has any keys, those are written back to the stopper
                     if stopper_dict:
-                        stopper._write_from_summary_dict(**stopper_dict)
+                        stopper._write_from_summary_dict(**stopper_dict)  # noqa: SLF001
                     else:
                         logger.warning(
                             "the training loop was configured with a stopper but no stopper configuration was "
@@ -1094,7 +1094,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
         """
         # Since the batch_size search with size 1, i.e., one tuple scored on all entities,
         # must have failed to start slice_size search, we start with trying half the entities.
-        return ceil(self.model._get_entity_len(mode=self.mode) / 2)
+        return ceil(self.model._get_entity_len(mode=self.mode) / 2)  # noqa: SLF001
 
     def _slice_size_search(
         self,
@@ -1255,7 +1255,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
         return sub_batch_size, finished_search, supports_sub_batching
 
     def _free_graph_and_cache(self):
-        self.model._free_graph_and_cache()
+        self.model._free_graph_and_cache()  # noqa: SLF001
         # The cache of the previous run has to be freed to allow accurate memory availability estimates
         torch.cuda.empty_cache()
 
@@ -1311,7 +1311,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
                 "optimizer_state_dict": self.optimizer.state_dict(),
                 "lr_scheduler_state_dict": lr_scheduler_state_dict,
                 "checksum": self.checksum,
-                "random_seed": self.model._random_seed,
+                "random_seed": self.model._random_seed,  # noqa: SLF001
                 "stopper_dict": stopper_dict,
                 "random_state": random.getstate(),
                 "np_random_state": np.random.get_state(),  # noqa: NPY002
