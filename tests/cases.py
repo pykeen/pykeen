@@ -43,7 +43,6 @@ import pykeen.nn.text
 import pykeen.nn.weighting
 import pykeen.predict
 from pykeen.checkpoints import CheckpointKeeper, CheckpointSchedule
-from pykeen.constants import TARGET_TO_INDEX
 from pykeen.datasets import Nations
 from pykeen.datasets.base import LazyDataset
 from pykeen.datasets.ea.combination import GraphPairCombinator
@@ -2144,10 +2143,12 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
         assert process_scores_.call_count == len(batch)
         assert {call.kwargs["target"] for call in process_scores_.call_args_list} == set(batch.keys())
         for call in process_scores_.call_args_list:
-            hrt_batch, scores, true_scores = (call.kwargs[key] for key in ("hrt_batch", "scores", "true_scores"))
-            target_ids = hrt_batch[:, TARGET_TO_INDEX[call.kwargs["target"]]]
+            hrt_batch, true_scores = call.kwargs["hrt_batch"], call.kwargs["true_scores"]
             assert true_scores.shape == (hrt_batch.shape[0], 1)
-            assert torch.equal(true_scores[:, 0], scores[torch.arange(hrt_batch.shape[0]), target_ids])
+            # the true score is the score of the evaluated triple, as calculated independently of the target prediction
+            with torch.inference_mode():
+                expected = self.instance.model.score_hrt(hrt_batch)
+            assert torch.allclose(true_scores, expected)
 
     def test_equivalence(self) -> None:
         """Test equivalence between Evaluator.evaluate and evaluation loop."""
