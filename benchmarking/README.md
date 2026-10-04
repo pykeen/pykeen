@@ -53,7 +53,7 @@ $ tox -e benchmarks
 From this directory, run
 
 ```console
-$ pip install "asv>=0.6.5" virtualenv
+$ uv tool install "asv>=0.6.5"
 $ asv machine --yes
 $ asv continuous --factor 1.2 master HEAD
 ```
