@@ -236,6 +236,6 @@ def test_missing_batch_targets() -> None:
     loop = bcwa.BatchCWATrainingLoop(model=TransE(triples_factory=triples_factory), triples_factory=triples_factory)
     h, r, t = triples_factory.mapped_triples[:3].unbind(dim=-1)
     # a batch without the positives, which are filled by the collator
-    batch = cast("BatchCWABatch", {"heads": h, "relations": r, "tails": t})
+    batch = cast(BatchCWABatch, {"heads": h, "relations": r, "tails": t})
     with pytest.raises(bcwa.MissingBatchTargetsError):
         loop._process_batch(batch, start=0, stop=3)

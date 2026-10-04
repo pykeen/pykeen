@@ -159,7 +159,7 @@ def parallel_unsqueeze(x: FloatTensor | Sequence[FloatTensor], dim: int) -> Floa
     """Unsqueeze all representations along the given dimension."""
     if not isinstance(x, Sequence):
         return x.unsqueeze(dim=dim)
-    return cast("Sequence[FloatTensor]", [xx.unsqueeze(dim=dim) for xx in x])
+    return cast(Sequence[FloatTensor], [xx.unsqueeze(dim=dim) for xx in x])
 
 
 class Interaction(nn.Module, ABC, Generic[HeadRepresentation, RelationRepresentation, TailRepresentation]):

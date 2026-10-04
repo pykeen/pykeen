@@ -146,7 +146,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
                 model=model,
                 loss=loss,
                 mode=mode,
-                batch=cast("GroupedSLCWABatch", batch),
+                batch=cast(GroupedSLCWABatch, batch),
                 start=start,
                 stop=stop,
                 label_smoothing=label_smoothing,
