@@ -30,7 +30,8 @@ class NoRegularizerTest(cases.RegularizerTestCase):
 class L1RegularizerTest(cases.LpRegularizerTest):
     """Test an L_1 normed regularizer."""
 
-    kwargs: ClassVar[Mapping[str, Any]] = {"p": 1}
+    # use a non-default weight, to test its application
+    kwargs: ClassVar[Mapping[str, Any]] = {"p": 1, "weight": 0.5}
 
 
 class NormedL2RegularizerTest(cases.LpRegularizerTest):
