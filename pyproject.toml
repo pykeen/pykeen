@@ -266,7 +266,7 @@ select = [
     # flake8-todos (TD)
     # "TD",
     # flake8-type-checking (TC)
-    # "TC",
+    "TC",
     # flake8-unused-arguments (ARG)
     # "ARG",
     # flake8-use-pathlib (PTH)
@@ -313,6 +313,12 @@ ignore = [
     "D105", # Missing docstring in magic method
     "PYI041", # "int | float" annotations should be not be replaced by "float"
     "TRY003", # long error messages (doesn't make sense)
+    # Sphinx autodoc (with `-W -n`) needs type-hint imports at runtime to resolve annotations
+    "TC001",
+    "TC002",
+    "TC003",
+    # Quoting the type argument of `typing.cast` reduces readability and editors do not look inside strings
+    "TC006",
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores

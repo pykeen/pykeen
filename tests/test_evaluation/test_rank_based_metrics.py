@@ -6,6 +6,7 @@ from typing import ClassVar
 
 import numpy as np
 import pytest
+import scipy.special
 import unittest_templates
 from scipy.stats import bootstrap
 
@@ -343,6 +344,29 @@ def test_compute_log_expected_power_sorted_vs_unsorted():
 
     # Should get the same result regardless of input order
     assert result_sorted == pytest.approx(result_unsorted, rel=1e-10)
+
+
+@pytest.mark.parametrize("memory_limit_elements", [10**7, 10])
+def test_compute_log_expected_power_large_powers(memory_limit_elements: int) -> None:
+    """Test that large powers, for which the naive power sum over- or underflows, are handled correctly."""
+    # for p = 200, the first terms are ~ 1000^-200 smaller than the largest, i.e., underflow when scaled; a second,
+    # moderate power in the same batch checks that only the affected rows are replaced
+    ks = np.array([1, 1000, 5, 20])
+    ps = np.array([200.0, 200.0, 2.0, 200.0])
+    # reference in log-space; the direct power sum would overflow, since 1000^200 = 1e600
+    expected = sum(
+        scipy.special.logsumexp(p * np.log(np.arange(1, k + 1))) - np.log(k) for k, p in zip(ks, ps, strict=True)
+    )
+    result = compute_log_expected_power(ks, ps, memory_limit_elements=memory_limit_elements)
+    assert np.isfinite(result)
+    assert result == pytest.approx(expected, rel=1e-10)
+
+
+@pytest.mark.parametrize("k", [0, -1])
+def test_compute_log_expected_power_invalid_k(k: int) -> None:
+    """Test that non-positive upper bounds are rejected."""
+    with pytest.raises(ValueError, match="at least 1"):
+        compute_log_expected_power(np.array([5, k]), np.array([1.0, 1.0]))
 
 
 def _assert_valid_survival_function(sf: np.ndarray, k_max: int, atol: float = 0.0) -> None:
