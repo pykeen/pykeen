@@ -2735,7 +2735,7 @@ class PredictionTestCase(unittest_templates.GenericTestCase[pykeen.predict.Predi
         assert set(df_filtered.itertuples()).issubset(self.df.itertuples())
 
 
-class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.ScoreConsumer]):
+class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.ScoreConsumer], ABC):
     """Tests for score consumers."""
 
     batch_size: int = 2
@@ -2750,6 +2750,7 @@ class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.Score
         self.instance(batch=batch, target=self.target, scores=scores)
         self.check(batch=batch, scores=scores)
 
+    @abstractmethod
     def check(self, batch: LongTensor, scores: FloatTensor) -> None:
         """Verify the consumer's state after consuming the scores for the given batch."""
         raise NotImplementedError
