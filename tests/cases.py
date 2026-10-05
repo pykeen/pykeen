@@ -10,11 +10,7 @@ import unittest
 from abc import ABC, abstractmethod
 from collections import ChainMap, Counter
 from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, MutableMapping, Sequence
-from typing import (
-    Any,
-    ClassVar,
-    TypeVar,
-)
+from typing import Any, ClassVar, TypeVar
 from unittest.case import SkipTest
 from unittest.mock import Mock, patch
 
@@ -2751,17 +2747,27 @@ class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.Score
         pass
 
 
-class CheckpointScheduleTests(GenericTestCase[CheckpointSchedule]):
+class CheckpointScheduleTests(GenericTestCase[CheckpointSchedule], ABC):
     """Generic tests for checkpoint schedules."""
 
     def test_call(self) -> None:
-        """Smoke-test for calling."""
+        """Test calling."""
+        checkpoint_steps = set()
         for step in self.iter_steps():
-            _result = self.instance(step=step)
+            result = self.instance(step=step)
+            assert isinstance(result, bool)
+            if result:
+                checkpoint_steps.add(step)
+        assert checkpoint_steps == self.expected_checkpoint_steps()
 
     def iter_steps(self) -> Iterator[int]:
         """Iterate over steps."""
         yield from range(20)
+
+    @abstractmethod
+    def expected_checkpoint_steps(self) -> set[int]:
+        """Return the steps from :meth:`iter_steps` for which a checkpoint should be created."""
+        raise NotImplementedError
 
 
 class CheckpointKeeperTests(GenericTestCase[CheckpointKeeper]):
