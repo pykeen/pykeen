@@ -1,6 +1,7 @@
 """Unit tests for triples factories."""
 
 import itertools as itt
+import logging
 import pickle
 import tempfile
 import unittest
@@ -21,6 +22,7 @@ from pykeen.triples.splitting import splitter_resolver
 from pykeen.triples.triples_factory import (
     INVERSE_SUFFIX,
     InvalidMappedTriplesShapeError,
+    Labeling,
     _map_triples_elements_to_ids,
     get_mapped_triples,
     valid_triple_id_range,
@@ -704,3 +706,78 @@ def test_condense(tf_one_hole: CoreTriplesFactory, entities: bool, relations: bo
     assert tf_new.num_entities == expected_num_entities
     expected_num_relations = tf_one_hole.num_relations - 1 if relations else tf_one_hole.num_relations
     assert tf_new.num_relations == expected_num_relations
+
+
+_LABELED_TRIPLES = np.array([["a", "r", "b"], ["b", "s", "c"]], dtype=str)
+
+
+_ENTITY = r"entity-to-ID mapping"
+_RELATION = r"relation-to-ID mapping"
+
+
+@pytest.mark.parametrize("compact_id", [False, True])
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        # non-injective mappings report the *original* IDs, also with compaction
+        ({"entity_to_id": {"a": 0, "b": 0, "c": 1}}, _ENTITY + r" is not injective.*0: \['a', 'b'\]"),
+        ({"relation_to_id": {"r": 3, "s": 3}}, _RELATION + r" is not injective.*3: \['r', 's'\]"),
+        # negative IDs
+        ({"entity_to_id": {"a": 0, "b": -1, "c": 1}}, _ENTITY + r" have to be non-negative.*'b', -1"),
+        ({"relation_to_id": {"r": 0, "s": -2}}, _RELATION + r" have to be non-negative.*'s', -2"),
+        # non-integer IDs
+        ({"entity_to_id": {"a": 0, "b": 1.5, "c": 1}}, _ENTITY + r" have to be integers.*'b', 1\.5"),
+        ({"entity_to_id": {"a": 0, "b": 2.0, "c": 1}}, _ENTITY + r" have to be integers.*'b', 2\.0"),
+        ({"entity_to_id": {"a": "0", "b": "1", "c": "2"}}, _ENTITY + r" have to be integers.*'a', '0'"),
+        ({"relation_to_id": {"r": "0", "s": "1"}}, _RELATION + r" have to be integers.*'r', '0'"),
+        ({"entity_to_id": {"a": False, "b": True, "c": 2}}, _ENTITY + r" have to be integers.*'a', False"),
+        ({"relation_to_id": {"r": np.bool_(True), "s": 1}}, _RELATION + r" have to be integers.*'r'"),
+    ],
+)
+def test_invalid_label_to_id(
+    kwargs: dict[str, Any], match: str, compact_id: bool, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that invalid user-provided label-to-ID mappings are rejected before compaction and mapping."""
+    with (
+        caplog.at_level(logging.WARNING, logger="pykeen.triples.triples_factory"),
+        pytest.raises(ValueError, match=match),
+    ):
+        TriplesFactory.from_labeled_triples(triples=_LABELED_TRIPLES, compact_id=compact_id, **kwargs)
+    # no misleading warnings (e.g., about unmappable triples) before the error
+    assert not caplog.records
+
+
+def test_non_injective_labeling_truncated_message() -> None:
+    """Test that the error message for many collisions is truncated."""
+    with pytest.raises(ValueError, match=r"100 ID\(s\) shared.*\.\.\. \(95 more\)"):
+        Labeling(label_to_id={f"{prefix}{i}": i for i in range(100) for prefix in "xy"})
+
+
+def test_non_injective_labeling_message_bounded() -> None:
+    """Test that the error message stays short when many labels share a single ID."""
+    with pytest.raises(ValueError, match=r"1 ID\(s\) shared.*\.\.\. \(99995 more\)") as exc_info:
+        Labeling(label_to_id={f"x{i}": 0 for i in range(100_000)})
+    assert len(str(exc_info.value)) < 500
+
+
+@pytest.mark.parametrize("compact_id", [False, True])
+def test_non_contiguous_label_to_id(compact_id: bool) -> None:
+    """Test that valid, but non-contiguous, label-to-ID mappings are accepted."""
+    entity_to_id = {"a": 0, "b": 7, "c": np.int64(3)}
+    relation_to_id = {"r": 5, "s": 1}
+    tf = TriplesFactory.from_labeled_triples(
+        triples=_LABELED_TRIPLES, entity_to_id=entity_to_id, relation_to_id=relation_to_id, compact_id=compact_id
+    )
+    if compact_id:
+        assert tf.entity_to_id == {"a": 0, "b": 2, "c": 1}
+        assert tf.relation_to_id == {"r": 1, "s": 0}
+        assert tf.num_entities == 3
+        assert tf.num_relations == 2
+    else:
+        assert tf.entity_to_id == entity_to_id
+        assert tf.relation_to_id == relation_to_id
+        assert tf.entity_id_to_label == {0: "a", 7: "b", 3: "c"}
+        assert tf.num_entities == 8
+        assert tf.num_relations == 6
+    # the triples are mapped consistently with the (possibly compacted) mappings
+    assert {tuple(t) for t in tf.triples.tolist()} == {tuple(t) for t in _LABELED_TRIPLES.tolist()}
