@@ -134,8 +134,8 @@ def tensor_to_df(
         )
 
     # convert to numpy
-    tensor = tensor.cpu().numpy()
-    data = dict(zip(["head_id", "relation_id", "tail_id"], tensor.T, strict=False))
+    array = tensor.cpu().numpy()
+    data = dict(zip(["head_id", "relation_id", "tail_id"], array.T, strict=False))
 
     # Additional columns
     for key, values in kwargs.items():
@@ -193,7 +193,7 @@ def compute_compressed_adjacency_list(
 def max_value(x: LongTensor) -> int | None:
     """Return the maximum value, or None if the tensor is empty."""
     if x.numel():
-        return x.max().item()
+        return int(x.max().item())
     return None
 
 
