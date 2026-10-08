@@ -432,7 +432,9 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         Each batch is an independently sampled subgraph; hence, a triple may occur in multiple batches of an epoch,
         or not at all. To keep the total number of sampled triples per epoch consistent with
         :class:`BatchedSLCWAInstances`, there are ``len(self)`` batches of size ``batch_size``, except for the last
-        batch, which has size ``num_triples % batch_size`` if this is non-zero and ``drop_last=False``.
+        batch, which has size ``num_triples % batch_size`` if this is non-zero and ``drop_last=False``. This last
+        subgraph is sampled with this smaller size, cf. :meth:`subgraph_sample`. In particular, if ``batch_size``
+        exceeds the number of triples and ``drop_last=False``, there is a single batch containing all triples.
 
         For multi-process data loading, the batch indices are partitioned among the workers, such that the batches of
         all workers add up to the same batches as for single-process loading.
@@ -442,9 +444,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         num_triples = len(self.mapped_triples)
         for batch_id in split_workload(len(self)):
             # the size of the last batch is num_triples % batch_size if it is incomplete (only if not drop_last)
-            batch_size = min(self.batch_size, num_triples - batch_id * self.batch_size)
-            # the subgraph is sampled sequentially, i.e., a prefix of a sample is a sample of the smaller size
-            yield self.subgraph_sample()[:batch_size]
+            yield self.subgraph_sample(size=min(self.batch_size, num_triples - batch_id * self.batch_size))
 
 
 class LCWAInstances(Instances[LCWABatch]):

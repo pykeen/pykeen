@@ -316,13 +316,22 @@ class SubGraphSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
 
     def test_iter_triple_ids_batch_sizes(self):
         """Test the number and sizes of batches for single- and (simulated) multi-process loading."""
-        num_triples = self.factory.num_triples
-        # 1592 triples: 398 divides evenly, 300 leaves a remainder of 92
-        for batch_size, num_workers, drop_last in itertools.product((300, 398), (None, 1, 2, 3), (False, True)):
-            with self.subTest(batch_size=batch_size, num_workers=num_workers, drop_last=drop_last):
+        # the first 13 triples leave some entities without incident edges; for these, batch size 4 leaves a remainder
+        # of 1, 13 divides evenly, and 20 exceeds the number of triples. All 1592 triples: 398 divides evenly, 300
+        # leaves a remainder of 92.
+        sizes = [(13, 4), (13, 13), (13, 20), (1592, 300), (1592, 398)]
+        assert self.factory.num_triples == 1592
+        for (num_triples, batch_size), num_workers, drop_last in itertools.product(
+            sizes, (None, 1, 2, 3), (False, True)
+        ):
+            with self.subTest(
+                num_triples=num_triples, batch_size=batch_size, num_workers=num_workers, drop_last=drop_last
+            ):
                 instance = SubGraphSLCWAInstances(
-                    mapped_triples=self.factory.mapped_triples, batch_size=batch_size, drop_last=drop_last
+                    mapped_triples=self.factory.mapped_triples[:num_triples], batch_size=batch_size, drop_last=drop_last
                 )
+                if num_triples == 13:
+                    assert (instance.degrees == 0).any()
                 if num_workers is None:
                     batches = list(instance.iter_triple_ids())
                 else:
@@ -338,8 +347,9 @@ class SubGraphSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
                     expected_sizes.append(remainder)
                 assert [len(batch) for batch in batches] == expected_sizes
                 for batch in batches:
-                    # each subgraph consists of distinct triples
+                    # each subgraph consists of distinct, valid triples
                     assert len(set(batch)) == len(batch)
+                    assert set(batch).issubset(range(num_triples))
 
     def test_data_loader_multiple_workers(self):
         """Test that the total number of sampled triples with a real multi-process data loader matches."""
