@@ -110,4 +110,5 @@ Name             Description
 ``docs``         Building of the documentation
 ``opt_einsum``   Improve performance of :func:`torch.einsum` by replacing with :func:`opt_einsum.contract`
 ``biomedicine``  Use of :mod:`pyobo` for lookup of biomedical entity labels
+``vision``       Visual representations with :mod:`torchvision`, cf. :mod:`pykeen.nn.vision`
 ================ =========================================================================================
