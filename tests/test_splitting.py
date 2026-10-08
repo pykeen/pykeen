@@ -10,12 +10,44 @@ from pykeen.triples.splitting import (
     DeterministicCleaner,
     RandomizedCleaner,
     _get_cover_deterministic,
+    _prepare_cleanup,
     get_absolute_split_sizes,
     normalize_ratios,
 )
 from pykeen.triples.utils import get_entities, get_relations
 from pykeen.utils import triple_tensor_to_set
 from tests.cases import CleanerTestCase, SplitterTestCase
+
+
+def _generate_rare_triples(
+    num_triples: int, num_entities: int, num_relations: int, seed: int
+) -> tuple[torch.LongTensor, torch.LongTensor]:
+    """Generate random triples with a heavy-tailed entity distribution, and split them into two parts."""
+    generator = torch.manual_seed(seed)
+    # heavy-tailed (Zipf-like) entity distribution => many rare entities
+    weights = 1.0 / torch.arange(1, num_entities + 1, dtype=torch.float)
+    heads, tails = torch.multinomial(weights, num_samples=2 * num_triples, replacement=True, generator=generator).view(
+        2, -1
+    )
+    relations = torch.randint(num_relations, size=(num_triples,), generator=generator)
+    triples = torch.stack([heads, relations, tails], dim=-1).unique(dim=0)
+    triples = triples[torch.randperm(triples.shape[0], generator=generator)]
+    num_reference = int(0.8 * triples.shape[0])
+    return triples[:num_reference], triples[num_reference:]
+
+
+def _legacy_randomized_cleanup_pair(
+    reference: torch.LongTensor, other: torch.LongTensor, generator: torch.Generator
+) -> tuple[torch.LongTensor, torch.LongTensor]:
+    """Clean up by moving one random candidate triple at a time (the original, quadratic implementation)."""
+    move_id_mask = _prepare_cleanup(reference, other)
+    while move_id_mask.any():
+        (candidates,) = move_id_mask.nonzero(as_tuple=True)
+        idx = candidates[torch.randint(candidates.shape[0], size=(1,), generator=generator)]
+        reference = torch.cat([reference, other[idx].view(1, -1)], dim=0)
+        other = torch.cat([other[:idx], other[idx + 1 :]], dim=0)
+        move_id_mask = _prepare_cleanup(reference, other)
+    return reference, other
 
 
 def test_get_absolute_split_sizes():
@@ -177,6 +209,52 @@ class RandomizedCleanerTests(CleanerTestCase):
             assert expected_testing_2 == new_testing
         else:
             self.fail("training was not correct")
+
+    def test_rare_entities(self):
+        """Test coverage, reproducibility, and the number of moved triples on random data with rare entities."""
+        reference, other = _generate_rare_triples(num_triples=3_000, num_entities=1_000, num_relations=20, seed=0)
+        # check for unclean split
+        assert not get_entities(other).issubset(get_entities(reference))
+
+        new_reference, new_other = self.instance.cleanup_pair(reference, other, random_state=42)
+        # check that no triple got lost, and triples were only moved from other to reference
+        assert triple_tensor_to_set(torch.cat([reference, other])) == triple_tensor_to_set(
+            torch.cat([new_reference, new_other])
+        )
+        assert triple_tensor_to_set(reference).issubset(triple_tensor_to_set(new_reference))
+        assert triple_tensor_to_set(new_other).issubset(triple_tensor_to_set(other))
+        # check coverage
+        assert get_entities(new_other).issubset(get_entities(new_reference))
+        assert get_relations(new_other).issubset(get_relations(new_reference))
+
+        # check reproducibility
+        for x, y in zip(
+            (new_reference, new_other), self.instance.cleanup_pair(reference, other, random_state=42), strict=True
+        ):
+            assert torch.equal(x, y)
+
+        # check number of moved triples: each moved triple covers at least one new ID, and we never move more than the
+        # deterministic cleaner
+        num_moved = new_reference.shape[0] - reference.shape[0]
+        num_uncovered = len(get_entities(other) - get_entities(reference)) + len(
+            get_relations(other) - get_relations(reference)
+        )
+        assert 0 < num_moved <= num_uncovered
+        assert num_moved <= int(_prepare_cleanup(reference, other).sum())
+
+        # compare against the original one-triple-at-a-time implementation (same distribution of moved triples)
+        num_seeds = 5
+        num_moved_new = []
+        num_moved_legacy = []
+        for seed in range(num_seeds):
+            num_moved_new.append(
+                self.instance.cleanup_pair(reference, other, random_state=seed)[0].shape[0] - reference.shape[0]
+            )
+            num_moved_legacy.append(
+                _legacy_randomized_cleanup_pair(reference, other, generator=torch.manual_seed(seed))[0].shape[0]
+                - reference.shape[0]
+            )
+        assert np.mean(num_moved_new) <= 1.1 * np.mean(num_moved_legacy)
 
 
 class CleanupSplitterTest(SplitterTestCase):

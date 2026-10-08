@@ -48,9 +48,9 @@ Randomized
 
 The randomized method is iterative: It determines all triples that have an entity or relation that is not covered by
 training triples, and randomly selects one of these triples to move into the training set. The process stops when all
-entities and relations are covered. Is usually requires multiple iterations and is therefore slower than the
-deterministic algorithm. However, it may find a smaller set of triples than the deterministic one and thus come closer
-to the desired split ratio.
+entities and relations are covered. It is implemented as a single pass over the candidate triples in random order and is
+slightly slower than the deterministic algorithm. However, it may find a smaller set of triples than the deterministic
+one and thus come closer to the desired split ratio.
 
 .. warning::
 
