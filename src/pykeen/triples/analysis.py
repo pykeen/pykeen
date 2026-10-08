@@ -689,6 +689,13 @@ def relation_pattern_types(
     $(x, z)$ pairs for composition (where the intermediate entity $y$ is projected out).
     The *confidence* is the proportion of these instantiations where the right-hand side is also true.
 
+    .. note ::
+
+        The returned support-confidence skyline also contains patterns supported by very few pairs, e.g., a single
+        triple, which can reach a confidence of 1.0. Consider filtering by a minimum support (in addition to a minimum
+        confidence), in particular for small or dense datasets, cf.
+        :func:`~pykeen.datasets.analysis.get_relation_pattern_types_df`.
+
     :param mapped_triples:
         A collection of ID-based triples.
     :returns:

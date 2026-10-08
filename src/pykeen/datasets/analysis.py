@@ -227,10 +227,16 @@ def get_relation_pattern_types_df(
     $(x, z)$ pairs for composition (where the intermediate entity $y$ is projected out).
     The *confidence* is the proportion of these instantiations where the right-hand side is also true.
 
+    .. note ::
+
+        With the default ``min_support=0``, patterns supported by very few pairs, e.g., a single triple, can reach a
+        confidence of 1.0 and thus pass the confidence threshold. Consider setting a minimum support, in particular
+        for small or dense datasets, such as :class:`~pykeen.datasets.Nations`.
+
     :param dataset:
         The dataset to investigate.
     :param min_support:
-        A minimum support for patterns.
+        A minimum support for patterns. Defaults to 0, i.e., no filtering by support; see the note above.
     :param min_confidence:
         A minimum confidence for the tested patterns.
     :param drop_confidence:
