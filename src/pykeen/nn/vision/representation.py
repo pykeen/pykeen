@@ -25,8 +25,9 @@ try:
     from PIL import Image
     from torchvision import models
     from torchvision import transforms as vision_transforms
+    from torchvision.models import feature_extraction
 except ImportError:
-    models = vision_transforms = Image = None
+    models = vision_transforms = feature_extraction = Image = None
 
 __all__ = [
     "ImageHint",
@@ -145,9 +146,7 @@ class VisualRepresentation(Representation):
 
         pool = functools.partial(torch.mean, dim=(-1, -2))
 
-        encoder = models.feature_extraction.create_feature_extractor(
-            model=encoder, return_nodes={layer_name: "feature"}
-        )
+        encoder = feature_extraction.create_feature_extractor(model=encoder, return_nodes={layer_name: "feature"})
 
         # infer shape
         with torch.inference_mode():
