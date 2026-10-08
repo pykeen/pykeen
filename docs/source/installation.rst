@@ -93,22 +93,27 @@ from in the same directory.
 Extras
 ------
 
-PyKEEN has several extras for installation that are defined in the ``[options.extras_require]`` section of the
-``setup.cfg``. They can be included with installation using the bracket notation like in ``pip install pykeen[docs]`` or
-``pip install -e .[docs]``. Several can be listed, comma-delimited like in ``pip install pykeen[docs,plotting]``.
+PyKEEN has several extras for installation that are defined in the ``[project.optional-dependencies]`` section of
+``pyproject.toml``. They can be included with installation using the bracket notation like in ``pip install
+pykeen[docs]`` or ``pip install -e .[docs]``. Several can be listed, comma-delimited like in ``pip install
+pykeen[docs,plotting]``.
 
 ================ =========================================================================================
 Name             Description
 ================ =========================================================================================
-``templating``   Building of templated documentation, like the README
-``plotting``     Plotting with ``seaborn`` and generation of word clouds
+``templating``   Building of templated documentation, like the README, with ``jinja2``
+``plotting``     Plotting, e.g., of losses and evaluation results, with ``matplotlib`` and ``seaborn``
+``wordcloud``    Generation of entity and relation word clouds with ``wordcloud`` in Jupyter notebooks
+``opt_einsum``   Improve performance of :func:`torch.einsum` by replacing with :func:`opt_einsum.contract`
 ``mlflow``       Tracking of results with ``mlflow``
+``ogb``          Datasets and evaluation from the Open Graph Benchmark with ``ogb``
 ``wandb``        Tracking of results with ``wandb``
 ``tensorboard``  Tracking of results with :mod:`tensorboard` via :mod:`torch.utils.tensorboard`
-``transformers`` Label-based initialization with ``transformers``.
+``transformers`` Text-based representations and label-based initialization with ``transformers``
+``lightning``    Training with PyTorch Lightning, cf. :mod:`pykeen.contrib.lightning`
+``biomedicine``  Use of ``pyobo`` and ``bioregistry`` for lookup of biomedical entity labels
 ``tests``        Code needed to run tests. Typically handled with ``tox -e py``
 ``docs``         Building of the documentation
-``opt_einsum``   Improve performance of :func:`torch.einsum` by replacing with :func:`opt_einsum.contract`
-``biomedicine``  Use of :mod:`pyobo` for lookup of biomedical entity labels
+``pyg``          Message passing representations with PyTorch Geometric, cf. :mod:`pykeen.nn.pyg`
 ``vision``       Visual representations with :mod:`torchvision`, cf. :mod:`pykeen.nn.vision`
 ================ =========================================================================================
