@@ -131,6 +131,11 @@ class CSGraphAnchorSearcher(AnchorSearcher):
     ) -> np.ndarray:
         # infer shape; entities without any edge only reach themselves (if they are an anchor)
         n = ensure_num_entities(edge_index, num_entities=num_entities)
+        if len(anchors) and (anchors.min() < 0 or anchors.max() >= n):
+            raise ValueError(
+                f"Anchor IDs must be in [0, {n}), but are in [{anchors.min()}, {anchors.max()}]. If some entities do "
+                f"not occur in the edge index, pass num_entities explicitly."
+            )
         # convert to adjacency matrix
         adjacency = edge_index_to_sparse_matrix(
             edge_index=torch.as_tensor(edge_index, dtype=torch.long), num_nodes=n
