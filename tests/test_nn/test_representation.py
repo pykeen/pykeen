@@ -287,7 +287,7 @@ class VisualRepresentationTestCase(cases.RepresentationTestCase):
             images=list(torch.rand(self.max_id, 3, 28, 28)),
             encoder="squeezenet1_0",
             layer_name="classifier.1",
-            encoder_kwargs=dict(num_classes=num_classes),
+            encoder_kwargs={"num_classes": num_classes},
             transforms=[],
             trainable=False,
         )
