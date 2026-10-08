@@ -82,12 +82,10 @@ def test_csgraph_chunked(num_entities: int, num_edges: int, num_anchors: int, k:
     """Test that chunked anchor search agrees with unchunked search and dense shortest path distances."""
     rng = np.random.default_rng(seed=seed)
     edge_index = rng.integers(num_entities, size=(2, num_edges))
-    # ensure that the largest entity ID occurs, since the number of entities is inferred from the edge index
-    edge_index[:, 0] = num_entities - 1
     anchors = rng.choice(num_entities, size=num_anchors, replace=False)
     cls = pykeen.nn.node_piece.CSGraphAnchorSearcher
-    expected = cls(chunk_size=num_anchors)(edge_index=edge_index, anchors=anchors, k=k)
-    result = cls(chunk_size=chunk_size)(edge_index=edge_index, anchors=anchors, k=k)
+    expected = cls(chunk_size=num_anchors)(edge_index=edge_index, anchors=anchors, k=k, num_entities=num_entities)
+    result = cls(chunk_size=chunk_size)(edge_index=edge_index, anchors=anchors, k=k, num_entities=num_entities)
     np.testing.assert_array_equal(result, expected)
 
     # compare against reference distances
@@ -110,6 +108,34 @@ def test_csgraph_chunked(num_entities: int, num_edges: int, num_anchors: int, k:
     with np.errstate(invalid="ignore"):  # inf - inf for unreachable anchors
         same = (np.diff(dist, axis=1) == 0) & reachable[:, 1:]
     assert (np.diff(result, axis=1)[same] > 0).all()
+
+
+@pytest.mark.parametrize("chunk_size", [1, 2, None])
+def test_csgraph_isolated_trailing_entities(chunk_size: int | None):
+    """Test that trailing entities without edges are included when num_entities is given."""
+    # path graph 0 - 1 - 2; entities 3, 4, 5 have no edges
+    edge_index = np.asarray([[0, 1], [1, 2]])
+    num_entities = 6
+    # entity 4 is an isolated anchor
+    anchors = np.asarray([0, 4, 2])
+    searcher = pykeen.nn.node_piece.CSGraphAnchorSearcher(chunk_size=chunk_size)
+    result = searcher(edge_index=edge_index, anchors=anchors, k=2, num_entities=num_entities)
+    expected = np.asarray(
+        [
+            [0, 2],
+            # tie at distance 1, broken by smaller anchor ID
+            [0, 2],
+            [2, 0],
+            [-1, -1],
+            # an isolated anchor only reaches itself
+            [1, -1],
+            [-1, -1],
+        ]
+    )
+    np.testing.assert_array_equal(result, expected)
+    # without num_entities, the number of entities is inferred from the edge index
+    result = searcher(edge_index=edge_index, anchors=anchors[[0, 2]], k=2)
+    np.testing.assert_array_equal(result, [[0, 1], [0, 1], [1, 0]])
 
 
 @pytest.mark.parametrize(("num_anchors", "num_entities", "k", "seed"), [(3, 7, 2, 0)])

@@ -129,11 +129,14 @@ class CSGraphAnchorSearcher(AnchorSearcher):
     def __call__(  # noqa: D102
         self, edge_index: np.ndarray, anchors: np.ndarray, k: int, num_entities: int | None = None
     ) -> np.ndarray:
+        # infer shape; entities without any edge only reach themselves (if they are an anchor)
+        n = ensure_num_entities(edge_index, num_entities=num_entities)
         # convert to adjacency matrix
-        adjacency = edge_index_to_sparse_matrix(edge_index=torch.as_tensor(edge_index, dtype=torch.long)).coalesce()
+        adjacency = edge_index_to_sparse_matrix(
+            edge_index=torch.as_tensor(edge_index, dtype=torch.long), num_nodes=n
+        ).coalesce()
         # convert to scipy sparse csr
         adjacency = scipy.sparse.coo_matrix((adjacency.values(), adjacency.indices()), shape=adjacency.shape).tocsr()
-        n = adjacency.shape[0]
         num_anchors = len(anchors)
         k = min(k, num_anchors)
         # we encode (distance, anchor ID) pairs as single float64 keys `distance * num_anchors + anchor_id`. This makes
