@@ -330,57 +330,90 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         self.degrees, self.offset, self.neighbors = compute_compressed_adjacency_list(
             mapped_triples=self.mapped_triples
         )
+        # numpy versions for the scalar-heavy sampling loop, cf. subgraph_sample. note: these need to be copies rather
+        # than views, since pickling for data loader workers may move the tensors' storage into shared memory.
+        self._degrees: np.ndarray = self.degrees.numpy().copy()
+        self._offset: np.ndarray = self.offset.numpy().copy()
+        self._entry_edge: np.ndarray = self.neighbors[:, 0].numpy().copy()
+        self._entry_other: np.ndarray = self.neighbors[:, 1].numpy().copy()
+        self._non_isolated: np.ndarray = np.flatnonzero(self._degrees > 0)
+
+    def _sample_unvisited_vertex(self, generator: np.random.Generator, visited: set[int]) -> int:
+        """Sample a vertex uniformly among the not yet visited vertices with at least one incident edge."""
+        candidates = self._non_isolated
+        # rejection sampling, which is efficient as long as only a small fraction of vertices has been visited
+        for _ in range(32):
+            vertex = int(candidates[generator.integers(len(candidates))])
+            if vertex not in visited:
+                return vertex
+        # exact fallback
+        candidates = np.setdiff1d(candidates, np.fromiter(visited, dtype=candidates.dtype, count=len(visited)))
+        if not len(candidates):
+            raise ValueError(f"Cannot sample {self.batch_size} distinct triples from {len(self.mapped_triples)}.")
+        return int(candidates[generator.integers(len(candidates))])
 
     def subgraph_sample(self) -> list[int]:
-        """Sample one subgraph."""
-        # initialize
-        node_weights = self.degrees.detach().clone()
-        edge_picked = torch.zeros(self.mapped_triples.shape[0], dtype=torch.bool)
-        node_picked = torch.zeros(self.degrees.shape[0], dtype=torch.bool)
+        """Sample one subgraph.
 
-        # sample iteratively
-        result = []
-        for _ in range(self.batch_size):
-            # determine weights
-            weights = node_weights * node_picked
+        The subgraph is grown iteratively: in each step, a vertex is chosen among the visited vertices with
+        probability proportional to its number of not yet picked incident edges, and one of these edges is chosen
+        uniformly at random. If no visited vertex has any remaining incident edges, a not yet visited vertex is chosen
+        uniformly at random (among those with at least one incident edge) instead. The other end of the chosen edge
+        becomes visited, too.
 
-            if torch.sum(weights) == 0:
-                # randomly choose a vertex which has not been chosen yet
-                pool = (~node_picked).nonzero()
-                chosen_vertex = pool[torch.randint(pool.numel(), size=())]
-            else:
-                # normalize to probabilities
-                probabilities = weights.float() / weights.sum().float()
-                chosen_vertex = torch.multinomial(probabilities, num_samples=1)[0]
+        Choosing a vertex proportionally to its number of remaining incident edges, and then one of these uniformly,
+        is the same as choosing uniformly among all remaining *half-edges* (i.e., adjacency list entries) of visited
+        vertices. Thus, we maintain a pool of half-edges of visited vertices, from which we draw uniformly. Half-edges
+        whose edge has already been picked via its other half are removed lazily when drawn. Since every draw removes
+        one entry from the pool, and each picked edge leaves at most one stale half-edge, sampling a batch requires at
+        most `2 * batch_size` half-edge draws.
 
-            # sample a start node
-            node_picked[chosen_vertex] = True
+        :returns: the triple IDs of the subgraph's edges, a list of length `batch_size`
+        """
+        # derive the numpy generator from torch's global RNG, such that sampling is reproducible via torch.manual_seed,
+        # and data loader worker processes, which torch seeds differently, obtain different streams
+        generator = np.random.default_rng(int(torch.randint(2**62, size=()).item()))
+        degrees, offset, entry_edge, entry_other = self._degrees, self._offset, self._entry_edge, self._entry_other
 
-            # get list of neighbors
-            start = self.offset[chosen_vertex]
-            chosen_node_degree = self.degrees[chosen_vertex].item()
-            stop = start + chosen_node_degree
-            adj_list = self.neighbors[start:stop, :]
+        # pool[:pool_size] contains the indices of the adjacency list entries of the visited vertices which have not
+        # been drawn yet
+        pool = np.empty_like(entry_edge)
+        pool_size = 0
+        visited: set[int] = set()
+        picked: set[int] = set()
+        result: list[int] = []
+        # draw uniform random numbers in chunks, since per-call overhead dominates for single draws
+        uniforms: list[float] = []
+        while len(result) < self.batch_size:
+            if not pool_size:
+                vertex = self._sample_unvisited_vertex(generator=generator, visited=visited)
+                visited.add(vertex)
+                start = offset[vertex]
+                pool_size = int(degrees[vertex])
+                pool[:pool_size] = np.arange(start, start + pool_size)
 
-            # sample an outgoing edge at random which has not been chosen yet using rejection sampling
-            chosen_edge_index = torch.randint(chosen_node_degree, size=(1,))[0]
-            chosen_edge = adj_list[chosen_edge_index]
-            edge_number = chosen_edge[0]
-            while edge_picked[edge_number]:
-                chosen_edge_index = torch.randint(chosen_node_degree, size=(1,))[0]
-                chosen_edge = adj_list[chosen_edge_index]
-                edge_number = chosen_edge[0]
-            result.append(edge_number.item())
+            # choose a half-edge uniformly
+            if not uniforms:
+                uniforms = generator.random(size=self.batch_size).tolist()
+            i = min(int(uniforms.pop() * pool_size), pool_size - 1)
+            entry = pool[i]
+            # remove it from the pool by swapping in the last element: it is either stale, or gets picked now
+            pool_size -= 1
+            pool[i] = pool[pool_size]
+            edge = int(entry_edge[entry])
+            if edge in picked:
+                continue
+            picked.add(edge)
+            result.append(edge)
 
-            edge_picked[edge_number] = True
-
-            # visit target node
-            other_vertex = chosen_edge[1]
-            node_picked[other_vertex] = True
-
-            # decrease sample counts
-            node_weights[chosen_vertex] -= 1
-            node_weights[other_vertex] -= 1
+            # visit the other end
+            other = int(entry_other[entry])
+            if other not in visited:
+                visited.add(other)
+                start = offset[other]
+                degree = int(degrees[other])
+                pool[pool_size : pool_size + degree] = np.arange(start, start + degree)
+                pool_size += degree
         return result
 
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
