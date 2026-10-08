@@ -320,7 +320,7 @@ class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
 class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
     """Pre-batched training instances for SLCWA of coherent subgraphs."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """Initialize the instances.
 
         :param kwargs: keyword-based parameters passed to :meth:`BaseBatchedSLCWAInstances.__init__`
@@ -349,10 +349,11 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         # exact fallback
         candidates = np.setdiff1d(candidates, np.fromiter(visited, dtype=candidates.dtype, count=len(visited)))
         if not len(candidates):
-            raise ValueError(f"Cannot sample {self.batch_size} distinct triples from {len(self.mapped_triples)}.")
+            # cannot happen when requesting at most as many edges as there are, cf. subgraph_sample
+            raise ValueError("There is no unvisited vertex with incident edges left.")
         return int(candidates[generator.integers(len(candidates))])
 
-    def subgraph_sample(self) -> list[int]:
+    def subgraph_sample(self, size: int | None = None) -> list[int]:
         """Sample one subgraph.
 
         The subgraph is grown iteratively: in each step, a vertex is chosen among the visited vertices with
@@ -366,10 +367,19 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         vertices. Thus, we maintain a pool of half-edges of visited vertices, from which we draw uniformly. Half-edges
         whose edge has already been picked via its other half are removed lazily when drawn. Since every draw removes
         one entry from the pool, and each picked edge leaves at most one stale half-edge, sampling a batch requires at
-        most `2 * batch_size` half-edge draws.
+        most `2 * size` half-edge draws.
 
-        :returns: the triple IDs of the subgraph's edges, a list of length `batch_size`
+        :param size: the number of edges to sample; defaults to :attr:`batch_size`. If it exceeds the number of
+            triples, all triples are returned (in the order in which the sampling process picks them).
+        :returns: the triple IDs of the subgraph's edges, a list of `min(size, num_triples)` unique IDs
+
+        :raises ValueError: if `size` is negative
         """
+        if size is None:
+            size = self.batch_size
+        if size < 0:
+            raise ValueError(f"size must be non-negative, but is {size}.")
+        size = min(size, len(self.mapped_triples))
         # derive the numpy generator from torch's global RNG, such that sampling is reproducible via torch.manual_seed,
         # and data loader worker processes, which torch seeds differently, obtain different streams
         generator = np.random.default_rng(int(torch.randint(2**62, size=()).item()))
@@ -384,7 +394,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         result: list[int] = []
         # draw uniform random numbers in chunks, since per-call overhead dominates for single draws
         uniforms: list[float] = []
-        while len(result) < self.batch_size:
+        while len(result) < size:
             if not pool_size:
                 vertex = self._sample_unvisited_vertex(generator=generator, visited=visited)
                 visited.add(vertex)
@@ -394,7 +404,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
 
             # choose a half-edge uniformly
             if not uniforms:
-                uniforms = generator.random(size=self.batch_size).tolist()
+                uniforms = generator.random(size=size).tolist()
             i = min(int(uniforms.pop() * pool_size), pool_size - 1)
             entry = pool[i]
             # remove it from the pool by swapping in the last element: it is either stale, or gets picked now

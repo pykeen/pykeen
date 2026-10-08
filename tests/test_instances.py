@@ -260,12 +260,26 @@ class SubGraphSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
             [[0, 0, 1], [1, 0, 2], [2, 0, 2], [0, 0, 1], [4, 0, 5], [5, 1, 5], [6, 0, 4]],
             dtype=torch.long,
         )
-        instance = SubGraphSLCWAInstances(mapped_triples=mapped_triples, batch_size=mapped_triples.shape[0])
+        num_triples = mapped_triples.shape[0]
+        instance = SubGraphSLCWAInstances(mapped_triples=mapped_triples, batch_size=num_triples)
         for _ in range(20):
-            assert sorted(instance.subgraph_sample()) == list(range(mapped_triples.shape[0]))
-        instance.batch_size += 1
-        with pytest.raises(ValueError, match="Cannot sample"):
-            instance.subgraph_sample()
+            assert sorted(instance.subgraph_sample()) == list(range(num_triples))
+        # requesting more triples than there are returns all of them
+        for size in (num_triples + 1, 2 * num_triples):
+            assert sorted(instance.subgraph_sample(size=size)) == list(range(num_triples))
+        instance.batch_size = num_triples + 1
+        assert sorted(instance.subgraph_sample()) == list(range(num_triples))
+
+    def test_subgraph_sample_size(self):
+        """Test sampling subgraphs of an explicitly requested size."""
+        assert self.instance.batch_size > 1
+        for size in range(self.instance.batch_size + 2):
+            triple_ids = self.instance.subgraph_sample(size=size)
+            assert len(triple_ids) == size
+            assert len(set(triple_ids)) == size
+            assert all(0 <= i < self.factory.num_triples for i in triple_ids)
+        with pytest.raises(ValueError, match="non-negative"):
+            self.instance.subgraph_sample(size=-1)
 
     def test_subgraph_sample_distribution(self):
         """Test that the empirical distribution of subgraph samples matches the exact one."""
