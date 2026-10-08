@@ -305,7 +305,9 @@ class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
         fake_image_path = pathlib.Path(self._tmp.name) / "fake.jpg"
-        Image.new("RGB", (256, 256)).save(fake_image_path)
+        # use a non-constant image: a blank one is encoded to all-zero features (bias-free convolutions followed by
+        # batch normalization), which makes, e.g., dropout ineffective
+        Image.effect_noise((256, 256), 64).convert("RGB").save(fake_image_path)
         wikidata_ids = kwargs["wikidata_ids"]
         mock_cache = MagicMock()
         mock_cache.get_image_paths.return_value = [fake_image_path] * (len(wikidata_ids) - 1) + [None]
