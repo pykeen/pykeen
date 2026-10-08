@@ -70,6 +70,7 @@ def test_normalize_invalid_ratio():
     """Test invalid ratios."""
     cases = [
         1.1,
+        2,
         [1.1],
         [0.8, 0.3],
         [0.8, 0.1, 0.2],
