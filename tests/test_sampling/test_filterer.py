@@ -1,5 +1,6 @@
 """Tests for filterers."""
 
+import warnings
 from collections.abc import MutableMapping
 from typing import Any
 
@@ -157,21 +158,47 @@ def test_default_filterer_fallback(caplog: pytest.LogCaptureFixture):
         filterer = make_default_filterer(mapped_triples=mapped_triples, **huge)
     assert isinstance(filterer, BloomFilterer)
     assert "Falling back" in caplog.text
-    # also via the negative sampler
-    sampler = BasicNegativeSampler(mapped_triples=mapped_triples, filtered=True, filterer_kwargs=huge)
-    assert isinstance(sampler.filterer, BloomFilterer)
-    # inferred sizes also trigger the fallback
+    # also via the negative sampler, with inferred sizes
     sampler = BasicNegativeSampler(
         mapped_triples=torch.as_tensor([[2**22, 2**20, 2**22]]), num_negs_per_pos=1, filtered=True
     )
     assert isinstance(sampler.filterer, BloomFilterer)
 
 
+def test_filterer_kwargs_without_filterer_deprecated():
+    """Test that filterer kwargs without an explicit filterer configure the bloom filterer, with a deprecation."""
+    mapped_triples = Nations().training.mapped_triples
+    with pytest.warns(DeprecationWarning, match="filterer='bloom'"):
+        sampler = BasicNegativeSampler(
+            mapped_triples=mapped_triples, filtered=True, filterer_kwargs={"error_rate": 0.0001}
+        )
+    assert isinstance(sampler.filterer, BloomFilterer)
+    assert sampler.filterer.error_rate == 0.0001
+    # empty kwargs use the default
+    sampler = BasicNegativeSampler(mapped_triples=mapped_triples, filtered=True, filterer_kwargs={})
+    assert isinstance(sampler.filterer, SortedKeyFilterer)
+
+
 def test_explicit_filterer_no_fallback():
     """Test that explicitly requested filterers are used, and the sorted key filterer does not fall back."""
     mapped_triples = Nations().training.mapped_triples
-    sampler = BasicNegativeSampler(mapped_triples=mapped_triples, filtered=True, filterer="bloom")
-    assert isinstance(sampler.filterer, BloomFilterer)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        sampler = BasicNegativeSampler(mapped_triples=mapped_triples, filtered=True, filterer="bloom")
+        assert isinstance(sampler.filterer, BloomFilterer)
+        sampler = BasicNegativeSampler(
+            mapped_triples=mapped_triples, filtered=True, filterer="bloom", filterer_kwargs={"error_rate": 0.0001}
+        )
+        assert isinstance(sampler.filterer, BloomFilterer)
+        assert sampler.filterer.error_rate == 0.0001
+        sampler = BasicNegativeSampler(
+            mapped_triples=mapped_triples,
+            filtered=True,
+            filterer="sorted-key",
+            filterer_kwargs={"num_entities": 100, "num_relations": 100},
+        )
+        assert isinstance(sampler.filterer, SortedKeyFilterer)
+        assert sampler.filterer.sizes.tolist() == [100, 100, 100]
     with pytest.raises(SortedKeyOverflowError):
         BasicNegativeSampler(
             mapped_triples=mapped_triples,
