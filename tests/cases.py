@@ -2056,6 +2056,22 @@ class AnchorSearcherTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSearcher
         for row in tokens.tolist():
             assert {k: v for k, v in Counter(row).items() if k >= 0 and v > 1} == {}, "duplicate token"
 
+    def test_call_more_tokens_than_anchors(self):
+        """Test __call__ with more tokens than anchors, which requires padding."""
+        num_anchors = len(self.anchors)
+        k = num_anchors + 2
+        tokens = self.instance(edge_index=self.edge_index, anchors=self.anchors, k=k)
+        # shape
+        assert tokens.shape == (self.num_entities, k)
+        # value range
+        assert (tokens >= -1).all()
+        assert (tokens < num_anchors).all()
+        # the excess columns are padding
+        assert (tokens[:, num_anchors:] == -1).all()
+        # no duplicates
+        for row in tokens.tolist():
+            assert {k: v for k, v in Counter(row).items() if k >= 0 and v > 1} == {}, "duplicate token"
+
 
 class TokenizerTestCase(GenericTestCase[pykeen.nn.node_piece.Tokenizer]):
     """Tests for tokenization."""

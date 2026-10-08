@@ -88,9 +88,13 @@ def test_csgraph_chunked(num_entities: int, num_edges: int, num_anchors: int, k:
     result = cls(chunk_size=chunk_size)(edge_index=edge_index, anchors=anchors, k=k, num_entities=num_entities)
     np.testing.assert_array_equal(result, expected)
 
+    # the result is padded with -1 if there are fewer than k anchors
+    assert result.shape == (num_entities, k)
+    assert (result[:, num_anchors:] == -1).all()
+    result = result[:, :num_anchors]
+
     # compare against reference distances
     k = min(k, num_anchors)
-    assert result.shape == (num_entities, k)
     adjacency = scipy.sparse.coo_matrix(
         (np.ones(num_edges), tuple(edge_index)), shape=(num_entities, num_entities)
     ).tocsr()

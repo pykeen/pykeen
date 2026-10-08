@@ -138,7 +138,6 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         # convert to scipy sparse csr
         adjacency = scipy.sparse.coo_matrix((adjacency.values(), adjacency.indices()), shape=adjacency.shape).tocsr()
         num_anchors = len(anchors)
-        k = min(k, num_anchors)
         # we encode (distance, anchor ID) pairs as single float64 keys `distance * num_anchors + anchor_id`. This makes
         # all finite keys unique, i.e., ties in distance are deterministically broken by the smaller anchor ID,
         # independent of the chunk size. Since unweighted distances are integers < n, the keys are exactly
@@ -162,12 +161,12 @@ class CSGraphAnchorSearcher(AnchorSearcher):
             keys *= num_anchors
             keys += np.arange(start, stop, dtype=np.float64)[:, None]
             best = self._merge_top_k(best=best, candidates=keys, k=k)
-        # sort by distance (and anchor ID), shape: (n, k)
+        # sort by distance (and anchor ID), shape: (n, min(k, num_anchors))
         best = np.sort(best.T, axis=1)
-        # decode anchor IDs; unreachable anchors are padded with -1, cf. the other searchers
+        # decode anchor IDs; unreachable anchors, and those exceeding the number of anchors, are padded with -1
         reachable = np.isfinite(best)
-        result = np.full(shape=best.shape, fill_value=-1, dtype=np.int64)
-        result[reachable] = best[reachable].astype(np.int64) % num_anchors
+        result = np.full(shape=(n, k), fill_value=-1, dtype=np.int64)
+        result[:, : best.shape[1]][reachable] = best[reachable].astype(np.int64) % num_anchors
         return result
 
 
@@ -437,7 +436,11 @@ class SparseBFSSearcher(AnchorSearcher):
         # values with distance 255 (or max for unsigned int8 type) are padding tokens
         indices[values == torch.iinfo(values.dtype).max] = -1
         # since the output is sorted, no need for random sampling, we just take top-k nearest
-        return indices[:, :k].detach().cpu().numpy()
+        top_k = indices[:, :k].detach().cpu().numpy()
+        # pad to k, if there are fewer than k anchors
+        result = np.full(shape=(top_k.shape[0], k), fill_value=-1, dtype=np.int64)
+        result[:, : top_k.shape[1]] = top_k
+        return result
 
     def __call__(  # noqa: D102
         self, edge_index: np.ndarray, anchors: np.ndarray, k: int, num_entities: int | None = None
@@ -500,11 +503,15 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
     ) -> np.ndarray:
         num_entities = ensure_num_entities(edge_index, num_entities=num_entities)
         result = np.full(shape=(num_entities, k), fill_value=-1)
+        # if there are fewer than k anchors, the remaining columns are padded with -1
+        num_selected = min(k, len(anchors))
         i = 0
         for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors, num_entities=num_entities):
             batch_size = batch_ppr.shape[0]
-            # select k anchors with largest ppr, shape: (batch_size, k)
-            result[i : i + batch_size, :] = torch.topk(batch_ppr, k=k, dim=-1, largest=True).indices.cpu().numpy()
+            # select k anchors with largest ppr, shape: (batch_size, num_selected)
+            result[i : i + batch_size, :num_selected] = (
+                torch.topk(batch_ppr, k=num_selected, dim=-1, largest=True).indices.cpu().numpy()
+            )
             i += batch_size
         return result
 
