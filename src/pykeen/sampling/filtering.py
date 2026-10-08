@@ -49,9 +49,33 @@ negative examples during training, the ``filtered`` keyword can be given to ``ne
     )
 
 PyKEEN implements several algorithms for filtering with different properties that can be chosen using the
-``filterer`` keyword argument in ``negative_sampler_kwargs``. By default, an fast and approximate algorithm is used in
-:class:`~pykeen.sampling.filtering.BloomFilterer`, which is based on
-`bloom filters <https://en.wikipedia.org/wiki/Bloom_filter>`_. The bloom filterer also has a configurable desired error
+``filterer`` keyword argument in ``negative_sampler_kwargs``. By default, the fast *and* exact
+:class:`~pykeen.sampling.filtering.SortedKeyFilterer` is used, which packs each triple into a single integer key and
+looks up negatives via binary search in a sorted tensor of the known triples' keys. It is pure PyTorch, and thus also
+runs on GPU. It can also be activated explicitly with:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    results = pipeline(
+        dataset='YAGO3-10',
+        model='PairRE',
+        training_loop='sLCWA',
+        negative_sampler='basic',
+        negative_sampler_kwargs=dict(
+            filtered=True,
+            filterer='sorted-key',
+        ),
+    )
+
+The packed keys need to fit into 64-bit integers, which is the case unless the product of the number of heads,
+relations, and tails is at least $2^{63}$. For such very large graphs, the default falls back to
+:class:`~pykeen.sampling.filtering.BloomFilterer` (and logs a warning); if the
+:class:`~pykeen.sampling.filtering.SortedKeyFilterer` is requested explicitly, an error is raised instead.
+
+The :class:`~pykeen.sampling.filtering.BloomFilterer` is a fast and approximate algorithm, which is based on
+`bloom filters <https://en.wikipedia.org/wiki/Bloom_filter>`_. The bloom filterer has a configurable desired error
 rate, which can be further lowered at the cost of increase in memory and computation costs.
 
 .. code-block:: python
@@ -72,8 +96,8 @@ rate, which can be further lowered at the cost of increase in memory and computa
         ),
     )
 
-If you want to have a guarantee that all known false negatives are filtered, you can use a slower implementation based
-on Python's built-in sets, the :class:`~pykeen.sampling.filtering.PythonSetFilterer`. It can be activated with:
+Another exact, but slower implementation is based on Python's built-in sets, the
+:class:`~pykeen.sampling.filtering.PythonSetFilterer`. It can be activated with:
 
 .. code-block:: python
 
@@ -87,25 +111,6 @@ on Python's built-in sets, the :class:`~pykeen.sampling.filtering.PythonSetFilte
         negative_sampler_kwargs=dict(
             filtered=True,
             filterer='python-set',
-        ),
-    )
-
-A fast *and* exact alternative is the :class:`~pykeen.sampling.filtering.SortedKeyFilterer`, which packs each
-triple into a single integer key and looks up negatives via binary search in a sorted tensor of the known triples' keys.
-It is pure PyTorch, and thus also runs on GPU. It can be activated with:
-
-.. code-block:: python
-
-    from pykeen.pipeline import pipeline
-
-    results = pipeline(
-        dataset='YAGO3-10',
-        model='PairRE',
-        training_loop='sLCWA',
-        negative_sampler='basic',
-        negative_sampler_kwargs=dict(
-            filtered=True,
-            filterer='sorted-key',
         ),
     )
 
@@ -140,6 +145,7 @@ from the filtered setting. For evaluation it makes sense to use all information 
 as solid evaluation results as possible.
 """  # noqa: D205, E501
 
+import logging
 import math
 from abc import abstractmethod
 from collections.abc import Iterable
@@ -156,8 +162,12 @@ __all__ = [
     "Filterer",
     "PythonSetFilterer",
     "SortedKeyFilterer",
+    "SortedKeyOverflowError",
     "filterer_resolver",
+    "make_default_filterer",
 ]
+
+logger = logging.getLogger(__name__)
 
 
 class Filterer(nn.Module):
@@ -367,6 +377,10 @@ class BloomFilterer(Filterer):
         return result
 
 
+class SortedKeyOverflowError(ValueError):
+    """Raised if the packed keys of a :class:`SortedKeyFilterer` would overflow 64-bit integers."""
+
+
 class SortedKeyFilterer(Filterer):
     r"""
     An exact filterer based on binary search over sorted integer keys.
@@ -387,8 +401,10 @@ class SortedKeyFilterer(Filterer):
     stored triples, and are thus reported as not contained (without computing their potentially colliding key).
 
     If $n_h \cdot n_r \cdot n_t \geq 2^{63}$, the keys would overflow the range of ``torch.long``, and a
-    :class:`ValueError` is raised upon initialization. This only happens for very large graphs, e.g., more than $2^{21}$
-    entities and relations each; in this case, use :class:`PythonSetFilterer` instead.
+    :class:`SortedKeyOverflowError` is raised upon initialization. This only happens for very large graphs, e.g., more
+    than $2^{21}$ entities and relations each; in this case, use :class:`BloomFilterer` or :class:`PythonSetFilterer`
+    instead. When this filterer is used as the default (cf. :func:`make_default_filterer`), it automatically falls back
+    to :class:`BloomFilterer`.
     """
 
     #: the sorted unique keys of the stored triples, shape: (num_unique_triples,)
@@ -416,8 +432,10 @@ class SortedKeyFilterer(Filterer):
             Providing a larger value does not change the results, but reduces the maximum supported graph size.
 
         :raises ValueError:
-            if the provided sizes are smaller than the IDs occurring in ``mapped_triples``, or if the packed keys would
-            overflow 64-bit integers.
+            if ``mapped_triples`` contains negative IDs, or if the provided sizes are smaller than the IDs occurring in
+            ``mapped_triples``.
+        :raises SortedKeyOverflowError:
+            if the packed keys would overflow 64-bit integers.
         """
         super().__init__()
         mapped_triples = torch.as_tensor(mapped_triples, dtype=torch.long)
@@ -438,9 +456,9 @@ class SortedKeyFilterer(Filterer):
                 sizes[c] = given
         # check for overflow; use Python integers, which have arbitrary precision
         if sizes[0] * sizes[1] * sizes[2] >= 2**63:
-            raise ValueError(
+            raise SortedKeyOverflowError(
                 f"The packed keys for sizes (heads, relations, tails)={tuple(sizes)} would overflow 64-bit integers. "
-                f"Use {PythonSetFilterer.__name__} instead.",
+                f"Use {BloomFilterer.__name__} or {PythonSetFilterer.__name__} instead.",
             )
         self.register_buffer(name="sizes", tensor=torch.as_tensor(sizes, dtype=torch.long))
         self.register_buffer(name="keys", tensor=torch.unique(self._pack(mapped_triples), sorted=True))
@@ -468,5 +486,35 @@ class SortedKeyFilterer(Filterer):
 #: A resolver for mapping filterers
 filterer_resolver: ClassResolver[Filterer] = ClassResolver.from_subclasses(
     base=Filterer,  # type: ignore[type-abstract]
-    default=BloomFilterer,
+    default=SortedKeyFilterer,
 )
+
+
+def make_default_filterer(mapped_triples: MappedTriples, **kwargs) -> Filterer:
+    """Create the default filterer.
+
+    The default filterer is the exact :class:`SortedKeyFilterer`. For very large graphs, where its packed keys would
+    overflow 64-bit integers, it falls back to the approximate :class:`BloomFilterer` with default parameters and logs
+    a warning.
+
+    .. note ::
+        The fallback is only applied for the default filterer. If a :class:`SortedKeyFilterer` is requested
+        explicitly, e.g., via ``filterer="sorted-key"``, a :class:`SortedKeyOverflowError` is raised instead.
+
+    :param mapped_triples: shape: (num_triples, 3)
+        The ID-based triples.
+    :param kwargs:
+        Additional keyword-based arguments passed to :class:`SortedKeyFilterer`. They are *not* passed to the fallback
+        :class:`BloomFilterer`.
+
+    :return:
+        The filterer.
+    """
+    try:
+        return SortedKeyFilterer(mapped_triples=mapped_triples, **kwargs)
+    except SortedKeyOverflowError as error:
+        logger.warning(
+            f"Falling back to the approximate {BloomFilterer.__name__} as the default filterer, since "
+            f"{SortedKeyFilterer.__name__} cannot be used: {error}",
+        )
+        return BloomFilterer(mapped_triples=mapped_triples)

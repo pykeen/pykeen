@@ -7,7 +7,7 @@ from typing import Any, ClassVar
 from class_resolver import HintOrType, normalize_string
 from torch import nn
 
-from .filtering import Filterer, filterer_resolver
+from .filtering import Filterer, filterer_resolver, make_default_filterer
 from ..constants import TARGET_TO_INDEX
 from ..typing import BoolTensor, LongTensor, MappedTriples, Target
 
@@ -74,22 +74,22 @@ class NegativeSampler(nn.Module):
         :param filtered: Whether proposed corrupted triples that are in the training data should be filtered. Defaults
             to False, since filtering is comparatively expensive and the effect on training is usually small.
         :param filterer: If filtered is set to True, this can be used to choose which filter module from
-            :mod:`pykeen.sampling.filtering` is used.
+            :mod:`pykeen.sampling.filtering` is used. If None, the exact
+            :class:`~pykeen.sampling.filtering.SortedKeyFilterer` is used, with a fallback to the approximate
+            :class:`~pykeen.sampling.filtering.BloomFilterer` for very large graphs, cf.
+            :func:`~pykeen.sampling.filtering.make_default_filterer`.
         :param filterer_kwargs: Additional keyword-based arguments passed to the filterer upon construction.
         """
         super().__init__()
         self.num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
         self.num_relations = num_relations or mapped_triples[:, 1].max().item() + 1
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
-        self.filterer = (
-            filterer_resolver.make(
-                filterer,
-                pos_kwargs=filterer_kwargs,
-                mapped_triples=mapped_triples,
-            )
-            if filterer is not None or filtered
-            else None
-        )
+        if filterer is not None:
+            self.filterer = filterer_resolver.make(filterer, pos_kwargs=filterer_kwargs, mapped_triples=mapped_triples)
+        elif filtered:
+            self.filterer = make_default_filterer(mapped_triples=mapped_triples, **(filterer_kwargs or {}))
+        else:
+            self.filterer = None
 
     @classmethod
     def get_normalized_name(cls) -> str:
