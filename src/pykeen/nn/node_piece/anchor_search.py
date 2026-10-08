@@ -290,15 +290,15 @@ class SparseBFSSearcher(AnchorSearcher):
         except ImportError as err:
             raise ImportError("Requires `torch_sparse` to be installed.") from err
 
-        num_entities = int(edge_list.max().item()) + 1
+        num_entities = edge_list.max().item() + 1
         # for each entity, determine anchor pool by BFS
         num_anchors = len(anchors)
 
-        anchor_ids = torch.tensor(anchors, dtype=torch.long, device=device)
+        anchors = torch.tensor(anchors, dtype=torch.long, device=device)
 
         # an array storing whether node i is reachable by anchor j
         reachable = torch.zeros((num_entities, num_anchors), dtype=torch.bool, device=device)
-        reachable[anchor_ids] = torch.eye(num_anchors, dtype=torch.bool, device=device)
+        reachable[anchors] = torch.eye(num_anchors, dtype=torch.bool, device=device)
 
         # an array indicating whether a node is closed, i.e., has found at least $k$ anchors
         final = torch.zeros((num_entities,), dtype=torch.bool, device=device)
@@ -308,7 +308,7 @@ class SparseBFSSearcher(AnchorSearcher):
         dtype = torch.uint8
         pool = torch.zeros((num_entities, num_anchors), dtype=dtype, device=device).fill_(torch.iinfo(dtype).max)
         # initial anchors are 0-hop away from themselves
-        pool[anchor_ids, torch.arange(len(anchor_ids), dtype=torch.long, device=device)] = 0
+        pool[anchors, torch.arange(len(anchors), dtype=torch.long, device=device)] = 0
 
         edge_list = edge_list.to(device)
         values = torch.ones_like(edge_list[0], dtype=torch.bool, device=device)
