@@ -126,6 +126,37 @@ class CSGraphAnchorSearcher(AnchorSearcher):
             merged = merged[:k]
         return merged
 
+    @staticmethod
+    def _bfs_distances(adjacency: scipy.sparse.csr_matrix, sources: np.ndarray) -> np.ndarray:
+        """Compute hop distances from the given sources to all nodes by one breadth-first search per source.
+
+        This is equivalent to, but faster than, :func:`scipy.sparse.csgraph.shortest_path` with `unweighted=True`.
+
+        :param adjacency: shape: (n, n) the symmetric adjacency matrix
+        :param sources: shape: (s,) the source node IDs
+
+        :returns: shape: (s, n) the hop distances, with `inf` for unreachable nodes
+        """
+        n = adjacency.shape[0]
+        distances = np.full(shape=(len(sources), n), fill_value=np.inf)
+        # the position of each node in the BFS order; only entries of reached nodes are (re-)written and read
+        position = np.empty(shape=(n,), dtype=np.int64)
+        for distances_row, source in zip(distances, sources.tolist(), strict=True):
+            order, predecessors = scipy.sparse.csgraph.breadth_first_order(
+                csgraph=adjacency, i_start=source, directed=True, return_predecessors=True
+            )
+            position[order] = np.arange(len(order))
+            # since nodes are discovered in the order of their predecessors, the predecessors' positions are
+            # non-decreasing along the BFS order. Thus, the nodes of level d + 1 are a contiguous block, consisting of
+            # all nodes whose predecessor is at level d, and its end can be found by binary search
+            predecessor_position = position[predecessors[order[1:]]]
+            level_ends = [1]
+            while level_ends[-1] < len(order):
+                level_ends.append(1 + int(np.searchsorted(predecessor_position, level_ends[-1], side="left")))
+            level_sizes = np.diff(level_ends, prepend=0)
+            distances_row[order] = np.repeat(np.arange(len(level_sizes), dtype=np.float64), level_sizes)
+        return distances
+
     def __call__(  # noqa: D102
         self, edge_index: np.ndarray, anchors: np.ndarray, k: int, num_entities: int | None = None
     ) -> np.ndarray:
@@ -142,6 +173,8 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         ).coalesce()
         # convert to scipy sparse csr
         adjacency = scipy.sparse.coo_matrix((adjacency.values(), adjacency.indices()), shape=adjacency.shape).tocsr()
+        # symmetrize once, such that the breadth-first search can operate on a directed graph
+        adjacency = (adjacency + adjacency.transpose()).tocsr()
         num_anchors = len(anchors)
         k = min(k, num_anchors)
         # we encode (distance, anchor ID) pairs as single float64 keys `distance * num_anchors + anchor_id`. This makes
@@ -156,13 +189,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         for start in range(0, num_anchors, chunk_size):
             stop = min(start + chunk_size, num_anchors)
             # compute distances between anchors and all nodes, shape: (chunk_size, num_entities)
-            keys = scipy.sparse.csgraph.shortest_path(
-                csgraph=adjacency,
-                directed=False,
-                return_predecessors=False,
-                unweighted=True,
-                indices=anchors[start:stop],
-            )
+            keys = self._bfs_distances(adjacency=adjacency, sources=anchors[start:stop])
             # encode, in-place
             keys *= num_anchors
             keys += np.arange(start, stop, dtype=np.float64)[:, None]
