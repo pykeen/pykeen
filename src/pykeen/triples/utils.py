@@ -176,17 +176,25 @@ def compute_compressed_adjacency_list(
 
             adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
     """
-    num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
-    adj_lists: list[list[tuple[int, float]]] = [[] for _ in range(num_entities)]
-    for i, (s, _, o) in enumerate(mapped_triples):
-        adj_lists[s].append((i, o.item()))
-        adj_lists[o].append((i, s.item()))
-    degrees = torch.tensor([len(a) for a in adj_lists], dtype=torch.long)
+    mapped_triples = mapped_triples.to(device="cpu", dtype=torch.long)
+    max_id = int(mapped_triples[:, [0, 2]].max().item())
+    num_vertices = num_entities or max_id + 1
+    heads, tails = mapped_triples[:, 0], mapped_triples[:, 2]
+    triple_ids = torch.arange(mapped_triples.shape[0])
+    # each triple (h, r, t) contributes the entry (i, t) to the adjacency list of h, followed by the entry (i, h) to
+    # the adjacency list of t; for self-loops, this results in two (identical) entries.
+    vertices = torch.stack([heads, tails], dim=-1).view(-1)
+    entries = torch.stack(
+        [triple_ids.repeat_interleave(2), torch.stack([tails, heads], dim=-1).view(-1)],
+        dim=-1,
+    )
+    # a stable sort by vertex keeps the entries of each vertex in the order of the triples
+    compressed_adj_lists = entries[torch.sort(vertices, stable=True).indices]
+    degrees = torch.bincount(vertices, minlength=num_vertices)
 
-    offset = torch.empty(num_entities, dtype=torch.long)
+    offset = torch.empty(num_vertices, dtype=torch.long)
     offset[0] = 0
     offset[1:] = torch.cumsum(degrees, dim=0)[:-1]
-    compressed_adj_lists = torch.cat([torch.as_tensor(adj_list, dtype=torch.long) for adj_list in adj_lists], dim=0)
     return degrees, offset, compressed_adj_lists
 
 
