@@ -58,6 +58,60 @@ class CSGraphAnchorSearcherTests(cases.AnchorSearcherTestCase):
     cls = pykeen.nn.node_piece.CSGraphAnchorSearcher
 
 
+class ChunkedCSGraphAnchorSearcherTests(cases.AnchorSearcherTestCase):
+    """Tests for anchor search with scipy.sparse.csgraph, using small chunks."""
+
+    cls = pykeen.nn.node_piece.CSGraphAnchorSearcher
+    kwargs: ClassVar[Mapping[str, Any]] = {"chunk_size": 2}
+
+
+@pytest.mark.parametrize(
+    ("num_entities", "num_edges", "num_anchors", "k", "seed"),
+    [
+        (50, 60, 10, 3, 0),
+        # sparse graph with many unreachable anchors
+        (80, 30, 12, 4, 1),
+        # k larger than the number of anchors
+        (30, 50, 3, 5, 2),
+        # many ties
+        (100, 400, 40, 8, 3),
+    ],
+)
+@pytest.mark.parametrize("chunk_size", [1, 3, 7])
+def test_csgraph_chunked(num_entities: int, num_edges: int, num_anchors: int, k: int, seed: int, chunk_size: int):
+    """Test that chunked anchor search agrees with unchunked search and dense shortest path distances."""
+    rng = np.random.default_rng(seed=seed)
+    edge_index = rng.integers(num_entities, size=(2, num_edges))
+    # ensure that the largest entity ID occurs, since the number of entities is inferred from the edge index
+    edge_index[:, 0] = num_entities - 1
+    anchors = rng.choice(num_entities, size=num_anchors, replace=False)
+    cls = pykeen.nn.node_piece.CSGraphAnchorSearcher
+    expected = cls(chunk_size=num_anchors)(edge_index=edge_index, anchors=anchors, k=k)
+    result = cls(chunk_size=chunk_size)(edge_index=edge_index, anchors=anchors, k=k)
+    np.testing.assert_array_equal(result, expected)
+
+    # compare against reference distances
+    k = min(k, num_anchors)
+    assert result.shape == (num_entities, k)
+    adjacency = scipy.sparse.coo_matrix(
+        (np.ones(num_edges), tuple(edge_index)), shape=(num_entities, num_entities)
+    ).tocsr()
+    distances = scipy.sparse.csgraph.shortest_path(
+        csgraph=adjacency, directed=False, unweighted=True, indices=anchors
+    ).T
+    exp_dist = np.sort(distances, axis=1)[:, :k]
+    # unreachable anchors are padded with -1
+    reachable = np.isfinite(exp_dist)
+    np.testing.assert_array_equal(result >= 0, reachable)
+    # the selected anchors have the k smallest distances, in ascending order
+    dist = np.take_along_axis(distances, np.maximum(result, 0), axis=1)
+    np.testing.assert_array_equal(dist[reachable], exp_dist[reachable])
+    # ties are broken by the smaller anchor ID
+    with np.errstate(invalid="ignore"):  # inf - inf for unreachable anchors
+        same = (np.diff(dist, axis=1) == 0) & reachable[:, 1:]
+    assert (np.diff(result, axis=1)[same] > 0).all()
+
+
 @pytest.mark.parametrize(("num_anchors", "num_entities", "k", "seed"), [(3, 7, 2, 0)])
 def test_top_k_indices(num_anchors: int, num_entities: int, k: int, seed: int) -> None:
     """Test top-k index calculation."""

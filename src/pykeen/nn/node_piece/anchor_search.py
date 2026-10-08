@@ -80,6 +80,52 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         top_dist = np.take_along_axis(arr=array, indices=top_k_indices, axis=0)
         return np.take_along_axis(arr=top_k_indices, indices=np.argsort(top_dist, axis=0), axis=0)
 
+    def __init__(self, chunk_size: int | None = None, max_memory: int = 2**28) -> None:
+        """Initialize the searcher.
+
+        The shortest path distances are computed for chunks of anchors at a time, and merged into a running top-$k$.
+        Thus, only a `(chunk_size, num_entities)` distance matrix has to be kept in memory instead of the full
+        `(num_anchors, num_entities)` one.
+
+        :param chunk_size: the number of anchors for which to compute shortest path distances at once. If `None`, it
+            is derived from `max_memory`.
+        :param max_memory: the (approximate) memory budget in bytes for a single chunk's float64 distance matrix. Only
+            used if `chunk_size` is `None`.
+
+        :raises ValueError: if `chunk_size` or `max_memory` are not positive
+        """
+        if chunk_size is not None and chunk_size <= 0:
+            raise ValueError(f"chunk_size must be positive, but is {chunk_size}")
+        if max_memory <= 0:
+            raise ValueError(f"max_memory must be positive, but is {max_memory}")
+        self.chunk_size = chunk_size
+        self.max_memory = max_memory
+
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        yield f"chunk_size={self.chunk_size}"
+        yield f"max_memory={self.max_memory}"
+
+    @staticmethod
+    def _merge_top_k(best: np.ndarray, candidates: np.ndarray, k: int) -> np.ndarray:
+        """Merge new candidates into the running top-$k$ (unsorted).
+
+        :param best: shape: (k', n) the current $k' <= k$ smallest keys for each entity
+        :param candidates: shape: (c, n) the new candidate keys; will be modified in-place
+        :param k: the value of $k$
+
+        :returns: shape: (min(k, k' + c), n) the $k$ smallest keys among both inputs, in arbitrary order
+        """
+        # reduce the chunk to its top-k first (in-place) to avoid copying the full chunk
+        if candidates.shape[0] > k:
+            candidates.partition(k - 1, axis=0)
+            candidates = candidates[:k]
+        merged = np.concatenate([best, candidates], axis=0)
+        if merged.shape[0] > k:
+            merged.partition(k - 1, axis=0)
+            merged = merged[:k]
+        return merged
+
     def __call__(  # noqa: D102
         self, edge_index: np.ndarray, anchors: np.ndarray, k: int, num_entities: int | None = None
     ) -> np.ndarray:
@@ -87,16 +133,39 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         adjacency = edge_index_to_sparse_matrix(edge_index=torch.as_tensor(edge_index, dtype=torch.long)).coalesce()
         # convert to scipy sparse csr
         adjacency = scipy.sparse.coo_matrix((adjacency.values(), adjacency.indices()), shape=adjacency.shape).tocsr()
-        # compute distances between anchors and all nodes, shape: (num_anchors, num_entities)
-        distances = scipy.sparse.csgraph.shortest_path(
-            csgraph=adjacency,
-            directed=False,
-            return_predecessors=False,
-            unweighted=True,
-            indices=anchors,
-        )
-        # TODO: padding for unreachable?
-        return self.topk_argpartition(array=distances, k=k).T
+        n = adjacency.shape[0]
+        num_anchors = len(anchors)
+        k = min(k, num_anchors)
+        # we encode (distance, anchor ID) pairs as single float64 keys `distance * num_anchors + anchor_id`. This makes
+        # all finite keys unique, i.e., ties in distance are deterministically broken by the smaller anchor ID,
+        # independent of the chunk size. Since unweighted distances are integers < n, the keys are exactly
+        # representable as long as n * num_anchors <= 2**53. Unreachable anchors have an infinite key.
+        if n * num_anchors > 2**53:
+            raise ValueError(f"Too many entities and anchors for exact key encoding: {n=:_}, {num_anchors=:_}")
+        chunk_size = self.chunk_size or max(1, self.max_memory // (8 * max(n, 1)))
+        # the running top-k keys, shape: (k', n)
+        best = np.empty(shape=(0, n), dtype=np.float64)
+        for start in range(0, num_anchors, chunk_size):
+            stop = min(start + chunk_size, num_anchors)
+            # compute distances between anchors and all nodes, shape: (chunk_size, num_entities)
+            keys = scipy.sparse.csgraph.shortest_path(
+                csgraph=adjacency,
+                directed=False,
+                return_predecessors=False,
+                unweighted=True,
+                indices=anchors[start:stop],
+            )
+            # encode, in-place
+            keys *= num_anchors
+            keys += np.arange(start, stop, dtype=np.float64)[:, None]
+            best = self._merge_top_k(best=best, candidates=keys, k=k)
+        # sort by distance (and anchor ID), shape: (n, k)
+        best = np.sort(best.T, axis=1)
+        # decode anchor IDs; unreachable anchors are padded with -1, cf. the other searchers
+        reachable = np.isfinite(best)
+        result = np.full(shape=best.shape, fill_value=-1, dtype=np.int64)
+        result[reachable] = best[reachable].astype(np.int64) % num_anchors
+        return result
 
 
 class ScipySparseAnchorSearcher(AnchorSearcher):
