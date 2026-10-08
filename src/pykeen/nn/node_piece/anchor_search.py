@@ -222,13 +222,17 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
     ) -> np.ndarray:
         """Determine the candidate pool using breadth-first search.
 
+        For each node, the candidate pool consists of all anchors within the smallest number of hops $d$ such that at
+        least $k$ anchors are within $d$ hops. If there is no such $d <= $ `max_iter`, e.g., since fewer than $k$
+        anchors are reachable, the pool consists of all anchors reachable within `max_iter` hops.
+
         :param anchors: shape: (a,) the anchor node IDs
         :param adjacency: shape: (n, n) the adjacency matrix
         :param max_iter: the maximum number of hops to consider
         :param k: the minimum number of anchor nodes to reach
 
-        :returns: shape: (n, a) a boolean array indicating whether anchor $j$ is in the set of $k$ closest anchors for
-            node $i$
+        :returns: shape: (n, a) the number of hops between node $i$ and anchor $j$ if anchor $j$ is in the candidate
+            pool of node $i$, and -1 otherwise
         """
         num_entities = adjacency.shape[0]
         # for each entity, determine anchor pool by BFS
@@ -238,36 +242,32 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         reachable = np.zeros(shape=(num_entities, num_anchors), dtype=bool)
         reachable[anchors] = np.eye(num_anchors, dtype=bool)
 
-        # an array indicating whether a node is closed, i.e., has found at least $k$ anchors
-        final = np.zeros(shape=(num_entities,), dtype=bool)
-
-        # the output
-        pool = np.zeros(shape=(num_entities, num_anchors), dtype=bool)
+        # the output: the number of hops at which anchor j was first reached from node i, or -1
+        pool = np.full(shape=(num_entities, num_anchors), fill_value=-1, dtype=np.min_scalar_type(-max_iter - 1))
         # anchor nodes have themselves as a starting found anchor
-        pool[anchors] = np.eye(num_anchors, dtype=bool)
+        pool[reachable] = 0
 
-        # TODO: take all (q-1) hop neighbors before selecting from q-hop
+        # an array indicating whether a node is closed, i.e., has found at least $k$ anchors
+        final = reachable.sum(axis=1) >= k
+
         old_reachable = reachable
         for i in range(max_iter):
+            # stop once we have enough
+            if final.all():
+                break
             # propagate one hop
             reachable = adjacency.dot(reachable)
             # convergence check
             if (reachable == old_reachable).all():
                 logger.warning(f"Search converged after iteration {i} without all nodes being reachable.")
                 break
+            # add newly reached anchors to the pool of nodes which have not yet seen enough anchors
+            pool[reachable & ~old_reachable & ~final[:, None]] = i + 1
             old_reachable = reachable
-            # copy pool if we have seen enough anchors and have not yet stopped
-            num_reachable = reachable.sum(axis=1)
-            enough = num_reachable >= k
-            mask = enough & ~final
+            final |= reachable.sum(axis=1) >= k
             logger.debug(
-                f"Iteration {i}: {format_relative_comparison(enough.sum(), total=num_entities)} closed nodes.",
+                f"Iteration {i}: {format_relative_comparison(int(final.sum()), total=num_entities)} closed nodes.",
             )
-            pool[mask] = reachable[mask]
-            # stop once we have enough
-            final |= enough
-            if final.all():
-                break
         return pool
 
     @staticmethod
@@ -275,9 +275,9 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         pool: np.ndarray,
         k: int,
     ) -> np.ndarray:
-        """Select $k$ anchors from the given pools.
+        """Select the $k$ closest anchors from the given pools, breaking ties randomly.
 
-        :param pool: shape: (n, a) the anchor candidates for each node (a binary array)
+        :param pool: shape: (n, a) the number of hops to each candidate anchor, or -1 for non-candidates
         :param k: the number of candidates to select
 
         :returns: shape: (n, k) the selected anchors. May contain -1 if there is an insufficient number of candidates
@@ -286,8 +286,10 @@ class ScipySparseAnchorSearcher(AnchorSearcher):
         generator = np.random.default_rng()
         # TODO: can we replace this loop with something vectorized?
         for i, row in enumerate(pool):
-            (this_pool,) = row.nonzero()
-            chosen = generator.choice(a=this_pool, size=min(k, this_pool.size), replace=False, shuffle=False)
+            (this_pool,) = (row >= 0).nonzero()
+            # shuffle for random tie-breaking, then (stable) sort by distance
+            this_pool = generator.permutation(this_pool)
+            chosen = this_pool[np.argsort(row[this_pool], kind="stable")[:k]]
             tokens[i, : len(chosen)] = chosen
         return tokens
 
@@ -509,9 +511,11 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         for batch_ppr in self._iter_ppr(edge_index=edge_index, anchors=anchors, num_entities=num_entities):
             batch_size = batch_ppr.shape[0]
             # select k anchors with largest ppr, shape: (batch_size, num_selected)
-            result[i : i + batch_size, :num_selected] = (
-                torch.topk(batch_ppr, k=num_selected, dim=-1, largest=True).indices.cpu().numpy()
-            )
+            values, indices = torch.topk(batch_ppr, k=num_selected, dim=-1, largest=True)
+            # anchors with zero PPR did not receive any probability mass, i.e., they are unreachable (or too far away
+            # to be reached before convergence); since they would be ranked arbitrarily, we pad them instead
+            indices[values <= 0] = -1
+            result[i : i + batch_size, :num_selected] = indices.cpu().numpy()
             i += batch_size
         return result
 
@@ -542,7 +546,9 @@ class PersonalizedPageRankAnchorSearcher(AnchorSearcher):
         for start in progress:
             # run page-rank calculation, shape: (batch_size, n)
             ppr = page_rank(
-                adj=adj, x0=prepare_x0(indices=range(start, start + self.batch_size), n=n), **self.page_rank_kwargs
+                adj=adj,
+                x0=prepare_x0(indices=range(start, min(start + self.batch_size, n)), n=n),
+                **self.page_rank_kwargs,
             )
             # select PPR values for the anchors, shape: (batch_size, num_anchors)
             yield ppr[:, anchors_torch.to(ppr.device)]

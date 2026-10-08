@@ -191,9 +191,30 @@ class ScipySparseAnchorSearcherTests(cases.AnchorSearcherTestCase):
             indices=anchors,
         )
         k_dist = np.partition(distances, kth=k, axis=0)[:k, :].T.max(axis=1)
-        exp_pool = ((distances <= k_dist) & (k_dist <= max_iter)).T
+        # nodes which do not reach k anchors within max_iter hops keep all anchors reachable within max_iter hops
+        exp_pool = (distances <= np.minimum(k_dist, max_iter)).T
 
-        np.testing.assert_array_equal(pool, exp_pool)
+        np.testing.assert_array_equal(pool >= 0, exp_pool)
+        # the pool contains the number of hops
+        np.testing.assert_array_equal(pool[exp_pool], distances.T[exp_pool])
+
+    def test_select_closest(self):
+        """Test that the closest anchors are selected."""
+        num_entities, num_edges, num_anchors, k = 60, 70, 15, 4
+        rng = np.random.default_rng(seed=0)
+        edge_index = rng.integers(num_entities, size=(2, num_edges))
+        anchors = rng.choice(num_entities, size=num_anchors, replace=False)
+        searcher = pykeen.nn.node_piece.ScipySparseAnchorSearcher(max_iter=num_entities)
+        tokens = searcher(edge_index=edge_index, anchors=anchors, k=k, num_entities=num_entities)
+        adjacency = searcher.create_adjacency(edge_index=edge_index, num_entities=num_entities)
+        distances = scipy.sparse.csgraph.shortest_path(
+            csgraph=adjacency, directed=False, unweighted=True, indices=anchors
+        ).T
+        exp_dist = np.sort(distances, axis=1)[:, :k]
+        reachable = np.isfinite(exp_dist)
+        np.testing.assert_array_equal(tokens >= 0, reachable)
+        dist = np.take_along_axis(distances, np.maximum(tokens, 0), axis=1)
+        np.testing.assert_array_equal(dist[reachable], exp_dist[reachable])
 
 
 @needs_packages("torch_sparse")
@@ -207,6 +228,24 @@ class PersonalizedPageRankAnchorSearcherTests(cases.AnchorSearcherTestCase):
     """Tests for anchor search via PPR."""
 
     cls = pykeen.nn.node_piece.PersonalizedPageRankAnchorSearcher
+
+
+@pytest.mark.parametrize("batch_size", [2, 4, 5])
+def test_ppr_batch_size(batch_size: int):
+    """Test PPR anchor search with a number of entities which is not divisible by the batch size."""
+    num_entities = 33
+    edge_index = np.stack([np.arange(num_entities - 1), np.arange(1, num_entities)])
+    anchors = np.arange(0, num_entities, 10)
+    cls = pykeen.nn.node_piece.PersonalizedPageRankAnchorSearcher
+    ppr = np.concatenate(
+        list(cls(batch_size=batch_size)._iter_ppr(edge_index=edge_index, anchors=anchors, num_entities=num_entities))
+    )
+    exp_ppr = np.concatenate(
+        list(cls(batch_size=1)._iter_ppr(edge_index=edge_index, anchors=anchors, num_entities=num_entities))
+    )
+    np.testing.assert_allclose(ppr, exp_ppr, atol=1.0e-03)
+    tokens = cls(batch_size=batch_size)(edge_index=edge_index, anchors=anchors, k=2, num_entities=num_entities)
+    assert tokens.shape == (num_entities, 2)
 
 
 class AnchorSearcherMetaTestCase(unittest_templates.MetaTestCase[pykeen.nn.node_piece.AnchorSearcher]):

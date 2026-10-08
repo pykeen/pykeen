@@ -2056,6 +2056,24 @@ class AnchorSearcherTestCase(GenericTestCase[pykeen.nn.node_piece.AnchorSearcher
         for row in tokens.tolist():
             assert {k: v for k, v in Counter(row).items() if k >= 0 and v > 1} == {}, "duplicate token"
 
+    def test_call_disconnected(self):
+        """Test __call__ on a disconnected graph, where some anchors are unreachable."""
+        # two cycles 0-...-5 and 6-...-11, and an isolated entity 12
+        cycle = np.arange(6)
+        edge_index = np.concatenate([np.stack([cycle, np.roll(cycle, -1)]) + offset for offset in (0, 6)], axis=1)
+        num_entities = 13
+        # two anchors in the first, one anchor in the second component
+        anchors = np.asarray([0, 3, 7])
+        # more tokens than reachable anchors for every entity
+        k = 3
+        tokens = self.instance(edge_index=edge_index, anchors=anchors, k=k, num_entities=num_entities)
+        assert tokens.shape == (num_entities, k)
+        # every entity gets exactly the anchors of its component, followed by padding
+        expected = [{0, 1}] * 6 + [{2}] * 6 + [set()]
+        for row, exp in zip(tokens.tolist(), expected, strict=True):
+            assert set(row[: len(exp)]) == exp
+            assert row[len(exp) :] == [-1] * (k - len(exp))
+
     def test_call_more_tokens_than_anchors(self):
         """Test __call__ with more tokens than anchors, which requires padding."""
         num_anchors = len(self.anchors)
