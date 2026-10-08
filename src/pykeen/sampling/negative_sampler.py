@@ -1,6 +1,5 @@
 """Basic structure for a negative sampler."""
 
-import warnings
 from abc import abstractmethod
 from collections.abc import Mapping
 from typing import Any, ClassVar
@@ -8,7 +7,7 @@ from typing import Any, ClassVar
 from class_resolver import HintOrType, normalize_string
 from torch import nn
 
-from .filtering import BloomFilterer, Filterer, filterer_resolver, make_default_filterer
+from .filtering import Filterer, filterer_resolver, make_default_filterer
 from ..constants import TARGET_TO_INDEX
 from ..typing import BoolTensor, LongTensor, MappedTriples, Target
 
@@ -78,15 +77,8 @@ class NegativeSampler(nn.Module):
             :mod:`pykeen.sampling.filtering` is used. If None, the exact
             :class:`~pykeen.sampling.filtering.SortedKeyFilterer` is used, with a fallback to the approximate
             :class:`~pykeen.sampling.filtering.BloomFilterer` for very large graphs, cf.
-            :func:`~pykeen.sampling.filtering.make_default_filterer`. For backwards compatibility, if None and
-            ``filterer_kwargs`` are given, the :class:`~pykeen.sampling.filtering.BloomFilterer` is used instead
-            (deprecated).
+            :func:`~pykeen.sampling.filtering.make_default_filterer`.
         :param filterer_kwargs: Additional keyword-based arguments passed to the filterer upon construction.
-
-            .. deprecated::
-                Passing ``filterer_kwargs`` without an explicit ``filterer`` configures the
-                :class:`~pykeen.sampling.filtering.BloomFilterer`, which was the previous default. Pass
-                ``filterer="bloom"`` (or another filterer) explicitly instead.
         """
         super().__init__()
         self.num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
@@ -94,17 +86,8 @@ class NegativeSampler(nn.Module):
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
         if filterer is not None:
             self.filterer = filterer_resolver.make(filterer, pos_kwargs=filterer_kwargs, mapped_triples=mapped_triples)
-        elif filtered and filterer_kwargs:
-            warnings.warn(
-                "Passing filterer_kwargs without an explicit filterer currently configures the BloomFilterer, for "
-                "backwards compatibility. However, the default filterer is now the SortedKeyFilterer. Please pass "
-                "filterer='bloom' (or another filterer) explicitly.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            self.filterer = BloomFilterer(mapped_triples=mapped_triples, **filterer_kwargs)
         elif filtered:
-            self.filterer = make_default_filterer(mapped_triples=mapped_triples)
+            self.filterer = make_default_filterer(mapped_triples=mapped_triples, **(filterer_kwargs or {}))
         else:
             self.filterer = None
 
