@@ -279,6 +279,20 @@ class VisualRepresentationTestCase(cases.RepresentationTestCase):
         kwargs["images"] = list(torch.rand(self.max_id, 3, 28, 28))
         return kwargs
 
+    def test_encoder_kwargs(self):
+        """Test that encoder kwargs are passed to the encoder upon instantiation."""
+        num_classes = 5
+        # squeezenet's classifier is a convolution with num_classes output channels
+        instance = self.cls(
+            images=list(torch.rand(self.max_id, 3, 28, 28)),
+            encoder="squeezenet1_0",
+            layer_name="classifier.1",
+            encoder_kwargs=dict(num_classes=num_classes),
+            transforms=[],
+            trainable=False,
+        )
+        assert instance.shape == (num_classes,)
+
 
 @constants.skip_if_windows
 @needs_packages("torchvision")

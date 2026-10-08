@@ -142,7 +142,7 @@ class VisualRepresentation(Representation):
 
         if isinstance(encoder, str):
             cls = getattr(models, encoder)
-            encoder = cls(encoder_kwargs or {})
+            encoder = cls(**(encoder_kwargs or {}))
 
         pool = functools.partial(torch.mean, dim=(-1, -2))
 
