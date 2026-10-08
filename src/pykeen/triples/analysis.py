@@ -263,11 +263,11 @@ def _iter_unary_patterns(stats: _PairStatistics, skip_zero: bool = False) -> Ite
 def _iter_binary_patterns(stats: _PairStatistics, skip_zero: bool = False) -> Iterable[PatternMatch]:
     """Yield binary patterns from pair statistics, cf. :func:`iter_binary_patterns`."""
     logger.debug("Evaluating binary patterns: {inversion}")
-    # only pairs (r', r) where r' occurs (first) before r
-    i, j = np.triu_indices(len(stats.relations), k=1)
+    # all ordered pairs (r', r) with r' != r; the diagonal corresponds to symmetry
+    i, j = np.nonzero(~np.eye(len(stats.relations), dtype=bool))
     support = np.diag(stats.overlap)[i]
-    # note: this uses `overlap` (r'(x, y) => r(x, y)) rather than `reverse_overlap` (r'(x, y) => r(y, x))
-    confidence = stats.overlap[i, j] / support
+    # confidence of r'(x, y) => r(y, x)
+    confidence = stats.reverse_overlap[i, j] / support
     yield from _iter_pattern_matches(PATTERN_TYPE_INVERSION, stats.relations[j], support, confidence, skip_zero)
 
 
@@ -307,7 +307,8 @@ def iter_binary_patterns(
     Inversion  $r'(x, y) \implies r(y, x)$
     =========  ===========================
 
-    Relation pairs $(r', r)$ are only considered for $r'$ occurring before $r$ in the triples.
+    All ordered pairs of distinct relations $(r', r)$ are considered. The pattern match is attributed to $r$, and its
+    support is the number of distinct pairs of $r'$.
 
     :param mapped_triples:
         A collection of ID-based triples.
@@ -687,6 +688,13 @@ def relation_pattern_types(
     right-hand side, i.e., the distinct $(x, y)$ pairs for symmetry, anti-symmetry, and inversion, and the distinct
     $(x, z)$ pairs for composition (where the intermediate entity $y$ is projected out).
     The *confidence* is the proportion of these instantiations where the right-hand side is also true.
+
+    .. note ::
+
+        The returned support-confidence skyline also contains patterns supported by very few pairs, e.g., a single
+        triple, which can reach a confidence of 1.0. Consider filtering by a minimum support (in addition to a minimum
+        confidence), in particular for small or dense datasets, cf.
+        :func:`~pykeen.datasets.analysis.get_relation_pattern_types_df`.
 
     :param mapped_triples:
         A collection of ID-based triples.
