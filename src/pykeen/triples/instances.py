@@ -426,8 +426,25 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
                 pool_size += degree
         return result
 
-    def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
-        yield from (self.subgraph_sample() for _ in split_workload(len(self)))
+    def iter_triple_ids(self) -> Iterable[list[int]]:
+        """Iterate over batches of IDs of positive triples.
+
+        Each batch is an independently sampled subgraph; hence, a triple may occur in multiple batches of an epoch,
+        or not at all. To keep the total number of sampled triples per epoch consistent with
+        :class:`BatchedSLCWAInstances`, there are ``len(self)`` batches of size ``batch_size``, except for the last
+        batch, which has size ``num_triples % batch_size`` if this is non-zero and ``drop_last=False``.
+
+        For multi-process data loading, the batch indices are partitioned among the workers, such that the batches of
+        all workers add up to the same batches as for single-process loading.
+
+        :yields: the triple IDs of a single batch
+        """
+        num_triples = len(self.mapped_triples)
+        for batch_id in split_workload(len(self)):
+            # the size of the last batch is num_triples % batch_size if it is incomplete (only if not drop_last)
+            batch_size = min(self.batch_size, num_triples - batch_id * self.batch_size)
+            # the subgraph is sampled sequentially, i.e., a prefix of a sample is a sample of the smaller size
+            yield self.subgraph_sample()[:batch_size]
 
 
 class LCWAInstances(Instances[LCWABatch]):

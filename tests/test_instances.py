@@ -138,6 +138,26 @@ class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
                     else:
                         assert triple_ids == list(range(num_triples))
 
+    def test_iter_triple_ids_single_process(self):
+        """Test the number and sizes of batches, and coverage, for single-process loading."""
+        for num_triples, batch_size, drop_last in itertools.product((13, 14, 50), (1, 3, 7), (False, True)):
+            with self.subTest(num_triples=num_triples, batch_size=batch_size, drop_last=drop_last):
+                instance = BatchedSLCWAInstances(
+                    mapped_triples=self.factory.mapped_triples[:num_triples],
+                    batch_size=batch_size,
+                    drop_last=drop_last,
+                )
+                batches = list(instance.iter_triple_ids())
+                assert len(batches) == len(instance)
+                num_full_batches, remainder = divmod(num_triples, batch_size)
+                expected_sizes = [batch_size] * num_full_batches
+                if remainder and not drop_last:
+                    expected_sizes.append(remainder)
+                assert [len(batch) for batch in batches] == expected_sizes
+                triple_ids = [i for batch in batches for i in batch]
+                assert len(triple_ids) == len(set(triple_ids))
+                assert set(triple_ids).issubset(range(num_triples))
+
     def test_iter_triple_ids_multiple_workers_randomness(self):
         """Test that the shared permutation is random, and changes between epochs."""
         instance = BatchedSLCWAInstances(mapped_triples=self.factory.mapped_triples, batch_size=7, drop_last=False)
@@ -293,6 +313,50 @@ class SubGraphSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
         assert set(counts).issubset(expected)
         total_variation = 0.5 * sum(abs(counts[key] / num_samples - p) for key, p in expected.items())
         assert total_variation < 0.02
+
+    def test_iter_triple_ids_batch_sizes(self):
+        """Test the number and sizes of batches for single- and (simulated) multi-process loading."""
+        num_triples = self.factory.num_triples
+        # 1592 triples: 398 divides evenly, 300 leaves a remainder of 92
+        for batch_size, num_workers, drop_last in itertools.product((300, 398), (None, 1, 2, 3), (False, True)):
+            with self.subTest(batch_size=batch_size, num_workers=num_workers, drop_last=drop_last):
+                instance = SubGraphSLCWAInstances(
+                    mapped_triples=self.factory.mapped_triples, batch_size=batch_size, drop_last=drop_last
+                )
+                if num_workers is None:
+                    batches = list(instance.iter_triple_ids())
+                else:
+                    batches = []
+                    for worker_id in range(num_workers):
+                        worker_info = mock.Mock(id=worker_id, num_workers=num_workers)
+                        with mock.patch("torch.utils.data.get_worker_info", return_value=worker_info):
+                            batches.extend(copy.deepcopy(instance).iter_triple_ids())
+                assert len(batches) == len(instance)
+                num_full_batches, remainder = divmod(num_triples, batch_size)
+                expected_sizes = [batch_size] * num_full_batches
+                if remainder and not drop_last:
+                    expected_sizes.append(remainder)
+                assert [len(batch) for batch in batches] == expected_sizes
+                for batch in batches:
+                    # each subgraph consists of distinct triples
+                    assert len(set(batch)) == len(batch)
+
+    def test_data_loader_multiple_workers(self):
+        """Test that the total number of sampled triples with a real multi-process data loader matches."""
+        instance = SubGraphSLCWAInstances(
+            mapped_triples=self.factory.mapped_triples,
+            batch_size=300,
+            drop_last=False,
+            num_entities=self.factory.num_entities,
+            num_relations=self.factory.num_relations,
+        )
+        sizes = [
+            batch["positives"].shape[0]
+            for batch in torch.utils.data.DataLoader(dataset=instance, batch_size=None, num_workers=2)
+        ]
+        assert len(sizes) == len(instance)
+        assert sum(sizes) == self.factory.num_triples
+        assert sorted(sizes) == [92] + [300] * 5
 
 
 def _subgraph_sample_distribution(edges: list[list[int]], batch_size: int) -> dict[tuple[int, ...], float]:
