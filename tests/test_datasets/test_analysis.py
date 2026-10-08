@@ -2,12 +2,14 @@
 
 import itertools
 import unittest
-from collections.abc import Iterable, Mapping
+from collections import Counter, defaultdict
+from collections.abc import Collection, Iterable, Mapping
 
 import numpy as np
 import pandas as pd
+import torch
 
-from pykeen.datasets import Dataset, Nations
+from pykeen.datasets import Dataset, Kinships, Nations
 from pykeen.datasets import analysis as dataset_analysis
 from pykeen.triples import analysis as triple_analysis
 from pykeen.typing import LABEL_HEAD, LABEL_TAIL
@@ -225,3 +227,137 @@ class DatasetAnalysisTests(unittest.TestCase):
 
         # check relation_id value range
         assert df[triple_analysis.RELATION_ID_COLUMN_NAME].isin(self.dataset.relation_to_id.values()).all()
+
+
+def _old_iter_patterns(mapped_triples: Collection[tuple[int, int, int]]) -> Iterable[triple_analysis.PatternMatch]:
+    """Mine patterns with the pure-Python reference implementation (pre-vectorization)."""
+    pairs: dict[int, set[tuple[int, int]]] = defaultdict(set)
+    adj: dict[int, dict[int, set[int]]] = defaultdict(lambda: defaultdict(set))
+    ins: dict[int, set[int]] = defaultdict(set)
+    outs: dict[int, set[int]] = defaultdict(set)
+    for h, r, t in mapped_triples:
+        pairs[r].add((h, t))
+        adj[r][h].add(t)
+        outs[h].add(r)
+        ins[t].add(r)
+    pairs = dict(pairs)
+    # unary
+    for r, ht in pairs.items():
+        support = len(ht)
+        confidence = len(ht.intersection({(t, h) for h, t in ht})) / support
+        yield triple_analysis.PatternMatch(r, triple_analysis.PATTERN_TYPE_SYMMETRY, support, confidence)
+        yield triple_analysis.PatternMatch(r, triple_analysis.PATTERN_TYPE_ANTI_SYMMETRY, support, 1 - confidence)
+    # binary
+    for (_r1, ht1), (r, ht2) in itertools.combinations(pairs.items(), r=2):
+        support = len(ht1)
+        confidence = len(ht1.intersection(ht2)) / support
+        yield triple_analysis.PatternMatch(r, triple_analysis.PATTERN_TYPE_INVERSION, support, confidence)
+    # ternary
+    candidates = {(r1, r2) for e, e_in in ins.items() if e in outs for r1, r2 in itertools.product(e_in, outs[e])}
+    for r1, r2 in candidates:
+        lhs = {(x, z) for x, y in pairs[r1] for z in adj[r2][y]}
+        support = len(lhs)
+        if not support:
+            continue
+        for r, ht in pairs.items():
+            confidence = len(lhs.intersection(ht)) / support
+            yield triple_analysis.PatternMatch(r, triple_analysis.PATTERN_TYPE_COMPOSITION, support, confidence)
+
+
+def _random_triples(
+    generator: np.random.Generator, num_entities: int, num_relations: int, num_triples: int
+) -> list[tuple[int, int, int]]:
+    """Generate random triples, including duplicates, self-loops, and reversed / copied pairs."""
+    h, t = generator.integers(num_entities, size=(2, num_triples))
+    r = generator.integers(num_relations, size=num_triples)
+    triples = list(zip(h.tolist(), r.tolist(), t.tolist(), strict=True))
+    # add some reversed triples (with random relation), copies with other relations, and duplicates
+    n = num_triples // 3
+    triples += [(t_, int(generator.integers(num_relations)), h_) for h_, _, t_ in triples[:n]]
+    triples += [(h_, int(generator.integers(num_relations)), t_) for h_, _, t_ in triples[n : 2 * n]]
+    triples += triples[:n]
+    generator.shuffle(triples)
+    return triples
+
+
+class PatternMiningTests(unittest.TestCase):
+    """Compare the vectorized relation pattern mining against a pure-Python reference implementation."""
+
+    def _assert_same_patterns(self, mapped_triples) -> None:
+        expected = Counter(_old_iter_patterns(mapped_triples))
+        actual = Counter(triple_analysis.iter_patterns(mapped_triples))
+        assert actual == expected
+        # also check output types
+        for pattern in actual:
+            assert type(pattern.relation_id) is int
+            assert type(pattern.support) is int
+            assert type(pattern.confidence) is float
+
+    def test_random(self):
+        """Test on random graphs."""
+        generator = np.random.default_rng(seed=42)
+        for num_entities, num_relations, num_triples in [
+            (1, 1, 1),
+            (3, 2, 5),
+            (5, 3, 20),
+            (10, 5, 60),
+            (30, 8, 300),
+            (50, 20, 200),
+        ]:
+            with self.subTest(num_entities=num_entities, num_relations=num_relations, num_triples=num_triples):
+                self._assert_same_patterns(_random_triples(generator, num_entities, num_relations, num_triples))
+
+    def test_skip_zero(self):
+        """Test skipping zero-confidence matches."""
+        triples = _random_triples(np.random.default_rng(seed=3), 20, 6, 150)
+        expected = Counter(p for p in triple_analysis.iter_patterns(triples) if p.confidence > 0)
+        assert Counter(triple_analysis.iter_patterns(triples, skip_zero=True)) == expected
+
+    def test_empty(self):
+        """Test on empty triples."""
+        assert list(triple_analysis.iter_patterns([])) == []
+
+    def test_input_types(self):
+        """Test that lists, numpy arrays, and tensors give the same result."""
+        triples = _random_triples(np.random.default_rng(seed=0), 10, 4, 50)
+        expected = Counter(triple_analysis.iter_patterns(triples))
+        assert Counter(triple_analysis.iter_patterns(np.asarray(triples))) == expected
+        assert Counter(triple_analysis.iter_patterns(torch.as_tensor(triples))) == expected
+
+    def test_composition_chunking(self):
+        """Test that the chunk size does not affect the composition statistics."""
+        index = triple_analysis._build_pair_index(_random_triples(np.random.default_rng(seed=1), 20, 5, 200))
+        expected = triple_analysis._composition_statistics(index)
+        for chunk_size in (1, 7, 100):
+            with self.subTest(chunk_size=chunk_size):
+                actual = triple_analysis._composition_statistics(index, chunk_size=chunk_size)
+                np.testing.assert_array_equal(actual.first, expected.first)
+                np.testing.assert_array_equal(actual.second, expected.second)
+                np.testing.assert_array_equal(actual.support, expected.support)
+                np.testing.assert_array_equal(actual.hits.toarray(), expected.hits.toarray())
+
+    def test_datasets(self):
+        """Test on the (packaged) Nations and Kinships datasets."""
+        for dataset_cls in (Nations, Kinships):
+            with self.subTest(dataset=dataset_cls.__name__):
+                dataset = dataset_cls()
+                mapped_triples = torch.cat([f.mapped_triples for f in dataset.factory_dict.values()]).tolist()
+                self._assert_same_patterns(mapped_triples)
+
+                # check the full categorization, too
+                expected = pd.DataFrame(
+                    data=list(
+                        triple_analysis.skyline(p for p in _old_iter_patterns(mapped_triples) if p.confidence > 0)
+                    ),
+                    columns=[
+                        triple_analysis.RELATION_ID_COLUMN_NAME,
+                        triple_analysis.PATTERN_TYPE_COLUMN_NAME,
+                        triple_analysis.SUPPORT_COLUMN_NAME,
+                        triple_analysis.CONFIDENCE_COLUMN_NAME,
+                    ],
+                )
+                actual = triple_analysis.relation_pattern_types(mapped_triples=mapped_triples)
+                pd.testing.assert_frame_equal(
+                    actual.sort_values(by=list(actual.columns)).reset_index(drop=True),
+                    expected.sort_values(by=list(expected.columns)).reset_index(drop=True),
+                )

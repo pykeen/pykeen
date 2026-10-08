@@ -9,6 +9,7 @@ from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
+import scipy.sparse
 from tqdm.auto import tqdm
 
 from . import TriplesFactory
@@ -207,11 +208,135 @@ def get_adjacency_dict(triples: Iterable[tuple[int, int, int]]) -> Mapping[int, 
     return rv
 
 
+class _PairIndex(NamedTuple):
+    """An index of the distinct triples, and of their distinct (head, tail) pairs."""
+
+    #: the distinct triples' heads, relations, and tails, shape: (num_triples,)
+    heads: np.ndarray
+    relations: np.ndarray
+    tails: np.ndarray
+
+    #: the occurring relation IDs in the order of their first occurrence
+    relation_order: np.ndarray
+
+    #: an upper bound on entity / relation IDs
+    num_entities: int
+    num_relations: int
+
+    #: the sorted keys `head * num_entities + tail` of distinct pairs, shape: (num_pairs,)
+    pair_keys: np.ndarray
+
+    #: a binary incidence matrix of pairs and relations, shape: (num_pairs, num_relations)
+    incidence: scipy.sparse.csr_array
+
+    def lookup_pairs(self, heads: np.ndarray, tails: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Look up pair IDs for (head, tail) pairs, returning the IDs of existing pairs, and a mask of existence."""
+        keys = heads * self.num_entities + tails
+        ids = np.searchsorted(self.pair_keys, keys)
+        mask = ids < len(self.pair_keys)
+        mask[mask] = self.pair_keys[ids[mask]] == keys[mask]
+        return ids[mask], mask
+
+
+def _build_pair_index(mapped_triples: Collection[tuple[int, int, int]]) -> _PairIndex:
+    """Build a pair index from ID-based triples."""
+    triples = np.asarray(mapped_triples, dtype=np.int64).reshape(-1, 3)
+    # relations in the order of first occurrence
+    relation_ids, first_index = np.unique(triples[:, 1], return_index=True)
+    relation_order = relation_ids[np.argsort(first_index)]
+    num_entities = int(triples[:, [0, 2]].max(initial=-1)) + 1
+    num_relations = int(triples[:, 1].max(initial=-1)) + 1
+    if num_entities**2 > np.iinfo(np.int64).max:
+        raise ValueError(f"Too many entities for an int64-based pair index: {num_entities}")
+    # distinct triples
+    heads, relations, tails = np.unique(triples, axis=0).T
+    # distinct pairs
+    pair_keys, pair_ids = np.unique(heads * num_entities + tails, return_inverse=True)
+    incidence = scipy.sparse.csr_array(
+        (np.ones_like(pair_ids), (pair_ids, relations)), shape=(len(pair_keys), num_relations)
+    )
+    return _PairIndex(
+        heads=heads,
+        relations=relations,
+        tails=tails,
+        relation_order=relation_order,
+        num_entities=num_entities,
+        num_relations=num_relations,
+        pair_keys=pair_keys,
+        incidence=incidence,
+    )
+
+
+class _PairStatistics(NamedTuple):
+    """Pair-overlap statistics for relations, in order of their first occurrence."""
+
+    #: the relation IDs, shape: (n,)
+    relations: np.ndarray
+
+    #: overlap[i, j] = |{(x, y) : r_i(x, y) and r_j(x, y)}|, shape: (n, n)
+    #: in particular, the diagonal contains the number of distinct pairs per relation
+    overlap: np.ndarray
+
+    #: reverse_overlap[i, j] = |{(x, y) : r_i(x, y) and r_j(y, x)}|, shape: (n, n)
+    reverse_overlap: np.ndarray
+
+
+def _pair_statistics(index: _PairIndex) -> _PairStatistics:
+    """Compute pair-overlap statistics via sparse matrix products."""
+    m = index.incidence
+    # the rows of m_rev are the rows of m for the reversed pair, i.e., m_rev[(x, y), r] = r(y, x)
+    reverse_ids, mask = index.lookup_pairs(heads=index.tails, tails=index.heads)
+    m_rev = scipy.sparse.csr_array((np.ones_like(reverse_ids), (reverse_ids, index.relations[mask])), shape=m.shape)
+    m_t = m.transpose().tocsr()
+    rs = index.relation_order
+    return _PairStatistics(
+        relations=rs,
+        overlap=(m_t @ m).toarray()[np.ix_(rs, rs)],
+        reverse_overlap=(m_t @ m_rev).toarray()[np.ix_(rs, rs)],
+    )
+
+
+def _iter_pattern_matches(
+    pattern_type: str,
+    relation_ids: np.ndarray,
+    support: np.ndarray,
+    confidence: np.ndarray,
+    skip_zero: bool = False,
+) -> Iterable[PatternMatch]:
+    """Convert aligned arrays to pattern match tuples (of Python scalars), optionally skipping zero confidence."""
+    if skip_zero:
+        mask = confidence > 0
+        relation_ids, support, confidence = relation_ids[mask], support[mask], confidence[mask]
+    for relation_id, supp, conf in zip(relation_ids.tolist(), support.tolist(), confidence.tolist(), strict=True):
+        yield PatternMatch(relation_id, pattern_type, supp, conf)
+
+
+def _iter_unary_patterns(stats: _PairStatistics, skip_zero: bool = False) -> Iterable[PatternMatch]:
+    """Yield unary patterns from pair statistics, cf. :func:`iter_unary_patterns`."""
+    logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
+    support = np.diag(stats.overlap)
+    confidence = np.diag(stats.reverse_overlap) / support
+    yield from _iter_pattern_matches(PATTERN_TYPE_SYMMETRY, stats.relations, support, confidence, skip_zero)
+    # confidence(anti-symmetry) = |ht \ rev(ht)| / |ht| = 1 - confidence(symmetry)
+    yield from _iter_pattern_matches(PATTERN_TYPE_ANTI_SYMMETRY, stats.relations, support, 1 - confidence, skip_zero)
+
+
+def _iter_binary_patterns(stats: _PairStatistics, skip_zero: bool = False) -> Iterable[PatternMatch]:
+    """Yield binary patterns from pair statistics, cf. :func:`iter_binary_patterns`."""
+    logger.debug("Evaluating binary patterns: {inversion}")
+    # only pairs (r', r) where r' occurs (first) before r
+    i, j = np.triu_indices(len(stats.relations), k=1)
+    support = np.diag(stats.overlap)[i]
+    # note: this uses `overlap` (r'(x, y) => r(x, y)) rather than `reverse_overlap` (r'(x, y) => r(y, x))
+    confidence = stats.overlap[i, j] / support
+    yield from _iter_pattern_matches(PATTERN_TYPE_INVERSION, stats.relations[j], support, confidence, skip_zero)
+
+
 def iter_unary_patterns(
-    pairs: Mapping[int, set[tuple[int, int]]],
+    mapped_triples: Collection[tuple[int, int, int]],
 ) -> Iterable[PatternMatch]:
     r"""
-    Yield unary patterns from pre-indexed triples.
+    Yield unary patterns from ID-based triples.
 
     =============  ===============================
     Pattern        Equation
@@ -223,26 +348,19 @@ def iter_unary_patterns(
     .. note ::
         By definition, we have confidence(anti-symmetry) = 1 - confidence(symmetry).
 
-    :param pairs:
-        A mapping from relations to the set of entity pairs.
+    :param mapped_triples:
+        A collection of ID-based triples.
 
     :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
-    logger.debug("Evaluating unary patterns: {symmetry, anti-symmetry}")
-    for r, ht in pairs.items():
-        support = len(ht)
-        rev_ht = {(t, h) for h, t in ht}
-        confidence = len(ht.intersection(rev_ht)) / support
-        yield PatternMatch(r, PATTERN_TYPE_SYMMETRY, support, confidence)
-        # confidence = len(ht.difference(rev_ht)) / support = 1 - len(ht.intersection(rev_ht)) / support
-        yield PatternMatch(r, PATTERN_TYPE_ANTI_SYMMETRY, support, 1 - confidence)
+    yield from _iter_unary_patterns(_pair_statistics(_build_pair_index(mapped_triples)))
 
 
 def iter_binary_patterns(
-    pairs: Mapping[int, set[tuple[int, int]]],
+    mapped_triples: Collection[tuple[int, int, int]],
 ) -> Iterable[PatternMatch]:
     r"""
-    Yield binary patterns from pre-indexed triples.
+    Yield binary patterns from ID-based triples.
 
     =========  ===========================
     Pattern    Equation
@@ -250,24 +368,135 @@ def iter_binary_patterns(
     Inversion  $r'(x, y) \implies r(y, x)$
     =========  ===========================
 
-    :param pairs:
-        A mapping from relations to the set of entity pairs.
+    Relation pairs $(r', r)$ are only considered for $r'$ occurring before $r$ in the triples.
+
+    :param mapped_triples:
+        A collection of ID-based triples.
 
     :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
-    logger.debug("Evaluating binary patterns: {inversion}")
-    for (_r1, ht1), (r, ht2) in itt.combinations(pairs.items(), r=2):
-        support = len(ht1)
-        confidence = len(ht1.intersection(ht2)) / support
-        yield PatternMatch(r, PATTERN_TYPE_INVERSION, support, confidence)
+    yield from _iter_binary_patterns(_pair_statistics(_build_pair_index(mapped_triples)))
+
+
+class _CompositionStatistics(NamedTuple):
+    r"""Statistics for composition patterns $r_1(x, y) \land r_2(y, z) \implies r(x, z)$."""
+
+    #: the relation pairs (r_1, r_2) with non-empty support, shape: (num_candidates,)
+    first: np.ndarray
+    second: np.ndarray
+
+    #: the number of distinct (x, z) with r_1(x, y) and r_2(y, z) for some y, shape: (num_candidates,)
+    support: np.ndarray
+
+    #: hits[c, r] = number of such (x, z) with r(x, z), shape: (num_candidates, num_relations)
+    hits: scipy.sparse.csr_array
+
+
+def _composition_statistics(index: _PairIndex, chunk_size: int = 2**24) -> _CompositionStatistics:
+    """Compute composition statistics via a chunked sparse self-join.
+
+    :param index:
+        The pair index.
+    :param chunk_size:
+        The (approximate) maximum number of joined rows to materialize at once. The join is chunked over groups of
+        $(r_1, x)$, such that a joined $(r_1, x, r_2, z)$ never spans multiple chunks. A single group exceeding this
+        size is processed as a chunk of its own.
+
+    :return:
+        The composition statistics.
+    """
+    num_e, num_r = index.num_entities, index.num_relations
+    # right-hand side atoms r_2(y, z) as a binary matrix of shape (num_entities, num_relations * num_entities)
+    right = scipy.sparse.csr_array(
+        (np.ones_like(index.heads), (index.heads, index.relations * num_e + index.tails)),
+        shape=(num_e, num_r * num_e),
+    )
+    # left-hand side atoms r_1(x, y) as a binary matrix of shape (num_groups, num_entities), one row per (r_1, x)
+    group_keys, group_ids = np.unique(index.relations * num_e + index.heads, return_inverse=True)
+    left = scipy.sparse.csr_array((np.ones_like(group_ids), (group_ids, index.tails)), shape=(len(group_keys), num_e))
+    group_r, group_x = np.divmod(group_keys, num_e)
+    # chunk over groups by the size of the (non-deduplicated) join
+    out_degree = np.bincount(index.heads, minlength=num_e)
+    join_size = np.bincount(group_ids, weights=out_degree[index.tails], minlength=len(group_keys)).astype(np.int64)
+    chunk_ids = (np.cumsum(join_size) - join_size) // chunk_size
+    bounds = np.r_[0, np.flatnonzero(chunk_ids[1:] != chunk_ids[:-1]) + 1, len(group_keys)]
+
+    support_keys: list[np.ndarray] = [np.empty(0, dtype=np.int64)]
+    support_counts: list[np.ndarray] = [np.empty(0, dtype=np.int64)]
+    hit_keys: list[np.ndarray] = [np.empty(0, dtype=np.int64)]
+    hit_relations: list[np.ndarray] = [np.empty(0, dtype=np.int64)]
+    hit_counts: list[np.ndarray] = [np.empty(0, dtype=np.int64)]
+    for start, stop in tqdm(
+        zip(bounds[:-1].tolist(), bounds[1:].tolist(), strict=True),
+        total=len(bounds) - 1,
+        desc="Checking ternary patterns",
+        unit="chunk",
+        unit_scale=True,
+    ):
+        # self-join r_1(x, y) & r_2(y, z) on y; the sparse product yields each distinct (r_1, x, r_2, z) once
+        joined = (left[start:stop] @ right).tocoo()
+        rows = start + joined.row
+        r1, x = group_r[rows], group_x[rows]
+        r2, z = np.divmod(joined.col.astype(np.int64), num_e)
+        # support: number of distinct (x, z) per (r_1, r_2)
+        keys, local_key, counts = np.unique(r1 * num_r + r2, return_inverse=True, return_counts=True)
+        support_keys.append(keys)
+        support_counts.append(counts)
+        # hits: number of distinct (x, z) per (r_1, r_2) with r(x, z)
+        pair_ids, mask = index.lookup_pairs(heads=x, tails=z)
+        lhs = scipy.sparse.csr_array(
+            (np.ones_like(pair_ids), (local_key[mask], pair_ids)), shape=(len(keys), len(index.pair_keys))
+        )
+        hits = (lhs @ index.incidence).tocoo()
+        hit_keys.append(keys[hits.row])
+        hit_relations.append(hits.col)
+        hit_counts.append(hits.data)
+
+    # aggregate over chunks
+    candidates, inverse = np.unique(np.concatenate(support_keys), return_inverse=True)
+    support = np.bincount(inverse, weights=np.concatenate(support_counts), minlength=len(candidates)).astype(np.int64)
+    hits = scipy.sparse.csr_array(
+        (
+            np.concatenate(hit_counts),
+            (np.searchsorted(candidates, np.concatenate(hit_keys)), np.concatenate(hit_relations)),
+        ),
+        shape=(len(candidates), num_r),
+    )
+    first, second = np.divmod(candidates, num_r)
+    return _CompositionStatistics(first=first, second=second, support=support, hits=hits)
+
+
+def _iter_ternary_patterns(
+    stats: _CompositionStatistics, relations: np.ndarray, skip_zero: bool = False, batch_size: int = 2**20
+) -> Iterable[PatternMatch]:
+    """Yield ternary patterns from composition statistics, cf. :func:`iter_ternary_patterns`."""
+    logger.debug("Evaluating ternary patterns: {composition}")
+    if skip_zero:
+        # only the (sparse) non-zero hits; these only occur for occurring relations
+        hits = stats.hits.tocoo()
+        support = stats.support[hits.row]
+        yield from _iter_pattern_matches(PATTERN_TYPE_COMPOSITION, hits.col, support, hits.data / support, skip_zero)
+        return
+    # each candidate (r_1, r_2) is combined with every relation r
+    num_candidates, num_relations = len(stats.support), len(relations)
+    step = max(1, batch_size // max(1, num_relations))
+    for start in range(0, num_candidates, step):
+        stop = min(start + step, num_candidates)
+        support = stats.support[start:stop, None]
+        confidence = stats.hits[start:stop].toarray()[:, relations] / support
+        yield from _iter_pattern_matches(
+            PATTERN_TYPE_COMPOSITION,
+            np.broadcast_to(relations[None, :], confidence.shape).ravel(),
+            np.broadcast_to(support, confidence.shape).ravel(),
+            confidence.ravel(),
+        )
 
 
 def iter_ternary_patterns(
     mapped_triples: Collection[tuple[int, int, int]],
-    pairs: Mapping[int, set[tuple[int, int]]],
 ) -> Iterable[PatternMatch]:
     r"""
-    Yield ternary patterns from pre-indexed triples.
+    Yield ternary patterns from ID-based triples.
 
     ===========  ===========================================
     Pattern      Equation
@@ -277,48 +506,34 @@ def iter_ternary_patterns(
 
     :param mapped_triples:
         A collection of ID-based triples.
-    :param pairs:
-        A mapping from relations to the set of entity pairs.
 
     :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
-    logger.debug("Evaluating ternary patterns: {composition}")
-    # composition r1(x, y) & r2(y, z) => r(x, z)
-    adj = get_adjacency_dict(mapped_triples)
-
-    # actual evaluation of the pattern
-    for r1, r2 in tqdm(
-        composition_candidates(mapped_triples),
-        desc="Checking ternary patterns",
-        unit="pattern",
-        unit_scale=True,
-    ):
-        lhs = {(x, z) for x, y in pairs[r1] for z in adj[r2][y]}
-        support = len(lhs)
-        # skip empty support
-        # TODO: Can this happen after pre-filtering?
-        if not support:
-            continue
-        for r, ht in pairs.items():
-            confidence = len(lhs.intersection(ht)) / support
-            yield PatternMatch(r, PATTERN_TYPE_COMPOSITION, support, confidence)
+    index = _build_pair_index(mapped_triples)
+    yield from _iter_ternary_patterns(_composition_statistics(index), relations=index.relation_order)
 
 
 def iter_patterns(
     mapped_triples: Collection[tuple[int, int, int]],
+    *,
+    skip_zero: bool = False,
 ) -> Iterable[PatternMatch]:
     """Iterate over unary, binary, and ternary patterns.
 
     :param mapped_triples:
         A collection of ID-based triples.
+    :param skip_zero:
+        Whether to skip pattern matches with zero confidence.
 
     :yields: Patterns from :func:`iter_unary_patterns`, func:`iter_binary_patterns`, and :func:`iter_ternary_patterns`.
     """
-    pairs = index_pairs(mapped_triples)
-
-    yield from iter_unary_patterns(pairs=pairs)
-    yield from iter_binary_patterns(pairs=pairs)
-    yield from iter_ternary_patterns(mapped_triples, pairs=pairs)
+    index = _build_pair_index(mapped_triples)
+    pair_stats = _pair_statistics(index)
+    yield from _iter_unary_patterns(pair_stats, skip_zero=skip_zero)
+    yield from _iter_binary_patterns(pair_stats, skip_zero=skip_zero)
+    yield from _iter_ternary_patterns(
+        _composition_statistics(index), relations=index.relation_order, skip_zero=skip_zero
+    )
 
 
 def triple_set_hash(
@@ -538,10 +753,8 @@ def relation_pattern_types(
         A dataframe of relation categorization
     """
     # determine patterns from triples
-    base = iter_patterns(mapped_triples=mapped_triples)
-
     # drop zero-confidence
-    base = (pattern for pattern in base if pattern.confidence > 0)
+    base = iter_patterns(mapped_triples=mapped_triples, skip_zero=True)
 
     # keep only skyline
     base = skyline(base)
