@@ -90,6 +90,25 @@ on Python's built-in sets, the :class:`~pykeen.sampling.filtering.PythonSetFilte
         ),
     )
 
+A fast *and* exact alternative is the :class:`~pykeen.sampling.filtering.SortedKeyFilterer`, which packs each
+triple into a single integer key and looks up negatives via binary search in a sorted tensor of the known triples' keys.
+It is pure PyTorch, and thus also runs on GPU. It can be activated with:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    results = pipeline(
+        dataset='YAGO3-10',
+        model='PairRE',
+        training_loop='sLCWA',
+        negative_sampler='basic',
+        negative_sampler_kwargs=dict(
+            filtered=True,
+            filterer='sorted-key',
+        ),
+    )
+
 Identifying False Negatives During Evaluation
 ---------------------------------------------
 In contrast to training, PyKEEN **does** filter false negatives from $\mathcal{N}$ during evaluation by default.
@@ -136,6 +155,7 @@ __all__ = [
     "BloomFilterer",
     "Filterer",
     "PythonSetFilterer",
+    "SortedKeyFilterer",
     "filterer_resolver",
 ]
 
@@ -345,6 +365,104 @@ class BloomFilterer(Filterer):
         for i in self.probe(batch):
             result &= self.bit_array[i]
         return result
+
+
+class SortedKeyFilterer(Filterer):
+    r"""
+    An exact filterer based on binary search over sorted integer keys.
+
+    Each triple $(h, r, t)$ is packed into a single 64-bit integer key
+
+    .. math ::
+
+        k(h, r, t) = (h \cdot n_r + r) \cdot n_t + t
+
+    where $n_h$, $n_r$, and $n_t$ are the (exclusive) upper bounds of the head, relation, and tail IDs, respectively.
+    Since $0 \leq r < n_r$ and $0 \leq t < n_t$, this is a bijection between triples and keys, i.e., there are no
+    collisions. The sorted unique keys of the known triples are stored as a buffer, such that the filterer can be moved
+    to GPU via :meth:`torch.nn.Module.to`. Membership queries are answered in a vectorized fashion via
+    :func:`torch.searchsorted` followed by an equality check.
+
+    Query triples with IDs outside the ranges ``[0, n_h)``, ``[0, n_r)``, or ``[0, n_t)`` cannot be contained in the
+    stored triples, and are thus reported as not contained (without computing their potentially colliding key).
+
+    If $n_h \cdot n_r \cdot n_t \geq 2^{63}$, the keys would overflow the range of ``torch.long``, and a
+    :class:`ValueError` is raised upon initialization. This only happens for very large graphs, e.g., more than $2^{21}$
+    entities and relations each; in this case, use :class:`PythonSetFilterer` instead.
+    """
+
+    #: the sorted unique keys of the stored triples, shape: (num_unique_triples,)
+    keys: LongTensor
+
+    #: the maximum valid ID (exclusive) for head, relation, and tail, shape: (3,)
+    sizes: LongTensor
+
+    def __init__(
+        self,
+        mapped_triples: MappedTriples,
+        num_entities: int | None = None,
+        num_relations: int | None = None,
+    ):
+        """
+        Initialize the filterer.
+
+        :param mapped_triples: shape: (num_triples, 3)
+            The ID-based triples.
+        :param num_entities:
+            The number of entities. If None, it is inferred from the maximum head / tail ID in ``mapped_triples``.
+            Providing a larger value does not change the results, but reduces the maximum supported graph size.
+        :param num_relations:
+            The number of relations. If None, it is inferred from the maximum relation ID in ``mapped_triples``.
+            Providing a larger value does not change the results, but reduces the maximum supported graph size.
+
+        :raises ValueError:
+            if the provided sizes are smaller than the IDs occurring in ``mapped_triples``, or if the packed keys would
+            overflow 64-bit integers.
+        """
+        super().__init__()
+        mapped_triples = torch.as_tensor(mapped_triples, dtype=torch.long)
+        # determine the (exclusive) upper bounds for each column
+        if mapped_triples.numel():
+            if (mapped_triples < 0).any():
+                raise ValueError("mapped_triples must not contain negative IDs.")
+            max_ids = mapped_triples.max(dim=0).values + 1
+            sizes = [int(max_ids[0]), int(max_ids[1]), int(max_ids[2])]
+        else:
+            sizes = [0, 0, 0]
+        for columns, given in (((0, 2), num_entities), ((1,), num_relations)):
+            if given is None:
+                continue
+            for c in columns:
+                if given < sizes[c]:
+                    raise ValueError(f"The given size {given} is smaller than the observed size {sizes[c]}.")
+                sizes[c] = given
+        # check for overflow; use Python integers, which have arbitrary precision
+        if sizes[0] * sizes[1] * sizes[2] >= 2**63:
+            raise ValueError(
+                f"The packed keys for sizes (heads, relations, tails)={tuple(sizes)} would overflow 64-bit integers. "
+                f"Use {PythonSetFilterer.__name__} instead.",
+            )
+        self.register_buffer(name="sizes", tensor=torch.as_tensor(sizes, dtype=torch.long))
+        self.register_buffer(name="keys", tensor=torch.unique(self._pack(mapped_triples), sorted=True))
+
+    def __repr__(self):
+        h, r, t = self.sizes.tolist()
+        return f"{self.__class__.__name__}(num_keys={self.keys.shape[0]}, sizes=({h}, {r}, {t}))"
+
+    def _pack(self, triples: LongTensor) -> LongTensor:
+        """Pack triples into keys; assumes that all IDs are in range."""
+        h, r, t = triples.unbind(dim=-1)
+        return (h * self.sizes[1] + r) * self.sizes[2] + t
+
+    def contains(self, batch: MappedTriples) -> BoolTensor:  # noqa: D102
+        # IDs outside the observed ranges cannot be contained; mask them to avoid key collisions / overflow
+        in_range = ((batch >= 0) & (batch < self.sizes)).all(dim=-1)
+        if self.keys.numel() == 0:
+            return torch.zeros_like(in_range)
+        query = self._pack(torch.where(in_range.unsqueeze(dim=-1), batch, torch.zeros_like(batch)))
+        query = query.reshape(-1)
+        index = torch.searchsorted(self.keys, query).clamp_(max=self.keys.shape[0] - 1)
+        return (self.keys[index] == query).view(in_range.shape) & in_range
 
 
 #: A resolver for mapping filterers
