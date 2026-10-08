@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from typing import Generic, NotRequired, Self, TypedDict, TypeVar
 
 import numpy as np
@@ -103,10 +103,10 @@ class GroupedSLCWABatch(TypedDict):
     pos_weights: NotRequired[FloatTensor]
 
     #: the replacement IDs, keyed by corrupted target, shape: (batch_size, k_target)
-    corruptions: dict[Target, LongTensor]
+    corruptions: Mapping[Target, LongTensor]
 
     #: filtering masks for negative triples, keyed by corrupted target, shape: (batch_size, k_target)
-    masks: NotRequired[dict[Target, BoolTensor]]
+    masks: NotRequired[Mapping[Target, BoolTensor]]
 
     #: sample weights for the negatives, keyed by corrupted target
     neg_weights: NotRequired[dict[Target, FloatTensor]]
@@ -436,14 +436,14 @@ class LCWAInstances(Instances[LCWABatch]):
         :returns: The instances.
         """
         target = get_target_column(target)
-        mapped_triples = mapped_triples.numpy()
+        triples = mapped_triples.numpy()
         other_columns = sorted(set(range(3)).difference({target}))
-        unique_pairs, pair_idx_to_triple_idx = np.unique(mapped_triples[:, other_columns], return_inverse=True, axis=0)
+        unique_pairs, pair_idx_to_triple_idx = np.unique(triples[:, other_columns], return_inverse=True, axis=0)
         num_pairs = unique_pairs.shape[0]
-        tails = mapped_triples[:, target]
+        tails = triples[:, target]
         target_size = num_relations if target == 1 else num_entities
         compressed = scipy.sparse.coo_matrix(
-            (np.ones(mapped_triples.shape[0], dtype=np.float32), (pair_idx_to_triple_idx, tails)),
+            (np.ones(triples.shape[0], dtype=np.float32), (pair_idx_to_triple_idx, tails)),
             shape=(num_pairs, target_size),
         )
         # convert to csr for fast row slicing
