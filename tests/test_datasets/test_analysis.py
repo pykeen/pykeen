@@ -1,9 +1,12 @@
 """Tests for dataset analysis utilities."""
 
 import itertools
+import pathlib
+import tempfile
 import unittest
 from collections import Counter, defaultdict
 from collections.abc import Collection, Iterable, Mapping
+from unittest import mock
 
 import numpy as np
 import pandas as pd
@@ -172,10 +175,22 @@ class DatasetAnalysisTests(unittest.TestCase):
 
     def test_relation_pattern_types(self):
         """Helper method for relation pattern classification."""
-        df = dataset_analysis.get_relation_pattern_types_df(
-            dataset=self.dataset,
-            drop_confidence=False,
-        )
+        # use a temporary cache directory to make sure that the patterns are actually computed (rather than loaded)
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            mock.patch.object(dataset_analysis, "PYKEEN_DATASETS", pathlib.Path(directory)),
+        ):
+            df = dataset_analysis.get_relation_pattern_types_df(
+                dataset=self.dataset,
+                drop_confidence=False,
+            )
+            # check that the result has been cached, and that loading it from the cache gives the same result
+            assert any(pathlib.Path(directory).rglob("relation_patterns_*.tsv.xz"))
+            df_cached = dataset_analysis.get_relation_pattern_types_df(
+                dataset=self.dataset,
+                drop_confidence=False,
+            )
+        pd.testing.assert_frame_equal(df.reset_index(drop=True), df_cached.reset_index(drop=True))
 
         # check correct type
         assert isinstance(df, pd.DataFrame)

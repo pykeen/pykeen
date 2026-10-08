@@ -1,7 +1,6 @@
 """Analysis utilities for (mapped) triples."""
 
 import hashlib
-import itertools as itt
 import logging
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping, Sequence
@@ -146,66 +145,6 @@ class PatternMatch(NamedTuple):
     pattern_type: str
     support: int
     confidence: float
-
-
-def composition_candidates(
-    mapped_triples: Iterable[tuple[int, int, int]],
-) -> Collection[tuple[int, int]]:
-    r"""Pre-filtering relation pair candidates for composition pattern.
-
-    Determines all relation pairs $(r, r')$ with at least one entity $e$ such that
-
-    .. math ::
-
-        \{(h, r, e), (e, r', t)\} \subseteq \mathcal{T}
-
-    :param mapped_triples:
-        An iterable over ID-based triples. Only consumed once.
-
-    :return:
-        A set of relation pairs.
-    """
-    ins, outs = index_relations(mapped_triples)
-
-    # return candidates
-    return {
-        (r1, r2)
-        for tail, tail_in_relations in ins.items()
-        if tail in outs
-        for r1, r2 in itt.product(tail_in_relations, outs[tail])
-    }
-
-
-def index_relations(
-    triples: Iterable[tuple[int, int, int]],
-) -> tuple[Mapping[int, set[int]], Mapping[int, set[int]]]:
-    """Create an index for in-relationships and out-relationships."""
-    # index triples
-    # incoming relations per entity
-    ins: defaultdict[int, set[int]] = defaultdict(set)
-    # outgoing relations per entity
-    outs: defaultdict[int, set[int]] = defaultdict(set)
-    for h, r, t in triples:
-        outs[h].add(r)
-        ins[t].add(r)
-    return dict(ins), dict(outs)
-
-
-def index_pairs(triples: Iterable[tuple[int, int, int]]) -> Mapping[int, set[tuple[int, int]]]:
-    """Create a mapping from relation to head/tail pairs for fast lookup."""
-    rv: defaultdict[int, set[tuple[int, int]]] = defaultdict(set)
-    for h, r, t in triples:
-        rv[r].add((h, t))
-    return dict(rv)
-
-
-def get_adjacency_dict(triples: Iterable[tuple[int, int, int]]) -> Mapping[int, Mapping[int, set[int]]]:
-    """Create a two-level mapping from relation to head to tails."""
-    # indexing triples for fast join r1 & r2
-    rv: defaultdict[int, defaultdict[int, set[int]]] = defaultdict(lambda: defaultdict(set))
-    for h, r, t in triples:
-        rv[r][h].add(t)
-    return rv
 
 
 class _PairIndex(NamedTuple):
@@ -452,7 +391,7 @@ def _composition_statistics(index: _PairIndex, chunk_size: int = 2**24) -> _Comp
         hit_relations.append(hits.col)
         hit_counts.append(hits.data)
 
-    # aggregate over chunks
+    # aggregate over chunks; candidates (r_1, r_2) stem from the join, hence always have a non-zero support
     candidates, inverse = np.unique(np.concatenate(support_keys), return_inverse=True)
     support = np.bincount(inverse, weights=np.concatenate(support_counts), minlength=len(candidates)).astype(np.int64)
     hits = scipy.sparse.csr_array(
@@ -744,7 +683,9 @@ def relation_pattern_types(
         X_1 \land \cdot \land X_k \implies Y
 
     where $X_i$ is of the form $r_i(h_i, t_i)$, and some of the $h_i / t_i$ might re-occur in other atoms.
-    The *support* of a pattern is the number of distinct instantiations of all variables for the left hand side.
+    The *support* of a pattern is the number of distinct instantiations of the variables shared by the left- and
+    right-hand side, i.e., the distinct $(x, y)$ pairs for symmetry, anti-symmetry, and inversion, and the distinct
+    $(x, z)$ pairs for composition (where the intermediate entity $y$ is projected out).
     The *confidence* is the proportion of these instantiations where the right-hand side is also true.
 
     :param mapped_triples:
