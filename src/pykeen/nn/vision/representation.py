@@ -40,7 +40,11 @@ __all__ = [
 
 def _ensure_vision(instance: object, module: Any | None):
     if module is None:
-        raise ImportError(f"{instance.__class__.__name__} requires `torchvision` to be installed.")
+        raise ImportError(
+            f"{instance.__class__.__name__} requires `torchvision` and `pillow` to be installed. Install them with "
+            "`pip install pykeen[vision]`, or see the PyKEEN installation docs at "
+            "https://pykeen.readthedocs.io/en/stable/installation.html for more information."
+        )
 
 
 #: A path to an image file or a tensor representation of the image
