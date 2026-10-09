@@ -373,9 +373,9 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         from the pool, and each picked edge leaves at most one stale half-edge, sampling a batch
         requires at most `2 * size` half-edge draws.
 
-        :param size: the number of edges to sample; defaults to :attr:`batch_size`. If it exceeds
-            the number of triples, all triples are returned (in the order in which the sampling
-            process picks them).
+        :param size: the number of edges to sample; defaults to ``batch_size``. If it exceeds the
+            number of triples, all triples are returned (in the order in which the sampling process
+            picks them).
         :param generator: a NumPy generator. If not given, is derived from torch's global RNG, such
             that sampling is reproducible via :func:`torch.manual_seed`, and data loader worker
             processes, which PyTorch seeds differently, obtain different streams
