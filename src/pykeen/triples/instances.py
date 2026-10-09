@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from typing import Generic, NotRequired, Self, TypedDict, TypeVar
 
 import numpy as np
@@ -103,10 +103,10 @@ class GroupedSLCWABatch(TypedDict):
     pos_weights: NotRequired[FloatTensor]
 
     #: the replacement IDs, keyed by corrupted target, shape: (batch_size, k_target)
-    corruptions: dict[Target, LongTensor]
+    corruptions: Mapping[Target, LongTensor]
 
     #: filtering masks for negative triples, keyed by corrupted target, shape: (batch_size, k_target)
-    masks: NotRequired[dict[Target, BoolTensor]]
+    masks: NotRequired[Mapping[Target, BoolTensor]]
 
     #: sample weights for the negatives, keyed by corrupted target
     neg_weights: NotRequired[dict[Target, FloatTensor]]
