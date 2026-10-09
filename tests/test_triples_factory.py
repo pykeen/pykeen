@@ -25,7 +25,13 @@ from pykeen.triples.triples_factory import (
     get_mapped_triples,
     valid_triple_id_range,
 )
-from pykeen.triples.utils import TRIPLES_DF_COLUMNS, InvalidRemappingLengthError, load_triples
+from pykeen.triples.utils import (
+    TRIPLES_DF_COLUMNS,
+    InvalidRemappingLengthError,
+    compute_compressed_adjacency_list,
+    get_num_ids,
+    load_triples,
+)
 from tests.constants import RESOURCES
 from tests.utils import needs_packages
 
@@ -704,3 +710,43 @@ def test_condense(tf_one_hole: CoreTriplesFactory, entities: bool, relations: bo
     assert tf_new.num_entities == expected_num_entities
     expected_num_relations = tf_one_hole.num_relations - 1 if relations else tf_one_hole.num_relations
     assert tf_new.num_relations == expected_num_relations
+
+
+def _compute_compressed_adjacency_list_reference(
+    mapped_triples: torch.Tensor, num_entities: int | None = None
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Compute the compressed adjacency list with a simple loop, cf. :func:`compute_compressed_adjacency_list`."""
+    num_vertices = num_entities or get_num_ids(mapped_triples[:, [0, 2]])
+    adj_lists: list[list[tuple[int, int]]] = [[] for _ in range(num_vertices)]
+    for i, (s, _, o) in enumerate(mapped_triples.tolist()):
+        adj_lists[s].append((i, o))
+        adj_lists[o].append((i, s))
+    degrees = torch.tensor([len(a) for a in adj_lists], dtype=torch.long)
+    offset = torch.empty(num_vertices, dtype=torch.long)
+    offset[0] = 0
+    offset[1:] = torch.cumsum(degrees, dim=0)[:-1]
+    compressed_adj_lists = torch.as_tensor([entry for a in adj_lists for entry in a], dtype=torch.long)
+    return degrees, offset, compressed_adj_lists
+
+
+@pytest.mark.parametrize(
+    ("seed", "num_entities", "num_triples", "explicit_num_entities"),
+    [(0, 5, 30, False), (1, 50, 100, False), (2, 50, 100, True), (3, 200, 50, False), (4, 1, 3, False)],
+)
+def test_compute_compressed_adjacency_list(
+    seed: int, num_entities: int, num_triples: int, explicit_num_entities: bool
+) -> None:
+    """Test the compressed adjacency list against a simple reference implementation."""
+    generator = torch.Generator().manual_seed(seed)
+    mapped_triples = torch.randint(num_entities, size=(num_triples, 3), generator=generator)
+    # add self-loops and duplicates; isolated vertices occur due to the sparsity for larger num_entities
+    mapped_triples[::4, 2] = mapped_triples[::4, 0]
+    mapped_triples = torch.cat([mapped_triples, mapped_triples[::3]])
+    kwargs = {"num_entities": num_entities + 3} if explicit_num_entities else {}
+    for actual, expected in zip(
+        compute_compressed_adjacency_list(mapped_triples=mapped_triples, **kwargs),
+        _compute_compressed_adjacency_list_reference(mapped_triples=mapped_triples, **kwargs),
+        strict=True,
+    ):
+        assert actual.dtype == expected.dtype
+        assert torch.equal(actual, expected)
