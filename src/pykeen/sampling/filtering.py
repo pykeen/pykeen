@@ -460,8 +460,7 @@ class SortedKeyFilterer(Filterer):
         h, r, t = triples.unbind(dim=-1)
         # mixed-radix encoding with the head as most significant and the tail as least significant "digit": each
         # position is weighted by the product of the sizes of all less significant positions, i.e.,
-        # h * (n_r * n_t) + r * n_t + t. Since the most significant digit needs no upper bound to be encoded, n_h does
-        # not occur; it only matters for the overflow check and for the range check in `contains`.
+        # h * (n_r * n_t) + r * n_t + t.
         return (h * self.sizes[1] + r) * self.sizes[2] + t
 
     def contains(self, batch: MappedTriples) -> BoolTensor:  # noqa: D102
