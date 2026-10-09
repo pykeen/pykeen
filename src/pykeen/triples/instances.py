@@ -353,25 +353,32 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
             raise ValueError("There is no unvisited vertex with incident edges left.")
         return int(candidates[generator.integers(len(candidates))])
 
-    def subgraph_sample(self, size: int | None = None) -> list[int]:
+    def subgraph_sample(self, *, size: int | None = None, generator: np.random.Generator | None = None) -> list[int]:
         """Sample one subgraph.
 
-        The subgraph is grown iteratively: in each step, a vertex is chosen among the visited vertices with
-        probability proportional to its number of not yet picked incident edges, and one of these edges is chosen
-        uniformly at random. If no visited vertex has any remaining incident edges, a not yet visited vertex is chosen
-        uniformly at random (among those with at least one incident edge) instead. The other end of the chosen edge
-        becomes visited, too.
+        The subgraph is grown iteratively: in each step, a vertex is chosen among the visited
+        vertices with probability proportional to its number of not yet picked incident edges, and
+        one of these edges is chosen uniformly at random. If no visited vertex has any remaining
+        incident edges, a not yet visited vertex is chosen uniformly at random (among those with at
+        least one incident edge) instead. The other end of the chosen edge becomes visited, too.
 
-        Choosing a vertex proportionally to its number of remaining incident edges, and then one of these uniformly,
-        is the same as choosing uniformly among all remaining *half-edges* (i.e., adjacency list entries) of visited
-        vertices. Thus, we maintain a pool of half-edges of visited vertices, from which we draw uniformly. Half-edges
-        whose edge has already been picked via its other half are removed lazily when drawn. Since every draw removes
-        one entry from the pool, and each picked edge leaves at most one stale half-edge, sampling a batch requires at
-        most `2 * size` half-edge draws.
+        Choosing a vertex proportionally to its number of remaining incident edges, and then one of
+        these uniformly, is the same as choosing uniformly among all remaining *half-edges* (i.e.,
+        adjacency list entries) of visited vertices. Thus, we maintain a pool of half-edges of
+        visited vertices, from which we draw uniformly. Half-edges whose edge has already been
+        picked via its other half are removed lazily when drawn. Since every draw removes one entry
+        from the pool, and each picked edge leaves at most one stale half-edge, sampling a batch
+        requires at most `2 * size` half-edge draws.
 
-        :param size: the number of edges to sample; defaults to :attr:`batch_size`. If it exceeds the number of
-            triples, all triples are returned (in the order in which the sampling process picks them).
-        :returns: the triple IDs of the subgraph's edges, a list of `min(size, num_triples)` unique IDs
+        :param size: the number of edges to sample; defaults to :attr:`batch_size`. If it exceeds
+            the number of triples, all triples are returned (in the order in which the sampling
+            process picks them).
+        :param generator: a NumPy generator. If not given, is derived from torch's global RNG, such
+            that sampling is reproducible via :func:`torch.manual_seed`, and data loader worker
+            processes, which PyTorch seeds differently, obtain different streams
+
+        :returns: the triple IDs of the subgraph's edges, a list of `min(size, num_triples)` unique
+            IDs
 
         :raises ValueError: if `size` is negative
         """
@@ -380,9 +387,10 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         if size < 0:
             raise ValueError(f"size must be non-negative, but is {size}.")
         size = min(size, len(self.mapped_triples))
-        # derive the numpy generator from torch's global RNG, such that sampling is reproducible via torch.manual_seed,
-        # and data loader worker processes, which torch seeds differently, obtain different streams
-        generator = np.random.default_rng(int(torch.randint(2**62, size=()).item()))
+
+        if generator is None:
+            generator = np.random.default_rng(int(torch.randint(2**62, size=()).item()))
+
         degrees, offset, entry_edge, entry_other = self._degrees, self._offset, self._entry_edge, self._entry_other
 
         # pool[:pool_size] contains the indices of the adjacency list entries of the visited vertices which have not
