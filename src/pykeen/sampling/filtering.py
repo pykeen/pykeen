@@ -429,13 +429,19 @@ class SortedKeyFilterer(Filterer):
             sizes = [int(max_ids[0]), int(max_ids[1]), int(max_ids[2])]
         else:
             sizes = [0, 0, 0]
-        for columns, given in (((0, 2), num_entities), ((1,), num_relations)):
-            if given is None:
-                continue
-            for c in columns:
-                if given < sizes[c]:
-                    raise ValueError(f"The given size {given} is smaller than the observed size {sizes[c]}.")
-                sizes[c] = given
+        if num_entities is not None:
+            if num_entities < sizes[0] or num_entities < sizes[2]:
+                raise ValueError(
+                    f"The given number of entities {num_entities} is smaller than the observed size "
+                    f"{max(sizes[0], sizes[2])}."
+                )
+            sizes[0] = sizes[2] = num_entities
+        if num_relations is not None:
+            if num_relations < sizes[1]:
+                raise ValueError(
+                    f"The given number of relations {num_relations} is smaller than the observed size {sizes[1]}."
+                )
+            sizes[1] = num_relations
         # check for overflow; use Python integers, which have arbitrary precision
         if sizes[0] * sizes[1] * sizes[2] >= 2**63:
             raise ValueError(
@@ -452,6 +458,8 @@ class SortedKeyFilterer(Filterer):
     def _pack(self, triples: LongTensor) -> LongTensor:
         """Pack triples into keys; assumes that all IDs are in range."""
         h, r, t = triples.unbind(dim=-1)
+        # the head size sizes[0] is not needed: h is the most significant "digit", so it is unbounded in the key; the
+        # head range is only relevant for the overflow check and for the range check in `contains`
         return (h * self.sizes[1] + r) * self.sizes[2] + t
 
     def contains(self, batch: MappedTriples) -> BoolTensor:  # noqa: D102
