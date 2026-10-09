@@ -3,11 +3,12 @@
 from collections.abc import MutableMapping
 from typing import Any
 
+import pytest
 import torch
 import unittest_templates
 
 from pykeen.datasets import Nations
-from pykeen.sampling.filtering import BloomFilterer, Filterer, PythonSetFilterer
+from pykeen.sampling.filtering import BloomFilterer, Filterer, PythonSetFilterer, SortedKeyFilterer
 from pykeen.utils import set_random_seed
 
 
@@ -60,6 +61,73 @@ class BloomFiltererTest(FiltererTest):
     """Tests for the bloom filterer."""
 
     cls = BloomFilterer
+
+
+class SortedKeyFiltererTest(FiltererTest):
+    """Tests for the sorted key filterer."""
+
+    cls = SortedKeyFilterer
+
+    def test_consistent_with_python_set(self):
+        """Test that results match the exact Python set-based filterer, incl. out-of-range IDs and batch shapes."""
+        generator = torch.Generator().manual_seed(self.seed)
+        num_entities, num_relations = 50, 7
+        mapped_triples = torch.stack(
+            [
+                torch.randint(num_entities, size=(500,), generator=generator),
+                torch.randint(num_relations, size=(500,), generator=generator),
+                torch.randint(num_entities, size=(500,), generator=generator),
+            ],
+            dim=-1,
+        )
+        filterer = SortedKeyFilterer(mapped_triples=mapped_triples)
+        reference = PythonSetFilterer(mapped_triples=mapped_triples)
+        # query IDs partially exceed the maximum stored IDs, and include negative IDs
+        negatives = torch.stack(
+            [
+                torch.randint(-2, num_entities + 5, size=(8, 300), generator=generator),
+                torch.randint(-2, num_relations + 5, size=(8, 300), generator=generator),
+                torch.randint(-2, num_entities + 5, size=(8, 300), generator=generator),
+            ],
+            dim=-1,
+        )
+        # mix in some known positives
+        negatives[:, :20] = mapped_triples[torch.randint(500, size=(8, 20), generator=generator)]
+        expected = reference.contains(batch=negatives)
+        result = filterer.contains(batch=negatives)
+        assert result.shape == negatives.shape[:-1]
+        assert result.any()
+        assert torch.equal(result, expected)
+        # forward
+        assert torch.equal(filterer(negative_batch=negatives), ~expected)
+
+    def test_no_collision(self):
+        """Test that IDs exceeding the stored ranges do not collide with stored keys."""
+        # stored: (0, 0, 2) has key 2 with n_t = 3; (0, 0, 2) and (0, 1, -1) must not be confused
+        filterer = SortedKeyFilterer(mapped_triples=torch.as_tensor([[0, 0, 2], [1, 1, 0]]))
+        queries = torch.as_tensor([[0, 0, 2], [0, 1, -1], [0, 0, 5], [0, 2, 0], [1, 1, 0]])
+        assert filterer.contains(batch=queries).tolist() == [True, False, False, False, True]
+
+    def test_empty(self):
+        """Test filtering with no stored triples."""
+        filterer = SortedKeyFilterer(mapped_triples=torch.empty(0, 3, dtype=torch.long))
+        assert not filterer.contains(batch=self.positive_batch).any()
+
+    def test_explicit_sizes(self):
+        """Test explicitly passing sizes."""
+        filterer = SortedKeyFilterer(
+            mapped_triples=self.mapped_triples,
+            num_entities=self.triples_factory.num_entities + 3,
+            num_relations=self.triples_factory.num_relations + 3,
+        )
+        assert filterer.contains(batch=self.positive_batch).all()
+        with pytest.raises(ValueError, match="smaller than the observed size"):
+            SortedKeyFilterer(mapped_triples=self.mapped_triples, num_entities=1)
+
+    def test_overflow(self):
+        """Test that an error is raised if keys would overflow."""
+        with pytest.raises(ValueError, match="overflow"):
+            SortedKeyFilterer(mapped_triples=torch.as_tensor([[2**22, 2**20, 2**22]]))
 
 
 class FiltererMetaTestCase(unittest_templates.MetaTestCase[Filterer]):

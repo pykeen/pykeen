@@ -8,7 +8,7 @@ import pytest
 from pykeen.datasets import Nations
 from pykeen.losses import BCEWithLogitsLoss, CrossEntropyLoss, MarginRankingLoss, NSSALoss, SoftplusLoss
 from pykeen.models import TransE
-from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
+from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer, SortedKeyFilterer
 from pykeen.training import BatchCWATrainingLoop, LCWATrainingLoop, SLCWATrainingLoop, SymmetricLCWATrainingLoop
 from tests.test_training import cases
 
@@ -68,6 +68,14 @@ class BloomFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
 
     cls = SLCWATrainingLoop
     filterer_cls = BloomFilterer
+    loss_cls = MarginRankingLoss
+
+
+class SortedKeyFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
+    """Test sLCWA with sorted key-based filtered negative sampling."""
+
+    cls = SLCWATrainingLoop
+    filterer_cls = SortedKeyFilterer
     loss_cls = MarginRankingLoss
 
 
