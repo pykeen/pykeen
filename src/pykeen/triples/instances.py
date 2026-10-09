@@ -323,9 +323,14 @@ class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
 class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
     """Pre-batched training instances for SLCWA of coherent subgraphs."""
 
-    def __init__(self, **kwargs: Any) -> None:
-        """Initialize the instances.
+    def __init__(self, fraction_visited_candidates: float = 0.9, **kwargs: Any) -> None:
+        r"""Initialize the instances.
 
+        :param fraction_visited_candidates: rejection sampling costs $O(1)$ per draw with an
+            expected $\frac{1}{1 - f}$ draws, where $f$ is the fraction of visited candidates,
+            whereas exact sampling costs $O(n \log n)$ for $n$ candidates, independent of $f$. Both
+            are equal only for $f$ very close to 1. For example, when $f = 0.9$, we switch at most
+            $\frac{1}{1-0.9}=10$ expected draws, to bound the rejection loop.
         :param kwargs: keyword-based parameters passed to :meth:`BaseBatchedSLCWAInstances.__init__`
         """
         super().__init__(**kwargs)
@@ -340,6 +345,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         self._entry_edge: np.ndarray = self.neighbors[:, 0].numpy().copy()
         self._entry_other: np.ndarray = self.neighbors[:, 1].numpy().copy()
         self._non_isolated: np.ndarray = np.flatnonzero(self._degrees > 0)
+        self.fraction_visited_candidates = fraction_visited_candidates
 
     def _sample_unvisited_vertex(self, generator: np.random.Generator, visited: set[int]) -> int:
         """Sample a vertex uniformly among the not yet visited vertices with at least one incident edge."""
@@ -347,7 +353,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         # rejection sampling costs O(1) per draw with an expected 1 / (1 - f) draws, where f is the fraction of visited
         # candidates, whereas exact sampling costs O(n log n) for n candidates, independent of f. Both are equal only
         # for f very close to 1; we switch at f = 0.9, i.e., at most 10 expected draws, to bound the rejection loop.
-        if 10 * len(visited) <= 9 * len(candidates):
+        if len(visited) <= self.fraction_visited_candidates * len(candidates):
             while True:
                 vertex = int(candidates[generator.integers(len(candidates))])
                 if vertex not in visited:
