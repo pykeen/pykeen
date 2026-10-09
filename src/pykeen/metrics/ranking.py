@@ -1,7 +1,7 @@
 """
 Ranking metrics.
 
-This module comprises various rank-based metrics, which get an array of individual ranks as input, as summarize them
+This module comprises various rank-based metrics, which get an array of individual ranks as input, and summarize them
 into a single-figure metric measuring different aspects of ranking performance.
 
 We can generally distinguish:
@@ -10,7 +10,7 @@ Base Metrics
 ------------
 These metrics directly operate on the ranks:
 
-The following metrics measures summarize the central tendency of ranks
+The following metrics summarize the central tendency of ranks
 
 - :class:`~pykeen.metrics.ranking.ArithmeticMeanRank`
 - :class:`~pykeen.metrics.ranking.GeometricMeanRank`
@@ -28,7 +28,7 @@ The next metrics summarize the dispersion of ranks
 - :class:`~pykeen.metrics.ranking.Variance`
 - :class:`~pykeen.metrics.ranking.StandardDeviation`
 
-and finally there is a simple metric to store the number of ranks which where aggregated
+and finally there is a simple metric to store the number of ranks which were aggregated
 
 - :class:`~pykeen.metrics.ranking.Count`
 
@@ -662,7 +662,7 @@ class ZMetric(DerivedRankBasedMetric):
 
     .. note::
 
-        For non-increasing metrics, i.e., where larger values correspond to better
+        For non-increasing metrics, i.e., where smaller values correspond to better
         results, we additionally change the sign of the result such that a larger
         z-value always corresponds to a better result irrespective of the base metric's
         direction.
@@ -1162,12 +1162,17 @@ def generalized_harmonic_numbers(n: int, p: float = -1.0) -> np.ndarray:
 
     .. math::
 
-        H_p(n) = \sum \limits_{i=1}^{n} i^{-p}
+        \sum \limits_{i=1}^{n} i^{p}
+
+    Following the common convention, the generalized harmonic number of order $m$ is
+    $H_m(n) = \sum_{i=1}^{n} i^{-m}$, i.e., this function returns $H_{-p}(n)$.
+    In particular, the default $p=-1$ yields the ordinary harmonic numbers $H_1(n)$,
+    and $p=-2$ yields $H_2(n)$.
 
     :param n:
         the maximum number for which the generalized harmonic numbers are calculated
     :param p:
-        the power, typically negative
+        the exponent, typically negative
 
     :return: shape: (n,)
         the first $n$ generalized harmonic numbers
@@ -1186,9 +1191,10 @@ def harmonic_variances(n: int) -> np.ndarray:
 
     .. math::
 
-        H_p(n) = \sum \limits_{i=1}^{n} i^{-p}
+        H_m(n) = \sum \limits_{i=1}^{n} i^{-m}
 
-    denoting the generalized harmonic numbers, and abbreviating $H(n) := H_1(n)$, we have
+    denoting the generalized harmonic numbers (cf. :func:`generalized_harmonic_numbers`, which is called with
+    exponent $p = -m$), and abbreviating $H(n) := H_1(n)$, we have
 
     .. math::
 
@@ -1199,8 +1205,8 @@ def harmonic_variances(n: int) -> np.ndarray:
     :param n:
         the maximum rank number
 
-    :return: shape: (n+1,)
-        the variances for the discrete uniform distribution over $\{\frac{1}{1}, \dots, \frac{1}{k}\}$`
+    :return: shape: (n,)
+        the variances for the discrete uniform distribution over $\{\frac{1}{1}, \dots, \frac{1}{k}\}$
     """
     h = generalized_harmonic_numbers(n)
     h2 = generalized_harmonic_numbers(n, p=-2)
@@ -1221,6 +1227,10 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     .. math::
 
         IHMR = MRR = \frac{1}{n} \sum_{i=1}^{n} r_i^{-1}
+
+    Optionally, individual weights $\{w_i\}_{i=1}^n$ can be provided, in which case the (weighted) mean is
+    $\frac{1}{W} \sum_{i=1}^{n} w_i r_i^{-1}$ with $W = \sum_{i=1}^{n} w_i$. For the variance, the weights are
+    scaled quadratically, cf. :func:`~pykeen.metrics.utils.weighted_mean_variance`.
 
     .. warning::
 
@@ -1502,6 +1512,8 @@ class MedianRank(RankBasedMetric):
 class InverseMedianRank(RankBasedMetric):
     """The inverse median rank.
 
+    The inverse of the (weighted) median of the ranks. When weights are provided, the weighted median is used.
+
     ---
     link: https://arxiv.org/abs/2203.07544
     description: The inverse of the median over all ranks.
@@ -1685,6 +1697,10 @@ class HitsAtK(RankBasedMetric):
 
         H_k = \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]
 
+    Optionally, individual weights $\{w_i\}_{i=1}^n$ can be provided, in which case
+    $H_k = \frac{1}{W} \sum_{i=1}^{n} w_i \mathbb{I}[r_i \leq k]$ with $W = \sum_{i=1}^{n} w_i$.
+    For the variance, the weights are scaled quadratically, cf. :func:`~pykeen.metrics.utils.weighted_mean_variance`.
+
     For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
     hits @ 20. The hits @ k, regardless of $k$, lies on the $[0, 1]$ where closer to 1 is better.
 
@@ -1843,7 +1859,7 @@ class ZHitsAtK(ZMetric):
 class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
     """The adjusted arithmetic mean rank (AMR).
 
-    The adjusted (arithmetic) mean rank (AMR) was introduced by [berrendorf2020]. It is defined as the ratio of the
+    The adjusted (arithmetic) mean rank (AMR) was introduced by [berrendorf2020]_. It is defined as the ratio of the
     mean rank to the expected mean rank. It lies on the open interval $(0, 2)$ where lower is better.
 
     ---
@@ -1852,7 +1868,7 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
     """
 
     name = "Adjusted Arithmetic Mean Rank (AAMR)"
-    value_range = ValueRange(lower=0, lower_inclusive=True, upper=2, upper_inclusive=False)
+    value_range = ValueRange(lower=0, lower_inclusive=False, upper=2, upper_inclusive=False)
     synonyms: ClassVar[Collection[str]] = ("adjusted_mean_rank", "amr", "aamr")
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
@@ -1865,7 +1881,7 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
 class AdjustedArithmeticMeanRankIndex(ReindexedMetric):
     """The adjusted arithmetic mean rank index (AMRI).
 
-    The adjusted (arithmetic) mean rank index (AMRI) was introduced by [berrendorf2020] to make the AMR more intuitive.
+    The adjusted (arithmetic) mean rank index (AMRI) was introduced by [berrendorf2020]_ to make the AMR more intuitive.
     The AMRI has a bounded value range of $[-1, 1]$ where closer to 1 is better.
 
     ---
