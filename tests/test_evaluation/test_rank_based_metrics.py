@@ -435,3 +435,15 @@ def test_median_survival_function_against_simulation():
 
     # The analytical result should be close to empirical (with some tolerance)
     np.testing.assert_allclose(sf, empirical_sf, rtol=0.05)
+
+
+def test_generate_num_candidates_and_ranks_range():
+    """Test that the maximum number of candidates is reachable, and all values are within valid ranges."""
+    max_num_candidates = 5
+    ranks, num_candidates = pykeen.metrics.ranking.generate_num_candidates_and_ranks(
+        num_ranks=1_000, max_num_candidates=max_num_candidates, seed=42
+    )
+    assert num_candidates.min() >= 1
+    assert num_candidates.max() == max_num_candidates
+    assert (ranks >= 1).all()
+    assert (ranks <= num_candidates).all()
