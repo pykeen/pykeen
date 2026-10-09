@@ -217,7 +217,9 @@ def get_relation_pattern_types_df(
         X_1 \land \cdot \land X_k \implies Y
 
     where $X_i$ is of the form $r_i(h_i, t_i)$, and some of the $h_i / t_i$ might re-occur in other atoms.
-    The *support* of a pattern is the number of distinct instantiations of all variables for the left hand side.
+    The *support* of a pattern is the number of distinct instantiations of the variables shared by the left- and
+    right-hand side, i.e., the distinct $(x, y)$ pairs for symmetry, anti-symmetry, and inversion, and the distinct
+    $(x, z)$ pairs for composition (where the intermediate entity $y$ is projected out).
     The *confidence* is the proportion of these instantiations where the right-hand side is also true.
 
     :param dataset:
