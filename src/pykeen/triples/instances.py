@@ -5,7 +5,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from typing import Generic, NotRequired, Self, TypedDict, TypeVar
+from typing import Generic, NotRequired, Self, TypedDict, TypeVar, Any
 
 import numpy as np
 import scipy.sparse
@@ -132,6 +132,9 @@ class BaseBatchedSLCWAInstances(
         `batch_sampler` of torch.utils.data.DataLoader` are set to `None`.
     """
 
+    #: the batch size
+    batch_size: int
+
     @update_docstring_with_resolver_keys(
         ResolverKey("negative_sampler", "pykeen.sampling.negative_sampler_resolver"),
         ResolverKey("loss_weighter", "pykeen.triples.weights.loss_weighter_resolver"),
@@ -148,7 +151,7 @@ class BaseBatchedSLCWAInstances(
         loss_weighter: HintOrType[LossWeighter] = None,
         loss_weighter_kwargs: OptionalKwargs = None,
         grouped: bool = False,
-    ):
+    ) -> None:
         """Initialize the dataset.
 
         :param mapped_triples: shape: (num_triples, 3) the mapped triples
@@ -320,7 +323,7 @@ class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
 class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
     """Pre-batched training instances for SLCWA of coherent subgraphs."""
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize the instances.
 
         :param kwargs: keyword-based parameters passed to :meth:`BaseBatchedSLCWAInstances.__init__`
