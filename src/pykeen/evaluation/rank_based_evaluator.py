@@ -129,7 +129,7 @@ _TYPE_PATTERN = "|".join(itertools.chain(RANK_TYPES, RANK_TYPE_SYNONYMS.keys()))
 METRIC_PATTERN = re.compile(
     rf"^((?P<side>{_SIDE_PATTERN})\.)?((?P<type>{_TYPE_PATTERN})\.)?(?P<name>[\w@]+)(\.(?P<k>\d+))?$",
 )
-HITS_PATTERN = re.compile(r"(?P<name>h@|hits@|hits_at_)(?P<k>\d+)")
+HITS_PATTERN = re.compile(r"(?P<name>(?:adjusted_|z_)?(?:h@|hits@|hits_at_))(?P<k>\d+)")
 
 
 class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
