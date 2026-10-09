@@ -313,7 +313,7 @@ class RankBasedMetric(Metric):
 
     def _bootstrap(
         self,
-        func: Callable[[np.ndarray], np.ndarray],
+        func: Callable[[np.ndarray], np.floating | np.ndarray],
         num_candidates: np.ndarray,
         num_samples: int,
         confidence_level: float = 95.0,
