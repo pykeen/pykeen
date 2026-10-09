@@ -143,7 +143,7 @@ class NumScores(ClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("score_count",)
 
-    def forward(self, y_true: np.ndarray, y_score: np.ndarray, weights: np.ndarray | None = None) -> float:
+    def forward(self, y_true: np.ndarray, y_score: np.ndarray, sample_weight: np.ndarray | None = None) -> float:
         return y_score.size
 
 
@@ -252,9 +252,11 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
         """
         # todo: it would make sense to have a separate evaluator which constructs the confusion matrix only once
 
-    def forward(self, y_true: np.ndarray, y_score: np.ndarray, weights: np.ndarray | None = None) -> float:
+    def forward(self, y_true: np.ndarray, y_score: np.ndarray, sample_weight: np.ndarray | None = None) -> float:
         y_pred = construct_indicator(y_score=y_score, y_true=y_true)
-        matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred, sample_weight=weights, normalize=None)
+        matrix = metrics.confusion_matrix(
+            y_true=y_true, y_pred=y_pred, sample_weight=sample_weight, normalize=None, labels=[0, 1]
+        )
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html
         tn, fp, fn, tp = matrix.ravel().tolist()
         return self.extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
