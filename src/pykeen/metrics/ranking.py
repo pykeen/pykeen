@@ -151,7 +151,7 @@ EPSILON = 1.0e-12
 
 #: The consistency constant for MAD with scale="normal": the 0.75 quantile of the
 #: standard normal distribution (Φ^(-1)(0.75))
-WEIGHTED_MEDIAN_SCALE = 0.67449
+WEIGHTED_MEDIAN_SCALE = float(stats.norm.ppf(0.75))  # 0.6744897501960817
 
 
 def generate_ranks(
@@ -1450,9 +1450,6 @@ class MedianRank(RankBasedMetric):
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:
-        if weights is None:
-            return np.median(ranks).item()
-
         return weighted_median(a=ranks, weights=weights).item()
 
     def expected_value(  # noqa: D102

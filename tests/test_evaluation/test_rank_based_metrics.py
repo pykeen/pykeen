@@ -146,6 +146,18 @@ class MedianAbsoluteDeviationTests(cases.RankBasedMetricTestCase):
     def test_weights_direction(self) -> None:
         raise unittest.SkipTest("Test does not make sense to dispersion metrics")
 
+    def test_equal_weights_match_unweighted(self):
+        """Test that equal weights reproduce the unweighted MAD to tight tolerance."""
+        metric = self.cls()
+        for n in (9, 10):
+            ranks = np.random.default_rng(seed=n).integers(1, 100, size=n)
+            for weight in (0.1, 1, 3.5):
+                np.testing.assert_allclose(
+                    metric(ranks, weights=np.full(n, weight)),
+                    metric(ranks),
+                    rtol=1.0e-12,
+                )
+
 
 class MedianRankTests(cases.RankBasedMetricTestCase):
     """Tests for median rank."""
@@ -236,6 +248,19 @@ class WeightedTests(unittest.TestCase):
     def test_weighted_median(self):
         """Test weighted median."""
         self._test_equal_weights(weighted_median)
+
+    def test_weighted_median_equal_weights_matches_median(self):
+        """Test that equal weights of any scale reproduce the unweighted median (including averaging the middle)."""
+        for n in (1, 2, 3, 10, 11, 100):
+            for weight in (0.1, 1, 3, 0.3, 1 / 7, 1.0e-3, 1.0e3):
+                with self.subTest(n=n, weight=weight):
+                    a = np.random.default_rng(seed=n).permutation(np.arange(1, n + 1))
+                    assert weighted_median(a, np.full(n, weight)) == np.median(a)
+
+    def test_weighted_median_degenerate(self):
+        """Test that all-zero weights are rejected."""
+        with pytest.raises(ValueError, match="must be positive"):
+            weighted_median(np.arange(3), np.zeros(3))
 
     def _test_weighted_mean_moment(
         self,
