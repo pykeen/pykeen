@@ -175,7 +175,7 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
                 "edge_weighting": edge_weighting,
                 "decomposition": decomposition,
                 "decomposition_kwargs": decomposition_kwargs,
-                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501
+                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67
                 "regularizer": regularizer,
                 "regularizer_kwargs": regularizer_kwargs,
             },
@@ -184,7 +184,7 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
                 "shape": embedding_dim,
                 "initializer": relation_initializer,
                 "initializer_kwargs": relation_initializer_kwargs,
-                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501
+                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67
                 "regularizer": regularizer,
                 "regularizer_kwargs": regularizer_kwargs,
             },
