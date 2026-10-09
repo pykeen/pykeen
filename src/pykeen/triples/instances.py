@@ -369,7 +369,7 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         one entry from the pool, and each picked edge leaves at most one stale half-edge, sampling a batch requires at
         most `2 * size` half-edge draws.
 
-        :param size: the number of edges to sample; defaults to :attr:`batch_size`. If it exceeds the number of
+        :param size: the number of edges to sample; defaults to ``batch_size``. If it exceeds the number of
             triples, all triples are returned (in the order in which the sampling process picks them).
         :returns: the triple IDs of the subgraph's edges, a list of `min(size, num_triples)` unique IDs
 
