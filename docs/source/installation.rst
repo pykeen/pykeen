@@ -93,21 +93,27 @@ from in the same directory.
 Extras
 ------
 
-PyKEEN has several extras for installation that are defined in the ``[options.extras_require]`` section of the
-``setup.cfg``. They can be included with installation using the bracket notation like in ``pip install pykeen[docs]`` or
-``pip install -e .[docs]``. Several can be listed, comma-delimited like in ``pip install pykeen[docs,plotting]``.
+PyKEEN has several extras for installation that are defined in the ``[project.optional-dependencies]`` section of
+``pyproject.toml``. They can be included with installation using the bracket notation like in ``pip install
+pykeen[docs]`` or ``pip install -e .[docs]``. Several can be listed, comma-delimited like in ``pip install
+pykeen[docs,plotting]``.
 
 ================ =========================================================================================
 Name             Description
 ================ =========================================================================================
 ``templating``   Building of templated documentation, like the README
-``plotting``     Plotting with ``seaborn`` and generation of word clouds
+``plotting``     Plotting with ``seaborn``
+``wordcloud``    Generation of word clouds
 ``mlflow``       Tracking of results with ``mlflow``
+``ogb``          Datasets and evaluation from the Open Graph Benchmark
 ``wandb``        Tracking of results with ``wandb``
 ``tensorboard``  Tracking of results with :mod:`tensorboard` via :mod:`torch.utils.tensorboard`
 ``transformers`` Label-based initialization with ``transformers``.
+``lightning``    Training with PyTorch Lightning
 ``tests``        Code needed to run tests. Typically handled with ``tox -e py``
 ``docs``         Building of the documentation
 ``opt_einsum``   Improve performance of :func:`torch.einsum` by replacing with :func:`opt_einsum.contract`
 ``biomedicine``  Use of :mod:`pyobo` for lookup of biomedical entity labels
+``pyg``          Message passing representations
+``vision``       Visual representations
 ================ =========================================================================================

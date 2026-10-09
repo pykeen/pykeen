@@ -11,7 +11,7 @@ import unittest_templates
 from pykeen.constants import COLUMN_LABELS, TARGET_TO_INDEX
 from pykeen.datasets import Nations
 from pykeen.sampling import NegativeSampler, expand_corruption
-from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
+from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer, SortedKeyFilterer
 from pykeen.triples import Instances, TriplesFactory
 from pykeen.triples.instances import BatchedSLCWAInstances
 
@@ -111,6 +111,11 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
     def test_sample_bloom_filtered(self):
         """Test generating a negative sample with bloom filtering."""
         instance = self.cls(**self.instance_kwargs, filterer=BloomFilterer)
+        self.check_sample(instance)
+
+    def test_sample_sorted_key_filtered(self):
+        """Test generating a negative sample with sorted key-based filtering."""
+        instance = self.cls(**self.instance_kwargs, filterer=SortedKeyFilterer)
         self.check_sample(instance)
 
     def test_small_batch(self):
