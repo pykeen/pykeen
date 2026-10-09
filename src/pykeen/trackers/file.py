@@ -1,7 +1,7 @@
 """Tracking results in local files."""
 
 import csv
-import datetime
+import datetime as dt
 import json
 import logging
 import pathlib
@@ -56,7 +56,7 @@ class FileResultTracker(ResultTracker):
             used.
         """
         if name is None:
-            name = datetime.datetime.now().isoformat()
+            name = dt.datetime.now().isoformat()
         path = normalize_path(path, default=PYKEEN_LOGS.joinpath(f"{name}.{self.extension}"), mkdir=True, is_file=True)
         logger.info(f"Logging to {path.as_uri()}.")
         self.file = path.open(mode="w", newline="", encoding="utf8")

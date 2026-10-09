@@ -51,7 +51,7 @@ class PairRE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
 
     #: The default entity normalizer parameters
     #: The entity representations are normalized to L2 unit length
-    #: cf. https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L232-L240  # noqa: E501
+    #: cf. https://github.com/alipay/KnowledgeGraphEmbeddingsViaPairedRelationVectors_PairRE/blob/0a95bcd54759207984c670af92ceefa19dd248ad/biokg/model.py#L232-L240
     default_entity_normalizer_kwargs: ClassVar[Mapping[str, Any]] = {
         "p": 2,
         "dim": -1,
