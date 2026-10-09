@@ -435,7 +435,7 @@ class FalseOmissionRate(ConfusionMatrixClassificationMetric):
     name = "False Omission Rate"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = False
-    synonyms: ClassVar[Collection[str]] = ("for", "fom")
+    synonyms: ClassVar[Collection[str]] = ("for",)
 
     def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=fn, denominator=fn + tn, zero_division=self.zero_division)

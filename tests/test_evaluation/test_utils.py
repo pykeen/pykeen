@@ -63,7 +63,6 @@ def test_prevalence_threshold_zero_division_policy(policy, expected):
         assert metric.extract_from_confusion_matrix(tn=0, fp=0, fn=0, tp=0) == expected
 
 
-@pytest.mark.parametrize("key", ["for", "fom"])
-def test_false_omission_rate_synonyms(key):
-    """Test that the abbreviations resolve to the false omission rate."""
-    assert classification_metric_resolver.lookup(key) is FalseOmissionRate
+def test_false_omission_rate_synonym():
+    """Test that the abbreviation resolves to the false omission rate."""
+    assert classification_metric_resolver.lookup("for") is FalseOmissionRate
