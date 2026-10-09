@@ -618,7 +618,7 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
 
     .. math::
 
-        FM = \sqrt{\frac{TP^2}{(2TP + FP + FN)}}
+        FM = \sqrt{PPV \cdot TPR} = \frac{TP}{\sqrt{(TP + FP)(TP + FN)}}
 
     ---
     link: https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index
@@ -631,7 +631,7 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
     synonyms: ClassVar[Collection[str]] = ("fm", "fmi")
 
     def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
-        return math.sqrt(safe_divide(numerator=tp**2, denominator=2 * tp + fp + fn, zero_division=self.zero_division))
+        return safe_divide(numerator=tp, denominator=math.sqrt((tp + fp) * (tp + fn)), zero_division=self.zero_division)
 
 
 @parse_docdata
