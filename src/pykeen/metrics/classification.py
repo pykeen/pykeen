@@ -399,7 +399,7 @@ class NegativePredictiveValue(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class FalseDiscoveryRate(ConfusionMatrixClassificationMetric):
-    """The false discovery rate is the proportion of predicted negatives which are true positive.
+    """The false discovery rate is the proportion of predicted positives which are truly negative.
 
     .. math::
 
@@ -407,7 +407,7 @@ class FalseDiscoveryRate(ConfusionMatrixClassificationMetric):
 
     ---
     link: https://en.wikipedia.org/wiki/False_discovery_rate
-    description: The proportion of predicted negatives which are true positive.
+    description: The proportion of predicted positives which are truly negative.
     """
 
     name = "False Discovery Rate"
@@ -421,7 +421,7 @@ class FalseDiscoveryRate(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class FalseOmissionRate(ConfusionMatrixClassificationMetric):
-    """The false omission rate is the proportion of predicted positives which are true negative.
+    """The false omission rate is the proportion of predicted negatives which are truly positive.
 
     .. math::
 
@@ -429,13 +429,13 @@ class FalseOmissionRate(ConfusionMatrixClassificationMetric):
 
     ---
     link: https://en.wikipedia.org/wiki/Positive_and_negative_predictive_values
-    description: The proportion of predicted positives which are true negative.
+    description: The proportion of predicted negatives which are truly positive.
     """
 
     name = "False Omission Rate"
     value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = False
-    synonyms: ClassVar[Collection[str]] = ("fom",)
+    synonyms: ClassVar[Collection[str]] = ("for",)
 
     def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
         return safe_divide(numerator=fn, denominator=fn + tn, zero_division=self.zero_division)
@@ -477,7 +477,7 @@ class NegativeLikelihoodRatio(ConfusionMatrixClassificationMetric):
 
     ---
     link: https://en.wikipedia.org/wiki/Negative_likelihood_ratio
-    description: The ratio of false positive rate to true positive rate.
+    description: The ratio of false negative rate to true negative rate.
     """
 
     name = "Negative Likelihood Ratio"
@@ -565,27 +565,29 @@ class F1Score(ConfusionMatrixClassificationMetric):
 class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
     r"""The prevalence threshold.
 
+    It is the prevalence level below which the positive predictive value drops steeply, i.e., where
+    predicted positives start to be dominated by false positives.
+
     .. math::
 
         PT = √FPR / (√TPR + √FPR)
 
     ---
     link: https://en.wikipedia.org/wiki/Prevalence_threshold
-    description: The prevalence threshold.
+    description: The prevalence level below which the positive predictive value drops steeply.
     """
 
-    # todo: improve doc
     name = "Prevalence Threshold"
-    value_range = ValueRange(lower=0, lower_inclusive=True)
+    value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = False
     synonyms: ClassVar[Collection[str]] = ("pt",)
 
     def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
-        fpr = FalsePositiveRate().extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
-        tpr = TruePositiveRate().extract_from_confusion_matrix(tn=tn, fp=fp, fn=fn, tp=tp)
+        fpr = safe_divide(numerator=fp, denominator=fp + tn, zero_division=self.zero_division)
+        tpr = safe_divide(numerator=tp, denominator=tp + fn, zero_division=self.zero_division)
         return safe_divide(
-            numerator=np.sqrt(fpr).item(),
-            denominator=(np.sqrt(fpr) + np.sqrt(tpr)).item(),
+            numerator=math.sqrt(fpr),
+            denominator=math.sqrt(fpr) + math.sqrt(tpr),
             zero_division=self.zero_division,
         )
 
@@ -599,8 +601,8 @@ class ThreatScore(ConfusionMatrixClassificationMetric):
         TS = TP / (TP + FN + FP)
 
     ---
-    link: https://en.wikipedia.org/wiki/Sensitivity_and_specificity
-    description: The harmonic mean of precision and recall.
+    link: https://en.wikipedia.org/wiki/Jaccard_index
+    description: The proportion of true positives among all actual and predicted positives, TP / (TP + FN + FP).
     """
 
     name = "Threat Score"
