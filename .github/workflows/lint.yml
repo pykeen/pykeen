@@ -6,6 +6,9 @@ on:
       - master
   merge_group:
   workflow_dispatch:
+  # catch dependency releases that break CI while the repository stands still
+  schedule:
+    - cron: "0 4 * * 1"
   pull_request:
     types: [opened, synchronize]
 
@@ -61,6 +64,17 @@ jobs:
     - name: Check RST formatting with docstrfmt
       run: tox -e docstrfmt
 
+
+  report-failure:
+    name: Report scheduled failure
+    needs: [ lint, lint-single-version ]
+    if: failure() && github.event_name == 'schedule'
+    permissions:
+      contents: read
+      issues: write
+    uses: $/.github/workflows/scheduled-failure-issue.yml
+    with:
+      workflow: Lint
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
