@@ -35,6 +35,7 @@ from pykeen.evaluation.rank_based_evaluator import (
 )
 from pykeen.evaluation.ranks import Ranks
 from pykeen.metrics.ranking import (
+    HITS_METRICS,
     AdjustedArithmeticMeanRankIndex,
     ArithmeticMeanRank,
     HitsAtK,
@@ -537,6 +538,25 @@ class TestEvaluationFiltering(unittest.TestCase):
 def test_resolve_metric_name(string, expected):
     """Test metric name resolution."""
     assert RankBasedMetricResults.key_from_string(string) == expected
+
+
+def test_default_metric_keys_unique():
+    """Test that the default metrics of the rank-based evaluator have unique keys."""
+    keys = [metric.key for metric in RankBasedEvaluator().metrics]
+    duplicates = [key for key, count in Counter(keys).items() if count > 1]
+    assert not duplicates
+
+
+@pytest.mark.parametrize("cls", HITS_METRICS)
+@pytest.mark.parametrize("k", [1, 3, 5, 10])
+def test_hits_at_k_key_roundtrip(cls, k):
+    """Test that keys of (derived) Hits@k metrics contain k, and can be resolved back to the same key."""
+    metric = cls(k=k)
+    assert metric.key.endswith(f"hits_at_{k}")
+    assert f"k={k}" in metric.extra_repr()
+    assert RankBasedMetricResults.key_from_string(metric.key) == RankBasedMetricKey(
+        side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=metric.key
+    )
 
 
 def test_sample_negatives():

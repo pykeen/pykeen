@@ -105,6 +105,7 @@ from .utils import (
     weighted_median,
 )
 from ..typing import RANK_REALISTIC, RANK_TYPES, RankType
+from ..utils import camel_to_snake
 
 __all__ = [
     "EPSILON",
@@ -560,6 +561,22 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
             additional keyword-based parameters used to instantiate the base metric
         """
         self.base = rank_based_metric_resolver.make(base_cls or self.base_cls, pos_kwargs=kwargs)
+
+    def iter_extra_repr(self) -> Iterable[str]:  # noqa: D102
+        yield from super().iter_extra_repr()
+        # parameters of the base metric, e.g., $k$ for Hits@k
+        yield from self.base.iter_extra_repr()
+
+    @property
+    def key(self) -> str:  # noqa: D102
+        key = super().key
+        # the key of a parametrized base metric (e.g., Hits@k) differs from its class-derived name; propagate the
+        # parametrization to the derived key, e.g., "adjusted_hits_at_k" -> "adjusted_hits_at_10"
+        generic_base_key = camel_to_snake(self.base.__class__.__name__)
+        base_key = self.base.key
+        if base_key != generic_base_key and key.endswith(generic_base_key):
+            key = key[: -len(generic_base_key)] + base_key
+        return key
 
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
