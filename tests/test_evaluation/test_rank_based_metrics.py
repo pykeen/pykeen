@@ -76,6 +76,28 @@ class GeometricMeanRankTests(cases.RankBasedMetricTestCase):
 
     cls = pykeen.metrics.ranking.GeometricMeanRank
 
+    def test_integer_weights(self):
+        """Integer weights give the same expectation and variance as float weights."""
+        num_candidates = np.array([5, 7, 11])
+        int_weights = np.array([1, 2, 3])
+        float_weights = int_weights.astype(float)
+        assert self.instance.expected_value(num_candidates, weights=int_weights) == pytest.approx(
+            self.instance.expected_value(num_candidates, weights=float_weights)
+        )
+        assert self.instance.variance(num_candidates, weights=int_weights) == pytest.approx(
+            self.instance.variance(num_candidates, weights=float_weights)
+        )
+
+    def test_moments_against_sampling(self):
+        """Expectation and variance match a Monte-Carlo estimate with weights."""
+        num_candidates = np.array([3, 6, 10])
+        weights = np.array([1.0, 2.0, 0.5])
+        generator = np.random.default_rng(42)
+        ranks = np.stack([generator.integers(1, c + 1, size=200_000) for c in num_candidates])
+        values = np.exp((weights[:, None] / weights.sum() * np.log(ranks)).sum(axis=0))
+        assert self.instance.expected_value(num_candidates, weights=weights) == pytest.approx(values.mean(), rel=1e-2)
+        assert self.instance.variance(num_candidates, weights=weights) == pytest.approx(values.var(), rel=5e-2)
+
 
 class AdjustedGeometricMeanRankIndexTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted geometric mean rank index."""
