@@ -177,8 +177,7 @@ def compute_compressed_adjacency_list(
             adj_list[i] = compressed_adj_list[offsets[i]:offsets[i+1]]
     """
     mapped_triples = mapped_triples.to(device="cpu", dtype=torch.long)
-    max_id = int(mapped_triples[:, [0, 2]].max().item())
-    num_vertices = num_entities or max_id + 1
+    num_vertices = num_entities or get_num_ids(mapped_triples[:, [0, 2]])
     heads, tails = mapped_triples[:, 0], mapped_triples[:, 2]
     triple_ids = torch.arange(mapped_triples.shape[0])
     # each triple (h, r, t) contributes the entry (i, t) to the adjacency list of h, followed by the entry (i, h) to

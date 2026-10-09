@@ -29,6 +29,7 @@ from pykeen.triples.utils import (
     TRIPLES_DF_COLUMNS,
     InvalidRemappingLengthError,
     compute_compressed_adjacency_list,
+    get_num_ids,
     load_triples,
 )
 from tests.constants import RESOURCES
@@ -715,8 +716,7 @@ def _compute_compressed_adjacency_list_reference(
     mapped_triples: torch.Tensor, num_entities: int | None = None
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Compute the compressed adjacency list with a simple loop, cf. :func:`compute_compressed_adjacency_list`."""
-    max_id = int(mapped_triples[:, [0, 2]].max().item())
-    num_vertices = num_entities or max_id + 1
+    num_vertices = num_entities or get_num_ids(mapped_triples[:, [0, 2]])
     adj_lists: list[list[tuple[int, int]]] = [[] for _ in range(num_vertices)]
     for i, (s, _, o) in enumerate(mapped_triples.tolist()):
         adj_lists[s].append((i, o))

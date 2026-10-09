@@ -17,6 +17,7 @@ from pykeen.triples import LCWAInstances
 from pykeen.triples.instances import BatchedSLCWAInstances, SubGraphSLCWAInstances
 from pykeen.triples.triples_factory import TriplesFactory
 from pykeen.triples.weights import RelationLossWeighter
+from pykeen.utils import get_edge_index
 from tests import cases
 
 
@@ -285,7 +286,9 @@ class SubGraphSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
         """Test that the empirical distribution of subgraph samples matches the exact one."""
         mapped_triples = torch.as_tensor([[0, 0, 1], [1, 0, 2], [1, 0, 3], [3, 0, 3], [4, 0, 5]], dtype=torch.long)
         batch_size = 3
-        expected = _subgraph_sample_distribution(edges=mapped_triples[:, [0, 2]].tolist(), batch_size=batch_size)
+        expected = _subgraph_sample_distribution(
+            edges=get_edge_index(mapped_triples=mapped_triples).t().tolist(), batch_size=batch_size
+        )
         instance = SubGraphSLCWAInstances(mapped_triples=mapped_triples, batch_size=batch_size)
         torch.manual_seed(0)
         num_samples = 20_000

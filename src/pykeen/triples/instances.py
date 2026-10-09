@@ -344,12 +344,14 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
     def _sample_unvisited_vertex(self, generator: np.random.Generator, visited: set[int]) -> int:
         """Sample a vertex uniformly among the not yet visited vertices with at least one incident edge."""
         candidates = self._non_isolated
-        # rejection sampling, which is efficient as long as only a small fraction of vertices has been visited
-        for _ in range(32):
-            vertex = int(candidates[generator.integers(len(candidates))])
-            if vertex not in visited:
-                return vertex
-        # exact fallback
+        # rejection sampling takes in expectation at most two draws as long as at most half of the candidates have been
+        # visited; otherwise, drawing from the explicit set of unvisited candidates is cheaper
+        if 2 * len(visited) <= len(candidates):
+            while True:
+                vertex = int(candidates[generator.integers(len(candidates))])
+                if vertex not in visited:
+                    return vertex
+        # exact sampling
         candidates = np.setdiff1d(candidates, np.fromiter(visited, dtype=candidates.dtype, count=len(visited)))
         if not len(candidates):
             # cannot happen when requesting at most as many edges as there are, cf. subgraph_sample
