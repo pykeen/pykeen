@@ -1,5 +1,7 @@
 """Tests for rank-based metrics."""
 
+import itertools
+import time
 import unittest
 from collections.abc import Callable, Collection, Sequence
 from typing import ClassVar
@@ -11,9 +13,12 @@ import unittest_templates
 from scipy.stats import bootstrap
 
 import pykeen.metrics.ranking
+import pykeen.metrics.utils
 from pykeen.metrics.ranking import generalized_harmonic_numbers, harmonic_variances
 from pykeen.metrics.utils import (
     compute_log_expected_power,
+    compute_median_mean,
+    compute_median_moments,
     compute_median_survival_function,
     weighted_harmonic_mean,
     weighted_mean_expectation,
@@ -434,4 +439,108 @@ def test_median_survival_function_against_simulation():
     empirical_sf = np.array([(samples > x).mean() for x in range(len(sf))])
 
     # The analytical result should be close to empirical (with some tolerance)
-    np.testing.assert_allclose(sf, empirical_sf, rtol=0.05)
+    np.testing.assert_allclose(sf, empirical_sf, rtol=0.05, atol=1e-9)
+
+
+def _brute_force_median_moments(num_candidates: Sequence[int]) -> tuple[float, float]:
+    """Enumerate all rank tuples to get the exact mean and variance of `np.median`."""
+    medians = np.array([np.median(ranks) for ranks in itertools.product(*(range(1, k + 1) for k in num_candidates))])
+    return medians.mean().item(), medians.var().item()
+
+
+MEDIAN_BRUTE_FORCE_CASES = [
+    pytest.param([5], id="single"),
+    pytest.param([5, 5, 5], id="odd-single-k"),
+    pytest.param([5, 5, 5, 5], id="even-single-k"),
+    pytest.param([6, 6], id="two"),
+    pytest.param([3, 5, 7], id="odd-multi-k"),
+    pytest.param([4, 4, 6, 6], id="even-multi-k"),
+    pytest.param([2, 3, 4, 5, 6, 6], id="even-six"),
+    pytest.param([1, 1, 3, 3], id="with-single-candidate"),
+]
+
+
+@pytest.mark.parametrize("num_candidates", MEDIAN_BRUTE_FORCE_CASES)
+def test_median_moments_brute_force(num_candidates: list[int]):
+    """Compare the closed-form mean and variance of the median to exhaustive enumeration."""
+    expected_mean, expected_variance = _brute_force_median_moments(num_candidates)
+    ks = np.asarray(num_candidates)
+    mean, variance = compute_median_moments(ks)
+    assert mean == pytest.approx(expected_mean, abs=1e-9)
+    assert variance == pytest.approx(expected_variance, abs=1e-9)
+    assert compute_median_mean(ks) == pytest.approx(expected_mean, abs=1e-9)
+    # the metric uses the same code path
+    metric = pykeen.metrics.ranking.MedianRank()
+    assert metric.expected_value(num_candidates=ks) == pytest.approx(expected_mean, abs=1e-9)
+    assert metric.variance(num_candidates=ks) == pytest.approx(expected_variance, abs=1e-9)
+    assert metric.std(num_candidates=ks) == pytest.approx(expected_variance**0.5, abs=1e-6)
+
+
+def test_median_survival_function_even_is_upper_median():
+    """For even n, the survival function is that of the upper median, i.e., the order statistic n // 2 + 1."""
+    num_candidates = [5, 5, 5, 5]
+    upper = np.array([sorted(ranks)[2] for ranks in itertools.product(*(range(1, k + 1) for k in num_candidates))])
+    sf = compute_median_survival_function(np.asarray(num_candidates))
+    np.testing.assert_allclose(sf, [(upper > x).mean() for x in range(len(sf))], atol=1e-12)
+
+
+def test_median_expected_value_even_regression():
+    """Regression test: the expected median of 4 ranks with k=5 is 3.0, not the upper median 3.5."""
+    ks = np.full(4, 5)
+    assert pykeen.metrics.ranking.MedianRank().expected_value(num_candidates=ks) == pytest.approx(3.0)
+
+
+@pytest.mark.parametrize("num_ranks", [1, 2, 3, 4, 50, 51])
+@pytest.mark.parametrize("k", [1, 2, 7])
+def test_median_variance_non_negative(num_ranks: int, k: int):
+    """The variance must never be negative (e.g., due to cancellation), so that the standard deviation is defined."""
+    metric = pykeen.metrics.ranking.MedianRank()
+    ks = np.full(num_ranks, k)
+    assert metric.variance(num_candidates=ks) >= 0.0
+    assert metric.std(num_candidates=ks) >= 0.0
+
+
+def test_median_variance_degenerate():
+    """If there is a single candidate, the median is deterministic."""
+    assert compute_median_moments(np.ones(4, dtype=int)) == (1.0, 0.0)
+
+
+def test_median_variance_fallback_to_sampling(monkeypatch: pytest.MonkeyPatch):
+    """For even n with multiple k whose exact variance is too expensive, the sampling path is used."""
+    monkeypatch.setattr(pykeen.metrics.utils, "_MAX_PAIRWISE_WORK", 0.0)
+    ks = np.array([4, 4, 6, 6])
+    metric = pykeen.metrics.ranking.MedianRank()
+    with pytest.raises(NotImplementedError):
+        compute_median_moments(ks)
+    with pytest.raises(pykeen.metrics.ranking.NoClosedFormError):
+        metric.variance(num_candidates=ks)
+    _, expected_variance = _brute_force_median_moments(ks)
+    estimate = metric.variance(num_candidates=ks, num_samples=20_000, generator=np.random.default_rng(42))
+    assert estimate == pytest.approx(expected_variance, rel=0.1)
+    # the expectation is always exact
+    assert metric.expected_value(num_candidates=ks) == pytest.approx(_brute_force_median_moments(ks)[0])
+
+
+@pytest.mark.parametrize("num_ranks", [2_000, 2_001])
+def test_median_moments_single_k_large(num_ranks: int):
+    """Smoke test: with a single k, the cost is independent of the number of ranks; compare to simulation."""
+    k = 1_500
+    start = time.perf_counter()
+    mean, variance = compute_median_moments(np.full(num_ranks, k))
+    assert time.perf_counter() - start < 5.0
+    # median of many uniform ranks concentrates around the center
+    assert mean == pytest.approx((k + 1) / 2, abs=0.5)
+    generator = np.random.default_rng(seed=0)
+    samples = np.median(generator.integers(1, k + 1, size=(2_000, num_ranks)), axis=1)
+    assert variance == pytest.approx(samples.var(), rel=0.15)
+
+
+def test_median_moments_multiple_k_against_simulation():
+    """Compare the exact moments for many distinct k (even and odd n) to a simulation."""
+    generator = np.random.default_rng(seed=1)
+    for n in (40, 41):
+        ks = generator.integers(20, 60, size=n)
+        samples = np.median(generator.integers(1, ks[None, :] + 1, size=(50_000, n)), axis=1)
+        mean, variance = compute_median_moments(ks)
+        assert mean == pytest.approx(samples.mean(), abs=0.1)
+        assert variance == pytest.approx(samples.var(), rel=0.05)

@@ -6,7 +6,7 @@ from typing import ClassVar
 
 import numpy as np
 from docdata import get_docdata
-from scipy import stats
+from scipy import fft, special, stats
 
 from ..utils import ExtraReprMixin, camel_to_snake
 
@@ -14,7 +14,10 @@ __all__ = [
     "Metric",
     "ValueRange",
     "compute_log_expected_power",
+    "compute_median_mean",
+    "compute_median_moments",
     "compute_median_survival_function",
+    "compute_order_statistic_survival_function",
     "weighted_harmonic_mean",
     "weighted_mean_expectation",
     "weighted_mean_variance",
@@ -363,59 +366,252 @@ def compute_log_expected_power(k_values: np.ndarray, powers: np.ndarray, memory_
     return float(np.sum(log_sums - np.log(k_values)))
 
 
+#: maximum number of array elements to hold per chunk when evaluating count distributions
+_CHUNK_ELEMENTS = 2_000_000
+
+#: maximum amount of work (in complex multiplications) for the exact pairwise term of the even-n median variance
+#: with multiple distinct numbers of candidates
+_MAX_PAIRWISE_WORK = 5e7
+
+
+def _group_candidates(num_candidates: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Group ranking tasks by their number of candidates.
+
+    :param num_candidates: shape: (n,)
+        The number of candidates for each ranking task.
+
+    :return: shape: (g,), (g,)
+        The unique numbers of candidates, and the number of tasks for each of them.
+    """
+    ks, counts = np.unique(np.asarray(num_candidates, dtype=int), return_counts=True)
+    return ks, counts
+
+
+def _count_cdf(ks: np.ndarray, counts: np.ndarray, x_grid: np.ndarray, c: int) -> np.ndarray:
+    r"""Compute $P(C(x) \leq c)$, where $C(x) = |\{i : r_i \leq x\}|$ for $r_i \sim \mathcal{U}(1, k_i)$.
+
+    The count is a sum of independent binomials, one for each group of tasks with identical $k$, with success
+    probability $\min(1, x / k)$.
+
+    For a single group, this is a vectorized evaluation of the binomial CDF. For multiple groups, we convolve the
+    probability mass functions of the groups using FFTs along the count axis, vectorized over chunks of $x$.
+
+    :param ks: shape: (g,)
+        The unique numbers of candidates.
+    :param counts: shape: (g,)
+        The number of tasks for each unique number of candidates.
+    :param x_grid: shape: (m,)
+        The values $x$.
+    :param c:
+        The (inclusive) upper limit for the count.
+
+    :return: shape: (m,)
+        The probabilities.
+    """
+    n = int(counts.sum())
+    if c >= n:
+        return np.ones(len(x_grid))
+    if len(ks) == 1:
+        return stats.binom.cdf(c, n, np.minimum(1.0, x_grid / ks[0]))
+    size = fft.next_fast_len(n + 1)
+    chunk = max(1, _CHUNK_ELEMENTS // size)
+    result = np.empty(len(x_grid))
+    for start in range(0, len(x_grid), chunk):
+        x = x_grid[start : start + chunk]
+        spectrum = None
+        for k, n_g in zip(ks, counts, strict=True):
+            p = np.minimum(1.0, x / k)
+            pmf = stats.binom.pmf(np.arange(n_g + 1)[None, :], n_g, p[:, None])
+            spec = fft.rfft(pmf, n=size, axis=-1)
+            spectrum = spec if spectrum is None else spectrum * spec
+        pmf = fft.irfft(spectrum, n=size, axis=-1)[:, : c + 1]
+        result[start : start + chunk] = np.clip(pmf, 0.0, None).sum(axis=-1)
+    return np.clip(result, 0.0, 1.0)
+
+
+def compute_order_statistic_survival_function(num_candidates: np.ndarray, index: int) -> np.ndarray:
+    r"""Compute $P(X_{(j)} > x)$ for the $j$-th smallest of independent $r_i \sim \mathcal{U}(1, k_i)$.
+
+    Let $C(x) = |\{i : r_i \leq x\}|$. Then, $X_{(j)} > x$ if and only if $C(x) \leq j - 1$. The distribution of
+    $C(x)$ is a convolution of binomial distributions, one for each group of tasks with identical number of
+    candidates.
+
+    Time complexity: $O(K)$ for a single unique number of candidates; for $g$ unique values, we need
+    $O(K \cdot g \cdot n \log n)$. Memory is bounded by a constant, since the grid is processed in chunks.
+
+    :param num_candidates: shape: (n,)
+        The number of candidates.
+    :param index:
+        The 1-based index $j \in \{1, \ldots, n\}$ of the order statistic.
+
+    :return: shape: (K + 1,)
+        The survival function for $x = 0, \ldots, K$, where $K$ denotes the maximum number of candidates.
+
+    :raises ValueError:
+        If the index is out of range.
+    """
+    ks, counts = _group_candidates(num_candidates)
+    if not 1 <= index <= counts.sum():
+        raise ValueError(f"index must be in [1, {counts.sum()}], but is {index}")
+    x_grid = np.arange(ks.max() + 1)
+    return _count_cdf(ks, counts, x_grid, c=index - 1)
+
+
 def compute_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
-    """Compute $P(Median > x)$ for x in range $[0, max(k)]$.
+    r"""Compute $P(M > x)$ for $x \in \{0, \ldots, K\}$, where $M$ is the (upper) median of the ranks.
 
-    This function uses dynamic programming to calculate the cumulative distribution
-    of the count of variables <= x, thereby deriving the median's distribution.
+    For an odd number $n$ of ranks, $M$ is the median, i.e., the order statistic $X_{(\frac{n + 1}{2})}$. For an even
+    number of ranks, the median as computed by :func:`numpy.median` is the average of the two middle order statistics
+    and is not integer-valued. This function then returns the survival function of the *upper* median
+    $X_{(\frac{n}{2} + 1)}$ instead. Use :func:`compute_order_statistic_survival_function` for the lower one, and
+    :func:`compute_median_mean` / :func:`compute_median_moments` for the mean and variance of the actual median.
 
-    Memory complexity: O(K * n), where K is the maximum value of k.
+    Time complexity: $O(K)$ for a single unique number of candidates, otherwise $O(K \cdot g \cdot n \log n)$, where
+    $g$ is the number of unique numbers of candidates. Memory is bounded by a constant.
 
     :param num_candidates: shape: (n,)
         The number of candidates.
 
-    :return: shape: (K,)
+    :return: shape: (K + 1,)
         The survival function. $K$ denotes the maximum number of candidates.
     """
-    ks = np.array(num_candidates, dtype=int)
-    n = len(ks)
-    k_max = ks.max()
+    n = len(num_candidates)
+    return compute_order_statistic_survival_function(num_candidates, index=n // 2 + 1)
 
-    # We target the index n // 2.
-    # For n=3 (odd), index 1 (2nd smallest).
-    # For n=4 (even), index 2 (3rd smallest, i.e., the 'upper' median).
-    target_threshold = n // 2
 
-    # Grid of values x = 0, 1, ..., k_max
-    # We compute probabilities up to k_max.
-    x_grid = np.arange(k_max + 1)
+def _pairwise_term(ks: np.ndarray, counts: np.ndarray, m: int) -> float:
+    r"""Compute $\sum_{0 \leq a < b} P(C(a) = m, C(b) = m)$ for $n = 2m$.
 
-    # Matrix of individual probabilities: P(X_i <= x)
-    # Shape: (k_max + 1, n)
-    # P(X_i <= x) = min(1, x / k_i)
-    p_matrix = np.minimum(1.0, x_grid[:, None] / ks[None, :])
+    The event means that exactly $m$ ranks are $\leq a$ and none is in $(a, b]$, i.e.,
 
-    # DP State: dp[v, c] = Probability that exactly 'c' variables are <= v
-    # Initialize: 0 variables <= v has probability 1 initially
-    dp = np.zeros((len(x_grid), n + 1))
-    dp[:, 0] = 1.0
+    .. math::
 
-    # Vectorized Poisson-Binomial recurrence
-    for i in range(n):
-        p = p_matrix[:, i : i + 1]  # Column vector for broadcasting
+        P(C(a) = m, C(b) = m) = [z^m] \prod_g \left(p_g(a) z + 1 - p_g(b)\right)^{n_g}
 
-        # New DP state based on convolution with Bernoulli(p)
-        # dp[c] = dp[c]*(1-p) + dp[c-1]*p
-        term_fail = dp * (1 - p)
+    For a single group, this is $\binom{n}{m} p(a)^m (1 - p(b))^{n - m}$, which is separable in $a$ and $b$ and can
+    thus be summed in $O(K)$ using a cumulative log-sum-exp. For multiple groups, we extract the coefficient via a
+    DFT over evaluations at roots of unity, which needs $O(K^2 \cdot g \cdot n)$ operations.
 
-        term_success = np.zeros_like(dp)
-        term_success[:, 1:] = dp[:, :-1] * p
+    :param ks: shape: (g,)
+        The unique numbers of candidates.
+    :param counts: shape: (g,)
+        The number of tasks for each unique number of candidates.
+    :param m:
+        Half of the number of tasks.
 
-        dp = term_fail + term_success
+    :return:
+        The sum.
 
-    # The median is <= x if the count of variables (<= x) is > target_threshold.
-    # CDF(x) = P(Median <= x) = Sum_{c=target+1}^{n} P(Count == c)
-    cdf_median = dp[:, target_threshold + 1 :].sum(axis=1)
+    :raises NotImplementedError:
+        If there are multiple groups and the computation exceeds the work limit.
+    """
+    n = int(counts.sum())
+    k_max = int(ks.max())
+    if len(ks) == 1:
+        x = np.arange(k_max + 1)
+        p = np.minimum(1.0, x / ks[0])
+        with np.errstate(divide="ignore"):
+            log_p = np.log(p)
+            log_q = np.log1p(-p)
+        # sum_{a < b} u_a v_b = sum_b v_b * (sum_{a < b} u_a), in log-space
+        log_cum = np.logaddexp.accumulate(m * log_p)
+        log_binom = special.gammaln(n + 1) - 2 * special.gammaln(m + 1)
+        # terms for b = 1, ..., K
+        return float(np.exp(log_binom + log_cum[:-1] + m * log_q[1:]).sum())
 
-    # Survival Function: P(Median > x) = 1 - CDF(x)
-    return 1.0 - cdf_median
+    size = n + 1
+    work = 0.5 * k_max**2 * len(ks) * size
+    if work > _MAX_PAIRWISE_WORK:
+        raise NotImplementedError(
+            f"Exact computation requires ~{work:.2g} operations, which exceeds the limit of {_MAX_PAIRWISE_WORK:.2g}."
+        )
+    omega = np.exp(2j * np.pi * np.arange(size) / size)
+    phase = omega ** (-m)
+    # shape: (g, K + 1)
+    x = np.arange(k_max + 1)
+    p = np.minimum(1.0, x[None, :] / ks[:, None])
+    q = 1.0 - p
+    chunk = max(1, _CHUNK_ELEMENTS // (size * k_max))
+    total = 0.0
+    for start in range(1, k_max, chunk):
+        a = np.arange(start, min(start + chunk, k_max))
+        b = np.arange(start + 1, k_max + 1)
+        acc = np.ones((len(a), len(b), size), dtype=complex)
+        for g, n_g in enumerate(counts):
+            acc *= (p[g, a][:, None, None] * omega[None, None, :] + q[g, b][None, :, None]) ** n_g
+        values = (acc * phase).sum(axis=-1).real / size
+        mask = b[None, :] > a[:, None]
+        total += float(np.clip(values, 0.0, None)[mask].sum())
+    return total
+
+
+def compute_median_mean(num_candidates: np.ndarray) -> float:
+    r"""Compute the exact expected value of the median of independent $r_i \sim \mathcal{U}(1, k_i)$.
+
+    For odd $n$ this is $\sum_{x \geq 0} P(X_{(\frac{n+1}{2})} > x)$, for even $n$ the average of the corresponding
+    sums for the two middle order statistics. It needs $O(K)$ for a single unique number of candidates, and
+    $O(K \cdot g \cdot n \log n)$ for $g$ unique values.
+
+    :param num_candidates: shape: (n,)
+        The number of candidates.
+
+    :return:
+        The expected value of the median.
+    """
+    n = len(num_candidates)
+    indices = [n // 2 + 1] if n % 2 == 1 else [n // 2, n // 2 + 1]
+    return float(
+        np.mean([compute_order_statistic_survival_function(num_candidates, index=i)[:-1].sum() for i in indices])
+    )
+
+
+def compute_median_moments(num_candidates: np.ndarray) -> tuple[float, float]:
+    r"""Compute the exact mean and variance of the median of independent $r_i \sim \mathcal{U}(1, k_i)$.
+
+    The median follows :func:`numpy.median`: for odd $n$, it is the order statistic $X_{(\frac{n+1}{2})}$, and for
+    even $n$ the average $M = \frac{A + B}{2}$ of $A = X_{(m)}$ and $B = X_{(m + 1)}$ with $m = \frac{n}{2}$. We use
+    $\mathbb{E}[X] = \sum_{x \geq 0} P(X > x)$ and $\mathbb{E}[X^2] = \sum_{x \geq 0} (2x + 1) P(X > x)$ for
+    non-negative integer random variables. For even $n$ we additionally need
+
+    .. math::
+
+        \mathbb{E}[AB] = \sum_{a \geq 0} \sum_{b \geq 0} P(A > a, B > b)
+
+    Since $A \leq B$, the summand is $P(A > a)$ for $b \leq a$. For $b > a$, with $C(x) = |\{i : r_i \leq x\}|$,
+
+    .. math::
+
+        P(A > a, B > b) = P(C(b) \leq m) - P(C(a) = m, C(b) = m)
+
+    The first term only depends on $b$, the second one is summed by :func:`_pairwise_term`.
+
+    Complexity: for a single unique number of candidates, $O(K)$. For $g$ unique values, odd $n$ needs
+    $O(K \cdot g \cdot n \log n)$. For even $n$, the exact variance additionally needs $O(K^2 \cdot g \cdot n)$,
+    which is only attempted if it is below a fixed work limit.
+
+    :param num_candidates: shape: (n,)
+        The number of candidates.
+
+    :return:
+        The mean and the variance of the median. The variance is clamped to be non-negative.
+
+    :raises NotImplementedError:
+        If $n$ is even, there are multiple unique numbers of candidates, and the exact variance is too expensive to
+        compute. The mean is always available via :func:`compute_median_mean`.
+    """
+    ks, counts = _group_candidates(num_candidates)
+    n = int(counts.sum())
+    if n % 2 == 1:
+        sf = compute_median_survival_function(num_candidates)[:-1]
+        x = np.arange(len(sf))
+        mean = float(sf.sum())
+        return mean, max(0.0, float(((2 * x + 1) * sf).sum()) - mean**2)
+    m = n // 2
+    sf_a = compute_order_statistic_survival_function(num_candidates, index=m)[:-1]
+    sf_b = compute_order_statistic_survival_function(num_candidates, index=m + 1)[:-1]
+    x = np.arange(len(sf_a))
+    mean = 0.5 * float(sf_a.sum() + sf_b.sum())
+    e_aa = float(((2 * x + 1) * sf_a).sum())
+    e_bb = float(((2 * x + 1) * sf_b).sum())
+    e_ab = float(((x + 1) * sf_a).sum() + (x * sf_b).sum()) - _pairwise_term(ks, counts, m)
+    return mean, max(0.0, 0.25 * (e_aa + e_bb + 2 * e_ab) - mean**2)
