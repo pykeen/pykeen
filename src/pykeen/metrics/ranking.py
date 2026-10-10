@@ -83,6 +83,7 @@ density function of the standard Gaussian distribution to retrieve a *p*-value. 
 - :class:`~pykeen.metrics.ranking.ZInverseHarmonicMeanRank`
 """
 
+import functools
 import math
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Collection, Iterable
@@ -172,7 +173,7 @@ def generate_ranks(
     :param dtype:
         the data type
 
-    :return: shape: dims + s
+    :return: shape: prefix_shape + s
         an array of sampled rank values
     """
     if dtype is None:
@@ -200,7 +201,7 @@ def generate_num_candidates_and_ranks(
         a pair of integer arrays, ranks and num_candidates for each individual ranking task
     """
     generator = np.random.default_rng(seed=seed)
-    num_candidates = generator.integers(low=1, high=max_num_candidates, size=(num_ranks,))
+    num_candidates = generator.integers(low=1, high=max_num_candidates, size=(num_ranks,), endpoint=True)
     ranks = generate_ranks(num_candidates=num_candidates, seed=generator)
     return ranks, num_candidates
 
@@ -281,7 +282,9 @@ class RankBasedMetric(Metric):
         :param generator:
             a random state for reproducibility
         :param memory_intense:
-            whether to use a more memory-intense, but more time-efficient variant
+            whether to use a more memory-intense variant, which draws all rank samples in a single batched
+            (vectorized) call. Note that the metric itself is still evaluated sample by sample in a Python-level loop
+            (via :func:`numpy.apply_along_axis`), so the speed-up is limited to the rank sampling.
 
         :return: shape: (num_samples,)
             the metric evaluated on `num_samples` sampled rank arrays
@@ -310,7 +313,7 @@ class RankBasedMetric(Metric):
 
     def _bootstrap(
         self,
-        func: Callable[[np.ndarray], np.ndarray],
+        func: Callable[[np.ndarray], np.floating | np.ndarray],
         num_candidates: np.ndarray,
         num_samples: int,
         confidence_level: float = 95.0,
@@ -422,7 +425,7 @@ class RankBasedMetric(Metric):
 
     def numeric_variance_with_ci(self, **kwargs) -> np.ndarray:
         """Estimate variance with confidence intervals."""
-        return self._bootstrap(func=np.var, **kwargs)
+        return self._bootstrap(func=functools.partial(np.var, ddof=1), **kwargs)
 
     def variance(
         self,
