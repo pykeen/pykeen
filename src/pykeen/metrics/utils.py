@@ -271,16 +271,20 @@ def weighted_median(a: np.ndarray, weights: np.ndarray | None = None) -> np.floa
     if weights is None:
         return np.median(a)
 
-    # calculate cdf
+    # calculate (unnormalized) cumulative weights; comparing against half the total avoids rounding from normalization
     indices = np.argsort(a)
     s_ranks = a[indices]
     s_weights = weights[indices]
-    cdf = np.cumsum(s_weights)
-    cdf /= cdf[-1]
-    # determine value at p=0.5
-    idx = np.searchsorted(cdf, v=0.5)
-    # special case for exactly 0.5
-    if cdf[idx] == 0.5:
+    cdf = np.cumsum(s_weights, dtype=float)
+    total = cdf[-1]
+    if not total > 0:
+        raise ValueError(f"The sum of weights must be positive, but is {total}")
+    half = 0.5 * total
+    tolerance = 1.0e-9 * total
+    # determine first value with cumulative weight >= 0.5 * total (up to numerical tolerance)
+    idx = int(np.searchsorted(cdf, v=half - tolerance))
+    # special case for exactly 0.5: average the two middle values
+    if abs(cdf[idx] - half) <= tolerance:
         return s_ranks[idx : idx + 2].mean()
     return s_ranks[idx]
 
