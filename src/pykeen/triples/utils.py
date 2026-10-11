@@ -10,6 +10,7 @@ import torch
 from class_resolver import FunctionResolver
 
 from ..typing import LabeledTriples, LongTensor, MappedTriples
+from ..utils import get_num_ids, max_value
 
 __all__ = [
     "compute_compressed_adjacency_list",
@@ -195,18 +196,3 @@ def compute_compressed_adjacency_list(
     offset[0] = 0
     offset[1:] = torch.cumsum(degrees, dim=0)[:-1]
     return degrees, offset, compressed_adj_lists
-
-
-def max_value(x: LongTensor | np.ndarray) -> int | None:
-    """Return the maximum value, or None if the tensor / array is empty."""
-    if 0 in x.shape:
-        return None
-    return x.max().item()
-
-
-def get_num_ids(x: LongTensor | np.ndarray) -> int:
-    """Return the number of ids values, i.e., the maximum ID plus one, or zero for an empty tensor / array."""
-    max_id = max_value(x)
-    if max_id is None:
-        return 0
-    return max_id + 1
