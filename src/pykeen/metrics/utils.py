@@ -1,5 +1,7 @@
 """Utilities for metrics."""
 
+import functools
+import operator
 from collections.abc import Collection
 from dataclasses import dataclass
 from typing import ClassVar
@@ -387,6 +389,26 @@ def _group_candidates(num_candidates: np.ndarray) -> tuple[np.ndarray, np.ndarra
     return ks, counts
 
 
+def _group_spectrum(x: np.ndarray, k: int, n_g: int, size: int) -> np.ndarray:
+    r"""Compute the spectrum of the count distribution of a single group of tasks.
+
+    :param x: shape: (m,)
+        The values $x$.
+    :param k:
+        The number of candidates of the group.
+    :param n_g:
+        The number of tasks in the group.
+    :param size:
+        The FFT length.
+
+    :return: shape: (m, size // 2 + 1)
+        The real FFT of the binomial probability mass function with success probability $\min(1, x / k)$.
+    """
+    p = np.minimum(1.0, x / k)
+    pmf = stats.binom.pmf(np.arange(n_g + 1)[None, :], n_g, p[:, None])
+    return fft.rfft(pmf, n=size, axis=-1)
+
+
 def _count_cdf(ks: np.ndarray, counts: np.ndarray, x_grid: np.ndarray, c: int) -> np.ndarray:
     r"""Compute $P(C(x) \leq c)$, where $C(x) = |\{i : r_i \leq x\}|$ for $r_i \sim \mathcal{U}(1, k_i)$.
 
@@ -418,12 +440,9 @@ def _count_cdf(ks: np.ndarray, counts: np.ndarray, x_grid: np.ndarray, c: int) -
     result = np.empty(len(x_grid))
     for start in range(0, len(x_grid), chunk):
         x = x_grid[start : start + chunk]
-        spectrum = None
-        for k, n_g in zip(ks, counts, strict=True):
-            p = np.minimum(1.0, x / k)
-            pmf = stats.binom.pmf(np.arange(n_g + 1)[None, :], n_g, p[:, None])
-            spec = fft.rfft(pmf, n=size, axis=-1)
-            spectrum = spec if spectrum is None else spectrum * spec
+        spectrum = functools.reduce(
+            operator.mul, (_group_spectrum(x, k, n_g, size) for k, n_g in zip(ks, counts, strict=True))
+        )
         pmf = fft.irfft(spectrum, n=size, axis=-1)[:, : c + 1]
         result[start : start + chunk] = np.clip(pmf, 0.0, None).sum(axis=-1)
     return np.clip(result, 0.0, 1.0)
