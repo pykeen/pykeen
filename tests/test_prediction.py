@@ -1,7 +1,7 @@
 """Tests for prediction tools."""
 
-from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence
-from typing import Any, ClassVar
+from collections.abc import Collection, Iterable, Mapping, MutableMapping, Sequence, Sized
+from typing import Any, ClassVar, cast
 
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ import pykeen.regularizers
 import pykeen.typing
 from pykeen.constants import COLUMN_LABELS
 from pykeen.datasets.nations import Nations
-from pykeen.triples.triples_factory import AnyTriples, CoreTriplesFactory, KGInfo
+from pykeen.triples.triples_factory import AnyTriples, CoreTriplesFactory, KGInfo, TriplesFactory
 from pykeen.utils import resolve_device
 from tests import cases
 
@@ -142,6 +142,7 @@ class CountScoreConsumerTestCase(cases.ScoreConsumerTests):
     cls = pykeen.predict.CountScoreConsumer
 
     def check(self, batch: torch.LongTensor, scores: torch.FloatTensor) -> None:
+        assert isinstance(self.instance, pykeen.predict.CountScoreConsumer)
         assert self.instance.batch_count == batch.shape[0]
         assert self.instance.score_count == scores.numel()
 
@@ -152,6 +153,7 @@ class TopKScoreConsumerTestCase(cases.ScoreConsumerTests):
     cls = pykeen.predict.TopKScoreConsumer
 
     def check(self, batch: torch.LongTensor, scores: torch.FloatTensor) -> None:
+        assert isinstance(self.instance, pykeen.predict.TopKScoreConsumer)
         k = self.instance.k
         assert self.instance.result.shape == (k, 3)
         # the kept scores are the k largest: fewer than k scores exceed the smallest kept one, and at least k reach it
@@ -310,24 +312,11 @@ def test_predict_triples(
     pack = pykeen.predict.predict_triples(
         model=model, triples=triples, triples_factory=triples_factory, batch_size=batch_size
     )
-    if not isinstance(triples, torch.Tensor | np.ndarray) and isinstance(triples[0], str):
-        num_triples = 1
-    else:
-        num_triples = len(triples)
+    num_triples = 1 if isinstance(triples, tuple) and isinstance(triples[0], str) else len(cast(Sized, triples))
     _check_score_pack(pack=pack, model=model, num_triples=num_triples)
 
 
-def _iter_get_input_batch_inputs() -> Iterable[
-    tuple[
-        CoreTriplesFactory | None,
-        int | str | None,
-        int,
-        str | None,
-        int,
-        str | None,
-        pykeen.typing.Target,
-    ]
-]:
+def _iter_get_input_batch_inputs() -> Iterable[tuple[Any, ...]]:
     """Iterate over test inputs for _get_input_batch."""
     factory = Nations().training
     # ID-based, no factory
@@ -346,7 +335,7 @@ def _iter_get_input_batch_inputs() -> Iterable[
 
 @pytest.mark.parametrize(("factory", "head", "relation", "tail", "exp_target"), list(_iter_get_input_batch_inputs()))
 def test_get_input_batch(
-    factory: CoreTriplesFactory | None,
+    factory: TriplesFactory | None,
     head: int | str | None,
     relation: int | str | None,
     tail: int | str | None,
@@ -364,9 +353,7 @@ def test_get_input_batch(
     assert batch.flatten().tolist() == list(batch_tuple)
 
 
-def _iter_get_targets_inputs() -> Iterable[
-    tuple[torch.Tensor | Collection[str | int] | None, CoreTriplesFactory | None, bool]
-]:
+def _iter_get_targets_inputs() -> Iterable[tuple[Any, ...]]:
     """Iterate over test inputs for _get_targets."""
     factory = Nations().training
     for entity, id_to_label in ((True, factory.entity_id_to_label), (False, factory.relation_id_to_label)):
@@ -391,7 +378,7 @@ def _iter_get_targets_inputs() -> Iterable[
 )
 def test_get_targets(
     ids: torch.Tensor | Collection[str | int] | None,
-    factory: CoreTriplesFactory | None,
+    factory: TriplesFactory | None,
     entity: bool,
     exp_labels: Sequence[str] | None,
     exp_ids: Sequence[int] | None,
@@ -405,10 +392,12 @@ def test_get_targets(
     if exp_labels is None:
         assert labels_list is None
     else:
+        assert labels_list is not None
         assert list(labels_list) == list(exp_labels)
     if exp_ids is None:
         assert exp_ids is None
     else:
+        assert ids_list is not None
         assert list(ids_list) == list(exp_ids)
     if exp_tensor is None:
         assert ids_tensor is None
@@ -416,9 +405,7 @@ def test_get_targets(
         assert (ids_tensor == exp_tensor.to(device=device)).all()
 
 
-def _iter_predict_target_inputs() -> Iterable[
-    tuple[pykeen.models.Model, int, int, int, CoreTriplesFactory | None, Sequence[int] | None]
-]:
+def _iter_predict_target_inputs() -> Iterable[tuple[Any, ...]]:
     # comment: we only use id-based input, since the normalization has already been tested
     # create model
     factory = Nations().training

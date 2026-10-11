@@ -230,7 +230,7 @@ class TestHyperparameterOptimization(unittest.TestCase):
         tracker_resolver.register(MockResultTracker)
 
         mock_result_tracker = MockResultTracker()
-        mock_result_tracker.end_run = MagicMock()
+        mock_result_tracker.end_run = MagicMock()  # type: ignore[method-assign]
         result = hpo_pipeline(
             dataset="nations",
             model="distmult",

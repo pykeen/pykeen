@@ -16,7 +16,6 @@ import pykeen.nn.modules
 import pykeen.nn.sim
 import pykeen.utils
 from pykeen.nn import quaternion
-from pykeen.typing import Representation
 from pykeen.utils import (
     clamp_norm,
     complex_normalize,
@@ -115,8 +114,7 @@ class CrossETests(cases.InteractionTestCase):
         "embedding_dim": cases.InteractionTestCase.dim,
     }
 
-    def _exp_score(self, **kwargs) -> torch.FloatTensor:
-        h, r, t = (kwargs[key] for key in ("h", "r", "t"))
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
         r, c_r = r
         instance = self.instance
         assert isinstance(instance, pykeen.nn.modules.CrossEInteraction)
@@ -534,7 +532,7 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
     def test_scores(self):
         raise SkipTest("Not a functional interaction.")
 
-    def _exp_score(self, **kwargs) -> torch.FloatTensor:
+    def _exp_score(self, h, r, t) -> torch.FloatTensor:
         # We do not need this, since we do not check for functional consistency anyway
         raise NotImplementedError
 
@@ -612,8 +610,8 @@ class ParallelSliceBatchesTest(unittest.TestCase):
 
     def _verify(
         self,
-        z: Representation,
-        z_batch: Representation,
+        z: Any,
+        z_batch: Any,
         dim: int,
         split_size: int,
     ) -> None:
@@ -635,8 +633,8 @@ class ParallelSliceBatchesTest(unittest.TestCase):
 
     def _generate(
         self,
-        shape: tuple[int, ...] | Sequence[tuple[int, ...]],
-    ) -> Representation:
+        shape: Any,
+    ) -> Any:
         """Generate dummy representations for the given shape(s)."""
         if not shape:
             return []

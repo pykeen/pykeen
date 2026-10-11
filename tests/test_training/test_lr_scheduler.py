@@ -72,7 +72,7 @@ def _make_training_loop(
 def _train(
     training_loop: SLCWATrainingLoop, triples_factory: CoreTriplesFactory, directory: pathlib.Path, num_epochs: int
 ) -> list[float]:
-    return training_loop.train(
+    losses = training_loop.train(
         triples_factory=triples_factory,
         num_epochs=num_epochs,
         batch_size=128,
@@ -81,6 +81,8 @@ def _train(
         checkpoint_frequency=0,
         use_tqdm=False,
     )
+    assert losses is not None
+    return losses
 
 
 @pytest.mark.parametrize(

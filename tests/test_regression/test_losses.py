@@ -169,9 +169,9 @@ def update(path: pathlib.Path, digits: int) -> None:
 
     # determine unique settings (using JSON-representation)
     unique_cases_jsons: set[str] = set()
-    keys = {"seed", "type", "kwargs"}
     for record in iter_records(path):
-        unique_cases_jsons.add(json.dumps({key: record[key] for key in keys}, sort_keys=True))
+        setting = {"seed": record["seed"], "type": record["type"], "kwargs": record["kwargs"]}
+        unique_cases_jsons.add(json.dumps(setting, sort_keys=True))
     logger.info(f"Found {len(unique_cases_jsons):_} unique settings at {path!s}")
 
     # create case for full cartesian product between cases & losses

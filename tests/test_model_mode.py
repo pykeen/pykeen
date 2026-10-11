@@ -9,7 +9,7 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.models import FixedModel, Model, TransE
 from pykeen.triples import TriplesFactory
-from pykeen.typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, Target
+from pykeen.typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, TargetColumn
 from pykeen.utils import extend_batch, resolve_device
 
 
@@ -82,9 +82,9 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
         self.generator = torch.random.manual_seed(seed=42)
         self.triples_factory = MinimalTriplesFactory
         self.device = resolve_device()
-        self.model = FixedModel(triples_factory=self.triples_factory).to(self.device)
+        self.model = FixedModel(triples_factory=self.triples_factory).to(self.device)  # type: ignore[arg-type]
 
-    def _test(self, score_func: Callable, dim: Target) -> None:
+    def _test(self, score_func: Callable, dim: TargetColumn) -> None:
         """Check whether the output of optimized function matches the output of a repeated batch.
 
         .. note::

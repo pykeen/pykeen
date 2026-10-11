@@ -17,7 +17,7 @@ try:
     LIT_MODULES = sorted(lit_module_resolver.lookup_dict.keys())
 except ImportError:
     LIT_MODULES = []
-    lit_pipeline = None
+    lit_pipeline = None  # type: ignore[assignment]
 
 
 EMBEDDING_DIM = 8

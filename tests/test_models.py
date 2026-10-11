@@ -651,7 +651,7 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
 
     base_test = cases.ModelTestCase
     base_cls = Model
-    skip_cls = SKIP_MODULES
+    skip_cls = SKIP_MODULES  # type: ignore[assignment]
 
     def test_documentation(self):
         """Test all models have appropriate structured documentation."""

@@ -61,7 +61,7 @@ def test_get_absolute_split_sizes():
         rng = np.random.default_rng(seed=42)
         ratios = rng.uniform(size=(num_splits,))
         ratios = ratios / ratios.sum()
-        sizes = get_absolute_split_sizes(n_total=n_total, ratios=ratios)
+        sizes = get_absolute_split_sizes(n_total=n_total, ratios=ratios.tolist())
         # check size
         assert len(sizes) == len(ratios)
 
@@ -100,7 +100,7 @@ def test_normalize_ratios():
 
 def test_normalize_invalid_ratio():
     """Test invalid ratios."""
-    cases = [
+    cases: list[float | list[float]] = [
         1.1,
         2,
         [1.1],

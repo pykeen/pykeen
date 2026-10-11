@@ -65,7 +65,7 @@ class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLog
 
         # assert that reporting another metric for this epoch raises an error
         with pytest.raises(ValueError, match="Cannot report more than one metric for one epoch"):
-            self.instance.report_result(metric=..., epoch=epoch)
+            self.instance.report_result(metric=..., epoch=epoch)  # type: ignore[arg-type]
 
     def test_early_stopping(self):
         """Test early stopping."""
@@ -122,6 +122,7 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
         """Tests early stopping."""
         # Set automatic_memory_optimization to false during testing
         nations = Nations()
+        assert nations.validation is not None
         model: Model = TransE(triples_factory=nations.training)
         evaluator = RankBasedEvaluator()
         stopper = EarlyStopper(

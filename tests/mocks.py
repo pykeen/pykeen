@@ -48,8 +48,8 @@ class MockEvaluator(Evaluator):
         self,
         hrt_batch: MappedTriples,
         target: Target,
-        true_scores: torch.FloatTensor,
         scores: torch.FloatTensor,
+        true_scores: torch.FloatTensor | None = None,
         dense_positive_mask: torch.FloatTensor | None = None,
     ) -> None:
         pass
@@ -62,7 +62,7 @@ class MockEvaluator(Evaluator):
         assert self.values_iter is not None
         if self.key not in result.data:
             raise KeyError(self.key)
-        result.data[self.key] = next(self.values_iter)
+        result.data[self.key] = next(self.values_iter)  # type: ignore[index]
         return result
 
     def __repr__(self):
