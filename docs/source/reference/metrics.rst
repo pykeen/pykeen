@@ -8,6 +8,7 @@ Metrics
 
 Ranking Metrics
 ---------------
+
 .. automodapi:: pykeen.metrics.ranking
     :no-heading:
     :inherited-members:
@@ -15,6 +16,7 @@ Ranking Metrics
 
 Classification Metrics
 ----------------------
+
 .. automodapi:: pykeen.metrics.classification
     :no-heading:
     :inherited-members:
@@ -22,6 +24,7 @@ Classification Metrics
 
 Utilities for Metrics
 ---------------------
+
 .. automodapi:: pykeen.metrics.utils
     :no-heading:
     :headings: --
