@@ -201,6 +201,8 @@ def generate_num_candidates_and_ranks(
         a pair of integer arrays, ranks and num_candidates for each individual ranking task
     """
     generator = np.random.default_rng(seed=seed)
+    # endpoint=True: the upper bound is inclusive, so `max_num_candidates` itself is a reachable number of candidates
+    # (e.g., a ranking task against all entities). The default would exclude it.
     num_candidates = generator.integers(low=1, high=max_num_candidates, size=(num_ranks,), endpoint=True)
     ranks = generate_ranks(num_candidates=num_candidates, seed=generator)
     return ranks, num_candidates
