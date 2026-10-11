@@ -1225,9 +1225,15 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
         IHMR = MRR = \frac{1}{n} \sum_{i=1}^{n} r_i^{-1}
 
-    Optionally, individual weights $\{w_i\}_{i=1}^n$ can be provided, in which case the (weighted) mean is
-    $\frac{1}{W} \sum_{i=1}^{n} w_i r_i^{-1}$ with $W = \sum_{i=1}^{n} w_i$. For the variance, the weights are
-    scaled quadratically, cf. :func:`~pykeen.metrics.utils.weighted_mean_variance`.
+    Optionally, individual weights $\{w_i\}_{i=1}^n$ can be provided, in which case the (weighted)
+    mean is defined as:
+
+    .. math::
+
+        IHMR = MRR = \frac{1}{W} \sum_{i=1}^{n} w_i r_i^{-1}$ with $W = \sum_{i=1}^{n} w_i$
+
+    For the variance, the weights are scaled quadratically, cf.
+    :func:`~pykeen.metrics.utils.weighted_mean_variance`.
 
     .. warning::
 
@@ -1692,9 +1698,14 @@ class HitsAtK(RankBasedMetric):
 
         H_k = \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]
 
-    Optionally, individual weights $\{w_i\}_{i=1}^n$ can be provided, in which case
-    $H_k = \frac{1}{W} \sum_{i=1}^{n} w_i \mathbb{I}[r_i \leq k]$ with $W = \sum_{i=1}^{n} w_i$.
-    For the variance, the weights are scaled quadratically, cf. :func:`~pykeen.metrics.utils.weighted_mean_variance`.
+    Optionally, individual weights $\{w_i\}_{i=1}^n$ can be provided, in which case:
+
+    .. math::
+
+        H_k = \frac{1}{W} \sum_{i=1}^{n} w_i \mathbb{I}[r_i \leq k]
+
+    with $W = \sum_{i=1}^{n} w_i$. For the variance, the weights are scaled quadratically, cf.
+    :func:`~pykeen.metrics.utils.weighted_mean_variance`.
 
     For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
     hits @ 20. The hits @ k, regardless of $k$, lies on the $[0, 1]$ where closer to 1 is better.
