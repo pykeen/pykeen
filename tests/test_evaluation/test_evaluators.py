@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import itertools
 import unittest
+import warnings
 from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, MutableMapping
 from typing import Any, ClassVar
@@ -20,6 +21,7 @@ from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, OGBEvaluator, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
 from pykeen.evaluation.evaluator import (
+    _optimal_batch_size_group_id,
     create_dense_positive_mask_,
     create_sparse_positive_filter_,
     filter_scores_,
@@ -763,6 +765,57 @@ def test_prepare_filter_triples():
         assert filter_triples.shape[0] >= mapped_triples.shape[0]
         # check unique
         assert filter_triples.unique(dim=0).shape == filter_triples.shape
+
+
+def test_restrict_entities_to_collection_types():
+    """Test that `restrict_entities_to` can be given as set, list, or tensor, with identical results."""
+    dataset = Nations()
+    model = FixedModel(triples_factory=dataset.training)
+    entities = [0, 2, 3, 5, 7, 9]
+    results = []
+    for restrict in (set(entities), list(entities), torch.as_tensor(entities)):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", category=UserWarning)
+            result = RankBasedEvaluator(filtered=True).evaluate(
+                model=model,
+                mapped_triples=dataset.testing.mapped_triples,
+                additional_filter_triples=[dataset.training.mapped_triples],
+                restrict_entities_to=restrict,
+                pre_filtered_triples=False,
+                batch_size=8,
+                slice_size=None,
+                use_tqdm=False,
+            )
+        results.append(result.to_dict())
+    assert results[0] == results[1] == results[2]
+
+
+def test_optimal_batch_size_group_id():
+    """Test the stability of the batch size cache key."""
+    evaluator = RankBasedEvaluator()
+    model = FixedModel(triples_factory=Nations().training)
+
+    def make_kwargs(**overrides):
+        kwargs: dict[str, Any] = {
+            "evaluator": evaluator,
+            "mapped_triples": torch.zeros(10, 3, dtype=torch.long),
+            "batch_size": 4,
+            "slice_size": 5,
+            "progress_bar": None,
+            "model": model,
+            "all_pos_triples": torch.zeros(20, 3, dtype=torch.long),
+        }
+        kwargs.update(overrides)
+        return kwargs
+
+    key = _optimal_batch_size_group_id(make_kwargs())
+    # freshly created, equal-shaped tensors share the key; batch/slice size are ignored
+    assert key == _optimal_batch_size_group_id(make_kwargs(all_pos_triples=torch.ones(20, 3, dtype=torch.long)))
+    assert key == _optimal_batch_size_group_id(make_kwargs(batch_size=1, slice_size=2))
+    # different shapes, number of evaluation triples, or evaluator instances do not
+    assert key != _optimal_batch_size_group_id(make_kwargs(all_pos_triples=torch.zeros(21, 3, dtype=torch.long)))
+    assert key != _optimal_batch_size_group_id(make_kwargs(mapped_triples=torch.zeros(11, 3, dtype=torch.long)))
+    assert key != _optimal_batch_size_group_id(make_kwargs(evaluator=RankBasedEvaluator()))
 
 
 class RankBasedMetricResultTests(cases.MetricResultTestCase):
