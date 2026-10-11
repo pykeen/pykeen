@@ -5,7 +5,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from typing import Generic, NotRequired, Self, TypedDict, TypeVar
+from typing import Any, Generic, NotRequired, Self, TypedDict, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -132,6 +132,9 @@ class BaseBatchedSLCWAInstances(
         `batch_sampler` of torch.utils.data.DataLoader` are set to `None`.
     """
 
+    #: the batch size
+    batch_size: int
+
     @update_docstring_with_resolver_keys(
         ResolverKey("negative_sampler", "pykeen.sampling.negative_sampler_resolver"),
         ResolverKey("loss_weighter", "pykeen.triples.weights.loss_weighter_resolver"),
@@ -148,7 +151,7 @@ class BaseBatchedSLCWAInstances(
         loss_weighter: HintOrType[LossWeighter] = None,
         loss_weighter_kwargs: OptionalKwargs = None,
         grouped: bool = False,
-    ):
+    ) -> None:
         """Initialize the dataset.
 
         :param mapped_triples: shape: (num_triples, 3) the mapped triples
@@ -320,9 +323,14 @@ class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
 class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
     """Pre-batched training instances for SLCWA of coherent subgraphs."""
 
-    def __init__(self, **kwargs):
-        """Initialize the instances.
+    def __init__(self, fraction_visited_candidates: float = 0.9, **kwargs: Any) -> None:
+        r"""Initialize the instances.
 
+        :param fraction_visited_candidates: rejection sampling costs $O(1)$ per draw with an
+            expected $\frac{1}{1 - f}$ draws, where $f$ is the fraction of visited candidates,
+            whereas exact sampling costs $O(n \log n)$ for $n$ candidates, independent of $f$. Both
+            are equal only for $f$ very close to 1. For example, when $f = 0.9$, we switch at most
+            $\frac{1}{1-0.9}=10$ expected draws, to bound the rejection loop.
         :param kwargs: keyword-based parameters passed to :meth:`BaseBatchedSLCWAInstances.__init__`
         """
         super().__init__(**kwargs)
@@ -330,57 +338,112 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         self.degrees, self.offset, self.neighbors = compute_compressed_adjacency_list(
             mapped_triples=self.mapped_triples
         )
+        # numpy versions for the scalar-heavy sampling loop, cf. subgraph_sample. note: these need to be copies rather
+        # than views, since pickling for data loader workers may move the tensors' storage into shared memory.
+        self._degrees: np.ndarray = self.degrees.numpy().copy()
+        self._offset: np.ndarray = self.offset.numpy().copy()
+        self._entry_edge: np.ndarray = self.neighbors[:, 0].numpy().copy()
+        self._entry_other: np.ndarray = self.neighbors[:, 1].numpy().copy()
+        self._non_isolated: np.ndarray = np.flatnonzero(self._degrees > 0)
+        self.fraction_visited_candidates = fraction_visited_candidates
 
-    def subgraph_sample(self) -> list[int]:
-        """Sample one subgraph."""
-        # initialize
-        node_weights = self.degrees.detach().clone()
-        edge_picked = torch.zeros(self.mapped_triples.shape[0], dtype=torch.bool)
-        node_picked = torch.zeros(self.degrees.shape[0], dtype=torch.bool)
+    def _sample_unvisited_vertex(self, generator: np.random.Generator, visited: set[int]) -> int:
+        """Sample a vertex uniformly among the not yet visited vertices with at least one incident edge."""
+        candidates = self._non_isolated
+        # rejection sampling costs O(1) per draw with an expected 1 / (1 - f) draws, where f is the fraction of visited
+        # candidates, whereas exact sampling costs O(n log n) for n candidates, independent of f. Both are equal only
+        # for f very close to 1; we switch at f = 0.9, i.e., at most 10 expected draws, to bound the rejection loop.
+        if len(visited) <= self.fraction_visited_candidates * len(candidates):
+            while True:
+                vertex = int(candidates[generator.integers(len(candidates))])
+                if vertex not in visited:
+                    return vertex
+        # exact sampling
+        candidates = np.setdiff1d(candidates, np.fromiter(visited, dtype=candidates.dtype, count=len(visited)))
+        if not len(candidates):
+            # cannot happen when requesting at most as many edges as there are, cf. subgraph_sample
+            raise ValueError("There is no unvisited vertex with incident edges left.")
+        return int(candidates[generator.integers(len(candidates))])
 
-        # sample iteratively
-        result = []
-        for _ in range(self.batch_size):
-            # determine weights
-            weights = node_weights * node_picked
+    def subgraph_sample(self, *, size: int | None = None, generator: np.random.Generator | None = None) -> list[int]:
+        """Sample one subgraph.
 
-            if torch.sum(weights) == 0:
-                # randomly choose a vertex which has not been chosen yet
-                pool = (~node_picked).nonzero()
-                chosen_vertex = pool[torch.randint(pool.numel(), size=())]
-            else:
-                # normalize to probabilities
-                probabilities = weights.float() / weights.sum().float()
-                chosen_vertex = torch.multinomial(probabilities, num_samples=1)[0]
+        The subgraph is grown iteratively: in each step, a vertex is chosen among the visited
+        vertices with probability proportional to its number of not yet picked incident edges, and
+        one of these edges is chosen uniformly at random. If no visited vertex has any remaining
+        incident edges, a not yet visited vertex is chosen uniformly at random (among those with at
+        least one incident edge) instead. The other end of the chosen edge becomes visited, too.
 
-            # sample a start node
-            node_picked[chosen_vertex] = True
+        Choosing a vertex proportionally to its number of remaining incident edges, and then one of
+        these uniformly, is the same as choosing uniformly among all remaining *half-edges* (i.e.,
+        adjacency list entries) of visited vertices. Thus, we maintain a pool of half-edges of
+        visited vertices, from which we draw uniformly. Half-edges whose edge has already been
+        picked via its other half are removed lazily when drawn. Since every draw removes one entry
+        from the pool, and each picked edge leaves at most one stale half-edge, sampling a batch
+        requires at most `2 * size` half-edge draws.
 
-            # get list of neighbors
-            start = self.offset[chosen_vertex]
-            chosen_node_degree = self.degrees[chosen_vertex].item()
-            stop = start + chosen_node_degree
-            adj_list = self.neighbors[start:stop, :]
+        :param size: the number of edges to sample; defaults to ``batch_size``. If it exceeds the
+            number of triples, all triples are returned (in the order in which the sampling process
+            picks them).
+        :param generator: a NumPy generator. If not given, is derived from torch's global RNG, such
+            that sampling is reproducible via :func:`torch.manual_seed`, and data loader worker
+            processes, which PyTorch seeds differently, obtain different streams
 
-            # sample an outgoing edge at random which has not been chosen yet using rejection sampling
-            chosen_edge_index = torch.randint(chosen_node_degree, size=(1,))[0]
-            chosen_edge = adj_list[chosen_edge_index]
-            edge_number = chosen_edge[0]
-            while edge_picked[edge_number]:
-                chosen_edge_index = torch.randint(chosen_node_degree, size=(1,))[0]
-                chosen_edge = adj_list[chosen_edge_index]
-                edge_number = chosen_edge[0]
-            result.append(edge_number.item())
+        :returns: the triple IDs of the subgraph's edges, a list of `min(size, num_triples)` unique
+            IDs
 
-            edge_picked[edge_number] = True
+        :raises ValueError: if `size` is negative
+        """
+        if size is None:
+            size = self.batch_size
+        if size < 0:
+            raise ValueError(f"size must be non-negative, but is {size}.")
+        size = min(size, len(self.mapped_triples))
 
-            # visit target node
-            other_vertex = chosen_edge[1]
-            node_picked[other_vertex] = True
+        if generator is None:
+            generator = np.random.default_rng(int(torch.randint(2**62, size=()).item()))
 
-            # decrease sample counts
-            node_weights[chosen_vertex] -= 1
-            node_weights[other_vertex] -= 1
+        degrees, offset, entry_edge, entry_other = self._degrees, self._offset, self._entry_edge, self._entry_other
+
+        # pool[:pool_size] contains the indices of the adjacency list entries of the visited vertices which have not
+        # been drawn yet
+        pool = np.empty_like(entry_edge)
+        pool_size = 0
+        visited: set[int] = set()
+        picked: set[int] = set()
+        result: list[int] = []
+        # draw uniform random numbers in chunks, since per-call overhead dominates for single draws
+        uniforms: list[float] = []
+        while len(result) < size:
+            if not pool_size:
+                vertex = self._sample_unvisited_vertex(generator=generator, visited=visited)
+                visited.add(vertex)
+                start = offset[vertex]
+                pool_size = int(degrees[vertex])
+                pool[:pool_size] = np.arange(start, start + pool_size)
+
+            # choose a half-edge uniformly
+            if not uniforms:
+                uniforms = generator.random(size=size).tolist()
+            i = min(int(uniforms.pop() * pool_size), pool_size - 1)
+            entry = pool[i]
+            # remove it from the pool by swapping in the last element: it is either stale, or gets picked now
+            pool_size -= 1
+            pool[i] = pool[pool_size]
+            edge = int(entry_edge[entry])
+            if edge in picked:
+                continue
+            picked.add(edge)
+            result.append(edge)
+
+            # visit the other end
+            other = int(entry_other[entry])
+            if other not in visited:
+                visited.add(other)
+                start = offset[other]
+                degree = int(degrees[other])
+                pool[pool_size : pool_size + degree] = np.arange(start, start + degree)
+                pool_size += degree
         return result
 
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102

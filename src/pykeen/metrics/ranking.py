@@ -976,9 +976,9 @@ class GeometricMeanRank(RankBasedMetric):
 
         \log \mathbb{E}[r_i^{w_i/W}]
             &= \log \frac{1}{C_i} \sum \limits_{j=1}^{C_i} j^{w_i/W} \\
-            &= -\log \frac{1}{C_i} + \log \sum \limits_{j=1}^{C_i} j^{w_i/W} \\
-            &= -\log \frac{1}{C_i} + \log \sum \limits_{j=1}^{C_i} \exp \log j^{w_i/W} \\
-            &= -\log \frac{1}{C_i} + \log \sum \limits_{j=1}^{C_i} \exp ( \frac{w_i}{W} \cdot \log j )
+            &= -\log C_i + \log \sum \limits_{j=1}^{C_i} j^{w_i/W} \\
+            &= -\log C_i + \log \sum \limits_{j=1}^{C_i} \exp \log j^{w_i/W} \\
+            &= -\log C_i + \log \sum \limits_{j=1}^{C_i} \exp ( \frac{w_i}{W} \cdot \log j )
 
     For the second summand in the last line, we observe a log-sum-exp term, with known numerically stable
     implementation.
@@ -995,7 +995,7 @@ class GeometricMeanRank(RankBasedMetric):
         \mathbb{E}[M]
             &= \exp \sum \limits_{i=1}^{n} \log \mathbb{E}[r_i^{w_i/W}] \\
             &= \exp \sum \limits_{i=1}^{n} (\log H_{-w_i/W}(C_i) - \log C_i) \\
-            &= \exp \sum \limits_{i=1}^{n} \log H_{-w_i/W}(C_i) - \exp \sum \limits_{i=1}^{n} \log C_i
+            &= \exp \left( \sum \limits_{i=1}^{n} \log H_{-w_i/W}(C_i) - \sum \limits_{i=1}^{n} \log C_i \right)
 
     where $C_i$ denotes the number of candidates for ranking task $i$, and $H_p(c)$ denotes
     the generalized harmonic number, cf. :func:`generalized_harmonic_numbers`.
@@ -1021,9 +1021,16 @@ class GeometricMeanRank(RankBasedMetric):
     def _normalize_weights(weights: np.ndarray | None, n: int) -> np.ndarray:
         if weights is None:
             return np.full(shape=n, fill_value=1 / n)
+        weights = np.asarray(weights, dtype=float)
         total = np.sum(weights)
         safe_total = np.clip(total, a_min=np.finfo(weights.dtype).eps, a_max=None)
         return weights / safe_total
+
+    def _log_moment(self, num_candidates: np.ndarray, weights: np.ndarray | None, order: int) -> float:
+        """Compute the log of the k-th raw moment of the geometric mean rank."""
+        alpha = self._normalize_weights(weights, n=len(num_candidates))
+        # E[G^k] = Product( E[ X_i^(k * alpha_i) ] ); we calculate this in log space
+        return compute_log_expected_power(num_candidates, powers=order * alpha)
 
     def expected_value(  # noqa: D102
         self,
@@ -1032,11 +1039,7 @@ class GeometricMeanRank(RankBasedMetric):
         weights: np.ndarray | None = None,
         **kwargs,
     ) -> float:
-        alpha = self._normalize_weights(weights, n=len(num_candidates))
-
-        # E[G] = Product( E[ X_i^alpha_i ] )
-        # We calculate this in log space
-        log_expectation = compute_log_expected_power(num_candidates, powers=alpha)
+        log_expectation = self._log_moment(num_candidates, weights, order=1)
 
         return np.exp(log_expectation)
 
@@ -1047,15 +1050,9 @@ class GeometricMeanRank(RankBasedMetric):
         weights: np.ndarray | None = None,
         **kwargs,
     ) -> float:
-        alpha = self._normalize_weights(weights, n=len(num_candidates))
-
-        # 1. Calculate Log of First Moment E[G]
-        # Power p = alpha
-        log_expectation = compute_log_expected_power(num_candidates, alpha)
-
-        # 2. Calculate Log of Second Moment E[G^2]
-        # Power p = 2 * alpha
-        log_squared_expectation = compute_log_expected_power(num_candidates, 2 * alpha)
+        # 1. Log of first moment E[G], and 2. log of second moment E[G^2]
+        log_expectation = self._log_moment(num_candidates, weights, order=1)
+        log_squared_expectation = self._log_moment(num_candidates, weights, order=2)
 
         # 3. Calculate Variance using Expm1 for stability
         # Var = E[G^2] - (E[G])^2
