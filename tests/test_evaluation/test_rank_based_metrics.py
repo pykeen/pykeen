@@ -381,15 +381,13 @@ def _assert_valid_survival_function(sf: np.ndarray, k_max: int, atol: float = 0.
     :param k_max: The maximum $k$.
     :param atol: Absolute tolerance for boundary checks and monotonicity
     """
-    # 0 to k_max
-    assert len(sf) == k_max + 1
+    # 0 to k_max - 1; the value for k_max is always 0
+    assert len(sf) == k_max
     # All probabilities should be in [0, 1]
     assert all(sf >= 0.0)
     assert all(sf <= 1.0)
     # Starts at 1
     assert sf[0] == pytest.approx(1.0, abs=atol)
-    # Ends at 0
-    assert sf[-1] == pytest.approx(0.0, abs=atol)
     # Monotonically non-increasing
     # Check monotonicity: sf[i] >= sf[i+1]
     differences = np.diff(sf)
@@ -403,8 +401,8 @@ def test_median_survival_function_single_candidate():
     sf = compute_median_survival_function(num_candidates)
 
     # For single variable, median is just that variable
-    # P(X > x) = (k - x) / k for x in [0, k]
-    expected = np.linspace(1.0, 0.0, 11)
+    # P(X > x) = (k - x) / k for x in [0, k)
+    expected = np.linspace(1.0, 0.0, 11)[:-1]
     np.testing.assert_allclose(sf, expected, atol=1e-10)
 
 

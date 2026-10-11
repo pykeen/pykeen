@@ -464,8 +464,9 @@ def compute_order_statistic_survival_function(num_candidates: np.ndarray, index:
     :param index:
         The 1-based index $j \in \{1, \ldots, n\}$ of the order statistic.
 
-    :return: shape: (K + 1,)
-        The survival function for $x = 0, \ldots, K$, where $K$ denotes the maximum number of candidates.
+    :return: shape: (K,)
+        The survival function for $x = 0, \ldots, K - 1$, where $K$ denotes the maximum number of candidates. The
+        omitted value for $x = K$ is always zero.
 
     :raises ValueError:
         If the index is out of range.
@@ -473,12 +474,12 @@ def compute_order_statistic_survival_function(num_candidates: np.ndarray, index:
     ks, counts = _group_candidates(num_candidates)
     if not 1 <= index <= counts.sum():
         raise ValueError(f"index must be in [1, {counts.sum()}], but is {index}")
-    x_grid = np.arange(ks.max() + 1)
+    x_grid = np.arange(ks.max())
     return _count_cdf(ks, counts, x_grid, c=index - 1)
 
 
 def compute_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
-    r"""Compute $P(M > x)$ for $x \in \{0, \ldots, K\}$, where $M$ is the (upper) median of the ranks.
+    r"""Compute $P(M > x)$ for $x \in \{0, \ldots, K - 1\}$, where $M$ is the (upper) median of the ranks.
 
     For an odd number $n$ of ranks, $M$ is the median, i.e., the order statistic $X_{(\frac{n + 1}{2})}$. For an even
     number of ranks, the median as computed by :func:`numpy.median` is the average of the two middle order statistics
@@ -492,7 +493,7 @@ def compute_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
     :param num_candidates: shape: (n,)
         The number of candidates.
 
-    :return: shape: (K + 1,)
+    :return: shape: (K,)
         The survival function. $K$ denotes the maximum number of candidates.
     """
     n = len(num_candidates)
@@ -578,13 +579,13 @@ def compute_median_mean(num_candidates: np.ndarray) -> float:
         The expected value of the median.
     """
     n = len(num_candidates)
-    direct_value = compute_order_statistic_survival_function(num_candidates, index=n // 2 + 1)[:-1].sum()
+    direct_value = compute_order_statistic_survival_function(num_candidates, index=n // 2 + 1).sum()
 
     if n % 2 == 1:
-        return direct_value
+        return float(direct_value)
 
-    adjacent_value = compute_order_statistic_survival_function(num_candidates, index=n // 2)[:-1].sum()
-    return np.mean([direct_value, adjacent_value])
+    adjacent_value = compute_order_statistic_survival_function(num_candidates, index=n // 2).sum()
+    return float(np.mean([direct_value, adjacent_value]))
 
 
 def compute_median_moments(num_candidates: np.ndarray) -> tuple[float, float]:
@@ -624,13 +625,13 @@ def compute_median_moments(num_candidates: np.ndarray) -> tuple[float, float]:
     ks, counts = _group_candidates(num_candidates)
     n = int(counts.sum())
     if n % 2 == 1:
-        sf = compute_median_survival_function(num_candidates)[:-1]
+        sf = compute_median_survival_function(num_candidates)
         x = np.arange(len(sf))
         mean = float(sf.sum())
         return mean, max(0.0, float(((2 * x + 1) * sf).sum()) - mean**2)
     m = n // 2
-    sf_a = compute_order_statistic_survival_function(num_candidates, index=m)[:-1]
-    sf_b = compute_order_statistic_survival_function(num_candidates, index=m + 1)[:-1]
+    sf_a = compute_order_statistic_survival_function(num_candidates, index=m)
+    sf_b = compute_order_statistic_survival_function(num_candidates, index=m + 1)
     x = np.arange(len(sf_a))
     mean = 0.5 * float(sf_a.sum() + sf_b.sum())
     e_aa = float(((2 * x + 1) * sf_a).sum())
