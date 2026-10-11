@@ -99,7 +99,7 @@ class PyOBOTextCache(TextCache):
                 continue
 
             try:
-                name = self._get_name(norm_prefix, identifier)
+                name = self._get_name(f"{norm_prefix}:{identifier}")
             except subprocess.CalledProcessError:
                 if norm_prefix not in PYOBO_PREFIXES_WARNED:
                     logger.warning("could not get names from %s", norm_prefix)
