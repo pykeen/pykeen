@@ -59,7 +59,6 @@ requires-python = ">=3.11"
 dependencies = [
     "dataclasses-json",
     "numpy",
-    "numpy",
     "scipy>=1.7.0",
     "click",
     "click_default_group",

@@ -4,7 +4,7 @@ The metrics in this module assume the link prediction setting to be a (binary) c
 
 .. note::
 
-    many metrics in this module use `scikit-learn` under the hood, cf.
+    many metrics in this module use scikit-learn under the hood, cf.
     https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
 """
 
@@ -27,10 +27,14 @@ from .utils import Metric, ValueRange
 
 __all__ = [
     "ClassificationMetric",
+    "ConfusionMatrixClassificationMetric",
+    "FowlkesMallowsIndex",
+    "ZeroDivisionPolicy",
     "classification_metric_resolver",
     "construct_indicator",
 ]
 
+#: A policy for division by zero
 ZeroDivisionPolicy = Literal["warn", 0, 1]
 
 
@@ -67,8 +71,10 @@ def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarra
         Since the method uses the number of true labels to determine a threshold, the results will typically be overly
         optimistic estimates of the generalization performance.
 
-    .. todo:: Add a method which estimates a threshold based on a validation set, and applies this
-    threshold for binarization on the test set.
+    .. todo::
+
+        Add a method which estimates a threshold based on a validation set,
+        and applies this threshold for binarization on the test set.
 
     :param y_score: A 1-D array of the score values
     :param y_true: A 1-D array of binary values (1 and 0)
@@ -226,7 +232,9 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
     """A classification metric based on the confusion matrix."""
 
     binarize: ClassVar[bool] = True
-    zero_division: ZeroDivisionPolicy = "warn"
+
+    #: The policy to be applied when the formula for a metric results in a division by zero
+    zero_division: ClassVar[ZeroDivisionPolicy] = "warn"
 
     @abc.abstractmethod
     def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
@@ -252,7 +260,7 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
         """
         # todo: it would make sense to have a separate evaluator which constructs the confusion matrix only once
 
-    def forward(self, y_true: np.ndarray, y_score: np.ndarray, weights: np.ndarray | None = None) -> float:
+    def forward(self, y_true: np.ndarray, y_score: np.ndarray, weights: np.ndarray | None = None) -> float:  # noqa:D102
         y_pred = construct_indicator(y_score=y_score, y_true=y_true)
         matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred, sample_weight=weights, normalize=None)
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html
@@ -620,20 +628,22 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
 
     .. math::
 
-        FM = \sqrt{\frac{TP^2}{(2TP + FP + FN)}}
+        FM = \sqrt{PPV \cdot TPR}
+        = \sqrt{\frac{TP}{TP + FP} \cdot \frac{TP}{TP + FN}}
+        = \frac{TP}{\sqrt{(TP + FP)(TP + FN)}}
 
     ---
     link: https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index
     description: The Fowlkes Mallows index.
     """
 
-    name = "Fowlkes Mallows Index"
-    value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
+    name: ClassVar[str] = "Fowlkes Mallows Index"
+    value_range: ClassVar[ValueRange] = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("fm", "fmi")
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
-        return math.sqrt(safe_divide(numerator=tp**2, denominator=2 * tp + fp + fn, zero_division=self.zero_division))
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa:D102
+        return safe_divide(numerator=tp, denominator=math.sqrt((tp + fp) * (tp + fn)), zero_division=self.zero_division)
 
 
 @parse_docdata
