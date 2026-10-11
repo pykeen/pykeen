@@ -97,15 +97,13 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
                 sub_batch_size=self.sub_batch_size,
             )
 
-    def test_error_on_nan(self):
+    def test_error_on_nan(self) -> None:
         """Test if the correct error is raised for non-finite loss values."""
         model = TransE(triples_factory=self.triples_factory)
         patience = 2
 
-        base_cls: Any = self.cls
-
-        class NaNTrainingLoop(base_cls):
-            def __init__(self, **kwargs):
+        class NaNTrainingLoop(self.cls):  # type:ignore[name-defined]
+            def __init__(self, **kwargs: Any) -> None:
                 super().__init__(**kwargs)
                 self.patience = patience
 

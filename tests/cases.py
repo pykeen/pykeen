@@ -402,7 +402,7 @@ class LossTestCase(GenericTestCase[Loss]):
         try:
             self.help_test_process_lcwa_scores(predictions=predictions, labels=labels, label_smoothing=0.01)
         except UnsupportedLabelSmoothingError as error:
-            raise SkipTest(str(error)) from error
+            raise SkipTest("smoothing isn't supported") from error
 
     def test_process_lcwa_scores_weights(self):
         """Test processing scores from LCWA training loop with weights."""
@@ -773,7 +773,7 @@ class InteractionTestCase(
                 )
 
     @abstractmethod
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         """Compute the expected score for a single-score batch."""
         raise NotImplementedError(self.cls.__name__)
 
@@ -1330,10 +1330,10 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             assert torch.equal(value, loaded_state[key]), key
 
     @property
-    def _cli_extras(self):
+    def _cli_extras(self) -> list[str]:
         """Return a list of extra flags for the CLI."""
         kwargs = self.kwargs or {}
-        extras: list[Any] = [
+        extras: list[str] = [
             "--silent",
         ]
         for k, v in kwargs.items():
@@ -1351,11 +1351,11 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
         extras += [
             "--number-epochs",
-            self.train_num_epochs,
+            str(self.train_num_epochs),
             "--embedding-dim",
-            self.embedding_dim,
+            str(self.embedding_dim),
             "--batch-size",
-            self.train_batch_size,
+            str(self.train_batch_size),
         ]
         extras.extend(self.cli_extras)
 
@@ -1363,7 +1363,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         if self.use_inverse_triples:
             extras.append("--use-inverse-triples")
 
-        return [str(e) for e in extras]
+        return extras
 
     @pytest.mark.slow
     def test_pipeline_nations_early_stopper(self):

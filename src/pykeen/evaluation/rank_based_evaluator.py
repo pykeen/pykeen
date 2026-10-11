@@ -251,7 +251,7 @@ class RankBasedMetricResults(MetricResults[RankBasedMetricKey]):
         )
 
     @classmethod
-    def create_random(cls, random_state: int | None = None) -> RankBasedMetricResults:
+    def create_random(cls, random_state: int | None = None) -> RankBasedMetricResults[RankBasedMetricKey]:
         """Create random results useful for testing."""
         targets = [LABEL_HEAD, LABEL_TAIL]
         num_targets = len(targets)
