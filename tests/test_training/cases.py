@@ -102,6 +102,7 @@ class TrainingLoopTestCase(unittest_templates.GenericTestCase[TrainingLoop]):
         model = TransE(triples_factory=self.triples_factory)
         patience = 2
 
+        # `cls` is set by each concrete test case, and is not known statically.
         class NaNTrainingLoop(self.cls):  # type: ignore[name-defined]
             def __init__(self, **kwargs):
                 super().__init__(**kwargs)

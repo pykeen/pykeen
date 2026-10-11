@@ -224,6 +224,7 @@ class CachedDatasetCase(DatasetTestCase):
     def setUp(self):
         """Set up the test with a temporary cache directory."""
         self.directory = tempfile.TemporaryDirectory()
+        # The base `dataset_cls` annotation does not declare `cache_root`, which the concrete test datasets accept.
         self.dataset = self.dataset_cls(cache_root=self.directory.name)  # type: ignore[call-arg]
 
     def tearDown(self) -> None:
@@ -825,6 +826,7 @@ class ResultTrackerTests(GenericTestCase[ResultTracker], unittest.TestCase):
                 {"test.a.b": 5.0, "test.c": -1.0},
             ),
         ):
+            # Nested dicts are deliberately passed; the signature only declares a flat `Mapping[str, float]`.
             self.instance.log_metrics(metrics=metrics, step=step, prefix=prefix)  # type: ignore[arg-type]
             self._verify_log_metrics(metrics=metrics, step=step, prefix=prefix, flat_metrics=flat_metrics)
 
@@ -1531,6 +1533,7 @@ class InductiveModelTestCase(ModelTestCase):
         training_loop_kwargs = dict(self.training_loop_kwargs or {})
         training_loop_kwargs["mode"] = self.mode
         InductiveModelTestCase.training_loop_kwargs = training_loop_kwargs
+        # The inductive dataset's split is a `CoreTriplesFactory`, but the attribute is typed `TriplesFactory`.
         kwargs["triples_factory"] = self.factory = dataset.transductive_training  # type: ignore[assignment]
         kwargs["inference_factory"] = dataset.inductive_inference
         kwargs["use_inverse_triples"] = self.use_inverse_triples
@@ -2183,11 +2186,13 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
 
     def test_equivalence(self) -> None:
         """Test equivalence between Evaluator.evaluate and evaluation loop."""
+        # `targets` is only defined on the concrete evaluation loop, not on the `EvaluationLoop` base.
         if LABEL_RELATION in self.instance.targets:  # type: ignore[attr-defined]
             raise unittest.SkipTest("Evaluator.evaluate does not support relation prediction")
         result = self.instance.evaluator.evaluate(
             model=self.instance.model,
             mapped_triples=self.factory.mapped_triples,
+            # `targets` is only defined on the concrete evaluation loop, not on the `EvaluationLoop` base.
             targets=self.instance.targets,  # type: ignore[attr-defined]
         )
         result2 = self.instance.evaluate()
@@ -2687,7 +2692,7 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
         """Test for serialization."""
         summary = self.instance.get_summary_dict()
         new_stopper = EarlyStopper(
-            # not needed for test
+            # not needed for test, so Ellipsis placeholders stand in for the required arguments
             model=...,  # type: ignore[arg-type]
             evaluator=...,  # type: ignore[arg-type]
             training_triples_factory=...,  # type: ignore[arg-type]

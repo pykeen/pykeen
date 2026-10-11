@@ -145,6 +145,7 @@ def test_score_dispatch(model: ERModel, hrt_batch: LongTensor, target: Target, p
 def test_score_invalid_target(model: ERModel, hrt_batch: LongTensor) -> None:
     """Test that an invalid target is rejected."""
     with pytest.raises(ValueError, match="nope"):
+        # Deliberately invalid target, to test the error path.
         model.score(hrt_batch, target="nope")  # type: ignore[arg-type]
 
 
@@ -228,6 +229,7 @@ class TestScoringBatch:
                 head=self._index(BATCH_SIZE),
                 relation=self._index(BATCH_SIZE),
                 tail=self._index(BATCH_SIZE),
+                # Deliberately invalid target, to test the error path.
                 target="nope",  # type: ignore[arg-type]
             )
 

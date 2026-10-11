@@ -651,6 +651,7 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
 
     base_test = cases.ModelTestCase
     base_cls = Model
+    # `SKIP_MODULES` is a set of abstract classes (`ABCMeta`), which mypy does not accept as `type[Model]`.
     skip_cls = SKIP_MODULES  # type: ignore[assignment]
 
     def test_documentation(self):

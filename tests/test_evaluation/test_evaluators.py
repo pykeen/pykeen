@@ -86,6 +86,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         # Check for correct class
         assert isinstance(result, RankBasedMetricResults)
         # check correct num_entities
+        # `num_entities` exists on the evaluator under test, but not on the `Evaluator` base.
         assert self.instance.num_entities == self.dataset.num_entities  # type: ignore[attr-defined]
 
         for (side, rank_type, metric), value in result.data.items():
@@ -125,6 +126,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
 class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the SampledRankBasedEvaluator."""
 
+    # Not a `RankBasedEvaluator` subclass, but shares its test suite, so the class variable is narrowed.
     cls = SampledRankBasedEvaluator  # type: ignore[assignment]
     kwargs: ClassVar[Mapping[str, Any]] = {"num_negatives": 3}
 
@@ -139,6 +141,7 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
 class OGBEvaluatorTests(RankBasedEvaluatorTests):
     """Unit test for OGB evaluator."""
 
+    # Not a `RankBasedEvaluator` subclass, but shares its test suite, so the class variable is narrowed.
     cls = OGBEvaluator  # type: ignore[assignment]
     kwargs: ClassVar[Mapping[str, Any]] = {"num_negatives": 3}
 
@@ -159,6 +162,7 @@ class OGBEvaluatorTests(RankBasedEvaluatorTests):
 class MacroRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the MacroRankBasedEvaluator."""
 
+    # Not a `RankBasedEvaluator` subclass, but shares its test suite, so the class variable is narrowed.
     cls = MacroRankBasedEvaluator  # type: ignore[assignment]
 
 
@@ -370,14 +374,17 @@ class EvaluatorUtilsTests(unittest.TestCase):
         assert not torch.isfinite(filtered_tail_scores[exp_tail_filter_mask]).any()
 
 
+# `Target` is a single literal, but the generic parameter is bound to a tuple; the dummy only needs a key.
 class DummyMetricResults(MetricResults[Target]):  # type: ignore[type-var]
     """Dummy metric results."""
 
     @classmethod
     def key_from_string(cls, s: str | None) -> Target:
+        # `normalize_target` may also return `"both"`, which is not part of the dummy's key type.
         return normalize_target(s)  # type: ignore[return-value]
 
 
+# `Target` is a single literal, but the generic parameter is bound to a tuple; the dummy only needs a key.
 class DummyEvaluator(Evaluator[Target]):  # type: ignore[type-var]
     """A dummy evaluator for testing the structure of the evaluation function."""
 
@@ -399,6 +406,7 @@ class DummyEvaluator(Evaluator[Target]):  # type: ignore[type-var]
     def clear(self) -> None:
         self.counter.clear()
 
+    # `Target` is a single literal, but the generic parameter is bound to a tuple; the dummy only needs a key.
     def finalize(self) -> MetricResults[Target]:  # type: ignore[type-var]
         return DummyMetricResults(data={target: float(count) for target, count in self.counter.items()})
 

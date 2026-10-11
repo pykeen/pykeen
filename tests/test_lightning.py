@@ -17,6 +17,7 @@ try:
     LIT_MODULES = sorted(lit_module_resolver.lookup_dict.keys())
 except ImportError:
     LIT_MODULES = []
+    # Placeholder when the optional lightning dependency is missing; the tests using it are skipped.
     lit_pipeline = None  # type: ignore[assignment]
 
 

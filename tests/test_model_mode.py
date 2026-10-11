@@ -82,6 +82,7 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
         self.generator = torch.random.manual_seed(seed=42)
         self.triples_factory = MinimalTriplesFactory
         self.device = resolve_device()
+        # The class `MinimalTriplesFactory` is passed as a lightweight stand-in for a `KGInfo` instance.
         self.model = FixedModel(triples_factory=self.triples_factory).to(self.device)  # type: ignore[arg-type]
 
     def _test(self, score_func: Callable, dim: TargetColumn) -> None:

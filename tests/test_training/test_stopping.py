@@ -79,6 +79,7 @@ class TestTrainingEarlyStopping(unittest.TestCase):
         assert self.triples_factory.validation is not None
         self.model = FixedModel(triples_factory=self.triples_factory.training)
         self.stopper = EarlyStopper(
+            # The mock evaluator ignores the metric.
             metric=None,  # type: ignore[arg-type]
             model=self.model,
             evaluator=self.mock_evaluator,

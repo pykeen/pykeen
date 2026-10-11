@@ -295,6 +295,7 @@ class TestUtils(unittest.TestCase):
             for _ in range(10):
                 x = torch.rand(10, 20, 30, generator=gen)
                 for dim in range(x.ndimension()):
+                    # `p=float("inf")` is supported by `torch.norm`, but the signature declares `str | int`.
                     x_c = clamp_norm(x, maxnorm=max_norm, p=p, dim=dim)  # type: ignore[arg-type]
 
                     # check maximum norm constraint
