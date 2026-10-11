@@ -1,12 +1,13 @@
 """Mocks for tests."""
 
-from collections.abc import Iterable
-from typing import Any
+from collections.abc import Iterable, Mapping
+from typing import cast
 
 import torch
 from torch import nn
 
 from pykeen.evaluation import Evaluator, MetricResults, RankBasedMetricResults
+from pykeen.evaluation.rank_based_evaluator import RankBasedMetricKey
 from pykeen.nn import Representation
 from pykeen.typing import ExtendedTarget, MappedTriples, RankType, Target
 
@@ -27,7 +28,7 @@ class CustomRepresentation(Representation):
         return self.x.unsqueeze(dim=0).repeat(n, *(1 for _ in self.shape))
 
 
-class MockEvaluator(Evaluator):
+class MockEvaluator(Evaluator[RankBasedMetricKey]):
     """A mock evaluator for testing early stopping."""
 
     def __init__(
@@ -58,14 +59,13 @@ class MockEvaluator(Evaluator):
     def clear(self):
         pass
 
-    def finalize(self) -> MetricResults:
-        result = RankBasedMetricResults.create_random(self.random_state)
+    def finalize(self) -> MetricResults[RankBasedMetricKey]:
+        result: MetricResults[RankBasedMetricKey] = RankBasedMetricResults.create_random(self.random_state)
         assert self.values_iter is not None
         if self.key not in result.data:
             raise KeyError(self.key)
-        data: dict[Any, float] = dict(result.data)
-        data[self.key] = next(self.values_iter)
-        return RankBasedMetricResults(data=data)
+        data: dict[RankBasedMetricKey, float] = {**result.data, self.key: next(self.values_iter)}
+        return RankBasedMetricResults(data=cast(Mapping[RankBasedMetricKey | str, float], data))
 
     def __repr__(self):
         return f"{self.__class__.__name__}(values={self.values})"
