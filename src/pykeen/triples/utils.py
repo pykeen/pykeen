@@ -199,9 +199,9 @@ def compute_compressed_adjacency_list(
 
 def max_value(x: LongTensor | np.ndarray) -> int | None:
     """Return the maximum value, or None if the tensor / array is empty."""
-    if 0 not in x.shape:
-        return x.max().item()
-    return None
+    if 0 in x.shape:
+        return None
+    return x.max().item()
 
 
 def get_num_ids(x: LongTensor | np.ndarray) -> int:
