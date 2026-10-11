@@ -71,7 +71,10 @@ def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarra
         Since the method uses the number of true labels to determine a threshold, the results will typically be overly
         optimistic estimates of the generalization performance.
 
-    .. todo:: Add a method which estimates a threshold based on a validation set, and applies this threshold for binarization on the test set.
+    .. todo::
+
+        Add a method which estimates a threshold based on a validation set,
+        and applies this threshold for binarization on the test set.
 
     :param y_score: A 1-D array of the score values
     :param y_true: A 1-D array of binary values (1 and 0)
@@ -256,7 +259,7 @@ class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
         """
         # todo: it would make sense to have a separate evaluator which constructs the confusion matrix only once
 
-    def forward(self, y_true: np.ndarray, y_score: np.ndarray, weights: np.ndarray | None = None) -> float:
+    def forward(self, y_true: np.ndarray, y_score: np.ndarray, weights: np.ndarray | None = None) -> float:  # noqa:D102
         y_pred = construct_indicator(y_score=y_score, y_true=y_true)
         matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred, sample_weight=weights, normalize=None)
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html
@@ -622,7 +625,9 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
 
     .. math::
 
-        FM = \sqrt{PPV \cdot TPR} = \sqrt{\frac{TP}{TP + FP} \cdot \frac{TP}{TP + FN}} = \frac{TP}{\sqrt{(TP + FP)(TP + FN)}}
+        FM = \sqrt{PPV \cdot TPR}
+        = \sqrt{\frac{TP}{TP + FP} \cdot \frac{TP}{TP + FN}}
+        = \frac{TP}{\sqrt{(TP + FP)(TP + FN)}}
 
     ---
     link: https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index
@@ -634,7 +639,7 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("fm", "fmi")
 
-    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
+    def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:  # noqa:D102
         return safe_divide(numerator=tp, denominator=math.sqrt((tp + fp) * (tp + fn)), zero_division=self.zero_division)
 
 
