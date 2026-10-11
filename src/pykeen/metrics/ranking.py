@@ -1702,9 +1702,9 @@ class HitsAtK(RankBasedMetric):
 
     .. math::
 
-        H_k = \frac{1}{W} \sum_{i=1}^{n} w_i \mathbb{I}[r_i \leq k]
+        H_k = \frac{\sum_{i=1}^{n} w_i \mathbb{I}[r_i \leq k]}{\sum_{i=1}^{n} w_i}
 
-    with $W = \sum_{i=1}^{n} w_i$. For the variance, the weights are scaled quadratically, cf.
+    For the variance, the weights are scaled quadratically, cf.
     :func:`~pykeen.metrics.utils.weighted_mean_variance`.
 
     For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
