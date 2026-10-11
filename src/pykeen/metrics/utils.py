@@ -280,9 +280,15 @@ def weighted_median(a: np.ndarray, weights: np.ndarray | None = None) -> np.floa
     if not total > 0:
         raise ValueError(f"The sum of weights must be positive, but is {total}")
     half = 0.5 * total
-    # The cumulative sums are float64, so their rounding error is on the order of 1e-16 * n relative to the total.
-    # 1e-9 lies well above this, but far below any real difference between cumulative weights, so it only absorbs noise.
-    tolerance = 1.0e-9 * total
+    # np.cumsum adds sequentially in float64, so its rounding error is at most ~n * 1.1e-16 relative to the total
+    # (typically ~sqrt(n) * 1.1e-16), far below 1e-9 for realistic evaluation sizes. The tolerance therefore treats
+    # cumulative weights within 1e-9 * total of the half as exact ties. Genuine differences that small (possible, e.g.,
+    # with inverse-frequency weights of large groups) are also treated as ties. Lower-precision float weights carry
+    # representation errors of up to eps / 2 each, which bounds the relative error of their sum, so we use at least eps.
+    rtol = 1.0e-9
+    if np.issubdtype(weights.dtype, np.floating):
+        rtol = max(rtol, float(np.finfo(weights.dtype).eps))
+    tolerance = rtol * total
     # determine first value with cumulative weight >= 0.5 * total (up to numerical tolerance)
     idx = int(np.searchsorted(cdf, v=half - tolerance))
     # special case for exactly 0.5: average the two middle values

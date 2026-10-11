@@ -257,6 +257,13 @@ class WeightedTests(unittest.TestCase):
                     a = np.random.default_rng(seed=n).permutation(np.arange(1, n + 1))
                     assert weighted_median(a, np.full(n, weight)) == np.median(a)
 
+    def test_weighted_median_low_precision_weights(self):
+        """Test that exact ties are detected for float32 weights, whose representation error exceeds 1e-9."""
+        # two groups of equal total weight 1, i.e., the cumulative weight is exactly half after the first group
+        for dtype in (np.float32, np.float64):
+            weights = np.concatenate([np.full(3, 1 / 3), np.full(7, 1 / 7)]).astype(dtype)
+            assert weighted_median(np.arange(10), weights) == 2.5
+
     def test_weighted_median_degenerate(self):
         """Test that all-zero weights are rejected."""
         with pytest.raises(ValueError, match="must be positive"):
