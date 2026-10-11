@@ -591,12 +591,13 @@ def compute_median_mean(num_candidates: np.ndarray) -> float:
         The expected value of the median.
     """
     n = len(num_candidates)
-    direct_value = compute_order_statistic_survival_function(num_candidates, index=n // 2 + 1).sum()
+    m = n // 2
+    direct_value = compute_order_statistic_survival_function(num_candidates, index=m + 1).sum()
 
     if n % 2 == 1:
         return float(direct_value)
 
-    adjacent_value = compute_order_statistic_survival_function(num_candidates, index=n // 2).sum()
+    adjacent_value = compute_order_statistic_survival_function(num_candidates, index=m).sum()
     return float(np.mean([direct_value, adjacent_value]))
 
 
