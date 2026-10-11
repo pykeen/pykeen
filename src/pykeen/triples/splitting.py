@@ -10,6 +10,7 @@ import pandas as pd
 import torch
 from class_resolver import ClassResolver, HintOrType
 
+from .utils import get_num_ids
 from ..constants import COLUMN_LABELS
 from ..typing import (
     COLUMN_HEAD,
@@ -294,7 +295,7 @@ def _prepare_cleanup(
     if max_ids is None:
         max_ids = typing.cast(
             tuple[int, int],
-            tuple(max(training[:, col].max().item(), testing[:, col].max().item()) + 1 for col in columns),
+            tuple(max(get_num_ids(training[:, col]), get_num_ids(testing[:, col])) for col in columns),
         )
     for col, max_id in zip(columns, max_ids, strict=False):
         # IDs not in training
@@ -335,7 +336,7 @@ class RandomizedCleaner(Cleaner):
         columns = [[0, 2], [1]]
         covered: list[list[bool]] = []
         for col in columns:
-            mask = torch.zeros(int(other[:, col].max()) + 1, dtype=torch.bool)
+            mask = torch.zeros(get_num_ids(other[:, col]), dtype=torch.bool)
             ids = reference[:, col].reshape(-1)
             mask[ids[ids < mask.shape[0]]] = True
             covered.append(mask.tolist())

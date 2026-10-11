@@ -13,6 +13,7 @@ from torch_ppr.utils import edge_index_to_sparse_matrix, prepare_page_rank_adjac
 from tqdm.auto import tqdm
 
 from .utils import ensure_num_entities
+from ...triples.utils import get_num_ids
 from ...typing import DeviceHint
 from ...utils import ExtraReprMixin, format_relative_comparison, resolve_device
 
@@ -290,7 +291,7 @@ class SparseBFSSearcher(AnchorSearcher):
         except ImportError as err:
             raise ImportError("Requires `torch_sparse` to be installed.") from err
 
-        num_entities = edge_list.max().item() + 1
+        num_entities = get_num_ids(edge_list)
         # for each entity, determine anchor pool by BFS
         num_anchors = len(anchors)
 

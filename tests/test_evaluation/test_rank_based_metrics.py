@@ -168,6 +168,18 @@ class MedianAbsoluteDeviationTests(cases.RankBasedMetricTestCase):
     def test_weights_direction(self) -> None:
         raise unittest.SkipTest("Test does not make sense to dispersion metrics")
 
+    def test_equal_weights_match_unweighted(self):
+        """Test that equal weights reproduce the unweighted MAD to tight tolerance."""
+        metric = self.cls()
+        for n in (9, 10):
+            ranks = np.random.default_rng(seed=n).integers(1, 100, size=n)
+            for weight in (0.1, 1, 3.5):
+                np.testing.assert_allclose(
+                    metric(ranks, weights=np.full(n, weight)),
+                    metric(ranks),
+                    rtol=1.0e-12,
+                )
+
 
 class MedianRankTests(cases.RankBasedMetricTestCase):
     """Tests for median rank."""
@@ -258,6 +270,26 @@ class WeightedTests(unittest.TestCase):
     def test_weighted_median(self):
         """Test weighted median."""
         self._test_equal_weights(weighted_median)
+
+    def test_weighted_median_equal_weights_matches_median(self):
+        """Test that equal weights of any scale reproduce the unweighted median (including averaging the middle)."""
+        for n in (1, 2, 3, 10, 11, 100):
+            for weight in (0.1, 1, 3, 0.3, 1 / 7, 1.0e-3, 1.0e3):
+                with self.subTest(n=n, weight=weight):
+                    a = np.random.default_rng(seed=n).permutation(np.arange(1, n + 1))
+                    assert weighted_median(a, np.full(n, weight)) == np.median(a)
+
+    def test_weighted_median_low_precision_weights(self):
+        """Test that exact ties are detected for float32 weights, whose representation error exceeds 1e-9."""
+        # two groups of equal total weight 1, i.e., the cumulative weight is exactly half after the first group
+        for dtype in (np.float32, np.float64):
+            weights = np.concatenate([np.full(3, 1 / 3), np.full(7, 1 / 7)]).astype(dtype)
+            assert weighted_median(np.arange(10), weights) == 2.5
+
+    def test_weighted_median_degenerate(self):
+        """Test that all-zero weights are rejected."""
+        with pytest.raises(ValueError, match="must be positive"):
+            weighted_median(np.arange(3), np.zeros(3))
 
     def _test_weighted_mean_moment(
         self,
@@ -457,3 +489,15 @@ def test_median_survival_function_against_simulation():
 
     # The analytical result should be close to empirical (with some tolerance)
     np.testing.assert_allclose(sf, empirical_sf, rtol=0.05)
+
+
+def test_generate_num_candidates_and_ranks_range():
+    """Test that the maximum number of candidates is reachable, and all values are within valid ranges."""
+    max_num_candidates = 5
+    ranks, num_candidates = pykeen.metrics.ranking.generate_num_candidates_and_ranks(
+        num_ranks=1_000, max_num_candidates=max_num_candidates, seed=42
+    )
+    assert num_candidates.min() >= 1
+    assert num_candidates.max() == max_num_candidates
+    assert (ranks >= 1).all()
+    assert (ranks <= num_candidates).all()

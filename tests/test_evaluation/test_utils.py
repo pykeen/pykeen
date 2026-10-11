@@ -1,11 +1,19 @@
 """Tests for evaluation utilities."""
 
 import unittest
+import warnings
 
 import numpy as np
+import pytest
 from sklearn.metrics import precision_score, recall_score
 
-from pykeen.metrics.classification import FowlkesMallowsIndex, construct_indicator
+from pykeen.metrics.classification import (
+    FalseOmissionRate,
+    FowlkesMallowsIndex,
+    PrevalenceThreshold,
+    classification_metric_resolver,
+    construct_indicator,
+)
 
 
 def get_true(pos: int = 5, neg: int = 5) -> np.ndarray:
@@ -65,3 +73,19 @@ class TestFowlkesMallowsIndex(unittest.TestCase):
         expected = (precision_score(y_true, y_pred) * recall_score(y_true, y_pred)) ** 0.5
         value = FowlkesMallowsIndex().extract_from_confusion_matrix(tn=5, fp=1, fn=2, tp=2)
         assert abs(value - expected) < 1e-12
+
+
+@pytest.mark.parametrize(("policy", "expected"), [(0, 0.0), (1, 0.5)])
+def test_prevalence_threshold_zero_division_policy(policy, expected):
+    """Test that the inner rates of the prevalence threshold honor the zero-division policy."""
+    metric = PrevalenceThreshold()
+    metric.zero_division = policy
+    # no positives and no negatives: FPR and TPR are both undefined => both equal to the policy
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert metric.extract_from_confusion_matrix(tn=0, fp=0, fn=0, tp=0) == expected
+
+
+def test_false_omission_rate_synonym():
+    """Test that the abbreviation resolves to the false omission rate."""
+    assert classification_metric_resolver.lookup("for") is FalseOmissionRate
