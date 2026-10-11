@@ -31,6 +31,7 @@ class PythonResultTrackerTests(cases.ResultTrackerTests):
     """Tests for Python result tracker."""
 
     cls = PythonResultTracker
+    instance: PythonResultTracker
 
     def _verify_start_run(self, run_name: str) -> None:
         assert self.instance.run_name == run_name
@@ -107,6 +108,7 @@ class ConsoleResultTrackerTests(cases.ResultTrackerTests):
     """Tests for console tracker."""
 
     cls = ConsoleResultTracker
+    instance: ConsoleResultTracker
 
     def post_instantiation_hook(self) -> None:
         """Capture the written lines."""
@@ -131,6 +133,7 @@ class MultiResultTrackerTests(cases.ResultTrackerTests):
     """Tests for multi tracker."""
 
     cls = MultiResultTracker
+    instance: MultiResultTracker
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -140,6 +143,7 @@ class MultiResultTrackerTests(cases.ResultTrackerTests):
 
     def _verify_start_run(self, run_name: str) -> None:
         for tracker in self.instance.trackers:
+            assert isinstance(tracker, PythonResultTracker)
             assert tracker.run_name == run_name
 
     def _verify_log_metrics(
@@ -150,10 +154,12 @@ class MultiResultTrackerTests(cases.ResultTrackerTests):
         flat_metrics: Mapping[str, float],
     ) -> None:
         for tracker in self.instance.trackers:
+            assert isinstance(tracker, PythonResultTracker)
             _verify_python_log_metrics(tracker=tracker, metrics=metrics, step=step, prefix=prefix)
 
     def _verify_log_params(self, params: Mapping[str, Any], flat_params: Mapping[str, Any]) -> None:
         for tracker in self.instance.trackers:
+            assert isinstance(tracker, PythonResultTracker)
             assert tracker.configuration == params
 
 

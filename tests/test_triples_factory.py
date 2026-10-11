@@ -98,9 +98,9 @@ class TestTriplesFactory(unittest.TestCase):
             ["e1", "a", "e2"],
             ["e1", "a.", "e5"],
         ]
-        t = np.array(t, dtype=str)
+        triples = np.array(t, dtype=str)
         with patch("pykeen.triples.triples_factory.logger.warning") as warning:
-            factory = TriplesFactory.from_labeled_triples(triples=t)
+            factory = TriplesFactory.from_labeled_triples(triples=triples)
             # check for warning
             warning.assert_called()
             # check for filtered triples
@@ -114,8 +114,8 @@ class TestTriplesFactory(unittest.TestCase):
         ]:
             for k in label_to_id:
                 assert id_to_label[label_to_id[k]] == k
-            for k in id_to_label:
-                assert label_to_id[id_to_label[k]] == k
+            for i in id_to_label:
+                assert label_to_id[id_to_label[i]] == i
 
     def test_tensor_to_df(self):
         """Test tensor_to_df()."""
@@ -134,17 +134,17 @@ class TestTriplesFactory(unittest.TestCase):
         self,
         original_triples_factory: TriplesFactory,
         entity_restriction: Collection[str] | None,
-        invert_entity_selection: bool,
+        invert_entity_selection: bool | None,
         relation_restriction: Collection[str] | None,
-        invert_relation_selection: bool,
+        invert_relation_selection: bool | None,
     ):
         """Run the actual test for new_with_restriction."""
         # apply restriction
         restricted_triples_factory = original_triples_factory.new_with_restriction(
             entities=entity_restriction,
             relations=relation_restriction,
-            invert_entity_selection=invert_entity_selection,
-            invert_relation_selection=invert_relation_selection,
+            invert_entity_selection=bool(invert_entity_selection),
+            invert_relation_selection=bool(invert_relation_selection),
         )
 
         # check that the triples factory is returned as is, if and only if no restriction is to apply
@@ -164,7 +164,7 @@ class TestTriplesFactory(unittest.TestCase):
             expected_entities = (
                 set(original_triples_factory.entity_id_to_label.values()).difference(entity_restriction)
                 if invert_entity_selection
-                else entity_restriction
+                else set(entity_restriction)
             )
             assert expected_entities.issuperset(present_entities)
 
@@ -302,7 +302,7 @@ class TestSplit(unittest.TestCase):
 
     def test_split_tf(self):
         """Test splitting a factory."""
-        cases = [
+        cases: list[tuple[int, float | list[float]]] = [
             (2, 0.8),
             (2, [0.8]),
             (3, [0.80, 0.10]),
@@ -325,7 +325,7 @@ class TestSplit(unittest.TestCase):
 
     def test_semi_inductive_split(self) -> None:
         """Test semi-inductive splitting."""
-        cases = [
+        cases: list[tuple[int, float | list[float]]] = [
             (2, 0.8),
             (2, [0.8]),
             (3, [0.80, 0.10]),
@@ -344,7 +344,7 @@ class TestSplit(unittest.TestCase):
 
     def test_fully_inductive_split(self) -> None:
         """Test fully-inductive splitting."""
-        cases = [
+        cases: list[tuple[int, float, float | list[float]]] = [
             (3, 0.5, 0.8),
             (3, 0.5, [0.8]),
             (4, 0.6, [0.80, 0.10]),
@@ -374,8 +374,9 @@ class TestSplit(unittest.TestCase):
             def __init__(self, random_state=0, **kwargs):
                 super().__init__(url=NATIONS_TRAIN_PATH.as_uri(), random_state=random_state, **kwargs)
 
-        dataset_classes = [MockSingleTabbedDataset]
-        if Hetionet(eager=False)._get_path().is_file():
+        dataset_classes: list[type[SingleTabbedDataset]] = [MockSingleTabbedDataset]
+        hetionet_path = Hetionet(eager=False)._get_path()
+        if hetionet_path is not None and hetionet_path.is_file():
             dataset_classes.append(Hetionet)
 
         for cls in dataset_classes:

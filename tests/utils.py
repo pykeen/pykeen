@@ -2,6 +2,8 @@
 
 import importlib
 import unittest
+from collections.abc import Callable
+from typing import TypeVar
 
 import torch
 
@@ -9,6 +11,8 @@ __all__ = [
     "needs_packages",
     "rand",
 ]
+
+_F = TypeVar("_F", bound=Callable)
 
 
 def rand(*size: int, generator: torch.Generator, device: torch.device) -> torch.FloatTensor:
@@ -30,7 +34,7 @@ def is_installed(name: str) -> bool:
     return True
 
 
-def needs_packages(*names: str) -> unittest.skipIf:
+def needs_packages(*names: str) -> Callable[[_F], _F]:
     """Decorate a test such that it only runs if the rqeuired package is available."""
     missing = {name for name in names if not is_installed(name=name)}
     return unittest.skipIf(condition=missing, reason=f"Missing required packages: {sorted(missing)}.")
