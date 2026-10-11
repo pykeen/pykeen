@@ -566,11 +566,11 @@ def test_median_variance_fallback_to_sampling(monkeypatch: pytest.MonkeyPatch):
         compute_median_moments(ks)
     with pytest.raises(pykeen.metrics.ranking.NoClosedFormError):
         metric.variance(num_candidates=ks)
-    _, expected_variance = _brute_force_median_moments(ks)
+    expected_value, expected_variance = _brute_force_median_moments(ks.tolist())
     estimate = metric.variance(num_candidates=ks, num_samples=20_000, generator=np.random.default_rng(42))
     assert estimate == pytest.approx(expected_variance, rel=0.1)
     # the expectation is always exact
-    assert metric.expected_value(num_candidates=ks) == pytest.approx(_brute_force_median_moments(ks)[0])
+    assert metric.expected_value(num_candidates=ks) == pytest.approx(expected_value)
 
 
 @pytest.mark.parametrize("num_ranks", [2_000, 2_001])
