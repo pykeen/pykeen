@@ -116,7 +116,7 @@ Another exact, but slower implementation is based on Python's built-in sets, the
         negative_sampler="basic",
         negative_sampler_kwargs=dict(
             filtered=True,
-            filterer='python-set',
+            filterer="python-set",
         ),
     )
 
@@ -525,22 +525,22 @@ filterer_resolver: ClassResolver[Filterer] = ClassResolver.from_subclasses(
 def make_default_filterer(mapped_triples: MappedTriples, **kwargs) -> Filterer:
     """Create the default filterer.
 
-    The default filterer is the exact :class:`SortedKeyFilterer`. For very large graphs, where its packed keys would
-    overflow 64-bit integers, it falls back to the approximate :class:`BloomFilterer` with default parameters and logs
-    a warning.
+    The default filterer is the exact :class:`SortedKeyFilterer`. For very large graphs, where its
+    packed keys would overflow 64-bit integers, it falls back to the approximate
+    :class:`BloomFilterer` with default parameters and logs a warning.
 
-    .. note ::
-        The fallback is only applied for the default filterer. If a :class:`SortedKeyFilterer` is requested
-        explicitly, e.g., via ``filterer="sorted-key"``, a :class:`SortedKeyOverflowError` is raised instead.
+    .. note::
+
+        The fallback is only applied for the default filterer. If a :class:`SortedKeyFilterer` is
+        requested explicitly, e.g., via ``filterer="sorted-key"``, a :class:`SortedKeyOverflowError`
+        is raised instead.
 
     :param mapped_triples: shape: (num_triples, 3)
         The ID-based triples.
-    :param kwargs:
-        Additional keyword-based arguments passed to :class:`SortedKeyFilterer`. They are *not* passed to the fallback
-        :class:`BloomFilterer`.
+    :param kwargs: Additional keyword-based arguments passed to :class:`SortedKeyFilterer`. They are
+        *not* passed to the fallback :class:`BloomFilterer`.
 
-    :return:
-        The filterer.
+    :returns: The filterer.
     """
     try:
         return SortedKeyFilterer(mapped_triples=mapped_triples, **kwargs)
