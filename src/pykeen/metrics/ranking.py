@@ -1230,10 +1230,10 @@ class InverseHarmonicMeanRank(RankBasedMetric):
 
     .. math::
 
-        IHMR = MRR = \frac{1}{W} \sum_{i=1}^{n} w_i r_i^{-1}$ with $W = \sum_{i=1}^{n} w_i$
+        IHMR = MRR = \frac{\sum_{i=1}^{n} w_i r_i^{-1}}{\sum_{i=1}^{n} w_i}
 
-    For the variance, the weights are scaled quadratically, cf.
-    :func:`~pykeen.metrics.utils.weighted_mean_variance`.
+    For the variance, the weights are scaled quadratically,
+    cf. :func:`~pykeen.metrics.utils.weighted_mean_variance`.
 
     .. warning::
 
