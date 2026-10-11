@@ -575,7 +575,7 @@ class DerivedRankBasedMetric(RankBasedMetric, ABC):
         generic_base_key = camel_to_snake(self.base.__class__.__name__)
         base_key = self.base.key
         if base_key != generic_base_key and key.endswith(generic_base_key):
-            key = key[: -len(generic_base_key)] + base_key
+            key = key.removesuffix(generic_base_key) + base_key
         return key
 
     def __call__(  # noqa: D102
