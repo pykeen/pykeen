@@ -99,7 +99,8 @@ from .utils import (
     Metric,
     ValueRange,
     compute_log_expected_power,
-    compute_median_survival_function,
+    compute_median_mean,
+    compute_median_moments,
     weighted_harmonic_mean,
     weighted_mean_expectation,
     weighted_mean_variance,
@@ -1394,64 +1395,83 @@ class ZGeometricMeanRank(ZMetric):
 class MedianRank(RankBasedMetric):
     r"""The median rank.
 
-    The median rank is a robust measure of central tendency that is less sensitive to outliers than the arithmetic
-    mean. For a set of ranks $\mathcal{I}$, the median is the middle value when ranks are sorted.
+    The median rank is a robust measure of central tendency that is less sensitive to outliers than
+    the arithmetic mean. For a set of ranks $\mathcal{I}$, the median is the middle value when ranks
+    are sorted.
 
     .. warning::
 
-        Like other rank-based metrics, the median rank is dependent on the number of candidates. A median rank of 10
-        has different interpretations for a candidate set size of 100 versus 1,000,000.
+        Like other rank-based metrics, the median rank is dependent on the number of candidates. A
+        median rank of 10 has different interpretations for a candidate set size of 100 versus
+        1,000,000.
 
     **Weighted Median**
 
-    When weights $w_1, \ldots, w_n$ are provided, the weighted median is computed as the value $m$ such that the
-    cumulative weight of all ranks less than or equal to $m$ is at least half of the total weight, and the cumulative
-    weight of all ranks greater than or equal to $m$ is also at least half of the total weight. Formally, the weighted
-    median $m$ satisfies:
+    When weights $w_1, \ldots, w_n$ are provided, the weighted median is computed as the value $m$
+    such that the cumulative weight of all ranks less than or equal to $m$ is at least half of the
+    total weight, and the cumulative weight of all ranks greater than or equal to $m$ is also at
+    least half of the total weight. Formally, the weighted median $m$ satisfies:
 
     .. math::
 
         \sum_{r_i \leq m} w_i \geq \frac{1}{2} \sum_j w_j \quad
             \text{and} \quad \sum_{r_i \geq m} w_i \geq \frac{1}{2} \sum_j w_j
 
-    The weighted median generalizes the standard median: when all weights are equal, it reduces to the unweighted
-    median. The implementation uses PyKEEN's :func:`~pykeen.metrics.utils.weighted_median` utility function.
+    The weighted median generalizes the standard median: when all weights are equal, it reduces to
+    the unweighted median. The implementation uses PyKEEN's
+    :func:`~pykeen.metrics.utils.weighted_median` utility function.
 
     **Expected Value (Unweighted Case)**
 
-    For the unweighted case, the expected value $\mathbb{E}[\text{Median}]$ can be computed exactly using dynamic
-    programming. The computation uses the survival function $P(\text{Median} > x)$ and the identity:
+    For the unweighted case, the expected value $\mathbb{E}[\text{Median}]$ can be computed exactly.
+    We model each rank as $r_i \sim \mathcal{U}(1, N_i)$ and denote by $C(x) = \|\{i : r_i \leq
+    x\}\|$ the number of ranks not larger than $x$. The $j$-th smallest rank $X_{(j)}$ exceeds $x$
+    if and only if $C(x) \leq j - 1$. The count $C(x)$ is a sum of independent binomial variables,
+    one for each group of ranking tasks with identical number of candidates $N$, with success
+    probability $\min(1, x / N)$. The expected value then follows from $\mathbb{E}[X] =
+    \sum_{x=0}^{\infty} P(X > x)$.
 
-    .. math::
-
-        \mathbb{E}[\text{Median}] = \sum_{x=0}^{\infty} P(\text{Median} > x)
-
-    The survival function is derived by modeling the median as the order statistic of discrete uniform random
-    variables $r_i \sim \mathcal{U}(1, N_i)$ and computing the distribution via dynamic programming with
-    complexity $O(K \cdot n)$, where $K = \max_i N_i$ and $n$ is the number of ranks.
+    The median follows :func:`numpy.median`: for an odd number $n$ of ranks it is
+    $X_{(\frac{n+1}{2})}$, and for an even number of ranks it is the average $\frac{1}{2}(X_{(n/2)}
+    + X_{(n/2 + 1)})$ of the two middle order statistics.
 
     **Variance (Unweighted Case)**
 
-    The variance $\mathbb{V}[\text{Median}]$ is similarly computed using:
-
-    .. math::
-
-        \mathbb{V}[\text{Median}] = \mathbb{E}[\text{Median}^2] - \mathbb{E}[\text{Median}]^2
-
-    where $\mathbb{E}[\text{Median}^2]$ is obtained from:
+    The variance is computed from the first and second moments, where for non-negative integer
+    variables
 
     .. math::
 
         \mathbb{E}[X^2] = \sum_{x=0}^{\infty} (2x + 1) \cdot P(X > x)
 
+    For an even number of ranks, the second moment of the average of the two middle order statistics
+    $A \leq B$ additionally requires $\mathbb{E}[AB] = \sum_{a, b \geq 0} P(A > a, B > b)$, which
+    reduces to terms of the form $P(C(a) = m, C(b) = m)$ with $m = n / 2$, cf.
+    :func:`~pykeen.metrics.utils.compute_median_moments`. The result is clamped to be non-negative.
+
+    **Complexity**
+
+    Let $n$ be the number of ranks, $K = \max_i N_i$, and $g$ the number of distinct numbers of
+    candidates.
+
+    - For $g = 1$ (e.g., full ranking against all entities), the expected value and the variance are
+      computed in $O(K)$ time, irrespective of $n$.
+    - For $g > 1$, the expected value, and the variance for odd $n$, take $O(K \cdot g \cdot n \log
+      n)$ time. Memory is bounded, as the values of $x$ are processed in chunks.
+    - For the variance with even $n$ and $g > 1$, the exact computation additionally needs $O(K^2
+      \cdot g \cdot n)$ time. If this exceeds a fixed work limit, it falls back to **numeric
+      estimation via sampling** (which requires ``num_samples`` to be given, and raises
+      :class:`NoClosedFormError` otherwise).
+
     **Weighted Case**
 
     .. warning::
 
-        Computing the expected value and variance for the weighted median is computationally intractable, as it
-        reduces to a variant of the `Subset Sum Problem <https://en.wikipedia.org/wiki/Subset_sum_problem>`_
-        (NP-complete). Therefore, when weights are provided, the metric falls back to **numeric estimation via
-        sampling**, which may be slow and less accurate.
+        Computing the expected value and variance for the weighted median is computationally
+        intractable, as it reduces to a variant of the `Subset Sum Problem
+        <https://en.wikipedia.org/wiki/Subset_sum_problem>`_ (NP-complete). Therefore, when weights
+        are provided, the metric falls back to **numeric estimation via sampling**, which may be
+        slow and less accurate.
 
     ---
     link: https://arxiv.org/abs/2203.07544
@@ -1483,12 +1503,7 @@ class MedianRank(RankBasedMetric):
                 num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
             )
 
-        # Get P(M > x) for x = 0, ..., k_max
-        sf = compute_median_survival_function(num_candidates)
-
-        # For non-negative integer variables: E[X] = Sum_{x=0}^{inf} P(X > x)
-        # We slice [:-1] because the array goes up to x=k_max, and P(M > k_max) is 0.
-        return np.sum(sf[:-1])
+        return compute_median_mean(num_candidates)
 
     def variance(  # noqa: D102
         self, num_candidates: np.ndarray, num_samples: int | None = None, weights: np.ndarray | None = None, **kwargs
@@ -1497,20 +1512,12 @@ class MedianRank(RankBasedMetric):
         if weights is not None:
             return super().variance(num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs)
 
-        # Get P(M > x)
-        sf = compute_median_survival_function(num_candidates)
-
-        # Calculate E[M]
-        # Sum P(M > x)
-        exp_val = np.sum(sf[:-1])
-
-        # Calculate E[M^2]
-        # Formula: E[X^2] = Sum_{x=0}^{inf} (2x + 1) * P(X > x)
-        x_indices = np.arange(len(sf) - 1)
-        exp_sq = np.sum((2 * x_indices + 1) * sf[:-1])
-
-        # Var(M) = E[M^2] - (E[M])^2
-        return exp_sq - exp_val**2
+        try:
+            _, variance = compute_median_moments(num_candidates)
+        except NotImplementedError:
+            # even number of ranks with multiple distinct numbers of candidates, and too expensive
+            return super().variance(num_candidates=num_candidates, num_samples=num_samples, weights=None, **kwargs)
+        return variance
 
 
 @parse_docdata
