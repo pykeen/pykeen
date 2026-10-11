@@ -341,7 +341,8 @@ class PatternMiningTests(unittest.TestCase):
 
     def test_composition_chunking(self):
         """Test that the chunk size does not affect the composition statistics."""
-        index = triple_analysis._build_pair_index(_random_triples(np.random.default_rng(seed=1), 20, 5, 200))
+        mapped_triples = _random_triples(np.random.default_rng(seed=1), 20, 5, 200)
+        index = triple_analysis.HeadTailPairIndex.from_mapped_triples(mapped_triples)
         expected = triple_analysis._composition_statistics(index)
         for chunk_size in (1, 7, 100):
             with self.subTest(chunk_size=chunk_size):

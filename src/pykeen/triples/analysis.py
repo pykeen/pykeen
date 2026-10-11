@@ -4,7 +4,7 @@ import hashlib
 import logging
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping, Sequence
-from typing import NamedTuple
+from typing import NamedTuple, Self
 
 import numpy as np
 import pandas as pd
@@ -147,7 +147,7 @@ class PatternMatch(NamedTuple):
     confidence: float
 
 
-class _PairIndex(NamedTuple):
+class HeadTailPairIndex(NamedTuple):
     """An index of the distinct triples, and of their distinct (head, tail) pairs."""
 
     #: the distinct triples' heads, relations, and tails, shape: (num_triples,)
@@ -176,8 +176,38 @@ class _PairIndex(NamedTuple):
         mask[mask] = self.pair_keys[ids[mask]] == keys[mask]
         return ids[mask], mask
 
+    @classmethod
+    def from_mapped_triples(cls, mapped_triples: Collection[tuple[int, int, int]]) -> Self:
+        """Build a pair index from ID-based triples."""
+        triples = np.asarray(mapped_triples, dtype=np.int64).reshape(-1, 3)
+        # relations in the order of first occurrence
+        relation_ids, first_index = np.unique(triples[:, 1], return_index=True)
+        relation_order = relation_ids[np.argsort(first_index)]
+        num_entities = int(triples[:, [0, 2]].max(initial=-1)) + 1
+        num_relations = int(triples[:, 1].max(initial=-1)) + 1
+        if num_entities**2 > np.iinfo(np.int64).max:
+            raise ValueError(f"Too many entities for an int64-based pair index: {num_entities}")
+        # distinct triples
+        heads, relations, tails = np.unique(triples, axis=0).T
+        # distinct pairs
+        pair_keys, pair_ids = np.unique(heads * num_entities + tails, return_inverse=True)
+        incidence = scipy.sparse.csr_array(
+            (np.ones_like(pair_ids), (pair_ids, relations)),
+            shape=(len(pair_keys), num_relations),
+        )
+        return cls(
+            heads=heads,
+            relations=relations,
+            tails=tails,
+            relation_order=relation_order,
+            num_entities=num_entities,
+            num_relations=num_relations,
+            pair_keys=pair_keys,
+            incidence=incidence,
+        )
 
-def _build_pair_index(mapped_triples: Collection[tuple[int, int, int]]) -> _PairIndex:
+
+def _build_pair_index(mapped_triples: Collection[tuple[int, int, int]]) -> HeadTailPairIndex:
     """Build a pair index from ID-based triples."""
     triples = np.asarray(mapped_triples, dtype=np.int64).reshape(-1, 3)
     # relations in the order of first occurrence
@@ -194,7 +224,7 @@ def _build_pair_index(mapped_triples: Collection[tuple[int, int, int]]) -> _Pair
     incidence = scipy.sparse.csr_array(
         (np.ones_like(pair_ids), (pair_ids, relations)), shape=(len(pair_keys), num_relations)
     )
-    return _PairIndex(
+    return HeadTailPairIndex(
         heads=heads,
         relations=relations,
         tails=tails,
@@ -220,7 +250,7 @@ class _PairStatistics(NamedTuple):
     reverse_overlap: np.ndarray
 
 
-def _pair_statistics(index: _PairIndex) -> _PairStatistics:
+def _pair_statistics(index: HeadTailPairIndex) -> _PairStatistics:
     """Compute pair-overlap statistics via sparse matrix products."""
     m = index.incidence
     # the rows of m_rev are the rows of m for the reversed pair, i.e., m_rev[(x, y), r] = r(y, x)
@@ -292,7 +322,8 @@ def iter_unary_patterns(
 
     :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
-    yield from _iter_unary_patterns(_pair_statistics(_build_pair_index(mapped_triples)))
+    index = HeadTailPairIndex.from_mapped_triples(mapped_triples)
+    yield from _iter_unary_patterns(_pair_statistics(index))
 
 
 def iter_binary_patterns(
@@ -314,7 +345,8 @@ def iter_binary_patterns(
 
     :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
-    yield from _iter_binary_patterns(_pair_statistics(_build_pair_index(mapped_triples)))
+    index = HeadTailPairIndex.from_mapped_triples(mapped_triples)
+    yield from _iter_binary_patterns(_pair_statistics(index))
 
 
 class _CompositionStatistics(NamedTuple):
@@ -331,7 +363,7 @@ class _CompositionStatistics(NamedTuple):
     hits: scipy.sparse.csr_array
 
 
-def _composition_statistics(index: _PairIndex, chunk_size: int = 2**24) -> _CompositionStatistics:
+def _composition_statistics(index: HeadTailPairIndex, chunk_size: int = 2**24) -> _CompositionStatistics:
     """Compute composition statistics via a chunked sparse self-join.
 
     :param index:
@@ -448,7 +480,7 @@ def iter_ternary_patterns(
 
     :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
-    index = _build_pair_index(mapped_triples)
+    index = HeadTailPairIndex.from_mapped_triples(mapped_triples)
     yield from _iter_ternary_patterns(_composition_statistics(index), relations=index.relation_order)
 
 
@@ -466,7 +498,7 @@ def iter_patterns(
 
     :yields: Patterns from :func:`iter_unary_patterns`, func:`iter_binary_patterns`, and :func:`iter_ternary_patterns`.
     """
-    index = _build_pair_index(mapped_triples)
+    index = HeadTailPairIndex.from_mapped_triples(mapped_triples)
     pair_stats = _pair_statistics(index)
     yield from _iter_unary_patterns(pair_stats, skip_zero=skip_zero)
     yield from _iter_binary_patterns(pair_stats, skip_zero=skip_zero)
