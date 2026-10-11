@@ -231,8 +231,9 @@ class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
 class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
     """A classification metric based on the confusion matrix."""
 
-    #: Should
     binarize: ClassVar[bool] = True
+
+    #: The policy to be applied when the formula for a metric results in a division by zero
     zero_division: ClassVar[ZeroDivisionPolicy] = "warn"
 
     @abc.abstractmethod
