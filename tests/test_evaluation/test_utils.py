@@ -49,16 +49,16 @@ class TestIndicators(unittest.TestCase):
 class TestFowlkesMallowsIndex(unittest.TestCase):
     """Test the Fowlkes-Mallows index."""
 
-    def test_perfect_prediction(self):
+    def test_perfect_prediction(self) -> None:
         """A perfect prediction has an index of exactly one (and not more)."""
         assert FowlkesMallowsIndex().extract_from_confusion_matrix(tn=7, fp=0, fn=0, tp=3) == 1.0
 
-    def test_hand_computed(self):
+    def test_hand_computed(self) -> None:
         """Test a non-trivial case: PPV = 2/3, TPR = 2/4, FM = sqrt(1/3)."""
         value = FowlkesMallowsIndex().extract_from_confusion_matrix(tn=5, fp=1, fn=2, tp=2)
         assert abs(value - (1 / 3) ** 0.5) < 1e-12
 
-    def test_matches_sklearn_precision_recall(self):
+    def test_matches_sklearn_precision_recall(self) -> None:
         """Test against sqrt(precision * recall) computed by sklearn."""
         y_true = np.array([1, 1, 1, 1, 0, 0, 0, 0, 0, 0])
         y_pred = np.array([1, 1, 0, 0, 1, 0, 0, 0, 0, 0])
