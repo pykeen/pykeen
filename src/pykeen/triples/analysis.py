@@ -49,12 +49,13 @@ RELATION_CARDINALITY_TYPES: set[RelationCardinality] = {
 }
 
 #: A pattern type
-RelationPatternType: TypeAlias = Literal["symmetry", "anti-symmetry", "inversion", "composition"]
+RelationPatternType: TypeAlias = Literal["symmetry", "anti-symmetry", "inversion", "implication", "composition"]
 
 # constants
 PATTERN_TYPE_SYMMETRY: RelationPatternType = "symmetry"
 PATTERN_TYPE_ANTI_SYMMETRY: RelationPatternType = "anti-symmetry"
 PATTERN_TYPE_INVERSION: RelationPatternType = "inversion"
+PATTERN_TYPE_IMPLICATION: RelationPatternType = "implication"
 PATTERN_TYPE_COMPOSITION: RelationPatternType = "composition"
 
 RELATION_PATTERN_TYPES: set[RelationPatternType] = {
@@ -63,6 +64,7 @@ RELATION_PATTERN_TYPES: set[RelationPatternType] = {
     PATTERN_TYPE_ANTI_SYMMETRY,
     # binary
     PATTERN_TYPE_INVERSION,
+    PATTERN_TYPE_IMPLICATION,
     # ternary
     PATTERN_TYPE_COMPOSITION,
 }
@@ -280,13 +282,16 @@ def _iter_unary_patterns(stats: _PairStatistics, skip_zero: bool = False) -> Ite
 
 def _iter_binary_patterns(stats: _PairStatistics, skip_zero: bool = False) -> Iterable[PatternMatch]:
     """Yield binary patterns from pair statistics, cf. :func:`iter_binary_patterns`."""
-    logger.debug("Evaluating binary patterns: {inversion}")
+    logger.debug("Evaluating binary patterns: {inversion, implication}")
     # all ordered pairs (r', r) with r' != r; the diagonal corresponds to symmetry
     i, j = np.nonzero(~np.eye(len(stats.relations), dtype=bool))
     support = np.diag(stats.overlap)[i]
     # confidence of r'(x, y) => r(y, x)
     confidence = stats.reverse_overlap[i, j] / support
     yield from _iter_pattern_matches(PATTERN_TYPE_INVERSION, stats.relations[j], support, confidence, skip_zero)
+    # confidence of r'(x, y) => r(x, y)
+    confidence = stats.overlap[i, j] / support
+    yield from _iter_pattern_matches(PATTERN_TYPE_IMPLICATION, stats.relations[j], support, confidence, skip_zero)
 
 
 def iter_unary_patterns(
@@ -321,11 +326,12 @@ def iter_binary_patterns(
     r"""
     Yield binary patterns from ID-based triples.
 
-    =========  ===========================
-    Pattern    Equation
-    =========  ===========================
-    Inversion  $r'(x, y) \implies r(y, x)$
-    =========  ===========================
+    ===========  ===========================
+    Pattern      Equation
+    ===========  ===========================
+    Inversion    $r'(x, y) \implies r(y, x)$
+    Implication  $r'(x, y) \implies r(x, y)$
+    ===========  ===========================
 
     All ordered pairs of distinct relations $(r', r)$ are considered. The pattern match is attributed to $r$, and its
     support is the number of distinct pairs of $r'$.

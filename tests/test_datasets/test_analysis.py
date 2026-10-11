@@ -250,7 +250,8 @@ def _reference_iter_patterns(
     r"""Mine patterns with a pure-Python reference implementation.
 
     For unary and ternary patterns, this is the implementation prior to vectorization. For inversion, it is a
-    straightforward set-based implementation of $r'(x, y) \implies r(y, x)$ for all ordered pairs $r' \neq r$.
+    straightforward set-based implementation of $r'(x, y) \implies r(y, x)$ (inversion) and
+    $r'(x, y) \implies r(x, y)$ (implication) for all ordered pairs $r' \neq r$.
     """
     pairs: dict[int, set[tuple[int, int]]] = defaultdict(set)
     adj: dict[int, dict[int, set[int]]] = defaultdict(lambda: defaultdict(set))
@@ -273,6 +274,8 @@ def _reference_iter_patterns(
         support = len(ht1)
         confidence = len(ht1.intersection({(t, h) for h, t in ht2})) / support
         yield triple_analysis.PatternMatch(r, triple_analysis.PATTERN_TYPE_INVERSION, support, confidence)
+        confidence = len(ht1.intersection(ht2)) / support
+        yield triple_analysis.PatternMatch(r, triple_analysis.PATTERN_TYPE_IMPLICATION, support, confidence)
     # ternary
     candidates = {(r1, r2) for e, e_in in ins.items() if e in outs for r1, r2 in itertools.product(e_in, outs[e])}
     for r1, r2 in candidates:
@@ -334,12 +337,11 @@ class PatternMiningTests(unittest.TestCase):
         expected = Counter(p for p in triple_analysis.iter_patterns(triples) if p.confidence > 0)
         assert Counter(triple_analysis.iter_patterns(triples, skip_zero=True)) == expected
 
+    def _matches(self, mapped_triples, pattern_type) -> Counter[triple_analysis.PatternMatch]:
+        return Counter(p for p in triple_analysis.iter_patterns(mapped_triples) if p.pattern_type == pattern_type)
+
     def _inversions(self, mapped_triples) -> Counter[triple_analysis.PatternMatch]:
-        return Counter(
-            p
-            for p in triple_analysis.iter_patterns(mapped_triples)
-            if p.pattern_type == triple_analysis.PATTERN_TYPE_INVERSION
-        )
+        return self._matches(mapped_triples, triple_analysis.PATTERN_TYPE_INVERSION)
 
     def test_inversion_perfect(self):
         """Test a perfect inversion pair, which should be detected in both directions."""
@@ -355,6 +357,33 @@ class PatternMiningTests(unittest.TestCase):
         assert all(p.confidence == 0 for p in self._inversions([(0, 0, 1), (0, 1, 1)]))
         df = triple_analysis.relation_pattern_types([(0, 0, 1), (0, 1, 1)])
         assert triple_analysis.PATTERN_TYPE_INVERSION not in set(df[triple_analysis.PATTERN_TYPE_COLUMN_NAME])
+
+    def test_implication(self):
+        """Test that r'(x, y) => r(x, y) is detected for the superset relation only, and not as inversion."""
+        # r0 = {(0, 1)} is contained in r1 = {(0, 1), (1, 2)}
+        triples = [(0, 0, 1), (0, 1, 1), (1, 1, 2)]
+        matches = self._matches(triples, triple_analysis.PATTERN_TYPE_IMPLICATION)
+        assert matches == Counter(
+            [
+                # r0 => r1
+                triple_analysis.PatternMatch(1, triple_analysis.PATTERN_TYPE_IMPLICATION, 1, 1.0),
+                # r1 => r0
+                triple_analysis.PatternMatch(0, triple_analysis.PATTERN_TYPE_IMPLICATION, 2, 0.5),
+            ]
+        )
+        df = triple_analysis.relation_pattern_types(triples)
+        assert (1, triple_analysis.PATTERN_TYPE_IMPLICATION) in set(
+            zip(
+                df[triple_analysis.RELATION_ID_COLUMN_NAME],
+                df[triple_analysis.PATTERN_TYPE_COLUMN_NAME],
+                strict=True,
+            )
+        )
+
+    def test_implication_inversion_disjoint(self):
+        """Test that a perfect inversion pair has no implication."""
+        matches = self._matches([(0, 0, 1), (1, 1, 0)], triple_analysis.PATTERN_TYPE_IMPLICATION)
+        assert all(p.confidence == 0 for p in matches)
 
     def test_order_invariance(self):
         """Test that the result does not depend on the order of triples."""
