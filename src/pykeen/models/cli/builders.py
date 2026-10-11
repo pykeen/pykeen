@@ -39,6 +39,8 @@ _SKIP_ARGS = {
     "edge_weighting",
     "relation_representations",
     "coefficients",  # from AutoSF
+    # handled by the -I/--use-inverse-triples flag, see below
+    "use_inverse_triples",
 }
 _SKIP_ANNOTATIONS = {
     Optional[nn.Embedding],  # noqa:UP045
@@ -68,6 +70,9 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:
     :returns: a click command for training a model of the given class
     """
     signature = inspect.signature(model.__init__)
+    # some models (e.g., ConvE, CompGCN, NodePiece) use inverse triples by default
+    inverse_triples_parameter = signature.parameters.get("use_inverse_triples")
+    use_inverse_triples_default = False if inverse_triples_parameter is None else inverse_triples_parameter.default
 
     def _decorate_model_kwargs(command: click.decorators.FC) -> click.decorators.FC:
         for name, annotation in model.__init__.__annotations__.items():
@@ -121,7 +126,13 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:
     @options.num_workers_option
     @options.random_seed_option
     @_decorate_model_kwargs
-    @options.inverse_triples_option
+    @click.option(
+        "-I",
+        "--use-inverse-triples/--no-use-inverse-triples",
+        default=use_inverse_triples_default,
+        show_default=True,
+        help="Model inverse triples",
+    )
     @click.option("--silent", is_flag=True)
     @click.option("--output-directory", type=pathlib.Path, default=None, help="Where to dump the results")
     def main(
@@ -145,7 +156,7 @@ def build_cli_from_cls(model: type[Model]) -> click.Command:
         num_workers,
         random_seed,
         silent: bool,
-        **model_kwargs,
+        **model_kwargs: Any,
     ) -> None:
         """CLI for PyKEEN."""
         click.echo(

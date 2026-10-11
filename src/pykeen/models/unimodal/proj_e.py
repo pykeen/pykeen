@@ -43,7 +43,7 @@ class ProjE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     #: The default loss function class
     loss_default: ClassVar[type[Loss]] = BCEWithLogitsLoss
     #: The default parameters for the default loss function class
-    loss_default_kwargs = {"reduction": "mean"}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {"reduction": "mean"}
 
     @update_docstring_with_resolver_keys(
         ResolverKey(name="inner_non_linearity", resolver="class_resolver.contrib.torch.activation_resolver")

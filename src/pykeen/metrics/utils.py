@@ -1,12 +1,13 @@
 """Utilities for metrics."""
 
+import math
 from collections.abc import Collection
 from dataclasses import dataclass
 from typing import ClassVar
 
 import numpy as np
 from docdata import get_docdata
-from scipy import stats
+from scipy import fft, special, stats
 
 from ..utils import ExtraReprMixin, camel_to_snake
 
@@ -14,7 +15,10 @@ __all__ = [
     "Metric",
     "ValueRange",
     "compute_log_expected_power",
-    "compute_median_survival_function",
+    "compute_median_mean",
+    "compute_median_moments",
+    "truncated_median_survival_function",
+    "truncated_order_statistic_survival_function",
     "weighted_harmonic_mean",
     "weighted_mean_expectation",
     "weighted_mean_variance",
@@ -114,7 +118,8 @@ class Metric(ExtraReprMixin):
         docdata = get_docdata(cls)
         if docdata is not None and "description" in docdata:
             return docdata["description"]
-        assert cls.__doc__ is not None
+        if cls.__doc__ is None:
+            raise ValueError(f"{cls.__name__} has neither a docdata description nor a docstring.")
         return cls.__doc__.splitlines()[0]
 
     @classmethod
@@ -270,168 +275,384 @@ def weighted_median(a: np.ndarray, weights: np.ndarray | None = None) -> np.floa
     if weights is None:
         return np.median(a)
 
-    # calculate cdf
+    # calculate (unnormalized) cumulative weights; comparing against half the total avoids rounding from normalization
     indices = np.argsort(a)
     s_ranks = a[indices]
     s_weights = weights[indices]
-    cdf = np.cumsum(s_weights)
-    cdf /= cdf[-1]
-    # determine value at p=0.5
-    idx = np.searchsorted(cdf, v=0.5)
-    # special case for exactly 0.5
-    if cdf[idx] == 0.5:
+    cdf = np.cumsum(s_weights, dtype=float)
+    total = cdf[-1]
+    if not total > 0:
+        raise ValueError(f"The sum of weights must be positive, but is {total}")
+    half = 0.5 * total
+    # np.cumsum adds sequentially in float64, so its rounding error is at most ~n * 1.1e-16 relative to the total
+    # (typically ~sqrt(n) * 1.1e-16), far below 1e-9 for realistic evaluation sizes. The tolerance therefore treats
+    # cumulative weights within 1e-9 * total of the half as exact ties. Genuine differences that small (possible, e.g.,
+    # with inverse-frequency weights of large groups) are also treated as ties. Lower-precision float weights carry
+    # representation errors of up to eps / 2 each, which bounds the relative error of their sum, so we use at least eps.
+    rtol = 1.0e-9
+    if np.issubdtype(weights.dtype, np.floating):
+        rtol = max(rtol, float(np.finfo(weights.dtype).eps))
+    tolerance = rtol * total
+    # determine first value with cumulative weight >= 0.5 * total (up to numerical tolerance)
+    idx = int(np.searchsorted(cdf, v=half - tolerance))
+    # special case for exactly 0.5: average the two middle values
+    if abs(cdf[idx] - half) <= tolerance:
         return s_ranks[idx : idx + 2].mean()
     return s_ranks[idx]
 
 
 def compute_log_expected_power(k_values: np.ndarray, powers: np.ndarray, memory_limit_elements: int = 10**7) -> float:
-    """
-    Compute $sum( ln( E[X_i^p_i] ) )$.
+    r"""
+    Compute $\sum_i \ln \mathbb{E}[X_i^{p_i}]$ for independent $X_i$ uniformly distributed on $\{1, \ldots, k_i\}$.
 
-    Does so efficiently by using sorted batching and vectorization.
+    Each summand is given by
+
+    .. math::
+
+        \ln \mathbb{E}[X_i^{p_i}] = \ln \sum \limits_{j=1}^{k_i} \exp(p_i \cdot \ln j) - \ln k_i
+
+    For each unique power $p$, the log-sums for all $k \leq \max_i k_i$ are obtained at once by a single cumulative sum,
+    and then looked up for each $k_i$. Hence, for $u$ unique powers, the cost is $\mathcal{O}(u \cdot \max_i k_i + n)$
+    rather than $\mathcal{O}(n \cdot \max_i k_i)$. In particular, $u = 1$ for the unweighted geometric mean rank.
 
     :param k_values: shape: (n,)
         Upper bounds.
     :param powers: shape: (n,)
         Exponents.
     :param memory_limit_elements:
-        Max number of float elements in the temporary matrix buffer.
+        Max number of float elements in the temporary buffer of log-cumulative sums, which has one row per unique power.
         10^7 elements ~ 80MB RAM.
 
     :return:
         The scalar log-value.
     """
-    # 1. Sort inputs by k.
-    # This minimizes the 'masking waste' when we batch variables together.
-    # Small k's are processed with small k's; large with large.
-    sort_idx = np.argsort(k_values)
-    k_sorted = np.asarray(k_values)[sort_idx]
-    p_sorted = np.asarray(powers)[sort_idx]
+    k_values = np.asarray(k_values).astype(np.int64, copy=False)
+    if (k_values < 1).any():
+        raise ValueError(f"All upper bounds must be at least 1, but the minimum is {k_values.min()}.")
+    unique_powers, inverse = np.unique(np.asarray(powers, dtype=np.float64), return_inverse=True)
+    inverse = inverse.reshape(-1)
+    num_unique = len(unique_powers)
 
-    n = len(k_sorted)
-    total_log_moment = 0.0
+    # the largest k per unique power, which determines the length of its log-cumulative sum
+    max_k = np.zeros(num_unique, dtype=np.int64)
+    np.maximum.at(max_k, inverse, k_values)
 
-    start_idx = 0
-    while start_idx < n:
-        # 2. Determine Batch Size dynamically based on Memory Limit.
-        # We want to find 'end_idx' such that:
-        # (rows in batch) * (max_k in batch) <= memory_limit
-        # Since k is sorted ascending, max_k_in_batch is simply k_sorted[end_idx-1].
+    # process unique powers sorted by their largest k, to reduce padding when batching them
+    order = np.argsort(max_k, kind="stable")
+    max_k_sorted = max_k[order]
+    # position of each unique power in the processing order
+    position = np.empty(num_unique, dtype=np.int64)
+    position[order] = np.arange(num_unique)
+    task_position = position[inverse]
 
-        end_idx = start_idx + 1
+    # log sum_{j=1}^{k_i} j^{p_i} for each task
+    log_sums = np.empty(len(k_values), dtype=np.float64)
+    start = 0
+    while start < num_unique:
+        # choose the batch such that (number of rows) * (largest k) stays within the memory limit (but >= 1 row)
+        # note: since max_k_sorted is ascending, the required size increases with the number of rows
+        sizes = np.arange(1, num_unique - start + 1) * max_k_sorted[start:]
+        stop = start + max(1, int(np.searchsorted(sizes, memory_limit_elements, side="right")))
+        batch_powers = unique_powers[order[start:stop], None]
+        log_j = np.log(np.arange(1, max_k_sorted[stop - 1] + 1, dtype=np.float64))
+        # shape: (stop - start, max_k); entry [b, k - 1] = exp(-shift_b) * sum_{j=1}^{k} j^{p_b}
+        # note: we shift by the largest exponent per row, p * log(max_k) for p > 0, and 0 otherwise, to avoid overflow;
+        #       this is faster than a log-cumsum-exp, which matters when there are many unique powers.
+        shift = np.maximum(batch_powers * log_j[-1], 0.0)
+        table = np.cumsum(np.exp(batch_powers * log_j[None, :] - shift), axis=1)
+        # look up the log-sums for all tasks whose power is in this batch
+        task_idx = np.flatnonzero((task_position >= start) & (task_position < stop))
+        rows = task_position[task_idx] - start
+        cols = k_values[task_idx] - 1
+        with np.errstate(divide="ignore"):  # log(0) for underflowed entries, which are replaced below
+            log_sums[task_idx] = np.log(table[rows, cols]) + shift[rows, 0]
+        # for large powers, small j underflow after shifting, i.e., table[:, 0] == 0; as the cumulative sums are
+        # monotone, only these rows are affected. They are rare, so we recompute them exactly in log-space.
+        underflowed = table[:, 0] == 0.0
+        if underflowed.any():
+            log_table = np.logaddexp.accumulate(batch_powers[underflowed] * log_j[None, :], axis=1)
+            row_to_log_row = np.cumsum(underflowed) - 1
+            selected = underflowed[rows]
+            log_sums[task_idx[selected]] = log_table[row_to_log_row[rows[selected]], cols[selected]]
+        start = stop
 
-        # We peek ahead to see how many rows we can fit.
-        # This is a heuristic: we check if adding the next block of rows
-        # would explode the matrix size required.
-        while end_idx < n:
-            current_max_k = k_sorted[end_idx]  # This would be the new width
-            current_rows = end_idx - start_idx + 1
-
-            # Check budget
-            if current_rows * current_max_k > memory_limit_elements:
-                break
-            end_idx += 1
-
-        # 3. Process the Batch
-        k_batch = k_sorted[start_idx:end_idx]
-        p_batch = p_sorted[start_idx:end_idx]
-
-        # Max k in this specific batch (determines matrix columns)
-        max_k_batch = int(k_batch[-1])
-
-        # TODO: check if we are 0- or 1-based
-        # Create base grid [1, 2, ..., max_k_batch]
-        # Shape: (1, max_k)
-        j_grid = np.arange(1, max_k_batch + 1, dtype=np.float64).reshape(1, -1)
-
-        # Reshape powers for broadcasting
-        # Shape: (batch_rows, 1)
-        p_col = p_batch.reshape(-1, 1)
-
-        # 4. Compute Powers (Broadcasting)
-        # Matrix Result: (batch_rows, max_k)
-        # value[i, j] = (j+1) ^ p_i
-        values = j_grid**p_col
-
-        # 5. Masking
-        # Since k is sorted, we have a "lower triangular" style validity mask
-        # (roughly), but strictly we just need to zero out j > k_i.
-        # Shape: (batch_rows, 1) compared to (1, max_k)
-        mask = j_grid <= k_batch.reshape(-1, 1)
-
-        # Apply mask (zero out values strictly greater than k_i)
-        # We use 'where' or multiplication. Multiplication is faster for floats usually.
-        values *= mask
-
-        # 6. Summation
-        # Sum along columns to get sum(j^p) for each variable
-        row_sums = np.sum(values, axis=1)
-
-        # Compute log terms: log(sum) - log(k)
-        # We use np.log with a safety for the 0 sums (though sums of j^p >= 1 are never 0)
-        batch_log_moments = np.log(row_sums) - np.log(k_batch)
-
-        total_log_moment += np.sum(batch_log_moments)
-
-        # Move to next batch
-        start_idx = end_idx
-
-    return total_log_moment
+    return float(np.sum(log_sums - np.log(k_values)))
 
 
-def compute_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
-    """Compute $P(Median > x)$ for x in range $[0, max(k)]$.
+#: maximum number of array elements to hold per chunk when evaluating count distributions
+_CHUNK_ELEMENTS = 2_000_000
 
-    This function uses dynamic programming to calculate the cumulative distribution
-    of the count of variables <= x, thereby deriving the median's distribution.
+#: maximum amount of work (in complex multiplications) for the exact pairwise term of the even-n median variance
+#: with multiple distinct numbers of candidates
+_MAX_PAIRWISE_WORK = 5e7
 
-    Memory complexity: O(K * n), where K is the maximum value of k.
+
+def _chunks(a: np.ndarray, size: int) -> list[np.ndarray]:
+    """Split an array into consecutive views of at most the given size."""
+    return np.split(a, np.arange(size, len(a), size))
+
+
+def _group_candidates(num_candidates: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Group ranking tasks by their number of candidates.
+
+    :param num_candidates: shape: (n,)
+        The number of candidates for each ranking task.
+
+    :return: shape: (g,), (g,)
+        The unique numbers of candidates, and the number of tasks for each of them.
+    """
+    ks, counts = np.unique(np.asarray(num_candidates, dtype=int), return_counts=True)
+    return ks, counts
+
+
+def _group_spectrum(x: np.ndarray, k: int, n_g: int, size: int) -> np.ndarray:
+    r"""Compute the spectrum of the count distribution of a single group of tasks.
+
+    :param x: shape: (m,)
+        The values $x$.
+    :param k: The number of candidates of the group.
+    :param n_g: The number of tasks in the group.
+    :param size: The FFT length.
+
+    :returns: shape: (m, size // 2 + 1)
+        The real FFT of the binomial probability mass function with success probability $\min(1, \frac{x}{k})$.
+    """
+    p = np.minimum(1.0, x / k)
+    pmf = stats.binom.pmf(np.arange(n_g + 1)[None, :], n_g, p[:, None])
+    return fft.rfft(pmf, n=size, axis=-1)
+
+
+def _count_cdf(ks: np.ndarray, counts: np.ndarray, x_grid: np.ndarray, c: int) -> np.ndarray:
+    r"""Compute $P(C(x) \leq c)$, where $C(x) = \|\{i : r_i \leq x\}\|$ for $r_i \sim \mathcal{U}(1, k_i)$.
+
+    The count is a sum of independent binomials, one for each group of tasks with identical $k$,
+    with success probability $\min(1, \frac{x}{k})$.
+
+    For a single group, this is a vectorized evaluation of the binomial CDF. For multiple groups, we
+    convolve the probability mass functions of the groups using FFTs along the count axis,
+    vectorized over chunks of $x$.
+
+    :param ks: shape: (g,)
+        The unique numbers of candidates.
+    :param counts: shape: (g,)
+        The number of tasks for each unique number of candidates.
+    :param x_grid: shape: (m,)
+        The values $x$.
+    :param c: The (inclusive) upper limit for the count.
+
+    :returns: shape: (m,)
+        The probabilities.
+    """
+    n = int(counts.sum())
+    if c >= n:
+        return np.ones(len(x_grid))
+    if len(ks) == 1:
+        return stats.binom.cdf(c, n, np.minimum(1.0, x_grid / ks[0]))
+    size = fft.next_fast_len(n + 1)
+    chunk = max(1, _CHUNK_ELEMENTS // size)
+    results = []
+    for x in _chunks(x_grid, chunk):
+        spectrum = math.prod(_group_spectrum(x, k, n_g, size) for k, n_g in zip(ks, counts, strict=True))
+        pmf = fft.irfft(spectrum, n=size, axis=-1)[:, : c + 1]
+        results.append(np.clip(pmf, 0.0, None).sum(axis=-1))
+    return np.clip(np.concatenate(results), 0.0, 1.0)
+
+
+def truncated_order_statistic_survival_function(num_candidates: np.ndarray, index: int) -> np.ndarray:
+    r"""Compute $P(X_{(j)} > x)$ for the $j$-th smallest of independent $r_i \sim \mathcal{U}(1, k_i)$.
+
+    Let $C(x) = \|\{i : r_i \leq x\}\|$. Then, $X_{(j)} > x$ if and only if $C(x) \leq j - 1$. The
+    distribution of $C(x)$ is a convolution of binomial distributions, one for each group of tasks
+    with identical number of candidates.
+
+    Time complexity: $O(K)$ for a single unique number of candidates; for $g$ unique values, we need
+    $O(K \cdot g \cdot n \log n)$. Memory is bounded by a constant, since the grid is processed in
+    chunks.
+
+    :param num_candidates: shape: (n,)
+        The number of candidates.
+    :param index: The 1-based index $j \in \{1, \ldots, n\}$ of the order statistic.
+
+    :returns: shape: (K,)
+        The survival function for $x = 0, \ldots, K - 1$, where $K$ denotes the
+        maximum number of candidates. The omitted value for $x = K$ is always zero.
+
+    :raises ValueError: If the index is out of range.
+
+    .. warning::
+
+        This is not a true survival function as it returns all elements except the last one
+    """
+    ks, counts = _group_candidates(num_candidates)
+    if not 1 <= index <= counts.sum():
+        raise ValueError(f"index must be in [1, {counts.sum()}], but is {index}")
+    x_grid = np.arange(ks.max())
+    return _count_cdf(ks, counts, x_grid, c=index - 1)
+
+
+def truncated_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
+    r"""Compute $P(M > x)$ for $x \in \{0, \ldots, K - 1\}$, where $M$ is the (upper) median of the ranks.
+
+    For an odd number $n$ of ranks, $M$ is the median, i.e., the order statistic $X_{\frac{n +
+    1}{2}}$. For an even number of ranks, the median as computed by :func:`numpy.median` is the
+    average of the two middle order statistics and is not integer-valued. This function then returns
+    the survival function of the *upper* median $X_{\frac{n}{2} + 1}$ instead. Use
+    :func:`truncated_order_statistic_survival_function` for the lower one, and
+    :func:`compute_median_mean` / :func:`compute_median_moments` for the mean and variance of the
+    actual median.
+
+    Time complexity: $O(K)$ for a single unique number of candidates, otherwise $O(K \cdot g \cdot n
+    \log n)$, where $g$ is the number of unique numbers of candidates. Memory is bounded by a
+    constant.
 
     :param num_candidates: shape: (n,)
         The number of candidates.
 
-    :return: shape: (K,)
+    :returns: shape: (K,)
         The survival function. $K$ denotes the maximum number of candidates.
+
+    .. warning::
+
+        This is not a true survival function as it returns all elements except the last one
     """
-    ks = np.array(num_candidates, dtype=int)
-    n = len(ks)
-    k_max = ks.max()
+    n = len(num_candidates)
+    return truncated_order_statistic_survival_function(num_candidates, index=n // 2 + 1)
 
-    # We target the index n // 2.
-    # For n=3 (odd), index 1 (2nd smallest).
-    # For n=4 (even), index 2 (3rd smallest, i.e., the 'upper' median).
-    target_threshold = n // 2
 
-    # Grid of values x = 0, 1, ..., k_max
-    # We compute probabilities up to k_max.
-    x_grid = np.arange(k_max + 1)
+def _pairwise_term(ks: np.ndarray, counts: np.ndarray, m: int) -> float:
+    r"""Compute $\sum_{0 \leq a < b} P(C(a) = m, C(b) = m)$ for $n = 2m$.
 
-    # Matrix of individual probabilities: P(X_i <= x)
-    # Shape: (k_max + 1, n)
-    # P(X_i <= x) = min(1, x / k_i)
-    p_matrix = np.minimum(1.0, x_grid[:, None] / ks[None, :])
+    The event means that exactly $m$ ranks are $\leq a$ and none is in $(a, b]$, i.e.,
 
-    # DP State: dp[v, c] = Probability that exactly 'c' variables are <= v
-    # Initialize: 0 variables <= v has probability 1 initially
-    dp = np.zeros((len(x_grid), n + 1))
-    dp[:, 0] = 1.0
+    .. math::
 
-    # Vectorized Poisson-Binomial recurrence
-    for i in range(n):
-        p = p_matrix[:, i : i + 1]  # Column vector for broadcasting
+        P(C(a) = m, C(b) = m) = [z^m] \prod_g \left(p_g(a) z + 1 - p_g(b)\right)^{n_g}
 
-        # New DP state based on convolution with Bernoulli(p)
-        # dp[c] = dp[c]*(1-p) + dp[c-1]*p
-        term_fail = dp * (1 - p)
+    For a single group, this is $\binom{n}{m} p(a)^m (1 - p(b))^{n - m}$, which is separable in $a$
+    and $b$ and can thus be summed in $O(K)$ using a cumulative log-sum-exp. For multiple groups, we
+    extract the coefficient via a DFT over evaluations at roots of unity, which needs $O(K^2 \cdot g
+    \cdot n)$ operations.
 
-        term_success = np.zeros_like(dp)
-        term_success[:, 1:] = dp[:, :-1] * p
+    :param ks: shape: (g,)
+        The unique numbers of candidates.
+    :param counts: shape: (g,)
+        The number of tasks for each unique number of candidates.
+    :param m: Half of the number of tasks.
 
-        dp = term_fail + term_success
+    :returns: The sum.
 
-    # The median is <= x if the count of variables (<= x) is > target_threshold.
-    # CDF(x) = P(Median <= x) = Sum_{c=target+1}^{n} P(Count == c)
-    cdf_median = dp[:, target_threshold + 1 :].sum(axis=1)
+    :raises NotImplementedError: If there are multiple groups and the computation exceeds the work
+        limit.
+    """
+    n = int(counts.sum())
+    k_max = int(ks.max())
+    if len(ks) == 1:
+        x = np.arange(k_max + 1)
+        p = np.minimum(1.0, x / ks[0])
+        with np.errstate(divide="ignore"):
+            log_p = np.log(p)
+            log_q = np.log1p(-p)
+        # sum_{a < b} u_a v_b = sum_b v_b * (sum_{a < b} u_a), in log-space
+        log_cum = np.logaddexp.accumulate(m * log_p)
+        log_binom = special.gammaln(n + 1) - 2 * special.gammaln(m + 1)
+        # terms for b = 1, ..., K
+        return float(np.exp(log_binom + log_cum[:-1] + m * log_q[1:]).sum())
 
-    # Survival Function: P(Median > x) = 1 - CDF(x)
-    return 1.0 - cdf_median
+    size = n + 1
+    work = 0.5 * k_max**2 * len(ks) * size
+    if work > _MAX_PAIRWISE_WORK:
+        raise NotImplementedError(
+            f"Exact computation requires ~{work:.2g} operations, which exceeds the limit of {_MAX_PAIRWISE_WORK:.2g}."
+        )
+    omega = np.exp(2j * np.pi * np.arange(size) / size)
+    phase = omega ** (-m)
+    # shape: (g, K + 1)
+    x = np.arange(k_max + 1)
+    p = np.minimum(1.0, x[None, :] / ks[:, None])
+    q = 1.0 - p
+    chunk = max(1, _CHUNK_ELEMENTS // (size * k_max))
+    total = 0.0
+    for a in _chunks(np.arange(1, k_max), chunk):
+        b = np.arange(a[0] + 1, k_max + 1)
+        acc = np.ones((len(a), len(b), size), dtype=complex)
+        for g, n_g in enumerate(counts):
+            acc *= (p[g, a][:, None, None] * omega[None, None, :] + q[g, b][None, :, None]) ** n_g
+        values = (acc * phase).sum(axis=-1).real / size
+        mask = b[None, :] > a[:, None]
+        total += float(np.clip(values, 0.0, None)[mask].sum())
+    return total
+
+
+def compute_median_mean(num_candidates: np.ndarray) -> float:
+    r"""Compute the exact expected value of the median of independent $r_i \sim \mathcal{U}(1, k_i)$.
+
+    For odd $n$ this is $\sum_{x \geq 0} P(X_{\frac{n+1}{2}} > x)$, for even $n$ the average of
+    the corresponding sums for the two middle order statistics. It needs $O(K)$ for a single unique
+    number of candidates, and $O(K \cdot g \cdot n \log n)$ for $g$ unique values.
+
+    :param num_candidates: shape: (n,)
+        The number of candidates.
+
+    :returns: The expected value of the median.
+    """
+    n = len(num_candidates)
+    m = n // 2
+    direct_value = truncated_order_statistic_survival_function(num_candidates, index=m + 1).sum()
+
+    if n % 2 == 1:
+        return float(direct_value)
+
+    adjacent_value = truncated_order_statistic_survival_function(num_candidates, index=m).sum()
+    return float(np.mean([direct_value, adjacent_value]))
+
+
+def compute_median_moments(num_candidates: np.ndarray) -> tuple[float, float]:
+    r"""Compute the exact mean and variance of the median of independent $r_i \sim \mathcal{U}(1, k_i)$.
+
+    The median follows :func:`numpy.median`: for odd $n$, it is the order statistic
+    $X_{\frac{n+1}{2}}$, and for even $n$ the average $M = \frac{A + B}{2}$ of $A = X_{(m)}$ and
+    $B = X_{(m + 1)}$ with $m = \frac{n}{2}$. We use $\mathbb{E}[X] = \sum_{x \geq 0} P(X > x)$ and
+    $\mathbb{E}[X^2] = \sum_{x \geq 0} (2x + 1) P(X > x)$ for non-negative integer random variables.
+    For even $n$ we additionally need
+
+    .. math::
+
+        \mathbb{E}[AB] = \sum_{a \geq 0} \sum_{b \geq 0} P(A > a, B > b)
+
+    Since $A \leq B$, the summand is $P(A > a)$ for $b \leq a$. For $b > a$, with
+    $C(x) = \|\{i : r_i \leq x\}\|$,
+
+    .. math::
+
+        P(A > a, B > b) = P(C(b) \leq m) - P(C(a) = m, C(b) = m)
+
+    The first term only depends on $b$, the second one is summed by ``_pairwise_term``.
+
+    Complexity: for a single unique number of candidates, $O(K)$. For $g$ unique values, odd $n$
+    needs $O(K \cdot g \cdot n \log n)$. For even $n$, the exact variance additionally needs $O(K^2
+    \cdot g \cdot n)$, which is only attempted if it is below a fixed work limit.
+
+    :param num_candidates: shape: (n,) The number of candidates.
+
+    :returns: The mean and the variance of the median. The variance is clamped to be non-negative.
+
+    :raises NotImplementedError: If $n$ is even, there are multiple unique numbers of candidates,
+        and the exact variance is too expensive to compute. The mean is always available via
+        :func:`compute_median_mean`.
+    """
+    ks, counts = _group_candidates(num_candidates)
+    n = int(counts.sum())
+    if n % 2 == 1:
+        sf = truncated_median_survival_function(num_candidates)
+        x = np.arange(len(sf))
+        mean = float(sf.sum())
+        return mean, max(0.0, float(((2 * x + 1) * sf).sum()) - mean**2)
+    m = n // 2
+    sf_a = truncated_order_statistic_survival_function(num_candidates, index=m)
+    sf_b = truncated_order_statistic_survival_function(num_candidates, index=m + 1)
+    x = np.arange(len(sf_a))
+    mean = 0.5 * float(sf_a.sum() + sf_b.sum())
+    e_aa = float(((2 * x + 1) * sf_a).sum())
+    e_bb = float(((2 * x + 1) * sf_b).sum())
+    e_ab = float(((x + 1) * sf_a).sum() + (x * sf_b).sum()) - _pairwise_term(ks, counts, m)
+    return mean, max(0.0, 0.25 * (e_aa + e_bb + 2 * e_ab) - mean**2)

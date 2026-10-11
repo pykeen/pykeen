@@ -50,7 +50,7 @@ class HolE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     }
 
     #: The default settings for the entity constrainer
-    entity_constrainer_default_kwargs = {"maxnorm": 1.0, "p": 2, "dim": -1}
+    entity_constrainer_default_kwargs: ClassVar[Mapping[str, Any]] = {"maxnorm": 1.0, "p": 2, "dim": -1}
 
     def __init__(
         self,

@@ -1,5 +1,7 @@
 """Tests for inverse relation handling."""
 
+from collections.abc import Callable
+
 import pytest
 import torch
 
@@ -68,8 +70,8 @@ def test_default_inverter_ids():
     mapped = inverter.to_internal_batch(batch=batch)
     assert mapped[0, 1].item() == 6
     assert inverter.get_inverse_id(relation_id=mapped[0, 1]).item() == 7
-    assert not inverter.is_inverse(mapped[:, 1]).any()
-    assert inverter.is_inverse(inverter.to_internal_batch(batch=batch, invert=True)[:, 1]).all()
+    assert not torch.as_tensor(inverter.is_inverse(mapped[:, 1])).any()
+    assert torch.as_tensor(inverter.is_inverse(inverter.to_internal_batch(batch=batch, invert=True)[:, 1])).all()
 
 
 @pytest.mark.parametrize(
@@ -175,7 +177,7 @@ def test_training_with_model_flag(training_loop_cls: type[TrainingLoop]):
 
 
 @pytest.mark.parametrize("model_cls", [ConvE, NodePiece, CompGCN])
-def test_model_builds_with_inverse_relations(model_cls: type[Model]):
+def test_model_builds_with_inverse_relations(model_cls: Callable[..., Model]):
     """Test that models requiring inverse relations enable them."""
     tf = Nations().training
     model = model_cls(triples_factory=tf, embedding_dim=16, random_seed=0)
@@ -186,7 +188,7 @@ def test_model_builds_with_inverse_relations(model_cls: type[Model]):
 
 
 @pytest.mark.parametrize("model_cls", [NodePiece, CompGCN])
-def test_model_requires_flag(model_cls: type[Model]):
+def test_model_requires_flag(model_cls: Callable[..., Model]):
     """Test that models requiring inverse relations raise an error if they are disabled."""
     with pytest.raises(ValueError, match="use_inverse_triples=True"):
         model_cls(

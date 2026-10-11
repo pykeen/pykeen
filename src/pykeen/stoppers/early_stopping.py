@@ -118,6 +118,12 @@ class EarlyStoppingLogic:
         return self.remaining_patience == self.patience
 
 
+def _default_best_model_path() -> pathlib.Path:
+    path = PYKEEN_CHECKPOINTS.joinpath(f"best-model-weights-{uuid4()}.pt")
+    logger.info(f"Inferred checkpoint path for best model weights: {path}")
+    return path
+
+
 @fix_dataclass_init_docs
 @dataclass
 class EarlyStopper(Stopper):
@@ -165,7 +171,7 @@ class EarlyStopper(Stopper):
     #: Did the stopper ever decide to stop?
     stopped: bool = False
     #: The path to the weights of the best model
-    best_model_path: pathlib.Path | None = None
+    best_model_path: pathlib.Path = dataclasses.field(default_factory=_default_best_model_path)
     #: Whether to delete the file with the best model weights after termination
     #: note: the weights will be re-loaded into the model before
     clean_up_checkpoint: bool = True
@@ -190,9 +196,6 @@ class EarlyStopper(Stopper):
             relative_delta=self.relative_delta,
             larger_is_better=self.larger_is_better,
         )
-        if self.best_model_path is None:
-            self.best_model_path = PYKEEN_CHECKPOINTS.joinpath(f"best-model-weights-{uuid4()}.pt")
-            logger.info(f"Inferred checkpoint path for best model weights: {self.best_model_path}")
         if self.best_model_path.is_file():
             logger.warning(
                 f"Checkpoint path for best weights does already exist ({self.best_model_path}). It will be overwritten."
@@ -242,8 +245,6 @@ class EarlyStopper(Stopper):
 
     def should_stop(self, epoch: int) -> bool:
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
-        # for mypy
-        assert self.best_model_path is not None
         # Evaluate
         metric_results = self.evaluation_loop.evaluate(
             use_tqdm=self.use_tqdm,

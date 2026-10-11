@@ -1,7 +1,7 @@
 """Implementation of the Comp-GCN model."""
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, ClassVar
 
 from class_resolver import Hint
 
@@ -30,7 +30,7 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = {
+    hpo_default: ClassVar[Mapping[str, Any]] = {
         "embedding_dim": {"type": int, "low": 32, "high": 512, "q": 32},
     }
 

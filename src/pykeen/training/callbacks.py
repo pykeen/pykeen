@@ -125,7 +125,6 @@ class TrainingCallback:
     @property
     def result_tracker(self) -> ResultTracker:
         """The result tracker, accessed via the training loop."""
-        assert self.training_loop.result_tracker is not None
         return self.training_loop.result_tracker
 
     def register_training_loop(self, training_loop: training.TrainingLoop) -> None:
@@ -319,7 +318,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
         self.factory = factory
         self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
         # lazy init
-        self._evaluation_loop = None
+        self._evaluation_loop: LCWAEvaluationLoop | None = None
         self.kwargs = kwargs
         self.additional_filter_triples = additional_filter_triples
 

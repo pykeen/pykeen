@@ -1,18 +1,25 @@
 """Tests for rank-based metrics."""
 
+import itertools
+import time
 import unittest
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Collection, Sequence
+from typing import ClassVar
 
 import numpy as np
 import pytest
+import scipy.special
 import unittest_templates
 from scipy.stats import bootstrap
 
 import pykeen.metrics.ranking
+import pykeen.metrics.utils
 from pykeen.metrics.ranking import generalized_harmonic_numbers, harmonic_variances
 from pykeen.metrics.utils import (
     compute_log_expected_power,
-    compute_median_survival_function,
+    compute_median_mean,
+    compute_median_moments,
+    truncated_median_survival_function,
     weighted_harmonic_mean,
     weighted_mean_expectation,
     weighted_mean_variance,
@@ -73,6 +80,28 @@ class GeometricMeanRankTests(cases.RankBasedMetricTestCase):
     """Tests for geometric mean rank."""
 
     cls = pykeen.metrics.ranking.GeometricMeanRank
+
+    def test_integer_weights(self):
+        """Integer weights give the same expectation and variance as float weights."""
+        num_candidates = np.array([5, 7, 11])
+        int_weights = np.array([1, 2, 3])
+        float_weights = int_weights.astype(float)
+        assert self.instance.expected_value(num_candidates, weights=int_weights) == pytest.approx(
+            self.instance.expected_value(num_candidates, weights=float_weights)
+        )
+        assert self.instance.variance(num_candidates, weights=int_weights) == pytest.approx(
+            self.instance.variance(num_candidates, weights=float_weights)
+        )
+
+    def test_moments_against_sampling(self):
+        """Expectation and variance match a Monte-Carlo estimate with weights."""
+        num_candidates = np.array([3, 6, 10])
+        weights = np.array([1.0, 2.0, 0.5])
+        generator = np.random.default_rng(42)
+        ranks = np.stack([generator.integers(1, c + 1, size=200_000) for c in num_candidates])
+        values = np.exp((weights[:, None] / weights.sum() * np.log(ranks)).sum(axis=0))
+        assert self.instance.expected_value(num_candidates, weights=weights) == pytest.approx(values.mean(), rel=1e-2)
+        assert self.instance.variance(num_candidates, weights=weights) == pytest.approx(values.var(), rel=5e-2)
 
 
 class AdjustedGeometricMeanRankIndexTests(cases.RankBasedMetricTestCase):
@@ -144,6 +173,18 @@ class MedianAbsoluteDeviationTests(cases.RankBasedMetricTestCase):
     def test_weights_direction(self) -> None:
         raise unittest.SkipTest("Test does not make sense to dispersion metrics")
 
+    def test_equal_weights_match_unweighted(self):
+        """Test that equal weights reproduce the unweighted MAD to tight tolerance."""
+        metric = self.cls()
+        for n in (9, 10):
+            ranks = np.random.default_rng(seed=n).integers(1, 100, size=n)
+            for weight in (0.1, 1, 3.5):
+                np.testing.assert_allclose(
+                    metric(ranks, weights=np.full(n, weight)),
+                    metric(ranks),
+                    rtol=1.0e-12,
+                )
+
 
 class MedianRankTests(cases.RankBasedMetricTestCase):
     """Tests for median rank."""
@@ -174,7 +215,7 @@ class RankBasedMetricsTest(unittest_templates.MetaTestCase[pykeen.metrics.rankin
 
     base_cls = pykeen.metrics.ranking.RankBasedMetric
     base_test = cases.RankBasedMetricTestCase
-    skip_cls = {
+    skip_cls: ClassVar[Collection[type]] = {
         pykeen.metrics.ranking.ExpectationNormalizedMetric,
         pykeen.metrics.ranking.ReindexedMetric,
         pykeen.metrics.ranking.ZMetric,
@@ -222,7 +263,7 @@ class WeightedTests(unittest.TestCase):
         generator = np.random.default_rng()
         self.array = generator.random(size=(10,))
 
-    def _test_equal_weights(self, func: Callable[[np.ndarray, np.ndarray | None], np.ndarray]):
+    def _test_equal_weights(self, func: Callable[[np.ndarray, np.ndarray | None], np.ndarray | np.floating]):
         """Verify that equal weights lead to unweighted results."""
         weights = np.full_like(self.array, fill_value=2.0)
         assert func(self.array, None).item() == pytest.approx(func(self.array, weights).item())
@@ -235,9 +276,29 @@ class WeightedTests(unittest.TestCase):
         """Test weighted median."""
         self._test_equal_weights(weighted_median)
 
+    def test_weighted_median_equal_weights_matches_median(self):
+        """Test that equal weights of any scale reproduce the unweighted median (including averaging the middle)."""
+        for n in (1, 2, 3, 10, 11, 100):
+            for weight in (0.1, 1, 3, 0.3, 1 / 7, 1.0e-3, 1.0e3):
+                with self.subTest(n=n, weight=weight):
+                    a = np.random.default_rng(seed=n).permutation(np.arange(1, n + 1))
+                    assert weighted_median(a, np.full(n, weight)) == np.median(a)
+
+    def test_weighted_median_low_precision_weights(self):
+        """Test that exact ties are detected for float32 weights, whose representation error exceeds 1e-9."""
+        # two groups of equal total weight 1, i.e., the cumulative weight is exactly half after the first group
+        for dtype in (np.float32, np.float64):
+            weights = np.concatenate([np.full(3, 1 / 3), np.full(7, 1 / 7)]).astype(dtype)
+            assert weighted_median(np.arange(10), weights) == 2.5
+
+    def test_weighted_median_degenerate(self):
+        """Test that all-zero weights are rejected."""
+        with pytest.raises(ValueError, match="must be positive"):
+            weighted_median(np.arange(3), np.zeros(3))
+
     def _test_weighted_mean_moment(
         self,
-        closed_form: Callable[[np.ndarray, np.ndarray | None], np.ndarray],
+        closed_form: Callable[[np.ndarray, np.ndarray | None], float],
         statistic: Callable[[np.ndarray], np.ndarray],
         key: str,
     ):
@@ -344,6 +405,29 @@ def test_compute_log_expected_power_sorted_vs_unsorted():
     assert result_sorted == pytest.approx(result_unsorted, rel=1e-10)
 
 
+@pytest.mark.parametrize("memory_limit_elements", [10**7, 10])
+def test_compute_log_expected_power_large_powers(memory_limit_elements: int) -> None:
+    """Test that large powers, for which the naive power sum over- or underflows, are handled correctly."""
+    # for p = 200, the first terms are ~ 1000^-200 smaller than the largest, i.e., underflow when scaled; a second,
+    # moderate power in the same batch checks that only the affected rows are replaced
+    ks = np.array([1, 1000, 5, 20])
+    ps = np.array([200.0, 200.0, 2.0, 200.0])
+    # reference in log-space; the direct power sum would overflow, since 1000^200 = 1e600
+    expected = sum(
+        scipy.special.logsumexp(p * np.log(np.arange(1, k + 1))) - np.log(k) for k, p in zip(ks, ps, strict=True)
+    )
+    result = compute_log_expected_power(ks, ps, memory_limit_elements=memory_limit_elements)
+    assert np.isfinite(result)
+    assert result == pytest.approx(expected, rel=1e-10)
+
+
+@pytest.mark.parametrize("k", [0, -1])
+def test_compute_log_expected_power_invalid_k(k: int) -> None:
+    """Test that non-positive upper bounds are rejected."""
+    with pytest.raises(ValueError, match="at least 1"):
+        compute_log_expected_power(np.array([5, k]), np.array([1.0, 1.0]))
+
+
 def _assert_valid_survival_function(sf: np.ndarray, k_max: int, atol: float = 0.0) -> None:
     """Assert that the given array is a valid survival function.
 
@@ -351,15 +435,13 @@ def _assert_valid_survival_function(sf: np.ndarray, k_max: int, atol: float = 0.
     :param k_max: The maximum $k$.
     :param atol: Absolute tolerance for boundary checks and monotonicity
     """
-    # 0 to k_max
-    assert len(sf) == k_max + 1
+    # 0 to k_max - 1; the value for k_max is always 0
+    assert len(sf) == k_max
     # All probabilities should be in [0, 1]
     assert all(sf >= 0.0)
     assert all(sf <= 1.0)
     # Starts at 1
     assert sf[0] == pytest.approx(1.0, abs=atol)
-    # Ends at 0
-    assert sf[-1] == pytest.approx(0.0, abs=atol)
     # Monotonically non-increasing
     # Check monotonicity: sf[i] >= sf[i+1]
     differences = np.diff(sf)
@@ -370,11 +452,11 @@ def test_median_survival_function_single_candidate():
     """Test with a single variable."""
     # Single variable with k=10
     num_candidates = np.array([10])
-    sf = compute_median_survival_function(num_candidates)
+    sf = truncated_median_survival_function(num_candidates)
 
     # For single variable, median is just that variable
-    # P(X > x) = (k - x) / k for x in [0, k]
-    expected = np.linspace(1.0, 0.0, 11)
+    # P(X > x) = (k - x) / k for x in [0, k)
+    expected = np.linspace(1.0, 0.0, 11)[:-1]
     np.testing.assert_allclose(sf, expected, atol=1e-10)
 
 
@@ -389,7 +471,7 @@ def test_median_survival_function_single_candidate():
 )
 def test_median_survival_function_basic_properties(num_candidates: np.ndarray):
     """Test basic survival function properties for various candidate configurations."""
-    sf = compute_median_survival_function(num_candidates)
+    sf = truncated_median_survival_function(num_candidates)
     _assert_valid_survival_function(sf, k_max=int(num_candidates.max()))
 
 
@@ -399,7 +481,7 @@ def test_median_survival_function_against_simulation():
     num_candidates = np.array([10, 15, 20])
 
     # Compute analytical survival function
-    sf = compute_median_survival_function(num_candidates)
+    sf = truncated_median_survival_function(num_candidates)
 
     # Run simulation
     n_samples = 10_000
@@ -409,4 +491,120 @@ def test_median_survival_function_against_simulation():
     empirical_sf = np.array([(samples > x).mean() for x in range(len(sf))])
 
     # The analytical result should be close to empirical (with some tolerance)
-    np.testing.assert_allclose(sf, empirical_sf, rtol=0.05)
+    np.testing.assert_allclose(sf, empirical_sf, rtol=0.05, atol=1e-9)
+
+
+def _brute_force_median_moments(num_candidates: Sequence[int]) -> tuple[float, float]:
+    """Enumerate all rank tuples to get the exact mean and variance of `np.median`."""
+    medians = np.array([np.median(ranks) for ranks in itertools.product(*(range(1, k + 1) for k in num_candidates))])
+    return medians.mean().item(), medians.var().item()
+
+
+MEDIAN_BRUTE_FORCE_CASES = [
+    pytest.param([5], id="single"),
+    pytest.param([5, 5, 5], id="odd-single-k"),
+    pytest.param([5, 5, 5, 5], id="even-single-k"),
+    pytest.param([6, 6], id="two"),
+    pytest.param([3, 5, 7], id="odd-multi-k"),
+    pytest.param([4, 4, 6, 6], id="even-multi-k"),
+    pytest.param([2, 3, 4, 5, 6, 6], id="even-six"),
+    pytest.param([1, 1, 3, 3], id="with-single-candidate"),
+]
+
+
+@pytest.mark.parametrize("num_candidates", MEDIAN_BRUTE_FORCE_CASES)
+def test_median_moments_brute_force(num_candidates: list[int]):
+    """Compare the closed-form mean and variance of the median to exhaustive enumeration."""
+    expected_mean, expected_variance = _brute_force_median_moments(num_candidates)
+    ks = np.asarray(num_candidates)
+    mean, variance = compute_median_moments(ks)
+    assert mean == pytest.approx(expected_mean, abs=1e-9)
+    assert variance == pytest.approx(expected_variance, abs=1e-9)
+    assert compute_median_mean(ks) == pytest.approx(expected_mean, abs=1e-9)
+    # the metric uses the same code path
+    metric = pykeen.metrics.ranking.MedianRank()
+    assert metric.expected_value(num_candidates=ks) == pytest.approx(expected_mean, abs=1e-9)
+    assert metric.variance(num_candidates=ks) == pytest.approx(expected_variance, abs=1e-9)
+    assert metric.std(num_candidates=ks) == pytest.approx(expected_variance**0.5, abs=1e-6)
+
+
+def test_median_survival_function_even_is_upper_median():
+    """For even n, the survival function is that of the upper median, i.e., the order statistic n // 2 + 1."""
+    num_candidates = [5, 5, 5, 5]
+    upper = np.array([sorted(ranks)[2] for ranks in itertools.product(*(range(1, k + 1) for k in num_candidates))])
+    sf = truncated_median_survival_function(np.asarray(num_candidates))
+    np.testing.assert_allclose(sf, [(upper > x).mean() for x in range(len(sf))], atol=1e-12)
+
+
+def test_median_expected_value_even_regression():
+    """Regression test: the expected median of 4 ranks with k=5 is 3.0, not the upper median 3.5."""
+    ks = np.full(4, 5)
+    assert pykeen.metrics.ranking.MedianRank().expected_value(num_candidates=ks) == pytest.approx(3.0)
+
+
+@pytest.mark.parametrize("num_ranks", [1, 2, 3, 4, 50, 51])
+@pytest.mark.parametrize("k", [1, 2, 7])
+def test_median_variance_non_negative(num_ranks: int, k: int):
+    """The variance must never be negative (e.g., due to cancellation), so that the standard deviation is defined."""
+    metric = pykeen.metrics.ranking.MedianRank()
+    ks = np.full(num_ranks, k)
+    assert metric.variance(num_candidates=ks) >= 0.0
+    assert metric.std(num_candidates=ks) >= 0.0
+
+
+def test_median_variance_degenerate():
+    """If there is a single candidate, the median is deterministic."""
+    assert compute_median_moments(np.ones(4, dtype=int)) == (1.0, 0.0)
+
+
+def test_median_variance_fallback_to_sampling(monkeypatch: pytest.MonkeyPatch):
+    """For even n with multiple k whose exact variance is too expensive, the sampling path is used."""
+    monkeypatch.setattr(pykeen.metrics.utils, "_MAX_PAIRWISE_WORK", 0.0)
+    ks = np.array([4, 4, 6, 6])
+    metric = pykeen.metrics.ranking.MedianRank()
+    with pytest.raises(NotImplementedError):
+        compute_median_moments(ks)
+    with pytest.raises(pykeen.metrics.ranking.NoClosedFormError):
+        metric.variance(num_candidates=ks)
+    expected_value, expected_variance = _brute_force_median_moments(ks.tolist())
+    estimate = metric.variance(num_candidates=ks, num_samples=20_000, generator=np.random.default_rng(42))
+    assert estimate == pytest.approx(expected_variance, rel=0.1)
+    # the expectation is always exact
+    assert metric.expected_value(num_candidates=ks) == pytest.approx(expected_value)
+
+
+@pytest.mark.parametrize("num_ranks", [2_000, 2_001])
+def test_median_moments_single_k_large(num_ranks: int):
+    """Smoke test: with a single k, the cost is independent of the number of ranks; compare to simulation."""
+    k = 1_500
+    start = time.perf_counter()
+    mean, variance = compute_median_moments(np.full(num_ranks, k))
+    assert time.perf_counter() - start < 5.0
+    # median of many uniform ranks concentrates around the center
+    assert mean == pytest.approx((k + 1) / 2, abs=0.5)
+    generator = np.random.default_rng(seed=0)
+    samples = np.median(generator.integers(1, k + 1, size=(2_000, num_ranks)), axis=1)
+    assert variance == pytest.approx(samples.var(), rel=0.15)
+
+
+def test_median_moments_multiple_k_against_simulation():
+    """Compare the exact moments for many distinct k (even and odd n) to a simulation."""
+    generator = np.random.default_rng(seed=1)
+    for n in (40, 41):
+        ks = generator.integers(20, 60, size=n)
+        samples = np.median(generator.integers(1, ks[None, :] + 1, size=(50_000, n)), axis=1)
+        mean, variance = compute_median_moments(ks)
+        assert mean == pytest.approx(samples.mean(), abs=0.1)
+        assert variance == pytest.approx(samples.var(), rel=0.05)
+
+
+def test_generate_num_candidates_and_ranks_range():
+    """Test that the maximum number of candidates is reachable, and all values are within valid ranges."""
+    max_num_candidates = 5
+    ranks, num_candidates = pykeen.metrics.ranking.generate_num_candidates_and_ranks(
+        num_ranks=1_000, max_num_candidates=max_num_candidates, seed=42
+    )
+    assert num_candidates.min() >= 1
+    assert num_candidates.max() == max_num_candidates
+    assert (ranks >= 1).all()
+    assert (ranks <= num_candidates).all()

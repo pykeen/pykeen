@@ -496,7 +496,8 @@ class Embedding(Representation):
         if self.is_complex:
             x = torch.view_as_complex(x)
         # verify that contiguity is preserved
-        assert x.is_contiguous()
+        if not x.is_contiguous():
+            raise ValueError("Expected x.is_contiguous().")
         return x
 
 
@@ -788,7 +789,8 @@ class CompGCNLayer(nn.Module):
             self.self_loop,
         ):
             nn.init.xavier_uniform_(w)
-        self.bias.reset_parameters()
+        if self.bias is not None:
+            self.bias.reset_parameters()
         self.w_rel.reset_parameters()
 
     def message(

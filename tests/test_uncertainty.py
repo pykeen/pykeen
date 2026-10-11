@@ -1,6 +1,7 @@
 """Tests for uncertainty workflows."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from typing import Any, ClassVar
 
 import pytest
 import torch
@@ -22,7 +23,7 @@ class UncertaintyFailureTest(cases.PredictBaseTestCase):
     """Test for when uncertainty can't be assessed with MC method."""
 
     model_cls = TransE
-    model_kwargs = {}
+    model_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     def test_missing_dropout(self):
         """Test that a value error is run if the model has no dropout."""
@@ -34,7 +35,7 @@ class UncertaintyPredictionTestCase(cases.PredictBaseTestCase):
     """Tests for uncertainty prediction."""
 
     model_cls = ERMLPE  # this model does indeed have dropouts!
-    model_kwargs = {
+    model_kwargs: ClassVar[Mapping[str, Any]] = {
         "embedding_dim": 2,
         "hidden_dim": 3,
     }

@@ -76,7 +76,8 @@ def _iter_scores(
         all_keys = list(all_scores[side].keys())
         y_score = y_score_for_side[side] = np.concatenate([all_scores[side][k] for k in all_keys], axis=0).flatten()
         y_true = y_true_for_side[side] = np.concatenate([all_positives[side][k] for k in all_keys], axis=0).flatten()
-        assert y_score.shape == y_true.shape
+        if y_score.shape != y_true.shape:
+            raise ValueError("Expected y_score.shape == y_true.shape.")
         if y_true.size == 0:
             raise ValueError(f"Cannot calculate scores from empty array (y_true.shape={y_true.shape}).")
         yield ScorePack(target=side, y_true=y_true, y_score=y_score)
@@ -133,7 +134,8 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
         # Ensure that each key gets counted only once
         for i in range(keys.shape[0]):
             key = tuple(map(int, keys[i]))
-            assert len(key) == 2
+            if len(key) != 2:
+                raise ValueError("Expected len(key) == 2.")
             key = cast(tuple[int, int], key)
             self.all_scores[target][key] = scores_np[i]
             self.all_positives[target][key] = dense_positive_mask_np[i]

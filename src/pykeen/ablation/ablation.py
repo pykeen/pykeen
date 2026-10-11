@@ -213,9 +213,12 @@ def _run_ablation_experiments(
 
     from pykeen.hpo import hpo_pipeline_from_path
 
-    for output_directory, rv_config_path in directories:
-        if isinstance(output_directory, str):
-            output_directory = pathlib.Path(output_directory).resolve()
+    for raw_output_directory, rv_config_path in directories:
+        output_directory = (
+            pathlib.Path(raw_output_directory).resolve()
+            if isinstance(raw_output_directory, str)
+            else raw_output_directory
+        )
         hpo_pipeline_result = hpo_pipeline_from_path(rv_config_path)
         hpo_pipeline_result.save_to_directory(output_directory)
 

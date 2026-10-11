@@ -99,6 +99,7 @@ __all__ = [
     "get_expected_norm",
     "get_json_bytes_io",
     "get_model_io",
+    "get_num_ids",
     "get_optimal_sequence",
     "get_preferred_device",
     "get_until_first_blank",
@@ -107,6 +108,7 @@ __all__ = [
     "isin_many_dim",
     "logcumsumexp",
     "lp_norm",
+    "max_value",
     "merge_kwargs",
     "negative_norm",
     "negative_norm_of_sum",
@@ -791,7 +793,8 @@ def negative_norm(
         The scores.
     """
     if power_norm:
-        assert not isinstance(p, str)
+        if isinstance(p, str):
+            raise TypeError(f"power_norm requires a numeric p, but got {p!r}.")
         return -(x.abs() ** p).sum(dim=-1)
 
     return -x.norm(p=p, dim=-1)
@@ -953,7 +956,8 @@ def extend_batch(
         ids = torch.arange(max_id, device=batch.device)
     if ids.ndimension() < 2:
         ids = ids.unsqueeze(dim=0)
-    assert ids.ndimension() == 2
+    if ids.ndimension() != 2:
+        raise ValueError("Expected ids.ndimension() == 2.")
 
     # normalize batch -> batch.shape: (batch_size, 1, 3)
     batch = batch.unsqueeze(dim=1)
@@ -996,9 +1000,10 @@ def check_shapes(
     """
     dims: dict[str, tuple[int, ...]] = {}
     errors = []
-    for actual_shape, shape in x:
-        if isinstance(actual_shape, torch.Tensor):
-            actual_shape = actual_shape.shape
+    for tensor_or_shape, shape in x:
+        actual_shape = tensor_or_shape
+        if isinstance(tensor_or_shape, torch.Tensor):
+            actual_shape = tensor_or_shape.shape
         if len(actual_shape) != len(shape):
             errors.append(f"Invalid number of dimensions: {actual_shape} vs. {shape}")
             continue
@@ -1274,16 +1279,16 @@ def get_connected_components(pairs: Iterable[tuple[X, X]]) -> Collection[Collect
         parent.setdefault(x, x)
         parent.setdefault(y, y)
         # get representatives
-        x = find(x=x, parent=parent)
-        y = find(x=y, parent=parent)
+        root_x = find(x=x, parent=parent)
+        root_y = find(x=y, parent=parent)
         # already merged
-        if x == y:
+        if root_x == root_y:
             continue
-        # make x the smaller one
-        if y < x:  # type: ignore[operator]
-            x, y = y, x
+        # make root_x the smaller one
+        if root_y < root_x:  # type: ignore[operator]
+            root_x, root_y = root_y, root_x
         # merge
-        parent[y] = x
+        parent[root_y] = root_x
     # extract partitions; note: parent[k] is not necessarily the root, hence we need to use find
     result = defaultdict(list)
     for k in parent:
@@ -1515,7 +1520,7 @@ def iter_weisfeiler_lehman(
     # only keep connectivity, but remove multiplicity
     edge_index = edge_index.unique(dim=1)
 
-    num_nodes = num_nodes or edge_index.max().item() + 1
+    num_nodes = num_nodes or get_num_ids(edge_index)
     colors = edge_index.new_zeros(size=(num_nodes,), dtype=torch.long)
     # note: in theory, we could return this uniform coloring as the first coloring; however, for featurization,
     #       this is rather useless
@@ -1982,3 +1987,18 @@ def prefix_unsqueeze_target(
     if target == LABEL_TAIL:
         return h, r, parallel_prefix_unsqueeze(t, ndim=ndim)
     raise ValueError(f"Unknown target={target}")
+
+
+def max_value(x: LongTensor | np.ndarray) -> int | None:
+    """Return the maximum value, or None if the tensor / array is empty."""
+    if 0 in x.shape:
+        return None
+    return x.max().item()
+
+
+def get_num_ids(x: LongTensor | np.ndarray) -> int:
+    """Return the number of ids values, i.e., the maximum ID plus one, or zero for an empty tensor / array."""
+    max_id = max_value(x)
+    if max_id is None:
+        return 0
+    return max_id + 1
