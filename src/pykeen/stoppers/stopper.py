@@ -24,19 +24,17 @@ class Stopper(ABC):
         """Return the epoch at which the best result occurred, if any."""
         return None
 
+    @abstractmethod
     def should_evaluate(self, epoch: int) -> bool:
         """Check if the stopper should be evaluated on the given epoch."""
-        raise NotImplementedError
 
     @abstractmethod
     def should_stop(self, epoch: int) -> bool:
         """Validate on validation set and check for termination condition."""
-        raise NotImplementedError
 
     @abstractmethod
     def get_summary_dict(self) -> Mapping[str, Any]:
         """Get a summary dict."""
-        raise NotImplementedError
 
     def _write_from_summary_dict(  # noqa: B027
         self,
@@ -51,7 +49,7 @@ class Stopper(ABC):
         stopped: bool,
         best_epoch: int,
         best_metric: float,
-    ):
+    ) -> None:
         pass
 
     @staticmethod
@@ -70,6 +68,9 @@ class Stopper(ABC):
 
 class NopStopper(Stopper):
     """A stopper that does nothing."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Instantiate a no-op stopper and throw away all arguments."""
 
     def should_evaluate(self, epoch: int) -> bool:
         """Return false; should never evaluate."""
