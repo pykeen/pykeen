@@ -197,15 +197,15 @@ def compute_compressed_adjacency_list(
     return degrees, offset, compressed_adj_lists
 
 
-def max_value(x: LongTensor) -> int | None:
-    """Return the maximum value, or None if the tensor is empty."""
-    if x.numel():
-        return x.max().item()
-    return None
+def max_value(x: LongTensor | np.ndarray) -> int | None:
+    """Return the maximum value, or None if the tensor / array is empty."""
+    if 0 in x.shape:
+        return None
+    return x.max().item()
 
 
-def get_num_ids(x: LongTensor) -> int:
-    """Return the number of ids values."""
+def get_num_ids(x: LongTensor | np.ndarray) -> int:
+    """Return the number of ids values, i.e., the maximum ID plus one, or zero for an empty tensor / array."""
     max_id = max_value(x)
     if max_id is None:
         return 0
