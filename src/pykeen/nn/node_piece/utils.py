@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from tqdm.auto import tqdm
 
+from ...triples.utils import get_num_ids
 from ...typing import LongTensor
 
 __all__ = [
@@ -54,7 +55,7 @@ def ensure_num_entities(edge_index: np.ndarray, num_entities: int | None = None)
     """Calculate the number of entities from the edge index if not given."""
     if num_entities is not None:
         return num_entities
-    return edge_index.max().item() + 1
+    return get_num_ids(edge_index)
 
 
 def prepare_edges_for_metis(edge_index: torch.Tensor) -> LongTensor:

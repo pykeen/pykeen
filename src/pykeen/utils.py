@@ -99,6 +99,7 @@ __all__ = [
     "get_expected_norm",
     "get_json_bytes_io",
     "get_model_io",
+    "get_num_ids",
     "get_optimal_sequence",
     "get_preferred_device",
     "get_until_first_blank",
@@ -107,6 +108,7 @@ __all__ = [
     "isin_many_dim",
     "logcumsumexp",
     "lp_norm",
+    "max_value",
     "merge_kwargs",
     "negative_norm",
     "negative_norm_of_sum",
@@ -1518,7 +1520,7 @@ def iter_weisfeiler_lehman(
     # only keep connectivity, but remove multiplicity
     edge_index = edge_index.unique(dim=1)
 
-    num_nodes = num_nodes or edge_index.max().item() + 1
+    num_nodes = num_nodes or get_num_ids(edge_index)
     colors = edge_index.new_zeros(size=(num_nodes,), dtype=torch.long)
     # note: in theory, we could return this uniform coloring as the first coloring; however, for featurization,
     #       this is rather useless
@@ -1985,3 +1987,18 @@ def prefix_unsqueeze_target(
     if target == LABEL_TAIL:
         return h, r, parallel_prefix_unsqueeze(t, ndim=ndim)
     raise ValueError(f"Unknown target={target}")
+
+
+def max_value(x: LongTensor | np.ndarray) -> int | None:
+    """Return the maximum value, or None if the tensor / array is empty."""
+    if 0 in x.shape:
+        return None
+    return x.max().item()
+
+
+def get_num_ids(x: LongTensor | np.ndarray) -> int:
+    """Return the number of ids values, i.e., the maximum ID plus one, or zero for an empty tensor / array."""
+    max_id = max_value(x)
+    if max_id is None:
+        return 0
+    return max_id + 1

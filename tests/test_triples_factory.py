@@ -25,7 +25,13 @@ from pykeen.triples.triples_factory import (
     get_mapped_triples,
     valid_triple_id_range,
 )
-from pykeen.triples.utils import TRIPLES_DF_COLUMNS, InvalidRemappingLengthError, load_triples
+from pykeen.triples.utils import (
+    TRIPLES_DF_COLUMNS,
+    InvalidRemappingLengthError,
+    compute_compressed_adjacency_list,
+    get_num_ids,
+    load_triples,
+)
 from tests.constants import RESOURCES
 from tests.utils import needs_packages
 
@@ -92,9 +98,9 @@ class TestTriplesFactory(unittest.TestCase):
             ["e1", "a", "e2"],
             ["e1", "a.", "e5"],
         ]
-        t = np.array(t, dtype=str)
+        triples = np.array(t, dtype=str)
         with patch("pykeen.triples.triples_factory.logger.warning") as warning:
-            factory = TriplesFactory.from_labeled_triples(triples=t)
+            factory = TriplesFactory.from_labeled_triples(triples=triples)
             # check for warning
             warning.assert_called()
             # check for filtered triples
@@ -108,8 +114,8 @@ class TestTriplesFactory(unittest.TestCase):
         ]:
             for k in label_to_id:
                 assert id_to_label[label_to_id[k]] == k
-            for k in id_to_label:
-                assert label_to_id[id_to_label[k]] == k
+            for i in id_to_label:
+                assert label_to_id[id_to_label[i]] == i
 
     def test_tensor_to_df(self):
         """Test tensor_to_df()."""
@@ -128,17 +134,17 @@ class TestTriplesFactory(unittest.TestCase):
         self,
         original_triples_factory: TriplesFactory,
         entity_restriction: Collection[str] | None,
-        invert_entity_selection: bool,
+        invert_entity_selection: bool | None,
         relation_restriction: Collection[str] | None,
-        invert_relation_selection: bool,
+        invert_relation_selection: bool | None,
     ):
         """Run the actual test for new_with_restriction."""
         # apply restriction
         restricted_triples_factory = original_triples_factory.new_with_restriction(
             entities=entity_restriction,
             relations=relation_restriction,
-            invert_entity_selection=invert_entity_selection,
-            invert_relation_selection=invert_relation_selection,
+            invert_entity_selection=bool(invert_entity_selection),
+            invert_relation_selection=bool(invert_relation_selection),
         )
 
         # check that the triples factory is returned as is, if and only if no restriction is to apply
@@ -158,7 +164,7 @@ class TestTriplesFactory(unittest.TestCase):
             expected_entities = (
                 set(original_triples_factory.entity_id_to_label.values()).difference(entity_restriction)
                 if invert_entity_selection
-                else entity_restriction
+                else set(entity_restriction)
             )
             assert expected_entities.issuperset(present_entities)
 
@@ -296,7 +302,7 @@ class TestSplit(unittest.TestCase):
 
     def test_split_tf(self):
         """Test splitting a factory."""
-        cases = [
+        cases: list[tuple[int, float | list[float]]] = [
             (2, 0.8),
             (2, [0.8]),
             (3, [0.80, 0.10]),
@@ -319,7 +325,7 @@ class TestSplit(unittest.TestCase):
 
     def test_semi_inductive_split(self) -> None:
         """Test semi-inductive splitting."""
-        cases = [
+        cases: list[tuple[int, float | list[float]]] = [
             (2, 0.8),
             (2, [0.8]),
             (3, [0.80, 0.10]),
@@ -338,7 +344,7 @@ class TestSplit(unittest.TestCase):
 
     def test_fully_inductive_split(self) -> None:
         """Test fully-inductive splitting."""
-        cases = [
+        cases: list[tuple[int, float, float | list[float]]] = [
             (3, 0.5, 0.8),
             (3, 0.5, [0.8]),
             (4, 0.6, [0.80, 0.10]),
@@ -368,8 +374,9 @@ class TestSplit(unittest.TestCase):
             def __init__(self, random_state=0, **kwargs):
                 super().__init__(url=NATIONS_TRAIN_PATH.as_uri(), random_state=random_state, **kwargs)
 
-        dataset_classes = [MockSingleTabbedDataset]
-        if Hetionet(eager=False)._get_path().is_file():
+        dataset_classes: list[type[SingleTabbedDataset]] = [MockSingleTabbedDataset]
+        hetionet_path = Hetionet(eager=False)._get_path()
+        if hetionet_path is not None and hetionet_path.is_file():
             dataset_classes.append(Hetionet)
 
         for cls in dataset_classes:
@@ -704,3 +711,53 @@ def test_condense(tf_one_hole: CoreTriplesFactory, entities: bool, relations: bo
     assert tf_new.num_entities == expected_num_entities
     expected_num_relations = tf_one_hole.num_relations - 1 if relations else tf_one_hole.num_relations
     assert tf_new.num_relations == expected_num_relations
+
+
+def _compute_compressed_adjacency_list_reference(
+    mapped_triples: torch.Tensor, num_entities: int | None = None
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Compute the compressed adjacency list with a simple loop, cf. :func:`compute_compressed_adjacency_list`."""
+    num_vertices = num_entities or get_num_ids(mapped_triples[:, [0, 2]])
+    adj_lists: list[list[tuple[int, int]]] = [[] for _ in range(num_vertices)]
+    for i, (s, _, o) in enumerate(mapped_triples.tolist()):
+        adj_lists[s].append((i, o))
+        adj_lists[o].append((i, s))
+    degrees = torch.tensor([len(a) for a in adj_lists], dtype=torch.long)
+    offset = torch.empty(num_vertices, dtype=torch.long)
+    offset[0] = 0
+    offset[1:] = torch.cumsum(degrees, dim=0)[:-1]
+    compressed_adj_lists = torch.as_tensor([entry for a in adj_lists for entry in a], dtype=torch.long)
+    return degrees, offset, compressed_adj_lists
+
+
+@pytest.mark.parametrize(
+    ("seed", "num_entities", "num_triples", "explicit_num_entities"),
+    [(0, 5, 30, False), (1, 50, 100, False), (2, 50, 100, True), (3, 200, 50, False), (4, 1, 3, False)],
+)
+def test_compute_compressed_adjacency_list(
+    seed: int, num_entities: int, num_triples: int, explicit_num_entities: bool
+) -> None:
+    """Test the compressed adjacency list against a simple reference implementation."""
+    generator = torch.Generator().manual_seed(seed)
+    mapped_triples = torch.randint(num_entities, size=(num_triples, 3), generator=generator)
+    # add self-loops and duplicates; isolated vertices occur due to the sparsity for larger num_entities
+    mapped_triples[::4, 2] = mapped_triples[::4, 0]
+    mapped_triples = torch.cat([mapped_triples, mapped_triples[::3]])
+    kwargs = {"num_entities": num_entities + 3} if explicit_num_entities else {}
+    for actual, expected in zip(
+        compute_compressed_adjacency_list(mapped_triples=mapped_triples, **kwargs),
+        _compute_compressed_adjacency_list_reference(mapped_triples=mapped_triples, **kwargs),
+        strict=True,
+    ):
+        assert actual.dtype == expected.dtype
+        assert torch.equal(actual, expected)
+
+
+@pytest.mark.parametrize("shape", [(0,), (0, 3), (), (5,), (4, 3)])
+def test_get_num_ids_torch_numpy_consistent(shape: tuple[int, ...]):
+    """Test that `get_num_ids` agrees on torch tensors and numpy arrays, and returns zero for empty input."""
+    array = np.asarray(np.random.default_rng(42).integers(0, 10, size=shape))
+    num_ids = get_num_ids(array)
+    assert num_ids == get_num_ids(torch.as_tensor(array))
+    assert isinstance(num_ids, int)
+    assert num_ids == (int(array.max()) + 1 if array.size else 0)

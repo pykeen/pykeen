@@ -318,7 +318,7 @@ class EvaluationLoopTrainingCallback(TrainingCallback):
         self.factory = factory
         self.evaluator = evaluator_resolver.make(evaluator, evaluator_kwargs)
         # lazy init
-        self._evaluation_loop = None
+        self._evaluation_loop: LCWAEvaluationLoop | None = None
         self.kwargs = kwargs
         self.additional_filter_triples = additional_filter_triples
 
