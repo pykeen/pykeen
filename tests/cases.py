@@ -70,7 +70,7 @@ from pykeen.optimizers import optimizer_resolver
 from pykeen.pipeline import pipeline
 from pykeen.regularizers import LpRegularizer, Regularizer
 from pykeen.stoppers.early_stopping import EarlyStopper
-from pykeen.trackers import ResultTracker
+from pykeen.trackers import FileResultTracker, ResultTracker
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingCallback, TrainingLoop
 from pykeen.triples import Instances, TriplesFactory, generation
 from pykeen.triples.instances import BaseBatchedSLCWAInstances
@@ -219,12 +219,13 @@ class CachedDatasetCase(DatasetTestCase):
     """A test case for datasets that need a cache directory."""
 
     #: The directory, if there is caching
-    directory: tempfile.TemporaryDirectory | None
+    directory: tempfile.TemporaryDirectory
 
     def setUp(self):
         """Set up the test with a temporary cache directory."""
         self.directory = tempfile.TemporaryDirectory()
-        self.dataset = self.dataset_cls(cache_root=self.directory.name)
+        kwargs: dict[str, Any] = {"cache_root": self.directory.name}
+        self.dataset = self.dataset_cls(**kwargs)
 
     def tearDown(self) -> None:
         """Tear down the test case by cleaning up the temporary cache directory."""
@@ -401,7 +402,7 @@ class LossTestCase(GenericTestCase[Loss]):
         try:
             self.help_test_process_lcwa_scores(predictions=predictions, labels=labels, label_smoothing=0.01)
         except UnsupportedLabelSmoothingError as error:
-            raise SkipTest from error
+            raise SkipTest("smoothing isn't supported") from error
 
     def test_process_lcwa_scores_weights(self):
         """Test processing scores from LCWA training loop with weights."""
@@ -487,7 +488,7 @@ class PointwiseLossTestCase(LossTestCase):
     """Base unit test for label-based losses."""
 
     #: The number of entities.
-    num_entities: int = 17
+    num_entities: ClassVar[int] = 17
 
     def test_type(self):
         """Test the loss is the right type."""
@@ -540,7 +541,7 @@ class SetwiseLossTestCase(LossTestCase):
     """Unit tests for setwise losses."""
 
     #: The number of entities.
-    num_entities: int = 13
+    num_entities: ClassVar[int] = 13
 
     def test_type(self):
         """Test the loss is the right type."""
@@ -731,7 +732,7 @@ class InteractionTestCase(
         rs: tuple[int, ...],
         ts: tuple[int, ...],
     ) -> tuple[int, ...]:
-        components = []
+        components: list[tuple[int, ...]] = []
         if self.instance.entity_shape:
             components.extend((hs, ts))
         if self.instance.relation_shape:
@@ -772,9 +773,9 @@ class InteractionTestCase(
                 )
 
     @abstractmethod
-    def _exp_score(self, **kwargs) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         """Compute the expected score for a single-score batch."""
-        raise NotImplementedError(f"{self.cls.__name__}({sorted(kwargs.keys())})")
+        raise NotImplementedError(self.cls.__name__)
 
 
 class TranslationalInteractionTests(InteractionTestCase, ABC):
@@ -794,28 +795,55 @@ class ResultTrackerTests(GenericTestCase[ResultTracker], unittest.TestCase):
     def test_start_run(self):
         """Test start_run."""
         self.instance.start_run(run_name="my_test.run")
+        self._verify_start_run(run_name="my_test.run")
+
+    def _verify_start_run(self, run_name: str) -> None:
+        """Verify the tracked state after start_run; override for trackers whose output can be inspected."""
 
     def test_end_run(self):
         """Test end_run."""
         self.instance.end_run()
+        self._verify_end_run()
+
+    def _verify_end_run(self) -> None:
+        """Verify the tracked state after end_run; override for trackers whose output can be inspected."""
 
     def test_log_metrics(self):
         """Test log_metrics."""
-        for metrics, step, prefix in (
+        for metrics, step, prefix, flat_metrics in (
             (
                 # simple
                 {"a": 1.0},
                 0,
                 None,
+                {"a": 1.0},
             ),
             (
                 # nested
                 {"a": {"b": 5.0}, "c": -1.0},
                 2,
                 "test",
+                {"test.a.b": 5.0, "test.c": -1.0},
             ),
         ):
-            self.instance.log_metrics(metrics=metrics, step=step, prefix=prefix)
+            # Nested dicts are deliberately passed; the signature only declares a flat `Mapping[str, float]`.
+            self.instance.log_metrics(metrics=metrics, step=step, prefix=prefix)  # type: ignore[arg-type]
+            self._verify_log_metrics(metrics=metrics, step=step, prefix=prefix, flat_metrics=flat_metrics)
+
+    def _verify_log_metrics(
+        self,
+        metrics: Mapping[str, Any],
+        step: int,
+        prefix: str | None,
+        flat_metrics: Mapping[str, float],
+    ) -> None:
+        """Verify the tracked state after log_metrics; override for trackers whose output can be inspected.
+
+        :param metrics: the logged (potentially nested) metrics
+        :param step: the logged step
+        :param prefix: the logged prefix
+        :param flat_metrics: the metrics flattened, with the prefix applied
+        """
 
     def test_log_params(self):
         """Test log_params."""
@@ -828,12 +856,29 @@ class ResultTrackerTests(GenericTestCase[ResultTracker], unittest.TestCase):
                 "activation": "relu",  # a string
             },
         }
-        prefix = None
-        self.instance.log_params(params=params, prefix=prefix)
+        self.instance.log_params(params=params, prefix=None)
+        self._verify_log_params(
+            params=params,
+            flat_params={
+                "num_epochs": 12,
+                "loss.margin": 2.0,
+                "loss.normalize": True,
+                "loss.activation": "relu",
+            },
+        )
+
+    def _verify_log_params(self, params: Mapping[str, Any], flat_params: Mapping[str, Any]) -> None:
+        """Verify the tracked state after log_params; override for trackers whose output can be inspected.
+
+        :param params: the logged (nested) parameters
+        :param flat_params: the parameters flattened
+        """
 
 
 class FileResultTrackerTests(ResultTrackerTests):
     """Tests for FileResultTracker."""
+
+    instance: FileResultTracker
 
     def setUp(self) -> None:
         """Set up the file result tracker test."""
@@ -846,6 +891,14 @@ class FileResultTrackerTests(ResultTrackerTests):
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
         kwargs["path"] = self.path
         return kwargs
+
+    def _verify_end_run(self) -> None:
+        assert self.instance.file.closed
+
+    def _read(self) -> str:
+        """Read the tracker's output file."""
+        self.instance.file.flush()
+        return self.path.read_text(encoding="utf8")
 
     def tearDown(self) -> None:
         # check that file was created
@@ -1134,7 +1187,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         try:
             scores = score(batch, mode=self.mode, **kwargs)
         except ValueError as error:
-            raise SkipTest from error
+            raise SkipTest(str(error)) from error
         except NotImplementedError:
             self.fail(msg=f"{score} not yet implemented")
         except RuntimeError as e:
@@ -1277,10 +1330,10 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             assert torch.equal(value, loaded_state[key]), key
 
     @property
-    def _cli_extras(self):
+    def _cli_extras(self) -> list[str]:
         """Return a list of extra flags for the CLI."""
         kwargs = self.kwargs or {}
-        extras = [
+        extras: list[str] = [
             "--silent",
         ]
         for k, v in kwargs.items():
@@ -1298,11 +1351,11 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
 
         extras += [
             "--number-epochs",
-            self.train_num_epochs,
+            str(self.train_num_epochs),
             "--embedding-dim",
-            self.embedding_dim,
+            str(self.embedding_dim),
             "--batch-size",
-            self.train_batch_size,
+            str(self.train_batch_size),
         ]
         extras.extend(self.cli_extras)
 
@@ -1310,7 +1363,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         if self.use_inverse_triples:
             extras.append("--use-inverse-triples")
 
-        return [str(e) for e in extras]
+        return extras
 
     @pytest.mark.slow
     def test_pipeline_nations_early_stopper(self):
@@ -1347,12 +1400,13 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         cli = build_cli_from_cls(self.cls)
         # TODO: Catch HolE MKL error?
         result: Result = runner.invoke(cli, args)
+        exc_info = result.exc_info or (None, None, None)
 
         assert (
             result.exit_code == 0
         ), f"""\nCommand\n=======\n$ pykeen train {self.cls.__name__.lower()} {" ".join(map(str, args))}\n\n"
-            f"Output\n======\n{result.output}\n\nException\n=========\n{result.exc_info[1]}\n\n"
-            f"Traceback\n=========\n{"".join(traceback.format_tb(result.exc_info[2]))}\n            """
+            f"Output\n======\n{result.output}\n\nException\n=========\n{exc_info[1]}\n\n"
+            f"Traceback\n=========\n{"".join(traceback.format_tb(exc_info[2]))}\n            """
 
     def test_has_hpo_defaults(self):
         """Test that there are defaults for HPO."""
@@ -1479,7 +1533,8 @@ class InductiveModelTestCase(ModelTestCase):
         training_loop_kwargs = dict(self.training_loop_kwargs or {})
         training_loop_kwargs["mode"] = self.mode
         InductiveModelTestCase.training_loop_kwargs = training_loop_kwargs
-        kwargs["triples_factory"] = self.factory = dataset.transductive_training
+        # The inductive dataset's split is a `CoreTriplesFactory`, but the attribute is typed `TriplesFactory`.
+        kwargs["triples_factory"] = self.factory = dataset.transductive_training  # type: ignore[assignment]
         kwargs["inference_factory"] = dataset.inductive_inference
         kwargs["use_inverse_triples"] = self.use_inverse_triples
         return kwargs
@@ -1496,7 +1551,7 @@ class RepresentationTestCase(GenericTestCase[Representation]):
 
     batch_size: ClassVar[int] = 2
     num_negatives: ClassVar[int] = 3
-    max_id: ClassVar[int] = 7
+    max_id: int = 7
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs)
@@ -1715,10 +1770,10 @@ class InitializerTestCase(unittest.TestCase):
     """A test case for initializers."""
 
     #: the number of entities
-    num_entities: ClassVar[int] = 33
+    num_entities: int = 33
 
     #: the shape of the tensor to initialize
-    shape: ClassVar[tuple[int, ...]] = (3,)
+    shape: tuple[int, ...] = (3,)
 
     #: to be initialized / set in subclass
     initializer: Initializer
@@ -1883,6 +1938,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
     @property
     def factory(self) -> CoreTriplesFactory:
         """Return the evaluation factory."""
+        assert self.dataset.validation is not None
         return self.dataset.validation
 
     def post_instantiation_hook(self) -> None:
@@ -1925,29 +1981,31 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
 
         return hrt_batch, scores, mask
 
-    def test_process_tail_scores_(self) -> None:
-        """Test the evaluator's ``process_tail_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input()
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 2]][:, None]
+    def _test_process_scores(self, target: Target) -> None:
+        """Test processing the scores for a single side, and finalizing afterwards."""
+        inverse = target == LABEL_HEAD
+        hrt_batch, scores, mask = self._get_input(inverse=inverse)
+        column = 0 if inverse else 2
+        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, column]][:, None]
         self.instance.process_scores_(
             hrt_batch=hrt_batch,
-            target=LABEL_TAIL,
+            target=target,
             true_scores=true_scores,
             scores=scores,
             dense_positive_mask=mask,
         )
+        # note: finalizing fails if no scores have been stored
+        result = self.instance.finalize()
+        assert isinstance(result, MetricResults)
+        self._validate_result(result=result, data={"batch": hrt_batch, "scores": scores, "mask": mask})
+
+    def test_process_tail_scores_(self) -> None:
+        """Test the evaluator's ``process_scores_()`` function for tail prediction."""
+        self._test_process_scores(target=LABEL_TAIL)
 
     def test_process_head_scores_(self) -> None:
-        """Test the evaluator's ``process_head_scores_()`` function."""
-        hrt_batch, scores, mask = self._get_input(inverse=True)
-        true_scores = scores[torch.arange(0, hrt_batch.shape[0]), hrt_batch[:, 0]][:, None]
-        self.instance.process_scores_(
-            hrt_batch=hrt_batch,
-            target=LABEL_HEAD,
-            true_scores=true_scores,
-            scores=scores,
-            dense_positive_mask=mask,
-        )
+        """Test the evaluator's ``process_scores_()`` function for head prediction."""
+        self._test_process_scores(target=LABEL_HEAD)
 
     def _process_batches(self):
         """Process one batch per side."""
@@ -2126,14 +2184,29 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
     def test_process_batch(self):
         """Test processing a single batch."""
         batch = next(iter(self.instance.get_loader(batch_size=self.batch_size)))
-        self.instance.process_batch(batch=batch)
+        evaluator = self.instance.evaluator
+        with patch.object(evaluator, "process_scores_", wraps=evaluator.process_scores_) as process_scores_:
+            self.instance.process_batch(batch=batch)
+        # the scores for each target in the batch are passed on to the evaluator
+        assert process_scores_.call_count == len(batch)
+        assert {call.kwargs["target"] for call in process_scores_.call_args_list} == set(batch.keys())
+        for call in process_scores_.call_args_list:
+            hrt_batch, true_scores = call.kwargs["hrt_batch"], call.kwargs["true_scores"]
+            assert true_scores.shape == (hrt_batch.shape[0], 1)
+            # the true score is the score of the evaluated triple, as calculated independently of the target prediction
+            with torch.inference_mode():
+                expected = self.instance.model.score_hrt(hrt_batch)
+            assert torch.allclose(true_scores, expected)
 
     def test_equivalence(self) -> None:
         """Test equivalence between Evaluator.evaluate and evaluation loop."""
+        assert isinstance(self.instance, pykeen.evaluation.evaluation_loop.LCWAEvaluationLoop)
         if LABEL_RELATION in self.instance.targets:
             raise unittest.SkipTest("Evaluator.evaluate does not support relation prediction")
         result = self.instance.evaluator.evaluate(
-            model=self.instance.model, mapped_triples=self.factory.mapped_triples, targets=self.instance.targets
+            model=self.instance.model,
+            mapped_triples=self.factory.mapped_triples,
+            targets=self.instance.targets,
         )
         result2 = self.instance.evaluate()
         assert result.to_flat_dict() == result2.to_flat_dict()
@@ -2198,7 +2271,7 @@ class RankBasedMetricTestCase(unittest_templates.GenericTestCase[RankBasedMetric
     def test_docdata(self):
         """Test the docdata contents of the metric."""
         assert hasattr(self.instance, "increasing")
-        assert self.cls.__doc__.splitlines()[0].strip() != "", "First line of docstring should not be blank"
+        assert (self.cls.__doc__ or "").splitlines()[0].strip() != "", "First line of docstring should not be blank"
         assert get_docdata(self.instance) is not None, "No docdata available"
         assert getattr_or_docdata(self.cls, "link") is not None
         assert getattr_or_docdata(self.cls, "name") is not None
@@ -2633,10 +2706,10 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
         summary = self.instance.get_summary_dict()
         new_stopper = EarlyStopper(
             # not needed for test
-            model=...,
-            evaluator=...,
-            training_triples_factory=...,
-            evaluation_triples_factory=...,
+            model=Mock(),
+            evaluator=Mock(),
+            training_triples_factory=Mock(),
+            evaluation_triples_factory=Mock(),
         )
         new_stopper._write_from_summary_dict(**summary)
         for key in summary:
@@ -2727,7 +2800,7 @@ class PredictionTestCase(unittest_templates.GenericTestCase[pykeen.predict.Predi
         assert set(df_filtered.itertuples()).issubset(self.df.itertuples())
 
 
-class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.ScoreConsumer]):
+class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.ScoreConsumer], ABC):
     """Tests for score consumers."""
 
     batch_size: int = 2
@@ -2740,11 +2813,12 @@ class ScoreConsumerTests(unittest_templates.GenericTestCase[pykeen.predict.Score
         batch = torch.randint(self.num_entities, size=(self.batch_size, 2), generator=generator)
         scores = torch.rand(self.batch_size, self.num_entities)
         self.instance(batch=batch, target=self.target, scores=scores)
-        self.check()
+        self.check(batch=batch, scores=scores)
 
-    def check(self):
-        """Perform additional verification."""
-        pass
+    @abstractmethod
+    def check(self, batch: LongTensor, scores: FloatTensor) -> None:
+        """Verify the consumer's state after consuming the scores for the given batch."""
+        raise NotImplementedError
 
 
 class CheckpointScheduleTests(GenericTestCase[CheckpointSchedule], ABC):

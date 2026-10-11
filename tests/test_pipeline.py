@@ -4,6 +4,7 @@ import itertools
 import pathlib
 import tempfile
 import unittest
+from typing import ClassVar
 from unittest import mock
 
 import pytest
@@ -324,6 +325,10 @@ class TestAttributes(unittest.TestCase):
 class TestPipelineEvaluationFiltering(unittest.TestCase):
     """Test filtering of triples during evaluation using the pipeline."""
 
+    device: ClassVar[torch.device]
+    dataset: ClassVar[Nations]
+    model: ClassVar[FixedModel]
+
     @classmethod
     def setUpClass(cls):
         """Set up a shared result."""
@@ -348,6 +353,7 @@ class TestPipelineEvaluationFiltering(unittest.TestCase):
             ],
         )
 
+        assert cls.dataset.validation is not None
         # The validation triples are created to yield the second highest score on both head and tail prediction for the
         # test triple at hand
         cls.dataset.validation.mapped_triples = torch.tensor(

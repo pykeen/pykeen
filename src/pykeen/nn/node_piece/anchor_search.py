@@ -13,6 +13,7 @@ from torch_ppr.utils import edge_index_to_sparse_matrix, prepare_page_rank_adjac
 from tqdm.auto import tqdm
 
 from .utils import ensure_num_entities
+from ...triples.utils import get_num_ids
 from ...typing import DeviceHint
 from ...utils import ExtraReprMixin, format_relative_comparison, resolve_device
 
@@ -26,6 +27,10 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+#: the dtype of the distance matrix returned by :func:`scipy.sparse.csgraph.shortest_path`. This is fixed by scipy and
+#: only mirrored here, i.e., changing it does not change the dtype of the distances.
+DISTANCE_DTYPE = np.float64
 
 
 class AnchorSearcher(ExtraReprMixin, ABC):
@@ -80,23 +85,26 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         top_dist = np.take_along_axis(arr=array, indices=top_k_indices, axis=0)
         return np.take_along_axis(arr=top_k_indices, indices=np.argsort(top_dist, axis=0), axis=0)
 
-    def __init__(self, chunk_size: int | None = None, max_memory: int = 2**28) -> None:
+    def __init__(self, chunk_size: int | None = None, max_memory: int | None = None) -> None:
         """Initialize the searcher.
 
-        The shortest path distances are computed for chunks of anchors at a time, and merged into a running top-$k$.
-        Thus, only a `(chunk_size, num_entities)` distance matrix has to be kept in memory instead of the full
-        `(num_anchors, num_entities)` one.
+        The shortest path distances are computed for chunks of anchors at a time, and merged into a
+        running top-$k$. Thus, only a `(chunk_size, num_entities)` distance matrix has to be kept in
+        memory instead of the full `(num_anchors, num_entities)` one.
 
-        :param chunk_size: the number of anchors for which to compute shortest path distances at once. If `None`, it
-            is derived from `max_memory`.
-        :param max_memory: the (approximate) memory budget in bytes for a single chunk's float64 distance matrix. Only
-            used if `chunk_size` is `None`.
+        :param chunk_size: the number of anchors for which to compute the shortest path distances at
+            once. If `None`, it is derived from `max_memory`.
+        :param max_memory: the (approximate) memory budget in bytes for a single chunk's float64
+            distance matrix. Only used if `chunk_size` is `None`. Defaults to 2^28 if no chunk size
+            is given.
 
         :raises ValueError: if `chunk_size` or `max_memory` are not positive
         """
         if chunk_size is not None and chunk_size <= 0:
             raise ValueError(f"chunk_size must be positive, but is {chunk_size}")
-        if max_memory <= 0:
+        if max_memory is None:
+            max_memory = 2**28
+        elif max_memory <= 0:
             raise ValueError(f"max_memory must be positive, but is {max_memory}")
         self.chunk_size = chunk_size
         self.max_memory = max_memory
@@ -106,6 +114,24 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         yield f"chunk_size={self.chunk_size}"
         yield f"max_memory={self.max_memory}"
 
+    def _get_chunk_size(self, num_entities: int) -> int:
+        """Determine the number of anchors to process per chunk.
+
+        If `chunk_size` was given explicitly, it is used as is. Otherwise, it is chosen as the
+        largest number of anchors whose `(chunk_size, num_entities)` distance matrix fits into
+        `max_memory`. Each element of this matrix has dtype :data:`DISTANCE_DTYPE` (float64), i.e.,
+        takes 8 bytes, which is obtained via :attr:`numpy.dtype.itemsize`. The result is at least
+        one, so that progress is made even if a single row exceeds the memory budget.
+
+        :param num_entities: the number of entities, i.e., the number of columns of the distance
+            matrix
+
+        :returns: the chunk size, a positive integer
+        """
+        if self.chunk_size:
+            return self.chunk_size
+        return max(1, self.max_memory // (np.dtype(DISTANCE_DTYPE).itemsize * max(num_entities, 1)))
+
     @staticmethod
     def _merge_top_k(best: np.ndarray, candidates: np.ndarray, k: int) -> np.ndarray:
         """Merge new candidates into the running top-$k$ (unsorted).
@@ -114,7 +140,8 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         :param candidates: shape: (c, n) the new candidate keys; will be modified in-place
         :param k: the value of $k$
 
-        :returns: shape: (min(k, k' + c), n) the $k$ smallest keys among both inputs, in arbitrary order
+        :returns: shape: (min(k, k' + c), n) the $k$ smallest keys among both inputs, in arbitrary
+            order
         """
         # reduce the chunk to its top-k first (in-place) to avoid copying the full chunk
         if candidates.shape[0] > k:
@@ -138,7 +165,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         :returns: shape: (s, n) the hop distances, with `inf` for unreachable nodes
         """
         n = adjacency.shape[0]
-        distances = np.full(shape=(len(sources), n), fill_value=np.inf)
+        distances = np.full(shape=(len(sources), n), fill_value=np.inf, dtype=DISTANCE_DTYPE)
         # the position of each node in the BFS order; only entries of reached nodes are (re-)written and read
         position = np.empty(shape=(n,), dtype=np.int64)
         for distances_row, source in zip(distances, sources.tolist(), strict=True):
@@ -154,7 +181,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
             while level_ends[-1] < len(order):
                 level_ends.append(1 + int(np.searchsorted(predecessor_position, level_ends[-1], side="left")))
             level_sizes = np.diff(level_ends, prepend=0)
-            distances_row[order] = np.repeat(np.arange(len(level_sizes), dtype=np.float64), level_sizes)
+            distances_row[order] = np.repeat(np.arange(len(level_sizes), dtype=DISTANCE_DTYPE), level_sizes)
         return distances
 
     def __call__(  # noqa: D102
@@ -162,6 +189,11 @@ class CSGraphAnchorSearcher(AnchorSearcher):
     ) -> np.ndarray:
         # infer shape; entities without any edge only reach themselves (if they are an anchor)
         n = ensure_num_entities(edge_index, num_entities=num_entities)
+        if len(anchors) and (anchors.min() < 0 or anchors.max() >= n):
+            raise ValueError(
+                f"Anchor IDs must be in [0, {n}), but are in [{anchors.min()}, {anchors.max()}]. If some entities do "
+                f"not occur in the edge index, pass num_entities explicitly."
+            )
         # convert to adjacency matrix
         adjacency = edge_index_to_sparse_matrix(
             edge_index=torch.as_tensor(edge_index, dtype=torch.long), num_nodes=n
@@ -178,16 +210,16 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         # representable as long as n * num_anchors <= 2**53. Unreachable anchors have an infinite key.
         if n * num_anchors > 2**53:
             raise ValueError(f"Too many entities and anchors for exact key encoding: {n=:_}, {num_anchors=:_}")
-        chunk_size = self.chunk_size or max(1, self.max_memory // (8 * max(n, 1)))
+        chunk_size = self._get_chunk_size(n)
         # the running top-k keys, shape: (k', n)
-        best = np.empty(shape=(0, n), dtype=np.float64)
+        best = np.empty(shape=(0, n), dtype=DISTANCE_DTYPE)
         for start in range(0, num_anchors, chunk_size):
             stop = min(start + chunk_size, num_anchors)
             # compute distances between anchors and all nodes, shape: (chunk_size, num_entities)
             keys = self._bfs_distances(adjacency=adjacency, sources=anchors[start:stop])
             # encode, in-place
             keys *= num_anchors
-            keys += np.arange(start, stop, dtype=np.float64)[:, None]
+            keys += np.arange(start, stop, dtype=DISTANCE_DTYPE)[:, None]
             best = self._merge_top_k(best=best, candidates=keys, k=k)
         # sort by distance (and anchor ID), shape: (n, k)
         best = np.sort(best.T, axis=1)
@@ -389,7 +421,7 @@ class SparseBFSSearcher(AnchorSearcher):
         except ImportError as err:
             raise ImportError("Requires `torch_sparse` to be installed.") from err
 
-        num_entities = edge_list.max().item() + 1
+        num_entities = get_num_ids(edge_list)
         # for each entity, determine anchor pool by BFS
         num_anchors = len(anchors)
 

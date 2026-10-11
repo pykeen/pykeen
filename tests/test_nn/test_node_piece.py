@@ -138,6 +138,24 @@ def test_csgraph_isolated_trailing_entities(chunk_size: int | None):
     np.testing.assert_array_equal(result, [[0, 1], [0, 1], [1, 0]])
 
 
+@pytest.mark.parametrize(
+    ("anchors", "num_entities"),
+    [
+        # inferred number of entities is 3
+        ([0, 3], None),
+        ([0, 6], 6),
+        ([-1, 1], None),
+        ([-1, 1], 6),
+    ],
+)
+def test_csgraph_invalid_anchors(anchors: list[int], num_entities: int | None):
+    """Test that out-of-range anchor IDs raise a clear error."""
+    edge_index = np.asarray([[0, 1], [1, 2]])
+    searcher = pykeen.nn.node_piece.CSGraphAnchorSearcher()
+    with pytest.raises(ValueError, match="Anchor IDs must be in"):
+        searcher(edge_index=edge_index, anchors=np.asarray(anchors), k=2, num_entities=num_entities)
+
+
 @pytest.mark.parametrize(("num_anchors", "num_entities", "k", "seed"), [(3, 7, 2, 0)])
 def test_top_k_indices(num_anchors: int, num_entities: int, k: int, seed: int) -> None:
     """Test top-k index calculation."""

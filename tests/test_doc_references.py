@@ -55,7 +55,7 @@ def _iter_role_usages():
 
 def _collect_pykeen_targets():
     """Collect fully-qualified ``pykeen.*`` role usages, deduplicated by (target, tilde)."""
-    seen = {}
+    seen: dict[tuple[str, str], tuple[str, int, str]] = {}
     for path, lineno, role, tilde, target in _iter_role_usages():
         if not target.startswith("pykeen.") or "." not in target[len("pykeen.") :]:
             # skip bare `pykeen` and single-segment targets like `pykeen.env`, which are already short

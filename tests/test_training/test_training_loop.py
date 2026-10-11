@@ -8,8 +8,9 @@ import pytest
 from pykeen.datasets import Nations
 from pykeen.losses import BCEWithLogitsLoss, CrossEntropyLoss, MarginRankingLoss, NSSALoss, SoftplusLoss
 from pykeen.models import TransE
-from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
+from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer, SortedKeyFilterer
 from pykeen.training import BatchCWATrainingLoop, LCWATrainingLoop, SLCWATrainingLoop, SymmetricLCWATrainingLoop
+from pykeen.typing import Target
 from tests.test_training import cases
 
 
@@ -68,6 +69,14 @@ class BloomFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
 
     cls = SLCWATrainingLoop
     filterer_cls = BloomFilterer
+    loss_cls = MarginRankingLoss
+
+
+class SortedKeyFilteredSLCWATrainingLoopTestCase(cases.SLCWATrainingLoopTestCase):
+    """Test sLCWA with sorted key-based filtered negative sampling."""
+
+    cls = SLCWATrainingLoop
+    filterer_cls = SortedKeyFilterer
     loss_cls = MarginRankingLoss
 
 
@@ -161,7 +170,7 @@ class CrossEntropyLossRelationBatchCWATrainingLoopTestCase(cases.TrainingLoopTes
         ("tail", 7),
     ],
 )
-def test_lcwa_initial_slice_size(target: str, expected: int) -> None:
+def test_lcwa_initial_slice_size(target: Target, expected: int) -> None:
     """Test that the slice size search starts at half the number of candidates for the target."""
     triples_factory = Nations().training
     model = TransE(triples_factory=triples_factory)
@@ -178,7 +187,7 @@ def test_lcwa_initial_slice_size(target: str, expected: int) -> None:
         ("relation", 100, 28),
     ],
 )
-def test_bcwa_initial_slice_size(target: str, batch_size: int, expected: int) -> None:
+def test_bcwa_initial_slice_size(target: Target, batch_size: int, expected: int) -> None:
     """Test that the slice size search starts at half the number of the batch's candidates for the target."""
     triples_factory = Nations().training
     model = TransE(triples_factory=triples_factory)
