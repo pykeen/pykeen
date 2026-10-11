@@ -96,3 +96,63 @@ def test_dataset_additional_filter_triples(filtered: bool, as_sequence: bool):
         filtered=filtered,
         additional_filter_triples=[additional_filter_triples] if as_sequence else additional_filter_triples,
     )
+
+
+class _OOMOnceModel(FixedModel):
+    """A model which raises an out-of-memory error on one specific call of :meth:`predict`."""
+
+    def __init__(self, fail_on_call: int, **kwargs):
+        """Initialize the model.
+
+        :param fail_on_call: the (1-based) index of the call to :meth:`predict` which fails, exactly once
+        :param kwargs: additional keyword-based parameters passed to :meth:`FixedModel.__init__`
+        """
+        super().__init__(**kwargs)
+        self.fail_on_call = fail_on_call
+        self.num_calls = 0
+        self.num_failures = 0
+
+    def predict(self, *args, **kwargs):
+        self.num_calls += 1
+        if self.num_calls == self.fail_on_call:
+            self.num_failures += 1
+            raise torch.cuda.OutOfMemoryError("CUDA out of memory.")
+        return super().predict(*args, **kwargs)
+
+
+def _num_ranking_tasks(evaluator: RankBasedEvaluator) -> int:
+    """Count the ranks collected by the evaluator, across all targets (using the realistic rank type)."""
+    return sum(
+        len(chunk) for (_, rank_type), chunks in evaluator.ranks.items() if rank_type == "realistic" for chunk in chunks
+    )
+
+
+@pytest.mark.parametrize("use_loop", [False, True])
+def test_oom_retry_does_not_double_count(use_loop: bool):
+    """Test that batches processed before an out-of-memory error are not counted again after the retry."""
+    dataset = Nations()
+    num_triples = dataset.testing.num_triples
+
+    def _run(model: FixedModel) -> tuple[RankBasedEvaluator, dict[str, float]]:
+        evaluator = RankBasedEvaluator(filtered=False, clear_on_finalize=False)
+        if use_loop:
+            result = LCWAEvaluationLoop(model=model, triples_factory=dataset.testing, evaluator=evaluator).evaluate(
+                batch_size=64, use_tqdm=False
+            )
+        else:
+            result = evaluator.evaluate(
+                model=model, mapped_triples=dataset.testing.mapped_triples, batch_size=64, use_tqdm=False
+            )
+        return evaluator, result.to_flat_dict()
+
+    reference_evaluator, reference = _run(FixedModel(triples_factory=dataset.training))
+    model = _OOMOnceModel(fail_on_call=3, triples_factory=dataset.training)
+    evaluator, result = _run(model)
+
+    # sanity check: the fake error was raised, and evaluation continued afterwards
+    assert model.num_failures == 1
+    assert model.num_calls > 3
+    # each test triple is ranked once for head and once for tail prediction
+    assert _num_ranking_tasks(reference_evaluator) == 2 * num_triples
+    assert _num_ranking_tasks(evaluator) == 2 * num_triples
+    assert result == pytest.approx(reference)
