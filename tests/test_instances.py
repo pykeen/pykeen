@@ -139,7 +139,7 @@ class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
                     else:
                         assert triple_ids == list(range(num_triples))
 
-    def test_iter_triple_ids_single_process(self):
+    def test_iter_triple_ids_single_process(self) -> None:
         """Test the number and sizes of batches, and coverage, for single-process loading."""
         for num_triples, batch_size, drop_last in itertools.product((13, 14, 50), (1, 3, 7), (False, True)):
             with self.subTest(num_triples=num_triples, batch_size=batch_size, drop_last=drop_last):
@@ -317,7 +317,7 @@ class SubGraphSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
         total_variation = 0.5 * sum(abs(counts[key] / num_samples - p) for key, p in expected.items())
         assert total_variation < 0.02
 
-    def test_iter_triple_ids_batch_sizes(self):
+    def test_iter_triple_ids_batch_sizes(self) -> None:
         """Test the number and sizes of batches for single- and (simulated) multi-process loading."""
         # the first 13 triples leave some entities without incident edges; for these, batch size 4 leaves a remainder
         # of 1, 13 divides evenly, and 20 exceeds the number of triples. All 1592 triples: 398 divides evenly, 300
