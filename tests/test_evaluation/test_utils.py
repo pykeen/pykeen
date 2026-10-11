@@ -79,7 +79,8 @@ class TestFowlkesMallowsIndex(unittest.TestCase):
 def test_prevalence_threshold_zero_division_policy(policy, expected):
     """Test that the inner rates of the prevalence threshold honor the zero-division policy."""
     metric = PrevalenceThreshold()
-    metric.zero_division = policy
+    # TODO could make this an instance variable
+    metric.zero_division = policy  # type:ignore[misc]
     # no positives and no negatives: FPR and TPR are both undefined => both equal to the policy
     with warnings.catch_warnings():
         warnings.simplefilter("error")
