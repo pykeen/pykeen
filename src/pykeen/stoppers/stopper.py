@@ -19,13 +19,6 @@ logger = logging.getLogger(__name__)
 class Stopper(ABC):
     """A harness for stopping training."""
 
-    def __init__(self, *args, **kwargs):  # noqa: B027
-        """Initialize the stopper.
-
-        :param args: ignored positional parameters
-        :param kwargs: ignored keyword-based parameters
-        """
-
     @property
     def best_epoch(self) -> int | None:
         """Return the epoch at which the best result occurred, if any."""
