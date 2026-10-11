@@ -58,7 +58,7 @@ class MetricResults(Generic[MetricKeyType]):
     metrics: ClassVar[Mapping[str, type[Metric]]]
     data: Mapping[MetricKeyType, float]
 
-    def __init__(self, data: Mapping[MetricKeyType | str, float]):
+    def __init__(self, data: Mapping[MetricKeyType | str, float]) -> None:
         """Initialize the result wrapper."""
         self.data = {self.string_or_key_to_key(key): value for key, value in data.items()}
 

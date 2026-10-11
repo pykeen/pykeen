@@ -24,7 +24,7 @@ class NoRegularizerTest(cases.RegularizerTestCase):
         return torch.zeros(1, device=x.device, dtype=x.dtype)
 
     def test_apply_only_once(self):
-        raise unittest.SkipTest
+        raise unittest.SkipTest("Not applicable.")
 
 
 class L1RegularizerTest(cases.LpRegularizerTest):
