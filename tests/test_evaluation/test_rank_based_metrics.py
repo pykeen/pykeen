@@ -81,6 +81,28 @@ class GeometricMeanRankTests(cases.RankBasedMetricTestCase):
 
     cls = pykeen.metrics.ranking.GeometricMeanRank
 
+    def test_integer_weights(self):
+        """Integer weights give the same expectation and variance as float weights."""
+        num_candidates = np.array([5, 7, 11])
+        int_weights = np.array([1, 2, 3])
+        float_weights = int_weights.astype(float)
+        assert self.instance.expected_value(num_candidates, weights=int_weights) == pytest.approx(
+            self.instance.expected_value(num_candidates, weights=float_weights)
+        )
+        assert self.instance.variance(num_candidates, weights=int_weights) == pytest.approx(
+            self.instance.variance(num_candidates, weights=float_weights)
+        )
+
+    def test_moments_against_sampling(self):
+        """Expectation and variance match a Monte-Carlo estimate with weights."""
+        num_candidates = np.array([3, 6, 10])
+        weights = np.array([1.0, 2.0, 0.5])
+        generator = np.random.default_rng(42)
+        ranks = np.stack([generator.integers(1, c + 1, size=200_000) for c in num_candidates])
+        values = np.exp((weights[:, None] / weights.sum() * np.log(ranks)).sum(axis=0))
+        assert self.instance.expected_value(num_candidates, weights=weights) == pytest.approx(values.mean(), rel=1e-2)
+        assert self.instance.variance(num_candidates, weights=weights) == pytest.approx(values.var(), rel=5e-2)
+
 
 class AdjustedGeometricMeanRankIndexTests(cases.RankBasedMetricTestCase):
     """Tests for adjusted geometric mean rank index."""
@@ -150,6 +172,18 @@ class MedianAbsoluteDeviationTests(cases.RankBasedMetricTestCase):
 
     def test_weights_direction(self) -> None:
         raise unittest.SkipTest("Test does not make sense to dispersion metrics")
+
+    def test_equal_weights_match_unweighted(self):
+        """Test that equal weights reproduce the unweighted MAD to tight tolerance."""
+        metric = self.cls()
+        for n in (9, 10):
+            ranks = np.random.default_rng(seed=n).integers(1, 100, size=n)
+            for weight in (0.1, 1, 3.5):
+                np.testing.assert_allclose(
+                    metric(ranks, weights=np.full(n, weight)),
+                    metric(ranks),
+                    rtol=1.0e-12,
+                )
 
 
 class MedianRankTests(cases.RankBasedMetricTestCase):
@@ -241,6 +275,26 @@ class WeightedTests(unittest.TestCase):
     def test_weighted_median(self):
         """Test weighted median."""
         self._test_equal_weights(weighted_median)
+
+    def test_weighted_median_equal_weights_matches_median(self):
+        """Test that equal weights of any scale reproduce the unweighted median (including averaging the middle)."""
+        for n in (1, 2, 3, 10, 11, 100):
+            for weight in (0.1, 1, 3, 0.3, 1 / 7, 1.0e-3, 1.0e3):
+                with self.subTest(n=n, weight=weight):
+                    a = np.random.default_rng(seed=n).permutation(np.arange(1, n + 1))
+                    assert weighted_median(a, np.full(n, weight)) == np.median(a)
+
+    def test_weighted_median_low_precision_weights(self):
+        """Test that exact ties are detected for float32 weights, whose representation error exceeds 1e-9."""
+        # two groups of equal total weight 1, i.e., the cumulative weight is exactly half after the first group
+        for dtype in (np.float32, np.float64):
+            weights = np.concatenate([np.full(3, 1 / 3), np.full(7, 1 / 7)]).astype(dtype)
+            assert weighted_median(np.arange(10), weights) == 2.5
+
+    def test_weighted_median_degenerate(self):
+        """Test that all-zero weights are rejected."""
+        with pytest.raises(ValueError, match="must be positive"):
+            weighted_median(np.arange(3), np.zeros(3))
 
     def _test_weighted_mean_moment(
         self,
@@ -542,3 +596,15 @@ def test_median_moments_multiple_k_against_simulation():
         mean, variance = compute_median_moments(ks)
         assert mean == pytest.approx(samples.mean(), abs=0.1)
         assert variance == pytest.approx(samples.var(), rel=0.05)
+
+
+def test_generate_num_candidates_and_ranks_range():
+    """Test that the maximum number of candidates is reachable, and all values are within valid ranges."""
+    max_num_candidates = 5
+    ranks, num_candidates = pykeen.metrics.ranking.generate_num_candidates_and_ranks(
+        num_ranks=1_000, max_num_candidates=max_num_candidates, seed=42
+    )
+    assert num_candidates.min() >= 1
+    assert num_candidates.max() == max_num_candidates
+    assert (ranks >= 1).all()
+    assert (ranks <= num_candidates).all()

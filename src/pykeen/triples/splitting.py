@@ -183,7 +183,7 @@ def normalize_ratios(
         if the ratio sum is bigger than 1.0
     """
     # Prepare split index
-    if isinstance(ratios, float):
+    if isinstance(ratios, int | float):
         ratios = [ratios]
     ratios = tuple(ratios)
     ratio_sum = sum(ratios)

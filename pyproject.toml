@@ -59,7 +59,6 @@ requires-python = ">=3.11"
 dependencies = [
     "dataclasses-json",
     "numpy",
-    "numpy",
     "scipy>=1.7.0",
     "click",
     "click_default_group",
@@ -134,6 +133,7 @@ skip = ["**/__init__.py", "tests/*"]
 [tool.mypy]
 plugins = []
 ignore_missing_imports = true
+check_untyped_defs = true
 
 # Libraries whose types are not checked yet. `follow_imports = "skip"` makes their
 # symbols `Any`, which is what happened implicitly while the mypy tox environment

@@ -11,7 +11,6 @@ import numpy as np
 import pytest
 import torch
 import unittest_templates
-from PIL import Image
 
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
@@ -295,7 +294,7 @@ class VisualRepresentationTestCase(cases.RepresentationTestCase):
 
 
 @constants.skip_if_windows
-@needs_packages("torchvision")
+@needs_packages("torchvision", "PIL")
 class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for Wikidata visual representations."""
 
@@ -313,6 +312,8 @@ class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
     }
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        from PIL import Image
+
         kwargs = super()._pre_instantiation_hook(kwargs)
         kwargs.pop("max_id")
         self.max_id = len(kwargs["wikidata_ids"])
