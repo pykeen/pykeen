@@ -180,7 +180,7 @@ class OGBEvaluatorValueTests(unittest.TestCase):
         )
         self.model = FixedModel(triples_factory=self.factory)
 
-    def _evaluate(self, **kwargs) -> dict[RankBasedMetricKey, float]:
+    def _evaluate(self, **kwargs) -> Mapping[Any, float]:
         return self.evaluator.evaluate(
             model=self.model, mapped_triples=self.factory.mapped_triples, use_tqdm=False, **kwargs
         ).data
