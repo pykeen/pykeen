@@ -312,7 +312,11 @@ def test_predict_triples(
     pack = pykeen.predict.predict_triples(
         model=model, triples=triples, triples_factory=triples_factory, batch_size=batch_size
     )
-    num_triples = 1 if isinstance(triples, tuple) and isinstance(triples[0], str) else len(cast(Sized, triples))
+    # a single labeled triple (a sequence of three strings) counts as one triple
+    if not isinstance(triples, torch.Tensor | np.ndarray) and isinstance(cast(Sequence, triples)[0], str):
+        num_triples = 1
+    else:
+        num_triples = len(cast(Sized, triples))
     _check_score_pack(pack=pack, model=model, num_triples=num_triples)
 
 
