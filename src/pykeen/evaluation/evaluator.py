@@ -398,7 +398,7 @@ def _optimal_batch_size_group_id(kwargs: Mapping[str, Any]) -> int:
     (its architecture, and thus memory footprint, is fixed for the lifetime of the instance). Tensors, in contrast, are
     often re-created for each call, e.g., `all_pos_triples` is rebuilt in every :meth:`Evaluator.evaluate` call, so
     their identity would prevent re-using the cache across calls (e.g., for periodic evaluation during training) and
-    could even produce arbitrary hits after an `id` is re-used. Since memory consumption depends only on their size,
+    could even produce arbitrary hits after an `id` is re-used. Since memory consumption depends mainly on their size,
     they enter the key via `(shape, dtype, device)`.
 
     This is safe although memory consumption is partially value-dependent: with filtering, the output of
