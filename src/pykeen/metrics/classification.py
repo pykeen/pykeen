@@ -632,7 +632,7 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
 
     ---
     link: https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index
-    description: The Fowlkes-Mallows index.
+    description: The Fowlkes Mallows index.
     """
 
     name: ClassVar[str] = "Fowlkes Mallows Index"
