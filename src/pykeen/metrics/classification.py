@@ -631,7 +631,7 @@ class ThreatScore(ConfusionMatrixClassificationMetric):
         TS = \frac{TP}{TP + FN + FP}
 
     ---
-    link: https://en.wikipedia.org/wiki/Jaccard_index
+    link: https://en.wikipedia.org/wiki/Jaccard_index#Jaccard_index_in_binary_classification_confusion_matrices
     description: The proportion of true positives among all actual and predicted positives, TP / (TP + FN + FP).
     """
 
