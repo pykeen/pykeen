@@ -367,6 +367,9 @@ def _main():
     fb15k = get_dataset(dataset="fb15k")
     click.echo(fb15k.summary_str())
 
+    if fb15k.validation is None:
+        raise ValueError("FB15k is expected to have a validation split.")
+
     n = 401  # magic 401 from the paper
     train, test, validate = unleak(fb15k.training, fb15k.testing, fb15k.validation, n=n)
     click.echo("")

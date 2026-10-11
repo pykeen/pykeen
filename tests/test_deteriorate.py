@@ -15,6 +15,7 @@ class TestDeterioration(unittest.TestCase):
         """Set up deterioration tests."""
         self.generator = ensure_torch_random_state(42)
         self.reference = Nations()
+        assert self.reference.validation is not None
         self.num_training_triples = self.reference.training.num_triples
         self.num_triples = (
             self.reference.training.num_triples

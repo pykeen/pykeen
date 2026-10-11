@@ -9,6 +9,7 @@ from torch import nn
 
 from .filtering import Filterer, filterer_resolver, make_default_filterer
 from ..constants import TARGET_TO_INDEX
+from ..triples.utils import get_num_ids
 from ..typing import BoolTensor, LongTensor, MappedTriples, Target
 
 __all__ = [
@@ -81,8 +82,8 @@ class NegativeSampler(nn.Module):
         :param filterer_kwargs: Additional keyword-based arguments passed to the filterer upon construction.
         """
         super().__init__()
-        self.num_entities = num_entities or mapped_triples[:, [0, 2]].max().item() + 1
-        self.num_relations = num_relations or mapped_triples[:, 1].max().item() + 1
+        self.num_entities = num_entities or get_num_ids(mapped_triples[:, [0, 2]])
+        self.num_relations = num_relations or get_num_ids(mapped_triples[:, 1])
         self.num_negs_per_pos = num_negs_per_pos if num_negs_per_pos is not None else 1
         if filterer is not None:
             self.filterer = filterer_resolver.make(filterer, pos_kwargs=filterer_kwargs, mapped_triples=mapped_triples)

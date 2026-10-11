@@ -344,7 +344,7 @@ class HpoPipelineResult(Result):
     objective: Objective
 
     def _get_best_study_config(self):
-        metadata = {
+        metadata: dict[str, Any] = {
             "best_trial_number": self.study.best_trial.number,
             "best_trial_evaluation": self.study.best_value,
         }

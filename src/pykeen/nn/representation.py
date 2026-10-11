@@ -789,7 +789,8 @@ class CompGCNLayer(nn.Module):
             self.self_loop,
         ):
             nn.init.xavier_uniform_(w)
-        self.bias.reset_parameters()
+        if self.bias is not None:
+            self.bias.reset_parameters()
         self.w_rel.reset_parameters()
 
     def message(

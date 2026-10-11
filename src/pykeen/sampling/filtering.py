@@ -114,6 +114,25 @@ Another exact, but slower implementation is based on Python's built-in sets, the
         ),
     )
 
+A fast *and* exact alternative is the :class:`~pykeen.sampling.filtering.SortedKeyFilterer`, which packs each
+triple into a single integer key and looks up negatives via binary search in a sorted tensor of the known triples' keys.
+It is pure PyTorch, and thus also runs on GPU. It can be activated with:
+
+.. code-block:: python
+
+    from pykeen.pipeline import pipeline
+
+    results = pipeline(
+        dataset='YAGO3-10',
+        model='PairRE',
+        training_loop='sLCWA',
+        negative_sampler='basic',
+        negative_sampler_kwargs=dict(
+            filtered=True,
+            filterer='sorted-key',
+        ),
+    )
+
 Identifying False Negatives During Evaluation
 ---------------------------------------------
 In contrast to training, PyKEEN **does** filter false negatives from $\mathcal{N}$ during evaluation by default.
@@ -447,13 +466,19 @@ class SortedKeyFilterer(Filterer):
             sizes = [int(max_ids[0]), int(max_ids[1]), int(max_ids[2])]
         else:
             sizes = [0, 0, 0]
-        for columns, given in (((0, 2), num_entities), ((1,), num_relations)):
-            if given is None:
-                continue
-            for c in columns:
-                if given < sizes[c]:
-                    raise ValueError(f"The given size {given} is smaller than the observed size {sizes[c]}.")
-                sizes[c] = given
+        if num_entities is not None:
+            if num_entities < sizes[0] or num_entities < sizes[2]:
+                raise ValueError(
+                    f"The given number of entities {num_entities} is smaller than the observed size "
+                    f"{max(sizes[0], sizes[2])}."
+                )
+            sizes[0] = sizes[2] = num_entities
+        if num_relations is not None:
+            if num_relations < sizes[1]:
+                raise ValueError(
+                    f"The given number of relations {num_relations} is smaller than the observed size {sizes[1]}."
+                )
+            sizes[1] = num_relations
         # check for overflow; use Python integers, which have arbitrary precision
         if sizes[0] * sizes[1] * sizes[2] >= 2**63:
             raise SortedKeyOverflowError(
@@ -470,6 +495,9 @@ class SortedKeyFilterer(Filterer):
     def _pack(self, triples: LongTensor) -> LongTensor:
         """Pack triples into keys; assumes that all IDs are in range."""
         h, r, t = triples.unbind(dim=-1)
+        # mixed-radix encoding with the head as most significant and the tail as least significant "digit": each
+        # position is weighted by the product of the sizes of all less significant positions, i.e.,
+        # h * (n_r * n_t) + r * n_t + t.
         return (h * self.sizes[1] + r) * self.sizes[2] + t
 
     def contains(self, batch: MappedTriples) -> BoolTensor:  # noqa: D102
