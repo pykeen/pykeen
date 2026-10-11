@@ -624,7 +624,7 @@ class PrevalenceThreshold(ConfusionMatrixClassificationMetric):
 
 @parse_docdata
 class ThreatScore(ConfusionMatrixClassificationMetric):
-    r"""The threat score.
+    r"""The threat score, also known as the critical success index (CSI) or the Jaccard index.
 
     .. math::
 
