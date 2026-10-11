@@ -84,23 +84,26 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         top_dist = np.take_along_axis(arr=array, indices=top_k_indices, axis=0)
         return np.take_along_axis(arr=top_k_indices, indices=np.argsort(top_dist, axis=0), axis=0)
 
-    def __init__(self, chunk_size: int | None = None, max_memory: int = 2**28) -> None:
+    def __init__(self, chunk_size: int | None = None, max_memory: int | None = None) -> None:
         """Initialize the searcher.
 
-        The shortest path distances are computed for chunks of anchors at a time, and merged into a running top-$k$.
-        Thus, only a `(chunk_size, num_entities)` distance matrix has to be kept in memory instead of the full
-        `(num_anchors, num_entities)` one.
+        The shortest path distances are computed for chunks of anchors at a time, and merged into a
+        running top-$k$. Thus, only a `(chunk_size, num_entities)` distance matrix has to be kept in
+        memory instead of the full `(num_anchors, num_entities)` one.
 
-        :param chunk_size: the number of anchors for which to compute shortest path distances at once. If `None`, it
-            is derived from `max_memory`.
-        :param max_memory: the (approximate) memory budget in bytes for a single chunk's float64 distance matrix. Only
-            used if `chunk_size` is `None`.
+        :param chunk_size: the number of anchors for which to compute the shortest path distances at
+            once. If `None`, it is derived from `max_memory`.
+        :param max_memory: the (approximate) memory budget in bytes for a single chunk's float64
+            distance matrix. Only used if `chunk_size` is `None`. Defaults to 2^28 if no chunk size
+            is given.
 
         :raises ValueError: if `chunk_size` or `max_memory` are not positive
         """
         if chunk_size is not None and chunk_size <= 0:
             raise ValueError(f"chunk_size must be positive, but is {chunk_size}")
-        if max_memory <= 0:
+        if max_memory is None:
+            max_memory = 2**28
+        elif max_memory <= 0:
             raise ValueError(f"max_memory must be positive, but is {max_memory}")
         self.chunk_size = chunk_size
         self.max_memory = max_memory
@@ -113,13 +116,14 @@ class CSGraphAnchorSearcher(AnchorSearcher):
     def _get_chunk_size(self, num_entities: int) -> int:
         """Determine the number of anchors to process per chunk.
 
-        If `chunk_size` was given explicitly, it is used as is. Otherwise, it is chosen as the largest number of
-        anchors whose `(chunk_size, num_entities)` distance matrix fits into `max_memory`. Each element of this matrix
-        has dtype :data:`DISTANCE_DTYPE` (float64), i.e., takes 8 bytes, which is obtained via
-        :attr:`numpy.dtype.itemsize`. The result is at least one, so that progress is made even if a single row
-        exceeds the memory budget.
+        If `chunk_size` was given explicitly, it is used as is. Otherwise, it is chosen as the
+        largest number of anchors whose `(chunk_size, num_entities)` distance matrix fits into
+        `max_memory`. Each element of this matrix has dtype :data:`DISTANCE_DTYPE` (float64), i.e.,
+        takes 8 bytes, which is obtained via :attr:`numpy.dtype.itemsize`. The result is at least
+        one, so that progress is made even if a single row exceeds the memory budget.
 
-        :param num_entities: the number of entities, i.e., the number of columns of the distance matrix
+        :param num_entities: the number of entities, i.e., the number of columns of the distance
+            matrix
 
         :returns: the chunk size, a positive integer
         """
@@ -135,7 +139,8 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         :param candidates: shape: (c, n) the new candidate keys; will be modified in-place
         :param k: the value of $k$
 
-        :returns: shape: (min(k, k' + c), n) the $k$ smallest keys among both inputs, in arbitrary order
+        :returns: shape: (min(k, k' + c), n) the $k$ smallest keys among both inputs, in arbitrary
+            order
         """
         # reduce the chunk to its top-k first (in-place) to avoid copying the full chunk
         if candidates.shape[0] > k:
