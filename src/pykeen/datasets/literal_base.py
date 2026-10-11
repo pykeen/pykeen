@@ -70,6 +70,8 @@ class NumericPathDataset(LazyDataset):
     def _summary_rows(self):
         rv = super()._summary_rows()
         tf = self.training
+        if not isinstance(tf, TriplesNumericLiteralsFactory):
+            raise TypeError(f"{tf.__class__} does not have literals.")
         n_relations = len(tf.literals_to_id)
         n_triples = n_relations * tf.num_entities
         rv.append(("Literals", "-", n_relations, n_triples))
