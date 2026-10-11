@@ -1507,9 +1507,7 @@ class MedianRank(RankBasedMetric):
 
 @parse_docdata
 class InverseMedianRank(RankBasedMetric):
-    """The inverse median rank.
-
-    The inverse of the (weighted) median of the ranks. When weights are provided, the weighted median is used.
+    """The inverse of the (optionally weighted) median rank.
 
     ---
     link: https://arxiv.org/abs/2203.07544
