@@ -279,6 +279,20 @@ class VisualRepresentationTestCase(cases.RepresentationTestCase):
         kwargs["images"] = list(torch.rand(self.max_id, 3, 28, 28))
         return kwargs
 
+    def test_encoder_kwargs(self):
+        """Test that encoder kwargs are passed to the encoder upon instantiation."""
+        num_classes = 5
+        # squeezenet's classifier is a convolution with num_classes output channels
+        instance = self.cls(
+            images=list(torch.rand(self.max_id, 3, 28, 28)),
+            encoder="squeezenet1_0",
+            layer_name="classifier.1",
+            encoder_kwargs={"num_classes": num_classes},
+            transforms=[],
+            trainable=False,
+        )
+        assert instance.shape == (num_classes,)
+
 
 @constants.skip_if_windows
 @needs_packages("torchvision")
@@ -305,7 +319,9 @@ class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
         fake_image_path = pathlib.Path(self._tmp.name) / "fake.jpg"
-        Image.new("RGB", (256, 256)).save(fake_image_path)
+        # use a non-constant image: a blank one is encoded to all-zero features (bias-free convolutions followed by
+        # batch normalization), which makes, e.g., dropout ineffective
+        Image.effect_noise((256, 256), 64).convert("RGB").save(fake_image_path)
         wikidata_ids = kwargs["wikidata_ids"]
         mock_cache = MagicMock()
         mock_cache.get_image_paths.return_value = [fake_image_path] * (len(wikidata_ids) - 1) + [None]

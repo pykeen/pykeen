@@ -111,6 +111,7 @@ pyg = [
     # for training, you may still want to have those, cf. https://github.com/pyg-team/pytorch_geometric?tab=readme-ov-file#pypi
     "torch_geometric",
 ]
+vision = ["torchvision", "pillow"]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
 [project.urls]

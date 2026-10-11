@@ -3581,7 +3581,7 @@ class TripleREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, F
         u = self.u
         r_head, r_mid, r_tail = r
         # note: normalization should be done from the representations
-        # cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L317-L328  # noqa: E501
+        # cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L317-L328
         # version 2
         if u is not None:
             # r_head = r_head + u * torch.ones_like(r_head)
