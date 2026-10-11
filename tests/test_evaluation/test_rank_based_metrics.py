@@ -19,7 +19,7 @@ from pykeen.metrics.utils import (
     compute_log_expected_power,
     compute_median_mean,
     compute_median_moments,
-    compute_median_survival_function,
+    truncated_median_survival_function,
     weighted_harmonic_mean,
     weighted_mean_expectation,
     weighted_mean_variance,
@@ -452,7 +452,7 @@ def test_median_survival_function_single_candidate():
     """Test with a single variable."""
     # Single variable with k=10
     num_candidates = np.array([10])
-    sf = compute_median_survival_function(num_candidates)
+    sf = truncated_median_survival_function(num_candidates)
 
     # For single variable, median is just that variable
     # P(X > x) = (k - x) / k for x in [0, k)
@@ -471,7 +471,7 @@ def test_median_survival_function_single_candidate():
 )
 def test_median_survival_function_basic_properties(num_candidates: np.ndarray):
     """Test basic survival function properties for various candidate configurations."""
-    sf = compute_median_survival_function(num_candidates)
+    sf = truncated_median_survival_function(num_candidates)
     _assert_valid_survival_function(sf, k_max=int(num_candidates.max()))
 
 
@@ -481,7 +481,7 @@ def test_median_survival_function_against_simulation():
     num_candidates = np.array([10, 15, 20])
 
     # Compute analytical survival function
-    sf = compute_median_survival_function(num_candidates)
+    sf = truncated_median_survival_function(num_candidates)
 
     # Run simulation
     n_samples = 10_000
@@ -532,7 +532,7 @@ def test_median_survival_function_even_is_upper_median():
     """For even n, the survival function is that of the upper median, i.e., the order statistic n // 2 + 1."""
     num_candidates = [5, 5, 5, 5]
     upper = np.array([sorted(ranks)[2] for ranks in itertools.product(*(range(1, k + 1) for k in num_candidates))])
-    sf = compute_median_survival_function(np.asarray(num_candidates))
+    sf = truncated_median_survival_function(np.asarray(num_candidates))
     np.testing.assert_allclose(sf, [(upper > x).mean() for x in range(len(sf))], atol=1e-12)
 
 

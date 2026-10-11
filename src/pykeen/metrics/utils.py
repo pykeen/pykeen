@@ -17,8 +17,8 @@ __all__ = [
     "compute_log_expected_power",
     "compute_median_mean",
     "compute_median_moments",
-    "compute_median_survival_function",
-    "compute_order_statistic_survival_function",
+    "truncated_median_survival_function",
+    "truncated_order_statistic_survival_function",
     "weighted_harmonic_mean",
     "weighted_mean_expectation",
     "weighted_mean_variance",
@@ -461,7 +461,7 @@ def _count_cdf(ks: np.ndarray, counts: np.ndarray, x_grid: np.ndarray, c: int) -
     return np.clip(np.concatenate(results), 0.0, 1.0)
 
 
-def compute_order_statistic_survival_function(num_candidates: np.ndarray, index: int) -> np.ndarray:
+def truncated_order_statistic_survival_function(num_candidates: np.ndarray, index: int) -> np.ndarray:
     r"""Compute $P(X_{(j)} > x)$ for the $j$-th smallest of independent $r_i \sim \mathcal{U}(1, k_i)$.
 
     Let $C(x) = |\{i : r_i \leq x\}|$. Then, $X_{(j)} > x$ if and only if $C(x) \leq j - 1$. The distribution of
@@ -482,6 +482,8 @@ def compute_order_statistic_survival_function(num_candidates: np.ndarray, index:
 
     :raises ValueError:
         If the index is out of range.
+
+    .. warning:: This is not a true survival function as it returns all elements except the last one
     """
     ks, counts = _group_candidates(num_candidates)
     if not 1 <= index <= counts.sum():
@@ -490,7 +492,7 @@ def compute_order_statistic_survival_function(num_candidates: np.ndarray, index:
     return _count_cdf(ks, counts, x_grid, c=index - 1)
 
 
-def compute_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
+def truncated_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
     r"""Compute $P(M > x)$ for $x \in \{0, \ldots, K - 1\}$, where $M$ is the (upper) median of the ranks.
 
     For an odd number $n$ of ranks, $M$ is the median, i.e., the order statistic $X_{(\frac{n + 1}{2})}$. For an even
@@ -507,9 +509,11 @@ def compute_median_survival_function(num_candidates: np.ndarray) -> np.ndarray:
 
     :return: shape: (K,)
         The survival function. $K$ denotes the maximum number of candidates.
+
+    .. warning:: This is not a true survival function as it returns all elements except the last one
     """
     n = len(num_candidates)
-    return compute_order_statistic_survival_function(num_candidates, index=n // 2 + 1)
+    return truncated_order_statistic_survival_function(num_candidates, index=n // 2 + 1)
 
 
 def _pairwise_term(ks: np.ndarray, counts: np.ndarray, m: int) -> float:
@@ -592,12 +596,12 @@ def compute_median_mean(num_candidates: np.ndarray) -> float:
     """
     n = len(num_candidates)
     m = n // 2
-    direct_value = compute_order_statistic_survival_function(num_candidates, index=m + 1).sum()
+    direct_value = truncated_order_statistic_survival_function(num_candidates, index=m + 1).sum()
 
     if n % 2 == 1:
         return float(direct_value)
 
-    adjacent_value = compute_order_statistic_survival_function(num_candidates, index=m).sum()
+    adjacent_value = truncated_order_statistic_survival_function(num_candidates, index=m).sum()
     return float(np.mean([direct_value, adjacent_value]))
 
 
@@ -638,13 +642,13 @@ def compute_median_moments(num_candidates: np.ndarray) -> tuple[float, float]:
     ks, counts = _group_candidates(num_candidates)
     n = int(counts.sum())
     if n % 2 == 1:
-        sf = compute_median_survival_function(num_candidates)
+        sf = truncated_median_survival_function(num_candidates)
         x = np.arange(len(sf))
         mean = float(sf.sum())
         return mean, max(0.0, float(((2 * x + 1) * sf).sum()) - mean**2)
     m = n // 2
-    sf_a = compute_order_statistic_survival_function(num_candidates, index=m)
-    sf_b = compute_order_statistic_survival_function(num_candidates, index=m + 1)
+    sf_a = truncated_order_statistic_survival_function(num_candidates, index=m)
+    sf_b = truncated_order_statistic_survival_function(num_candidates, index=m + 1)
     x = np.arange(len(sf_a))
     mean = 0.5 * float(sf_a.sum() + sf_b.sum())
     e_aa = float(((2 * x + 1) * sf_a).sum())
