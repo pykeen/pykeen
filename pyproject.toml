@@ -59,7 +59,6 @@ requires-python = ">=3.11"
 dependencies = [
     "dataclasses-json",
     "numpy",
-    "numpy",
     "scipy>=1.7.0",
     "click",
     "click_default_group",
@@ -90,7 +89,6 @@ opt_einsum = ["opt_einsum"]
 mlflow = ["mlflow>=1.8.0"]
 ogb = ["ogb>=1.3.4"]
 wandb = ["wandb"]
-neptune = ["neptune-client"]
 tensorboard = ["tensorboard"]
 transformers = ["transformers"]
 lightning = [
@@ -112,6 +110,7 @@ pyg = [
     # for training, you may still want to have those, cf. https://github.com/pyg-team/pytorch_geometric?tab=readme-ov-file#pypi
     "torch_geometric",
 ]
+vision = ["torchvision", "pillow"]
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
 [project.urls]
@@ -134,6 +133,7 @@ skip = ["**/__init__.py", "tests/*"]
 [tool.mypy]
 plugins = []
 ignore_missing_imports = true
+check_untyped_defs = true
 
 # Libraries whose types are not checked yet. `follow_imports = "skip"` makes their
 # symbols `Any`, which is what happened implicitly while the mypy tox environment
@@ -199,11 +199,11 @@ select = [
     # flake8-annotations (ANN)
     # "ANN",
     # flake8-async (ASYNC)
-    # "ASYNC",
+    "ASYNC",
     # flake8-bandit (S)
     "S",
     # flake8-blind-except (BLE)
-    # "BLE",
+    "BLE",
     # flake8-boolean-trap (FBT)
     # "FBT",
     # flake8-bugbear (B)
@@ -267,7 +267,7 @@ select = [
     # flake8-todos (TD)
     # "TD",
     # flake8-type-checking (TC)
-    # "TC",
+    "TC",
     # flake8-unused-arguments (ARG)
     # "ARG",
     # flake8-use-pathlib (PTH)
@@ -299,6 +299,8 @@ select = [
     "PGH",
     # Pylint (PL)
     # "PL",
+    "PLE", # pylint errors
+    "PLW", # pylint warnings
     # pyupgrade (UP)
     "UP",
     # refurb (FURB)
@@ -310,10 +312,14 @@ select = [
 ]
 ignore = [
     "D105", # Missing docstring in magic method
-    "S101", # Use of assert detected, TODO remove
-    "RUF012", # FIXME
     "PYI041", # "int | float" annotations should be not be replaced by "float"
     "TRY003", # long error messages (doesn't make sense)
+    # Sphinx autodoc (with `-W -n`) needs type-hint imports at runtime to resolve annotations
+    "TC001",
+    "TC002",
+    "TC003",
+    # Quoting the type argument of `typing.cast` reduces readability and editors do not look inside strings
+    "TC006",
 ]
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores
@@ -323,6 +329,7 @@ ignore = [
     "E402",   # allow imports not at top for narrative purposes
     "T201",   # allow prints
     "PTH",    # allow os.path
+    "S101",   # asserts narrow types in narrative examples
 ]
 "notebooks/**" = [
     "INP001", # notebooks are not a package
@@ -334,6 +341,7 @@ ignore = [
     "INP001", # tests are not a package
     "PIE790", # allow pass in test stubs/abstract methods
     "D102",   # test methods document intent via their name, not a docstring
+    "S101",   # pytest uses assert
 ]
 
 [tool.ruff.lint.pydocstyle]

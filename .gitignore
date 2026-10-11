@@ -120,3 +120,6 @@ mlruns
 doctests/
 tox2.ini
 uv.lock
+
+# asv benchmark environments and results
+benchmarking/.asv/

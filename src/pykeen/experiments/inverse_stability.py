@@ -57,12 +57,7 @@ def run_inverse_stability_workflow(
     dataset: str, model: str, training_loop: str, random_seed=0, device="cpu", *, mode: InductiveMode | None
 ):
     """Run an inverse stability experiment."""
-    dataset_instance: Dataset = get_dataset(
-        dataset=dataset,
-        dataset_kwargs={
-            "create_inverse_triples": True,
-        },
-    )
+    dataset_instance: Dataset = get_dataset(dataset=dataset)
     dataset_name = dataset_instance.get_normalized_name()
     model_cls: type[Model] = model_resolver.lookup(model)
     model_name = model_cls.__name__.lower()
@@ -73,6 +68,7 @@ def run_inverse_stability_workflow(
     pipeline_result = pipeline(
         dataset=dataset_instance,
         model=model,
+        model_kwargs={"use_inverse_triples": True},
         training_loop=training_loop,
         training_kwargs={
             "num_epochs": 1000,

@@ -197,7 +197,7 @@ def _cached_get_dataset(
     force = force or dataset_kwargs.pop("force", False)
 
     # hash kwargs
-    digest = _digest_kwargs(dataset_kwargs, ignore={"create_inverse_triples"})
+    digest = _digest_kwargs(dataset_kwargs)
 
     # normalize dataset name
     dataset_cls = dataset_resolver.lookup(dataset)
@@ -209,11 +209,7 @@ def _cached_get_dataset(
     # try to use cached dataset
     if path.is_dir() and not force:
         logger.info(f"Loading cached preprocessed dataset from {path.as_uri()}")
-        dataset_instance = dataset_cls.from_directory_binary(path)
-        # the cache is shared across create_inverse_triples settings, cf. the ignored key above.
-        # note: we only need to set the flag on the training factory; its setter keeps num_relations in sync.
-        dataset_instance.training.create_inverse_triples = dataset_kwargs.get("create_inverse_triples", False)
-        return dataset_instance
+        return dataset_cls.from_directory_binary(path)
 
     # load dataset without cache
     dataset_instance = dataset_resolver.make(dataset, dataset_kwargs)

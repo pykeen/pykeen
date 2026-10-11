@@ -83,18 +83,17 @@ class WikidataImageCache(WikidataTextCache):
         images: dict[str, dict[str, list[str]]] = {}
         for entry in res_json:
             # entity ID
-            wikidata_id = nested_get(entry, "item", "value", default="")
-            assert isinstance(wikidata_id, str)  # for mypy
+            wikidata_id: str = nested_get(entry, "item", "value", default="")
             wikidata_id = wikidata_id.rsplit("/", maxsplit=1)[-1]
 
             # relation ID
-            relation_id = nested_get(entry, "relation", "value", default="")
-            assert isinstance(relation_id, str)  # for mypy
+            relation_id: str = nested_get(entry, "relation", "value", default="")
             relation_id = relation_id.rsplit("/", maxsplit=1)[-1]
 
             # image URL
-            image_url = nested_get(entry, "image", "value", default=None)
-            assert image_url is not None
+            image_url: str | None = nested_get(entry, "image", "value", default=None)
+            if image_url is None:
+                raise ValueError(f"The SPARQL result for {wikidata_id} has no image URL.")
             images.setdefault(wikidata_id, {}).setdefault(relation_id, []).append(image_url)
 
         # check whether images are still missing

@@ -4,7 +4,7 @@ from pykeen.datasets.inductive.ilp_teru import InductiveFB15k237
 from pykeen.evaluation.rank_based_evaluator import SampledRankBasedEvaluator
 from pykeen.training import SLCWATrainingLoop
 
-dataset = InductiveFB15k237(version="v1", create_inverse_triples=True)
+dataset = InductiveFB15k237(version="v1")
 
 model = ...  # model init here, one of InductiveNodePiece
 optimizer = ...  # some optimizer

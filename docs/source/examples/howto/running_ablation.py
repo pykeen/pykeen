@@ -46,7 +46,7 @@ ablation_pipeline(
     training_loops=["LCWA"],
     optimizers=["Adam"],
     # Add inverse triples with
-    create_inverse_triples=[True, False],
+    use_inverse_triples=[True, False],
     # Fast testing configuration, make bigger in prod
     epochs=1,
     n_trials=1,
@@ -61,7 +61,7 @@ ablation_pipeline(
     losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
     training_loops="LCWA",
     optimizers="Adam",
-    create_inverse_triples=[True, False],
+    use_inverse_triples=[True, False],
     # Fast testing configuration, make bigger in prod
     epochs=1,
     n_trials=1,
@@ -117,7 +117,7 @@ ablation_pipeline(
     losses=["BCEAfterSigmoidLoss", "MarginRankingLoss"],
     training_loops=["LCWA"],
     optimizers=["Adam"],
-    create_inverse_triples=[True, False],
+    use_inverse_triples=[True, False],
     stopper="early",
     stopper_kwargs={
         "frequency": 5,
@@ -197,7 +197,7 @@ ablation_pipeline(
     losses=["BCEAfterSigmoidLoss"],
     training_loops=["lcwa"],
     optimizers=["adam"],
-    create_inverse_triples=[True, False],
+    use_inverse_triples=[True, False],
     stopper="early",
     stopper_kwargs={
         "frequency": 5,

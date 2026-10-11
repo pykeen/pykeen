@@ -1,6 +1,7 @@
 """Tests for uncertainty workflows."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from typing import Any, ClassVar
 
 import pytest
 import torch
@@ -22,7 +23,7 @@ class UncertaintyFailureTest(cases.PredictBaseTestCase):
     """Test for when uncertainty can't be assessed with MC method."""
 
     model_cls = TransE
-    model_kwargs = {}
+    model_kwargs: ClassVar[Mapping[str, Any]] = {}
 
     def test_missing_dropout(self):
         """Test that a value error is run if the model has no dropout."""
@@ -34,7 +35,7 @@ class UncertaintyPredictionTestCase(cases.PredictBaseTestCase):
     """Tests for uncertainty prediction."""
 
     model_cls = ERMLPE  # this model does indeed have dropouts!
-    model_kwargs = {
+    model_kwargs: ClassVar[Mapping[str, Any]] = {
         "embedding_dim": 2,
         "hidden_dim": 3,
     }
@@ -105,7 +106,7 @@ def test_uncertain_prediction_with_inverse_triples(
     columns: list[int],
 ):
     """Test that uncertainty prediction maps relation IDs like its deterministic counterpart."""
-    dataset = Nations(create_inverse_triples=True)
+    dataset = Nations()
     # disable dropout, so that the MC samples coincide with the deterministic prediction
     model = ERMLPE(
         triples_factory=dataset.training,
@@ -114,6 +115,7 @@ def test_uncertain_prediction_with_inverse_triples(
         random_seed=0,
         input_dropout=0.0,
         hidden_dropout=0.0,
+        use_inverse_triples=True,
     )
     batch = dataset.testing.mapped_triples[:3, columns]
     copy = batch.clone()

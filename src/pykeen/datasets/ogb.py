@@ -63,7 +63,6 @@ class OGBLoader(LazyDataset, Generic[PreprocessedTrainDictType, PreprocessedEval
             mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "train")),
             entity_to_id=entity_to_id,
             relation_to_id=relation_to_id,
-            create_inverse_triples=self.create_inverse_triples,
         )
         self._testing = TriplesFactory(
             mapped_triples=self._compose_mapped_triples(data_dict=self._load_data_dict_for_split(dataset, "test")),
@@ -300,7 +299,8 @@ class OGBBioKG(OGBLoader[BioKGTrainDict, BioKGEvalDict]):
         df["entity_type"] = df["entity_type"].astype(self.df_ent["entity_type"].dtype)
         # join with entity mapping
         df = df.merge(self.df_ent, on=["local_entity_id", "entity_type"])
-        assert len(df) == len(local_entity_id)
+        if len(df) != len(local_entity_id):
+            raise ValueError("Expected len(df) == len(local_entity_id).")
         # revert change in order
         df = df.sort_values(by="old_index")
         # select global ID

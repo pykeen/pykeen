@@ -34,18 +34,16 @@ class FixedModel(Model):
 
     hpo_default: ClassVar[Mapping[str, Any]] = {}
 
-    def __init__(self, *, triples_factory: KGInfo, **_kwargs):
+    def __init__(self, *, triples_factory: KGInfo, **kwargs) -> None:
         """
         Initialize the model.
 
         :param triples_factory:
             the (training) triples factory
-        :param _kwargs:
-            ignored keyword-based parameters
+        :param kwargs:
+            additional keyword-based parameters passed to :meth:`Model.__init__`
         """
-        super().__init__(
-            triples_factory=triples_factory,
-        )
+        super().__init__(triples_factory=triples_factory, **kwargs)
         self.num_entities = triples_factory.num_entities
         self.num_relations = triples_factory.num_relations
 

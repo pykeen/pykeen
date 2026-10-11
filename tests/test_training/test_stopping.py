@@ -1,16 +1,16 @@
 """Test that training loops work correctly."""
 
 import unittest
+from typing import ClassVar
 
-import torch
 from torch import optim
 
 from pykeen.datasets import Nations
 from pykeen.models import FixedModel, Model
 from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.training import SLCWATrainingLoop
-from pykeen.triples import TriplesFactory
-from pykeen.typing import MappedTriples
+from pykeen.triples import GroupedSLCWABatch, SLCWABatch, TriplesFactory
+from pykeen.typing import FloatTensor
 from tests.mocks import MockEvaluator
 
 
@@ -23,7 +23,7 @@ class DummyTrainingLoop(SLCWATrainingLoop):
         triples_factory: TriplesFactory,
         sub_batch_size: int,
         automatic_memory_optimization: bool = False,
-    ):
+    ) -> None:
         super().__init__(
             model=model,
             triples_factory=triples_factory,
@@ -34,18 +34,13 @@ class DummyTrainingLoop(SLCWATrainingLoop):
 
     def _process_batch(
         self,
-        batch: MappedTriples,
+        batch: SLCWABatch | GroupedSLCWABatch,
         start: int,
         stop: int,
         label_smoothing: float = 0.0,
         slice_size: int | None = None,
-    ) -> torch.FloatTensor:
+    ) -> FloatTensor:
         assert (stop - start) <= self.sub_batch_size
-
-        # check for empty batches
-        if torch.is_tensor(batch):
-            assert batch[start:stop].shape[0] > 0
-
         return super()._process_batch(
             batch=batch,
             start=start,
@@ -62,22 +57,24 @@ class TestTrainingEarlyStopping(unittest.TestCase):
     #: The window size used by the early stopper
     patience: int = 2
     #: The mock losses the mock evaluator will return
-    mock_losses: list[float] = [10.0, 9.0, 8.0, 8.0, 8.0, 8.0]
+    mock_losses: ClassVar[list[float]] = [10.0, 9.0, 8.0, 8.0, 8.0, 8.0]
     #: The (zeroed) index  - 1 at which stopping will occur
     stop_constant: int = 4
     #: The minimum improvement
     delta: float = 0.0
     #: The best results
-    best_results: list[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
+    best_results: ClassVar[list[float]] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
     def setUp(self):
         """Prepare for testing the early stopper."""
         # Set automatic_memory_optimization to false for tests
         self.mock_evaluator = MockEvaluator(key=None, values=self.mock_losses)
         self.triples_factory = Nations()
+        assert self.triples_factory.validation is not None
         self.model = FixedModel(triples_factory=self.triples_factory.training)
         self.stopper = EarlyStopper(
-            metric=None,
+            # FIXME if you fix the typing here, the tests start failing
+            metric=None,  # type:ignore[arg-type]
             model=self.model,
             evaluator=self.mock_evaluator,
             training_triples_factory=self.triples_factory.training,

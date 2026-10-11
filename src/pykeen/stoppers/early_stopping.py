@@ -1,6 +1,7 @@
 """Implementation of early stopping."""
 
 import dataclasses
+import functools
 import logging
 import math
 import pathlib
@@ -14,6 +15,7 @@ import torch
 from .stopper import Stopper
 from ..constants import PYKEEN_CHECKPOINTS
 from ..evaluation import Evaluator
+from ..evaluation.evaluation_loop import LCWAEvaluationLoop
 from ..models import Model
 from ..trackers import ResultTracker
 from ..triples import CoreTriplesFactory
@@ -116,10 +118,22 @@ class EarlyStoppingLogic:
         return self.remaining_patience == self.patience
 
 
+def _default_best_model_path() -> pathlib.Path:
+    path = PYKEEN_CHECKPOINTS.joinpath(f"best-model-weights-{uuid4()}.pt")
+    logger.info(f"Inferred checkpoint path for best model weights: {path}")
+    return path
+
+
 @fix_dataclass_init_docs
 @dataclass
 class EarlyStopper(Stopper):
-    """A harness for early stopping."""
+    """A harness for early stopping.
+
+    .. note::
+
+        If you want to use inductive modes, then they need to be
+        set during the construction of the ``evaluator``
+    """
 
     #: The model
     model: Model = dataclasses.field(repr=False)
@@ -157,7 +171,7 @@ class EarlyStopper(Stopper):
     #: Did the stopper ever decide to stop?
     stopped: bool = False
     #: The path to the weights of the best model
-    best_model_path: pathlib.Path | None = None
+    best_model_path: pathlib.Path = dataclasses.field(default_factory=_default_best_model_path)
     #: Whether to delete the file with the best model weights after termination
     #: note: the weights will be re-loaded into the model before
     clean_up_checkpoint: bool = True
@@ -165,7 +179,8 @@ class EarlyStopper(Stopper):
     use_tqdm: bool = False
     #: Keyword arguments for the tqdm progress bar
     tqdm_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
-    #: Additional keyword arguments passed to :meth:`~pykeen.evaluation.Evaluator.evaluate`.
+    #: Additional keyword arguments passed to :meth:`~pykeen.evaluation.EvaluationLoop.evaluate`.
+    #: ``targets`` is passed to the constructor of :class:`~pykeen.evaluation.LCWAEvaluationLoop`.
     #: Do not include ``batch_size`` or ``slice_size`` here; use the dedicated fields instead.
     evaluation_kwargs: dict[str, Any] = dataclasses.field(default_factory=dict)
 
@@ -181,13 +196,28 @@ class EarlyStopper(Stopper):
             relative_delta=self.relative_delta,
             larger_is_better=self.larger_is_better,
         )
-        if self.best_model_path is None:
-            self.best_model_path = PYKEEN_CHECKPOINTS.joinpath(f"best-model-weights-{uuid4()}.pt")
-            logger.info(f"Inferred checkpoint path for best model weights: {self.best_model_path}")
         if self.best_model_path.is_file():
             logger.warning(
                 f"Checkpoint path for best weights does already exist ({self.best_model_path}). It will be overwritten."
             )
+
+    @functools.cached_property
+    def evaluation_loop(self) -> LCWAEvaluationLoop:
+        """Return the evaluation loop, which is created lazily on first access.
+
+        Creating the loop builds the filter index over the training and evaluation triples. Doing this lazily avoids
+        paying this cost if the stopper never evaluates, e.g., when ``frequency`` exceeds the number of epochs.
+        """
+        loop_kwargs = {}
+        if "targets" in self.evaluation_kwargs:
+            loop_kwargs["targets"] = self.evaluation_kwargs["targets"]
+        return LCWAEvaluationLoop(
+            model=self.model,
+            triples_factory=self.evaluation_triples_factory,
+            evaluator=self.evaluator,
+            additional_filter_triples=[self.training_triples_factory.mapped_triples],
+            **loop_kwargs,
+        )
 
     @property
     def remaining_patience(self) -> int:
@@ -215,24 +245,14 @@ class EarlyStopper(Stopper):
 
     def should_stop(self, epoch: int) -> bool:
         """Evaluate on a metric and compare to past evaluations to decide if training should stop."""
-        # for mypy
-        assert self.best_model_path is not None
         # Evaluate
-        metric_results = self.evaluator.evaluate(
-            model=self.model,
-            additional_filter_triples=self.training_triples_factory.mapped_triples,
-            mapped_triples=self.evaluation_triples_factory.mapped_triples,
+        metric_results = self.evaluation_loop.evaluate(
             use_tqdm=self.use_tqdm,
             tqdm_kwargs=self.tqdm_kwargs,
             batch_size=self.evaluation_batch_size,
             slice_size=self.evaluation_slice_size,
-            # Only perform time-consuming checks for the first call.
-            do_time_consuming_checks=self.evaluation_batch_size is None,
-            **self.evaluation_kwargs,
+            **{key: value for key, value in self.evaluation_kwargs.items() if key != "targets"},
         )
-        # After the first evaluation pass the optimal batch and slice size is obtained and saved for re-use
-        self.evaluation_batch_size = self.evaluator.batch_size
-        self.evaluation_slice_size = self.evaluator.slice_size
 
         if self.result_tracker is not None:
             self.result_tracker.log_metrics(

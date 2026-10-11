@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
-from typing import Generic, NotRequired, Self, TypedDict, TypeVar
+from collections.abc import Iterable, Iterator, Mapping
+from typing import Any, Generic, NotRequired, Self, TypedDict, TypeVar
 
 import numpy as np
 import scipy.sparse
@@ -103,10 +103,10 @@ class GroupedSLCWABatch(TypedDict):
     pos_weights: NotRequired[FloatTensor]
 
     #: the replacement IDs, keyed by corrupted target, shape: (batch_size, k_target)
-    corruptions: dict[Target, LongTensor]
+    corruptions: Mapping[Target, LongTensor]
 
     #: filtering masks for negative triples, keyed by corrupted target, shape: (batch_size, k_target)
-    masks: NotRequired[dict[Target, BoolTensor]]
+    masks: NotRequired[Mapping[Target, BoolTensor]]
 
     #: sample weights for the negatives, keyed by corrupted target
     neg_weights: NotRequired[dict[Target, FloatTensor]]
@@ -132,6 +132,9 @@ class BaseBatchedSLCWAInstances(
         `batch_sampler` of torch.utils.data.DataLoader` are set to `None`.
     """
 
+    #: the batch size
+    batch_size: int
+
     @update_docstring_with_resolver_keys(
         ResolverKey("negative_sampler", "pykeen.sampling.negative_sampler_resolver"),
         ResolverKey("loss_weighter", "pykeen.triples.weights.loss_weighter_resolver"),
@@ -148,7 +151,7 @@ class BaseBatchedSLCWAInstances(
         loss_weighter: HintOrType[LossWeighter] = None,
         loss_weighter_kwargs: OptionalKwargs = None,
         grouped: bool = False,
-    ):
+    ) -> None:
         """Initialize the dataset.
 
         :param mapped_triples: shape: (num_triples, 3) the mapped triples
@@ -247,12 +250,12 @@ class BaseBatchedSLCWAInstances(
         return num_batches
 
     @classmethod
-    def from_triples_factory(cls, tf: CoreTriplesFactory, create_inverse_triples: bool | None = None, **kwargs) -> Self:
+    def from_triples_factory(cls, tf: CoreTriplesFactory, create_inverse_triples: bool = False, **kwargs) -> Self:
         """Create sLCWA instances for triples factory.
 
         :param tf: The triples factory.
         :param create_inverse_triples:
-            Whether to add inverse triples. If None, defaults to the triples factory's ``create_inverse_triples``.
+            Whether to add inverse triples.
         :param kwargs: Additional keyword-based parameters passed to :meth:`__init__`
 
         :returns: The instances.
@@ -265,8 +268,6 @@ class BaseBatchedSLCWAInstances(
                 raise AssertionError("If shuffle is provided, it must be True.")
         if kwargs.pop("sampler", None):
             raise AssertionError("sampler is not handled in sLCWA instances")
-        if create_inverse_triples is None:
-            create_inverse_triples = tf.create_inverse_triples
 
         return cls(
             mapped_triples=tf._add_inverse_triples_if_necessary(
@@ -281,20 +282,55 @@ class BaseBatchedSLCWAInstances(
 class BatchedSLCWAInstances(BaseBatchedSLCWAInstances):
     """Random pre-batched training instances for the sLCWA training loop."""
 
+    #: the number of iterations started in this (worker) process; used to vary the shared permutation across epochs
+    #: when the data loader's workers are persistent (and thus their base seed does not change between epochs).
+    #: note: this class-level default is shadowed by an instance attribute upon the first increment. This relies on
+    #: each worker process operating on its own copy of the dataset, and starting its iterator exactly once per epoch,
+    #: such that all workers share the same counter value in each epoch.
+    _num_worker_iterations: int = 0
+
     def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
-        yield from data.BatchSampler(
-            sampler=data.RandomSampler(data_source=split_workload(len(self.mapped_triples))),
-            batch_size=self.batch_size,
-            drop_last=self.drop_last,
-        )
+        worker_info = data.get_worker_info()
+        if worker_info is None:
+            # single-process data loading
+            yield from data.BatchSampler(
+                sampler=data.RandomSampler(data_source=range(len(self.mapped_triples))),
+                batch_size=self.batch_size,
+                drop_last=self.drop_last,
+            )
+            return
+
+        # multi-process data loading: to obtain the same batches (in particular, the same number of batches, and at
+        # most one incomplete batch) as for single-process loading, all workers generate the same random permutation
+        # of *all* triple IDs, split it into batches, and each worker only yields its share of these batches.
+        # The workers' seeds are `base_seed + worker_id`, where `base_seed` is drawn anew for each data loader
+        # iterator, cf. https://docs.pytorch.org/docs/stable/data.html#randomness-in-multi-process-data-loading
+        # This means for each epoch, unless `persistent_workers=True`, in which case the workers (and their seeds) are
+        # reused across epochs; hence, we additionally mix in the number of iterations started by this worker.
+        base_seed = worker_info.seed - worker_info.id
+        generator = np.random.default_rng([base_seed, self._num_worker_iterations])
+        self._num_worker_iterations += 1
+        permutation = generator.permutation(len(self.mapped_triples))
+        # batch b consists of the triple IDs permutation[b * batch_size : (b + 1) * batch_size]; __len__ already
+        # accounts for dropping an incomplete last batch.
+        # note: with `in_order=True` (the default), the data loader fetches from the workers in a round-robin fashion;
+        # hence assigning batches round-robin, too, retains the batch order of the shared permutation. With
+        # `in_order=False`, the batches' contents are still the same, but their order may differ.
+        for batch_id in range(worker_info.id, len(self), worker_info.num_workers):
+            yield permutation[batch_id * self.batch_size : (batch_id + 1) * self.batch_size].tolist()
 
 
 class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
     """Pre-batched training instances for SLCWA of coherent subgraphs."""
 
-    def __init__(self, **kwargs):
-        """Initialize the instances.
+    def __init__(self, fraction_visited_candidates: float = 0.9, **kwargs: Any) -> None:
+        r"""Initialize the instances.
 
+        :param fraction_visited_candidates: rejection sampling costs $O(1)$ per draw with an
+            expected $\frac{1}{1 - f}$ draws, where $f$ is the fraction of visited candidates,
+            whereas exact sampling costs $O(n \log n)$ for $n$ candidates, independent of $f$. Both
+            are equal only for $f$ very close to 1. For example, when $f = 0.9$, we switch at most
+            $\frac{1}{1-0.9}=10$ expected draws, to bound the rejection loop.
         :param kwargs: keyword-based parameters passed to :meth:`BaseBatchedSLCWAInstances.__init__`
         """
         super().__init__(**kwargs)
@@ -302,61 +338,134 @@ class SubGraphSLCWAInstances(BaseBatchedSLCWAInstances):
         self.degrees, self.offset, self.neighbors = compute_compressed_adjacency_list(
             mapped_triples=self.mapped_triples
         )
+        # numpy versions for the scalar-heavy sampling loop, cf. subgraph_sample. note: these need to be copies rather
+        # than views, since pickling for data loader workers may move the tensors' storage into shared memory.
+        self._degrees: np.ndarray = self.degrees.numpy().copy()
+        self._offset: np.ndarray = self.offset.numpy().copy()
+        self._entry_edge: np.ndarray = self.neighbors[:, 0].numpy().copy()
+        self._entry_other: np.ndarray = self.neighbors[:, 1].numpy().copy()
+        self._non_isolated: np.ndarray = np.flatnonzero(self._degrees > 0)
+        self.fraction_visited_candidates = fraction_visited_candidates
 
-    def subgraph_sample(self) -> list[int]:
-        """Sample one subgraph."""
-        # initialize
-        node_weights = self.degrees.detach().clone()
-        edge_picked = torch.zeros(self.mapped_triples.shape[0], dtype=torch.bool)
-        node_picked = torch.zeros(self.degrees.shape[0], dtype=torch.bool)
+    def _sample_unvisited_vertex(self, generator: np.random.Generator, visited: set[int]) -> int:
+        """Sample a vertex uniformly among the not yet visited vertices with at least one incident edge."""
+        candidates = self._non_isolated
+        # rejection sampling costs O(1) per draw with an expected 1 / (1 - f) draws, where f is the fraction of visited
+        # candidates, whereas exact sampling costs O(n log n) for n candidates, independent of f. Both are equal only
+        # for f very close to 1; we switch at f = 0.9, i.e., at most 10 expected draws, to bound the rejection loop.
+        if len(visited) <= self.fraction_visited_candidates * len(candidates):
+            while True:
+                vertex = int(candidates[generator.integers(len(candidates))])
+                if vertex not in visited:
+                    return vertex
+        # exact sampling
+        candidates = np.setdiff1d(candidates, np.fromiter(visited, dtype=candidates.dtype, count=len(visited)))
+        if not len(candidates):
+            # cannot happen when requesting at most as many edges as there are, cf. subgraph_sample
+            raise ValueError("There is no unvisited vertex with incident edges left.")
+        return int(candidates[generator.integers(len(candidates))])
 
-        # sample iteratively
-        result = []
-        for _ in range(self.batch_size):
-            # determine weights
-            weights = node_weights * node_picked
+    def subgraph_sample(self, *, size: int | None = None, generator: np.random.Generator | None = None) -> list[int]:
+        """Sample one subgraph.
 
-            if torch.sum(weights) == 0:
-                # randomly choose a vertex which has not been chosen yet
-                pool = (~node_picked).nonzero()
-                chosen_vertex = pool[torch.randint(pool.numel(), size=())]
-            else:
-                # normalize to probabilities
-                probabilities = weights.float() / weights.sum().float()
-                chosen_vertex = torch.multinomial(probabilities, num_samples=1)[0]
+        The subgraph is grown iteratively: in each step, a vertex is chosen among the visited
+        vertices with probability proportional to its number of not yet picked incident edges, and
+        one of these edges is chosen uniformly at random. If no visited vertex has any remaining
+        incident edges, a not yet visited vertex is chosen uniformly at random (among those with at
+        least one incident edge) instead. The other end of the chosen edge becomes visited, too.
 
-            # sample a start node
-            node_picked[chosen_vertex] = True
+        Choosing a vertex proportionally to its number of remaining incident edges, and then one of
+        these uniformly, is the same as choosing uniformly among all remaining *half-edges* (i.e.,
+        adjacency list entries) of visited vertices. Thus, we maintain a pool of half-edges of
+        visited vertices, from which we draw uniformly. Half-edges whose edge has already been
+        picked via its other half are removed lazily when drawn. Since every draw removes one entry
+        from the pool, and each picked edge leaves at most one stale half-edge, sampling a batch
+        requires at most `2 * size` half-edge draws.
 
-            # get list of neighbors
-            start = self.offset[chosen_vertex]
-            chosen_node_degree = self.degrees[chosen_vertex].item()
-            stop = start + chosen_node_degree
-            adj_list = self.neighbors[start:stop, :]
+        :param size: the number of edges to sample; defaults to ``batch_size``. If it exceeds the
+            number of triples, all triples are returned (in the order in which the sampling process
+            picks them).
+        :param generator: a NumPy generator. If not given, is derived from torch's global RNG, such
+            that sampling is reproducible via :func:`torch.manual_seed`, and data loader worker
+            processes, which PyTorch seeds differently, obtain different streams
 
-            # sample an outgoing edge at random which has not been chosen yet using rejection sampling
-            chosen_edge_index = torch.randint(chosen_node_degree, size=(1,))[0]
-            chosen_edge = adj_list[chosen_edge_index]
-            edge_number = chosen_edge[0]
-            while edge_picked[edge_number]:
-                chosen_edge_index = torch.randint(chosen_node_degree, size=(1,))[0]
-                chosen_edge = adj_list[chosen_edge_index]
-                edge_number = chosen_edge[0]
-            result.append(edge_number.item())
+        :returns: the triple IDs of the subgraph's edges, a list of `min(size, num_triples)` unique
+            IDs
 
-            edge_picked[edge_number] = True
+        :raises ValueError: if `size` is negative
+        """
+        if size is None:
+            size = self.batch_size
+        if size < 0:
+            raise ValueError(f"size must be non-negative, but is {size}.")
+        size = min(size, len(self.mapped_triples))
 
-            # visit target node
-            other_vertex = chosen_edge[1]
-            node_picked[other_vertex] = True
+        if generator is None:
+            generator = np.random.default_rng(int(torch.randint(2**62, size=()).item()))
 
-            # decrease sample counts
-            node_weights[chosen_vertex] -= 1
-            node_weights[other_vertex] -= 1
+        degrees, offset, entry_edge, entry_other = self._degrees, self._offset, self._entry_edge, self._entry_other
+
+        # pool[:pool_size] contains the indices of the adjacency list entries of the visited vertices which have not
+        # been drawn yet
+        pool = np.empty_like(entry_edge)
+        pool_size = 0
+        visited: set[int] = set()
+        picked: set[int] = set()
+        result: list[int] = []
+        # draw uniform random numbers in chunks, since per-call overhead dominates for single draws
+        uniforms: list[float] = []
+        while len(result) < size:
+            if not pool_size:
+                vertex = self._sample_unvisited_vertex(generator=generator, visited=visited)
+                visited.add(vertex)
+                start = offset[vertex]
+                pool_size = int(degrees[vertex])
+                pool[:pool_size] = np.arange(start, start + pool_size)
+
+            # choose a half-edge uniformly
+            if not uniforms:
+                uniforms = generator.random(size=size).tolist()
+            i = min(int(uniforms.pop() * pool_size), pool_size - 1)
+            entry = pool[i]
+            # remove it from the pool by swapping in the last element: it is either stale, or gets picked now
+            pool_size -= 1
+            pool[i] = pool[pool_size]
+            edge = int(entry_edge[entry])
+            if edge in picked:
+                continue
+            picked.add(edge)
+            result.append(edge)
+
+            # visit the other end
+            other = int(entry_other[entry])
+            if other not in visited:
+                visited.add(other)
+                start = offset[other]
+                degree = int(degrees[other])
+                pool[pool_size : pool_size + degree] = np.arange(start, start + degree)
+                pool_size += degree
         return result
 
-    def iter_triple_ids(self) -> Iterable[list[int]]:  # noqa: D102
-        yield from (self.subgraph_sample() for _ in split_workload(len(self)))
+    def iter_triple_ids(self) -> Iterable[list[int]]:
+        """Iterate over batches of IDs of positive triples.
+
+        Each batch is an independently sampled subgraph; hence, a triple may occur in multiple
+        batches of an epoch, or not at all. To keep the total number of sampled triples per epoch
+        consistent with :class:`BatchedSLCWAInstances`, there are ``len(self)`` batches of size
+        ``batch_size``, except for the last batch, which has size ``num_triples % batch_size`` if
+        this is non-zero and ``drop_last=False``. This last subgraph is sampled with this smaller
+        size, cf. :meth:`subgraph_sample`. In particular, if ``batch_size`` exceeds the number of
+        triples and ``drop_last=False``, there is a single batch containing all triples.
+
+        For multi-process data loading, the batch indices are partitioned among the workers, such
+        that the batches of all workers add up to the same batches as for single-process loading.
+
+        :yields: the triple IDs of a single batch
+        """
+        num_triples = len(self.mapped_triples)
+        for batch_id in split_workload(len(self)):
+            # the size of the last batch is num_triples % batch_size if it is incomplete (only if not drop_last)
+            yield self.subgraph_sample(size=min(self.batch_size, num_triples - batch_id * self.batch_size))
 
 
 class LCWAInstances(Instances[LCWABatch]):
@@ -433,7 +542,7 @@ class LCWAInstances(Instances[LCWABatch]):
         cls,
         tf: CoreTriplesFactory,
         *,
-        create_inverse_triples: bool | None = None,
+        create_inverse_triples: bool = False,
         target: TargetHint = None,
         loss_weighter: HintOrType[LossWeighter] = None,
         loss_weighter_kwargs: OptionalKwargs = None,
@@ -442,15 +551,13 @@ class LCWAInstances(Instances[LCWABatch]):
 
         :param tf: The triples factory.
         :param create_inverse_triples:
-            Whether to add inverse triples. If None, defaults to the triples factory's ``create_inverse_triples``.
+            Whether to add inverse triples.
         :param target: The column to predict
         :param loss_weighter: The method to determine sample weights.
         :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
 
         :returns: The instances.
         """
-        if create_inverse_triples is None:
-            create_inverse_triples = tf.create_inverse_triples
         return cls.from_triples(
             mapped_triples=tf._add_inverse_triples_if_necessary(
                 mapped_triples=tf.mapped_triples,

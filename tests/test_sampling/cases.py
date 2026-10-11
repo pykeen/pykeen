@@ -1,8 +1,8 @@
 """Test cases for sampling."""
 
 import unittest
-from collections.abc import MutableMapping
-from typing import Any
+from collections.abc import Mapping, MutableMapping
+from typing import Any, ClassVar
 
 import numpy as np
 import torch
@@ -11,7 +11,7 @@ import unittest_templates
 from pykeen.constants import COLUMN_LABELS, TARGET_TO_INDEX
 from pykeen.datasets import Nations
 from pykeen.sampling import NegativeSampler, expand_corruption
-from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer
+from pykeen.sampling.filtering import BloomFilterer, PythonSetFilterer, SortedKeyFilterer
 from pykeen.triples import Instances, TriplesFactory
 from pykeen.triples.instances import BatchedSLCWAInstances
 
@@ -43,7 +43,7 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
     #: A positive batch
     positive_batch: torch.LongTensor
     #: Kwargs
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "num_negs_per_pos": 10,
     }
 
@@ -113,13 +113,10 @@ class NegativeSamplerGenericTestCase(unittest_templates.GenericTestCase[Negative
         instance = self.cls(**self.instance_kwargs, filterer=BloomFilterer)
         self.check_sample(instance)
 
-    def _update_positive_batch(self, positive_batch, batch_filter):
-        # shape: (batch_size, 1, num_neg)
-        positive_batch = positive_batch.unsqueeze(dim=1)
-
-        if batch_filter is not None:
-            positive_batch = positive_batch[batch_filter]
-        return positive_batch
+    def test_sample_sorted_key_filtered(self):
+        """Test generating a negative sample with sorted key-based filtering."""
+        instance = self.cls(**self.instance_kwargs, filterer=SortedKeyFilterer)
+        self.check_sample(instance)
 
     def test_small_batch(self):
         """Test on a small batch."""

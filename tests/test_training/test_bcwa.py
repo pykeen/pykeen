@@ -12,7 +12,7 @@ from pykeen.models.mocks import FixedModel
 from pykeen.training import bcwa
 from pykeen.triples.instances import BatchCWABatch
 from pykeen.triples.weights import RelationLossWeighter
-from pykeen.typing import LongTensor
+from pykeen.typing import LongTensor, Target, TargetColumn
 
 
 @pytest.fixture
@@ -115,8 +115,8 @@ def test_collator_weights() -> None:
 
 def test_inverse_triples() -> None:
     """Test that the data loader uses internal relation IDs, including the inverse relations."""
-    triples_factory = Nations(create_inverse_triples=True).training
-    model = DistMult(triples_factory=triples_factory)
+    triples_factory = Nations().training
+    model = DistMult(triples_factory=triples_factory, use_inverse_triples=True)
     loop = bcwa.BatchCWATrainingLoop(model=model, triples_factory=triples_factory)
     loader = loop._create_training_data_loader(
         triples_factory, sampler=None, batch_size=len(triples_factory.mapped_triples) * 2, drop_last=False
@@ -129,6 +129,7 @@ def test_inverse_triples() -> None:
 @pytest.mark.parametrize("loss_cls", [BCEWithLogitsLoss, CrossEntropyLoss])
 def test_process_bcwa_scores(loss_cls: type[Loss], generator: torch.Generator) -> None:
     """Test that BCWA scores are processed like LCWA scores for each (head, relation)-pair."""
+    num_entities = 5
     loss = loss_cls()
     predictions = torch.rand(3, 2, 5, generator=generator)
     targets = torch.as_tensor([[0, 0, 1], [0, 0, 3], [2, 1, 4]])
@@ -138,7 +139,7 @@ def test_process_bcwa_scores(loss_cls: type[Loss], generator: torch.Generator) -
     if not loss.bcwa_keep_rows_without_positives:
         mask = labels_2d.any(dim=-1)
         predictions_2d, labels_2d = predictions_2d[mask], labels_2d[mask]
-    expected = loss.process_lcwa_scores(predictions=predictions_2d, labels=labels_2d)
+    expected = loss.process_lcwa_scores(predictions=predictions_2d, labels=labels_2d, num_entities=num_entities)
     assert torch.allclose(loss.process_bcwa_scores(predictions=predictions, positives=targets), expected)
 
 
@@ -152,7 +153,7 @@ def _batch_gradients(
 
 @pytest.mark.parametrize("loss_cls", [BCEWithLogitsLoss, CrossEntropyLoss])
 @pytest.mark.parametrize("target", ["head", "relation", "tail"])
-def test_slicing(target: str, loss_cls: type[Loss]) -> None:
+def test_slicing(target: Target, loss_cls: type[Loss]) -> None:
     """Test that slicing does not change the gradients."""
     triples_factory = Nations().training
     model = TransE(triples_factory=triples_factory, loss=loss_cls(), random_seed=0)
@@ -175,7 +176,7 @@ def test_slicing(target: str, loss_cls: type[Loss]) -> None:
 
 
 @pytest.mark.parametrize("target", [0, 1, 2])
-def test_target(target: int) -> None:
+def test_target(target: TargetColumn) -> None:
     """Test the loss for each target against a reference which scores each triple individually."""
     triples_factory = Nations().training
     model = TransE(triples_factory=triples_factory, loss=CrossEntropyLoss(), random_seed=0)
@@ -211,14 +212,16 @@ def test_schlichtkrull_sampler() -> None:
     model = DistMult(triples_factory=triples_factory)
     loop = bcwa.BatchCWATrainingLoop(model=model, triples_factory=triples_factory)
     losses = loop.train(triples_factory=triples_factory, num_epochs=1, batch_size=64, sampler="schlichtkrull")
+    assert losses is not None
     assert len(losses) == 1
 
 
 def test_requires_er_model() -> None:
     """Test that a model which is not an ERModel is rejected."""
     triples_factory = Nations().training
-    with pytest.raises(TypeError):
-        bcwa.BatchCWATrainingLoop(model=FixedModel(triples_factory=triples_factory), triples_factory=triples_factory)
+    model = FixedModel(triples_factory=triples_factory)
+    with pytest.raises(TypeError, match="requires an ERModel"):
+        bcwa.BatchCWATrainingLoop(model=model, triples_factory=triples_factory)
 
 
 def test_unknown_batch_triples() -> None:

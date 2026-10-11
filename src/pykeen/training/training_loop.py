@@ -58,12 +58,18 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+#: the default checkpoint frequency (in minutes)
+_DEFAULT_CHECKPOINT_FREQUENCY = 30
+
 BatchType = TypeVar("BatchType")
 P = ParamSpec("P")
 R = TypeVar("R")
 
 #: whether :func:`torch.load` supports memory-mapping, which was added in torch 2.1
 _TORCH_LOAD_SUPPORTS_MMAP = "mmap" in inspect.signature(torch.load).parameters
+
+#: the version of :attr:`TrainingLoop.checksum` stored in checkpoints; checkpoints without one use the legacy checksum
+CHECKSUM_VERSION = 2
 
 
 class NonFiniteLossError(RuntimeError):
@@ -144,6 +150,21 @@ def _make_optimizer_and_lr_scheduler(
     return optimizer_instance, lr_scheduler_instance
 
 
+def _config_repr(value: Any) -> str:
+    """Return a representation of a configuration value which is stable across Python sessions.
+
+    The default representation of functions, e.g., the ``lr_lambda`` of :class:`torch.optim.lr_scheduler.LambdaLR`,
+    contains their memory address, and is thus replaced by their qualified name.
+    """
+    if isinstance(value, Mapping):
+        return "{" + ", ".join(f"{key!r}: {_config_repr(v)}" for key, v in sorted(value.items())) + "}"
+    if isinstance(value, list | tuple):
+        return "[" + ", ".join(map(_config_repr, value)) + "]"
+    if callable(value):
+        return getattr(value, "__qualname__", type(value).__qualname__)
+    return repr(value)
+
+
 def _restore_state_after_probing(
     func: "Callable[Concatenate[TrainingLoop, P], R]",
 ) -> "Callable[Concatenate[TrainingLoop, P], R]":
@@ -200,9 +221,12 @@ class TrainingLoop(ABC, Generic[BatchType]):
     #: whether the current optimizer has already been used for training
     _optimizer_used: bool
 
+    #: the LR scheduler's configuration, which is part of the checksum
+    _lr_scheduler_config: str
+
     losses_per_epochs: list[float]
 
-    hpo_default = {
+    hpo_default: ClassVar[Mapping[str, Any]] = {
         "num_epochs": {"type": int, "low": 100, "high": 1000, "q": 100},
         "batch_size": {"type": int, "low": 4, "high": 12, "scale": "power_two"},  # [16, 4096]
     }
@@ -268,6 +292,16 @@ class TrainingLoop(ABC, Generic[BatchType]):
         # that clearing the optimizer releases the instances.
         pre_instantiated = isinstance(optimizer, Optimizer) or isinstance(lr_scheduler, LRScheduler)
         self._optimizer_factory = None if pre_instantiated else factory
+        # the LR scheduler's state mixes its configuration with its training progress, so the configuration is taken
+        # from the constructor parameters instead, which are unknown for a pre-instantiated LR scheduler
+        if self.lr_scheduler is None:
+            self._lr_scheduler_config = str(None)
+        elif isinstance(lr_scheduler, LRScheduler):
+            self._lr_scheduler_config = self.lr_scheduler.__class__.__name__
+        else:
+            self._lr_scheduler_config = (
+                f"{self.lr_scheduler.__class__.__name__}({_config_repr(lr_scheduler_kwargs or {})})"
+            )
         self.losses_per_epochs = []
         self._should_stop = False
         self.automatic_memory_optimization = automatic_memory_optimization
@@ -316,7 +350,29 @@ class TrainingLoop(ABC, Generic[BatchType]):
 
     @property
     def checksum(self) -> str:
-        """The checksum of the model and optimizer the training loop was configured with."""
+        """The checksum of the model, optimizer, and LR scheduler the training loop was configured with.
+
+        For the optimizer, only its class and default hyperparameters are considered, since its parameter groups are
+        modified during training, e.g., by learning rate schedulers. For the LR scheduler, its class and constructor
+        parameters are considered; the latter only if the LR scheduler was not passed pre-instantiated.
+        """
+        h = md5()  # noqa: S324
+        h.update(str(self.model).encode("utf-8"))
+        if self.optimizer is not None:
+            # the optimizer's defaults are its constructor arguments (merged with the class' default values), which are,
+            # unlike the parameter groups, not modified during training
+            optimizer_config = f"{self.optimizer.__class__.__name__}({sorted(self.optimizer.defaults.items())})"
+            h.update(optimizer_config.encode("utf-8"))
+        h.update(self._lr_scheduler_config.encode("utf-8"))
+        return h.hexdigest()
+
+    @property
+    def _legacy_checksum(self) -> str:
+        """The checksum used by checkpoints without a ``checksum_version``.
+
+        It is calculated from the optimizer's string representation, which includes the current learning rate. Thus,
+        it only matches after the optimizer and LR scheduler state have been restored from the checkpoint.
+        """
         h = md5()  # noqa: S324
         h.update(str(self.model).encode("utf-8"))
         h.update(str(self.optimizer).encode("utf-8"))
@@ -387,7 +443,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
         :param checkpoint_name: The filename for saving checkpoints. If the given filename exists already, that file
             will be loaded and used to continue training.
         :param checkpoint_frequency: The frequency of saving checkpoints in minutes. Setting it to 0 will save a
-            checkpoint after every epoch.
+            checkpoint after every epoch. Defaults to 30 minutes if a checkpoint name is given.
         :param checkpoint_on_failure: Whether to save a checkpoint in cases of a RuntimeError or MemoryError. This
             option differs from ordinary checkpoints, since ordinary checkpoints are only saved after a successful
             epoch. When saving checkpoints due to failure of the training loop there is no guarantee that all random
@@ -451,9 +507,6 @@ class TrainingLoop(ABC, Generic[BatchType]):
                 continue_training = True
             else:
                 logger.info(f"=> no checkpoint found at '{checkpoint_path}'. Creating a new file.")
-            # The checkpoint frequency needs to be set to save checkpoints
-            if checkpoint_frequency is None:
-                checkpoint_frequency = 30
             save_checkpoints = True
         elif checkpoint_frequency is not None:
             logger.warning(
@@ -516,7 +569,9 @@ class TrainingLoop(ABC, Generic[BatchType]):
                     num_workers=num_workers,
                     save_checkpoints=save_checkpoints,
                     checkpoint_path=checkpoint_path,
-                    checkpoint_frequency=checkpoint_frequency,
+                    checkpoint_frequency=(
+                        _DEFAULT_CHECKPOINT_FREQUENCY if checkpoint_frequency is None else checkpoint_frequency
+                    ),
                     checkpoint_on_failure_file_path=checkpoint_on_failure_file_path,
                     best_epoch_model_file_path=best_epoch_model_file_path,
                     last_best_epoch=last_best_epoch,
@@ -651,15 +706,23 @@ class TrainingLoop(ABC, Generic[BatchType]):
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
         # When using early stopping models have to be saved separately at the best epoch, since the training loop will
         # due to the patience continue to train after the best epoch and thus alter the model
-        # -> the temporay file has to be created outside, which we assert here
-        if stopper is not None and not only_size_probing and last_best_epoch is None:
-            assert best_epoch_model_file_path is not None
+        # -> the temporay file has to be created outside, which we check here
+        if (
+            stopper is not None
+            and not only_size_probing
+            and last_best_epoch is None
+            and best_epoch_model_file_path is None
+        ):
+            raise ValueError("best_epoch_model_file_path must not be None when using early stopping.")
 
         if isinstance(self.model, RGCN) and sampler != "schlichtkrull":
             logger.warning(
                 'Using RGCN without graph-based sampling! Please select sampler="schlichtkrull" instead of %s.',
                 sampler,
             )
+
+        if checkpoint_frequency is None:
+            checkpoint_frequency = _DEFAULT_CHECKPOINT_FREQUENCY
 
         # Prepare all of the callbacks
         callback = MultiTrainingCallback(callbacks=callbacks, callbacks_kwargs=callbacks_kwargs)
@@ -869,7 +932,6 @@ class TrainingLoop(ABC, Generic[BatchType]):
 
             # If a checkpoint file is given, we check whether it is time to save a checkpoint
             if save_checkpoints and checkpoint_path is not None:
-                assert checkpoint_frequency is not None
                 minutes_since_last_checkpoint = (time.time() - last_checkpoint) // 60
                 # MyPy overrides are because you should
                 if minutes_since_last_checkpoint >= checkpoint_frequency or self._should_stop or epoch == num_epochs:
@@ -1302,6 +1364,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
                 "optimizer_state_dict": self.optimizer.state_dict(),
                 "lr_scheduler_state_dict": lr_scheduler_state_dict,
                 "checksum": self.checksum,
+                "checksum_version": CHECKSUM_VERSION,
                 "random_seed": self.model._random_seed,
                 "stopper_dict": stopper_dict,
                 "random_state": random.getstate(),
@@ -1343,7 +1406,9 @@ class TrainingLoop(ABC, Generic[BatchType]):
 
         logger.info(f"=> loading checkpoint '{path}'")
         checkpoint = torch.load(path, weights_only=False)
-        if checkpoint["checksum"] != self.checksum:
+        # legacy checkpoints can only be verified after the optimizer state has been restored, cf. _legacy_checksum
+        is_legacy = checkpoint.get("checksum_version") is None
+        if not is_legacy and checkpoint["checksum"] != self.checksum:
             raise CheckpointMismatchError(
                 f"The checkpoint file '{path}' that was provided already exists, but seems to be "
                 f"from a different training loop setup.",
@@ -1410,6 +1475,11 @@ class TrainingLoop(ABC, Generic[BatchType]):
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if self.lr_scheduler is not None:
             self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
+        if is_legacy and checkpoint["checksum"] != self._legacy_checksum:
+            raise CheckpointMismatchError(
+                f"The checkpoint file '{path}' that was provided already exists, but seems to be "
+                f"from a different training loop setup.",
+            )
         random.setstate(checkpoint["random_state"])
         np.random.set_state(checkpoint["np_random_state"])  # noqa: NPY002
         torch.random.set_rng_state(checkpoint["torch_random_state"])

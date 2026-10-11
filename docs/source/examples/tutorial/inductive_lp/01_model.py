@@ -4,7 +4,7 @@ from pykeen.datasets.inductive.ilp_teru import InductiveFB15k237
 from pykeen.losses import NSSALoss
 from pykeen.models.inductive import InductiveNodePiece
 
-dataset = InductiveFB15k237(version="v1", create_inverse_triples=True)
+dataset = InductiveFB15k237(version="v1")
 
 model = InductiveNodePiece(
     triples_factory=dataset.transductive_training,  # training factory, used to tokenize training nodes
@@ -13,4 +13,5 @@ model = InductiveNodePiece(
     aggregation="mlp",  # aggregation function, defaults to an MLP, can be any PyTorch function
     loss=NSSALoss(margin=15),  # dummy loss
     random_seed=42,
+    use_inverse_triples=True,
 )

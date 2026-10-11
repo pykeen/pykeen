@@ -50,6 +50,7 @@ _SKIP_ANNOTATIONS = {
 }
 _SKIP_EXTRANEOUS = {
     "predict_with_sigmoid",
+    "use_inverse_triples",
 }
 
 

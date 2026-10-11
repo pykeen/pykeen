@@ -10,10 +10,7 @@ from pykeen.nn.init import LabelBasedInitializer
 from pykeen.pipeline import pipeline
 from pykeen.triples.triples_factory import TriplesFactory
 
-dataset = get_dataset(
-    dataset="nations",
-    dataset_kwargs={"create_inverse_triples": True},
-)
+dataset = get_dataset(dataset="nations")
 triples_factory = dataset.training
 # build initializer with encoding of entity labels
 assert isinstance(triples_factory, TriplesFactory)
@@ -27,6 +24,7 @@ pipeline(
     model=ERModel,
     model_kwargs={
         "interaction": "distmult",
+        "use_inverse_triples": True,
         "entity_representations": "SimpleMessagePassing",
         "entity_representations_kwargs": {
             "triples_factory": triples_factory,

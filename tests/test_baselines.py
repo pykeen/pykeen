@@ -1,5 +1,8 @@
 """Test non-parametric baseline models."""
 
+from collections.abc import Mapping
+from typing import Any, ClassVar
+
 import torch
 
 import pykeen.models
@@ -21,7 +24,7 @@ class MarginalDistributionBaselineTests(cases.EvaluationOnlyModelTestCase):
 class OnlyRelationMarginalDistributionBaselineTests(MarginalDistributionBaselineTests):
     """Tests for MarginalDistributionBaseline using only the relation margin."""
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "entity_margin": False,
         "relation_margin": True,
     }
@@ -30,7 +33,7 @@ class OnlyRelationMarginalDistributionBaselineTests(MarginalDistributionBaseline
 class OnlyEntityMarginalDistributionBaselineTests(MarginalDistributionBaselineTests):
     """Tests for MarginalDistributionBaseline using only the entity margin."""
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "entity_margin": True,
         "relation_margin": False,
     }
@@ -39,7 +42,7 @@ class OnlyEntityMarginalDistributionBaselineTests(MarginalDistributionBaselineTe
 class TrivialMarginalDistributionBaselineTests(MarginalDistributionBaselineTests):
     """Tests for MarginalDistributionBaseline not actually using a marginal distribution."""
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "entity_margin": False,
         "relation_margin": False,
     }

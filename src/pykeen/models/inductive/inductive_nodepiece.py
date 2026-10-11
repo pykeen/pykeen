@@ -143,9 +143,11 @@ class InductiveNodePiece(InductiveERModel):
         #   trainable parameters
         np: NodePieceRepresentation = self.entity_representations[0]
         for representations in self._mode_to_representations.values():
-            assert len(representations) == 1
+            if len(representations) != 1:
+                raise ValueError("Expected len(representations) == 1.")
             np2 = representations[0]
-            assert isinstance(np2, NodePieceRepresentation)
+            if not isinstance(np2, NodePieceRepresentation):
+                raise TypeError(f"Expected np2 to be of type NodePieceRepresentation, but got {type(np2).__name__}.")
             np2.combination = np.combination
 
     def create_entity_representation_for_new_triples(
@@ -164,26 +166,35 @@ class InductiveNodePiece(InductiveERModel):
             a new NodePiece entity representation with shared relation tokenization and aggregation.
 
         :raises ValueError:
-            if the triples factory does not request inverse triples, or the number of relations differs.
+            if the number of relations differs.
         """
-        if triples_factory.num_relations != self.num_relations:
-            raise ValueError(f"{self.num_relations=} != {triples_factory.num_relations=} !")
+        if triples_factory.real_num_relations != self.num_real_relations:
+            raise ValueError(f"{self.num_real_relations=} != {triples_factory.real_num_relations=} !")
         # note: we cannot ensure the mapping also matches...
 
         # get relation representations
         relation_repr = more_itertools.one(self.relation_representations)
-        assert isinstance(relation_repr, SubsetRepresentation)
+        if not isinstance(relation_repr, SubsetRepresentation):
+            raise TypeError(
+                f"Expected relation_repr to be of type SubsetRepresentation, but got {type(relation_repr).__name__}."
+            )
         relation_repr = relation_repr.base
 
         # get combination
         np = more_itertools.one(self.entity_representations)
-        assert isinstance(np, NodePieceRepresentation)
+        if not isinstance(np, NodePieceRepresentation):
+            raise TypeError(f"Expected np to be of type NodePieceRepresentation, but got {type(np).__name__}.")
         combination = np.combination
-        assert isinstance(combination, ConcatAggregationCombination)
+        if not isinstance(combination, ConcatAggregationCombination):
+            raise TypeError(
+                f"Expected combination to be of type ConcatAggregationCombination, "
+                f"but got {type(combination).__name__}."
+            )
 
         # get token representations
         tr = more_itertools.one(np.base)
-        assert isinstance(tr, TokenizationRepresentation)
+        if not isinstance(tr, TokenizationRepresentation):
+            raise TypeError(f"Expected tr to be of type TokenizationRepresentation, but got {type(tr).__name__}.")
         num_tokens = tr.num_tokens
 
         # relation representations are shared

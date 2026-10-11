@@ -40,9 +40,10 @@ MODEL_CLASSES = [DistMult, UM]
 def model(request) -> ERModel:
     """Return a small model with deterministic parameters."""
     return request.param(
-        triples_factory=KGInfo(num_entities=NUM_ENTITIES, num_relations=NUM_RELATIONS, create_inverse_triples=False),
+        triples_factory=KGInfo(num_entities=NUM_ENTITIES, num_relations=NUM_RELATIONS),
         embedding_dim=8,
         random_seed=42,
+        use_inverse_triples=False,
     ).eval()
 
 
@@ -144,7 +145,8 @@ def test_score_dispatch(model: ERModel, hrt_batch: LongTensor, target: Target, p
 def test_score_invalid_target(model: ERModel, hrt_batch: LongTensor) -> None:
     """Test that an invalid target is rejected."""
     with pytest.raises(ValueError, match="nope"):
-        model.score(hrt_batch, target="nope")
+        # Deliberately invalid target, to test the error path.
+        model.score(hrt_batch, target="nope")  # type: ignore[arg-type]
 
 
 class TestScoringBatch:
@@ -192,7 +194,7 @@ class TestScoringBatch:
         indices = {label: self._index(BATCH_SIZE) for label in TARGETS if label != target}
         batch = TargetScoringBatch.from_transposed_batch(**indices, **{target: None}, target=target)
         for label, index in zip(TARGETS, batch.lookup_indices, strict=True):
-            assert index is None if label == target else index.shape == (BATCH_SIZE, 1)
+            assert index is None if label == target else index is not None and index.shape == (BATCH_SIZE, 1)
 
     def test_with_target_ids(self) -> None:
         """Test replacing the target's index tensor."""
@@ -227,7 +229,8 @@ class TestScoringBatch:
                 head=self._index(BATCH_SIZE),
                 relation=self._index(BATCH_SIZE),
                 tail=self._index(BATCH_SIZE),
-                target="nope",
+                # Deliberately invalid target, to test the error path.
+                target="nope",  # type: ignore[arg-type]
             )
 
     def test_non_broadcastable(self) -> None:

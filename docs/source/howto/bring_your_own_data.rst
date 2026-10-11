@@ -29,8 +29,8 @@ This is equally applicable for the :func:`~pykeen.hpo.hpo_pipeline`, which has a
 The remainder of the examples will be for :func:`~pykeen.pipeline.pipeline`, but all work exactly the same for
 :func:`~pykeen.hpo.hpo_pipeline`.
 
-If you want to add dataset-wide arguments, you can use the ``dataset_kwargs`` argument to the
-:class:`~pykeen.pipeline.pipeline` to enable options like ``create_inverse_triples=True``.
+If you want to pass additional arguments to the model, you can use the ``model_kwargs`` argument to the
+:class:`~pykeen.pipeline.pipeline`, e.g., to explicitly model inverse relations with ``use_inverse_triples=True``.
 
 .. literalinclude:: ../examples/howto/bring_your_own_data.py
     :lines: 30-37
@@ -49,11 +49,11 @@ can use the :class:`~pykeen.triples.TriplesFactory` interface.
     reuse it. If we didn't have the same identifiers, then the testing set would get mixed up with the wrong identifiers
     in the training set during evaluation, and we'd get nonsense results.
 
-The ``dataset_kwargs`` argument is ignored when passing your own :class:`~pykeen.triples.TriplesFactory`, so be sure to
-include the ``create_inverse_triples=True`` in the instantiation of those classes if that's your desired behavior as in:
+Whether inverse relations are used is decided by the model, not by the :class:`~pykeen.triples.TriplesFactory`, so the
+same ``model_kwargs`` also work when passing your own triples factories:
 
 .. literalinclude:: ../examples/howto/bring_your_own_data.py
-    :lines: 55-71
+    :lines: 55-68
 
 Triples factories can also be instantiated using the ``triples`` keyword argument instead of the ``path`` argument if
 you already have triples loaded in a :class:`numpy.ndarray`.
@@ -65,13 +65,13 @@ It's more realistic your real-world dataset is not already stratified into train
 covered with :func:`~pykeen.triples.CoreTriplesFactory.split`, which will allow you to create a stratified dataset.
 
 .. literalinclude:: ../examples/howto/bring_your_own_data.py
-    :lines: 74-82
+    :lines: 71-79
 
 By default, this is an 80/20 split. If you want to use early stopping, you'll also need a validation set, so you should
 specify the splits:
 
 .. literalinclude:: ../examples/howto/bring_your_own_data.py
-    :lines: 85-96
+    :lines: 82-93
 
 Bring Your Own Data with Checkpoints
 ------------------------------------

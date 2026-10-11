@@ -252,9 +252,7 @@ def _make_dim_divisible(dim: int, divisor: int, name: str) -> int:
     dim_div, remainder = divmod(dim, divisor)
     if remainder:
         logger.warning(f"{name}={dim} not divisible by {divisor}.")
-    dim = dim_div * divisor
-    assert dim % divisor == 0
-    return dim
+    return dim_div * divisor
 
 
 def _pad_if_necessary(x: torch.Tensor, dim: int) -> torch.Tensor:
@@ -440,7 +438,7 @@ class RGCNLayer(nn.Module):
             The keyword-based arguments passed to the decomposition for instantiation.
         """
         super().__init__()
-        # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/message_gcns/gcn_basis.py#L22-L24  # noqa: E501
+        # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/encoders/message_gcns/gcn_basis.py#L22-L24
         # there are separate decompositions for forward and backward relations.
         # the self-loop weight is not decomposed.
         self.fwd = decomposition_resolver.make(
@@ -618,10 +616,6 @@ class RGCNRepresentation(Representation):
             raise ValueError(
                 f"max_id={max_id} differs from triples_factory.num_entities={triples_factory.num_entities}"
             )
-        if triples_factory.create_inverse_triples:
-            raise ValueError(
-                "RGCN internally creates inverse triples. It thus expects a triples factory without them.",
-            )
 
         # has to be imported now to avoid cyclic imports
         from . import representation_resolver
@@ -663,7 +657,7 @@ class RGCNRepresentation(Representation):
                 output_dim=dim,
                 use_bias=use_bias,
                 # no activation on last layer
-                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/common/model_builder.py#L275  # noqa: E501
+                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/common/model_builder.py#L275
                 activation=activation if i < num_layers - 1 else None,
                 activation_kwargs=activation_kwargs,
                 self_loop_dropout=self_loop_dropout,

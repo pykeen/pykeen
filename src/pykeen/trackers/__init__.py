@@ -6,7 +6,6 @@ from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs
 from .base import ConsoleResultTracker, MultiResultTracker, PythonResultTracker, ResultTracker, TrackerHint
 from .file import CSVResultTracker, FileResultTracker, JSONResultTracker
 from .mlflow import MLFlowResultTracker
-from .neptune import NeptuneResultTracker
 from .tensorboard import TensorBoardResultTracker
 from .wandb import WANDBResultTracker
 
@@ -17,7 +16,6 @@ __all__ = [
     "JSONResultTracker",
     "MLFlowResultTracker",
     "MultiResultTracker",
-    "NeptuneResultTracker",
     "PythonResultTracker",
     "ResultTracker",
     "TensorBoardResultTracker",

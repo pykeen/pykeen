@@ -17,7 +17,8 @@ try:
     LIT_MODULES = sorted(lit_module_resolver.lookup_dict.keys())
 except ImportError:
     LIT_MODULES = []
-    lit_pipeline = None
+    # Placeholder when the optional lightning dependency is missing; the tests using it are skipped.
+    lit_pipeline = None  # type: ignore[assignment]
 
 
 EMBEDDING_DIM = 8
@@ -72,9 +73,9 @@ TEST_CONFIGURATIONS = [
 @pytest.mark.parametrize(("model", "model_kwargs", "training_loop"), TEST_CONFIGURATIONS)
 def test_lit_training(model, model_kwargs, training_loop):
     """Test training models with PyTorch Lightning."""
+    dataset = get_dataset(dataset="nations")
     # some models require inverse relations
-    create_inverse_triples = model is not models.RGCN
-    dataset = get_dataset(dataset="nations", dataset_kwargs={"create_inverse_triples": create_inverse_triples})
+    model_kwargs = {**model_kwargs, "use_inverse_triples": model is not models.RGCN}
 
     # some model require access to the training triples
     if "triples_factory" in model_kwargs:

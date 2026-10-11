@@ -162,7 +162,7 @@ class ConsoleResultTracker(ResultTracker):
         if not self.track_parameters:
             return
 
-        for key, value in flatten_dictionary(dictionary=params).items():
+        for key, value in flatten_dictionary(dictionary=params, prefix=prefix).items():
             if not self.parameter_filter or self.parameter_filter.match(key):
                 self.write(f"Parameter: {key} = {value}")
 

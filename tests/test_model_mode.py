@@ -2,14 +2,14 @@
 
 import unittest
 from collections.abc import Callable
-from dataclasses import dataclass
 
 import torch
 
 from pykeen.datasets import Nations
 from pykeen.models import FixedModel, Model, TransE
 from pykeen.triples import TriplesFactory
-from pykeen.typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, Target
+from pykeen.triples.triples_factory import KGInfo
+from pykeen.typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, TargetColumn
 from pykeen.utils import extend_batch, resolve_device
 
 
@@ -80,11 +80,11 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
     def setUp(self):
         """Prepare for testing the scoring functions."""
         self.generator = torch.random.manual_seed(seed=42)
-        self.triples_factory = MinimalTriplesFactory
+        self.triples_factory = KGInfo(num_entities=2, num_relations=2)
         self.device = resolve_device()
         self.model = FixedModel(triples_factory=self.triples_factory).to(self.device)
 
-    def _test(self, score_func: Callable, dim: Target) -> None:
+    def _test(self, score_func: Callable, dim: TargetColumn) -> None:
         """Check whether the output of optimized function matches the output of a repeated batch.
 
         .. note::
@@ -116,12 +116,3 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
     def test_alignment_of_score_r_fall_back(self) -> None:
         """Test if ``BaseModule.score_r`` aligns with ``BaseModule.score_hrt``."""
         self._test(score_func=self.model.score_r, dim=COLUMN_RELATION)
-
-
-@dataclass
-class MinimalTriplesFactory:
-    """A triples factory with minial attributes to allow the model to initiate."""
-
-    num_entities = 2
-    num_relations = real_num_relations = 2
-    create_inverse_triples: bool = False

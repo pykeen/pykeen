@@ -30,8 +30,8 @@ hpo_pipeline_result.save_to_directory("doctests/test_hpo_pre_stratified_transe")
 result = pipeline(
     training=NATIONS_TRAIN_PATH,
     testing=NATIONS_TEST_PATH,
-    dataset_kwargs={"create_inverse_triples": True},
     model="TransE",
+    model_kwargs={"use_inverse_triples": True},
     epochs=5,  # short epochs for testing - you should go higher
 )
 result.save_to_directory("doctests/test_pre_stratified_transe_inverse")
@@ -52,20 +52,17 @@ result = pipeline(
 result.save_to_directory("doctests/test_pre_stratified_transe_factory")
 
 # %%
-training = TriplesFactory.from_path(
-    NATIONS_TRAIN_PATH,
-    create_inverse_triples=True,
-)
+training = TriplesFactory.from_path(NATIONS_TRAIN_PATH)
 testing = TriplesFactory.from_path(
     NATIONS_TEST_PATH,
     entity_to_id=training.entity_to_id,
     relation_to_id=training.relation_to_id,
-    create_inverse_triples=True,
 )
 result = pipeline(
     training=training,
     testing=testing,
     model="TransE",
+    model_kwargs={"use_inverse_triples": True},
     epochs=5,  # short epochs for testing - you should go higher
 )
 result.save_to_directory("doctests/test_pre_stratified_transe_factory_inverse")

@@ -10,9 +10,8 @@ embedding models that has some nice features:
 
     model = LitLCWAModule(
         dataset="fb15k237",
-        dataset_kwargs=dict(create_inverse_triples=True),
         model="mure",
-        model_kwargs=dict(embedding_dim=128, loss="bcewithlogits"),
+        model_kwargs=dict(embedding_dim=128, loss="bcewithlogits", use_inverse_triples=True),
         batch_size=128,
     )
     trainer = pytorch_lightning.Trainer(
@@ -296,7 +295,7 @@ def lit_pipeline(
 def _main(
     training_loop: HintOrType[LitModule],
     dataset: HintOrType[Dataset],
-    create_inverse_triples: bool,
+    use_inverse_triples: bool | None,
     model: HintOrType[Model],
     loss: HintOrType[Loss],
     batch_size: int,
@@ -305,13 +304,19 @@ def _main(
     number_epochs: int,
 ) -> None:
     """Run PyTorch lightning model."""
+    model_kwargs = {
+        "embedding_dim": embedding_dim,
+        "loss": loss,
+    }
+    if use_inverse_triples is not None:
+        model_kwargs["use_inverse_triples"] = use_inverse_triples
+
     lit_pipeline(
         training_loop=training_loop,
         training_loop_kwargs={
             "dataset": dataset,
-            "dataset_kwargs": {"create_inverse_triples": create_inverse_triples},
             "model": model,
-            "model_kwargs": {"embedding_dim": embedding_dim, "loss": loss},
+            "model_kwargs": model_kwargs,
             "batch_size": batch_size,
         },
         trainer_kwargs={

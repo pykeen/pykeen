@@ -1,7 +1,7 @@
 """Tracking results in local files."""
 
 import csv
-import datetime
+import datetime as dt
 import json
 import logging
 import pathlib
@@ -56,7 +56,7 @@ class FileResultTracker(ResultTracker):
             used.
         """
         if name is None:
-            name = datetime.datetime.now().isoformat()
+            name = dt.datetime.now().isoformat()
         path = normalize_path(path, default=PYKEEN_LOGS.joinpath(f"{name}.{self.extension}"), mkdir=True, is_file=True)
         logger.info(f"Logging to {path.as_uri()}.")
         self.file = path.open(mode="w", newline="", encoding="utf8")
@@ -139,7 +139,9 @@ class JSONResultTracker(FileResultTracker):
     extension = "jsonl"
 
     def _write(self, obj) -> None:
-        print(json.dumps(obj), file=self.file, flush=True)
+        # values which are not JSON serializable, e.g., loss instances or initializer functions in the model kwargs,
+        # are written as strings, as done by the CSV tracker
+        print(json.dumps(obj, default=str), file=self.file, flush=True)
 
     def log_params(  # noqa: D102
         self,

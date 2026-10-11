@@ -34,7 +34,8 @@ class WANDBResultTracker(ResultTracker):
 
         :param project: project name your WANDB login has access to.
         :param offline: whether to run in offline mode, i.e, without syncing with the wandb server.
-        :param kwargs: additional keyword arguments passed to :func:`wandb.init`.
+        :param kwargs: additional keyword arguments passed to :func:`wandb.init`. If ``allow_val_change`` is given, it
+            is also used when logging parameters, e.g., to allow updating the configuration of a resumed run.
 
         :raises ValueError: If the project name is given as None
         """
@@ -72,4 +73,4 @@ class WANDBResultTracker(ResultTracker):
         if self.run is None:
             raise AssertionError("start_run must be called before logging any metrics")
         params = flatten_dictionary(dictionary=params, prefix=prefix)
-        self.run.config.update(params)
+        self.run.config.update(params, allow_val_change=self.kwargs.get("allow_val_change"))

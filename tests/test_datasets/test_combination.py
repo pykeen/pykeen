@@ -5,7 +5,7 @@ import unittest_templates
 
 import pykeen.datasets.ea.combination
 import pykeen.triples.generation
-from pykeen.triples import CoreTriplesFactory
+from pykeen.triples import CoreTriplesFactory, TriplesFactory
 from pykeen.utils import triple_tensor_to_set
 from tests import cases
 
@@ -41,6 +41,7 @@ class ExtraRelationGraphPairCombinatorTestCase(cases.GraphPairCombinatorTestCase
     same_as_rel_name = cls.ALIGNMENT_RELATION_NAME
 
     def _verify_manual(self, combined_tf: CoreTriplesFactory):
+        assert isinstance(combined_tf, TriplesFactory)
         same_as_id = combined_tf.relation_to_id[self.__class__.same_as_rel_name]
         assert isinstance(same_as_id, int)
         # assumes deterministic entity to id mapping

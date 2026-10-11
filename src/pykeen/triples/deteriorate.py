@@ -39,9 +39,6 @@ def deteriorate(
     :raises ValueError: If a float is given for n that isn't between 0 and 1
     """
     # TODO: take care that triples aren't removed that are the only ones with any given entity
-    if reference.create_inverse_triples:
-        raise NotImplementedError
-
     if isinstance(n, float):
         if n < 0 or n >= 1:
             raise ValueError
