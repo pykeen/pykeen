@@ -8,6 +8,7 @@ from typing import ClassVar
 
 import numpy as np
 from docdata import get_docdata
+from more_itertools import chunked
 from scipy import fft, special, stats
 
 from ..utils import ExtraReprMixin, camel_to_snake
@@ -437,15 +438,14 @@ def _count_cdf(ks: np.ndarray, counts: np.ndarray, x_grid: np.ndarray, c: int) -
         return stats.binom.cdf(c, n, np.minimum(1.0, x_grid / ks[0]))
     size = fft.next_fast_len(n + 1)
     chunk = max(1, _CHUNK_ELEMENTS // size)
-    result = np.empty(len(x_grid))
-    for start in range(0, len(x_grid), chunk):
-        x = x_grid[start : start + chunk]
+    results = []
+    for x in map(np.asarray, chunked(x_grid, chunk)):
         spectrum = functools.reduce(
             operator.mul, (_group_spectrum(x, k, n_g, size) for k, n_g in zip(ks, counts, strict=True))
         )
         pmf = fft.irfft(spectrum, n=size, axis=-1)[:, : c + 1]
-        result[start : start + chunk] = np.clip(pmf, 0.0, None).sum(axis=-1)
-    return np.clip(result, 0.0, 1.0)
+        results.append(np.clip(pmf, 0.0, None).sum(axis=-1))
+    return np.clip(np.concatenate(results), 0.0, 1.0)
 
 
 def compute_order_statistic_survival_function(num_candidates: np.ndarray, index: int) -> np.ndarray:
@@ -552,9 +552,8 @@ def _pairwise_term(ks: np.ndarray, counts: np.ndarray, m: int) -> float:
     q = 1.0 - p
     chunk = max(1, _CHUNK_ELEMENTS // (size * k_max))
     total = 0.0
-    for start in range(1, k_max, chunk):
-        a = np.arange(start, min(start + chunk, k_max))
-        b = np.arange(start + 1, k_max + 1)
+    for a in map(np.asarray, chunked(range(1, k_max), chunk)):
+        b = np.arange(a[0] + 1, k_max + 1)
         acc = np.ones((len(a), len(b), size), dtype=complex)
         for g, n_g in enumerate(counts):
             acc *= (p[g, a][:, None, None] * omega[None, None, :] + q[g, b][None, :, None]) ** n_g
