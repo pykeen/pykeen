@@ -65,8 +65,7 @@ class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLog
 
         # assert that reporting another metric for this epoch raises an error
         with pytest.raises(ValueError, match="Cannot report more than one metric for one epoch"):
-            # The value is irrelevant: the call must fail on the repeated epoch before the metric is used.
-            self.instance.report_result(metric=..., epoch=epoch)  # type: ignore[arg-type]
+            self.instance.report_result(metric=metric, epoch=epoch)
 
     def test_early_stopping(self):
         """Test early stopping."""

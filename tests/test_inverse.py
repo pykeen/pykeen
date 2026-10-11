@@ -61,10 +61,8 @@ def test_default_inverter_ids():
     mapped = inverter.to_internal_batch(batch=batch)
     assert mapped[0, 1].item() == 6
     assert inverter.get_inverse_id(relation_id=mapped[0, 1]).item() == 7
-    # `is_inverse` is typed `bool | Tensor`, but is called on tensors here.
-    assert not inverter.is_inverse(mapped[:, 1]).any()  # type: ignore[union-attr]
-    # `is_inverse` is typed `bool | Tensor`, but is called on tensors here.
-    assert inverter.is_inverse(inverter.to_internal_batch(batch=batch, invert=True)[:, 1]).all()  # type: ignore[union-attr]
+    assert not torch.as_tensor(inverter.is_inverse(mapped[:, 1])).any()
+    assert torch.as_tensor(inverter.is_inverse(inverter.to_internal_batch(batch=batch, invert=True)[:, 1])).all()
 
 
 @pytest.mark.parametrize(

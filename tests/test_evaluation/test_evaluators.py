@@ -52,6 +52,7 @@ from pykeen.typing import (
     RANK_TYPES,
     SIDE_BOTH,
     SIDES,
+    ExtendedTarget,
     MappedTriples,
     Target,
     normalize_target,
@@ -76,7 +77,7 @@ def test_summarize_values(estimator, ci):
 class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
     """unittest for the RankBasedEvaluator."""
 
-    cls = RankBasedEvaluator
+    cls: ClassVar[type[Evaluator]] = RankBasedEvaluator
 
     def _validate_result(
         self,
@@ -86,8 +87,8 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         # Check for correct class
         assert isinstance(result, RankBasedMetricResults)
         # check correct num_entities
-        # `num_entities` exists on the evaluator under test, but not on the `Evaluator` base.
-        assert self.instance.num_entities == self.dataset.num_entities  # type: ignore[attr-defined]
+        assert isinstance(self.instance, RankBasedEvaluator)
+        assert self.instance.num_entities == self.dataset.num_entities
 
         for (side, rank_type, metric), value in result.data.items():
             assert side in SIDES
@@ -126,8 +127,7 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
 class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the SampledRankBasedEvaluator."""
 
-    # Not a `RankBasedEvaluator` subclass, but shares its test suite, so the class variable is narrowed.
-    cls = SampledRankBasedEvaluator  # type: ignore[assignment]
+    cls = SampledRankBasedEvaluator
     kwargs: ClassVar[Mapping[str, Any]] = {"num_negatives": 3}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
@@ -141,8 +141,7 @@ class SampledRankBasedEvaluatorTests(RankBasedEvaluatorTests):
 class OGBEvaluatorTests(RankBasedEvaluatorTests):
     """Unit test for OGB evaluator."""
 
-    # Not a `RankBasedEvaluator` subclass, but shares its test suite, so the class variable is narrowed.
-    cls = OGBEvaluator  # type: ignore[assignment]
+    cls = OGBEvaluator
     kwargs: ClassVar[Mapping[str, Any]] = {"num_negatives": 3}
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
@@ -162,8 +161,7 @@ class OGBEvaluatorTests(RankBasedEvaluatorTests):
 class MacroRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the MacroRankBasedEvaluator."""
 
-    # Not a `RankBasedEvaluator` subclass, but shares its test suite, so the class variable is narrowed.
-    cls = MacroRankBasedEvaluator  # type: ignore[assignment]
+    cls = MacroRankBasedEvaluator
 
 
 class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
@@ -374,18 +372,15 @@ class EvaluatorUtilsTests(unittest.TestCase):
         assert not torch.isfinite(filtered_tail_scores[exp_tail_filter_mask]).any()
 
 
-# `Target` is a single literal, but the generic parameter is bound to a tuple; the dummy only needs a key.
-class DummyMetricResults(MetricResults[Target]):  # type: ignore[type-var]
+class DummyMetricResults(MetricResults[tuple[ExtendedTarget]]):
     """Dummy metric results."""
 
     @classmethod
-    def key_from_string(cls, s: str | None) -> Target:
-        # `normalize_target` may also return `"both"`, which is not part of the dummy's key type.
-        return normalize_target(s)  # type: ignore[return-value]
+    def key_from_string(cls, s: str | None) -> tuple[ExtendedTarget]:
+        return (normalize_target(s),)
 
 
-# `Target` is a single literal, but the generic parameter is bound to a tuple; the dummy only needs a key.
-class DummyEvaluator(Evaluator[Target]):  # type: ignore[type-var]
+class DummyEvaluator(Evaluator[tuple[ExtendedTarget]]):
     """A dummy evaluator for testing the structure of the evaluation function."""
 
     def __init__(self, *args, **kwargs) -> None:
@@ -406,9 +401,8 @@ class DummyEvaluator(Evaluator[Target]):  # type: ignore[type-var]
     def clear(self) -> None:
         self.counter.clear()
 
-    # `Target` is a single literal, but the generic parameter is bound to a tuple; the dummy only needs a key.
-    def finalize(self) -> MetricResults[Target]:  # type: ignore[type-var]
-        return DummyMetricResults(data={target: float(count) for target, count in self.counter.items()})
+    def finalize(self) -> MetricResults[tuple[ExtendedTarget]]:
+        return DummyMetricResults(data={(target,): float(count) for target, count in self.counter.items()})
 
 
 class TestEvaluationStructure(unittest.TestCase):

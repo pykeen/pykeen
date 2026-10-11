@@ -224,8 +224,8 @@ class CachedDatasetCase(DatasetTestCase):
     def setUp(self):
         """Set up the test with a temporary cache directory."""
         self.directory = tempfile.TemporaryDirectory()
-        # The base `dataset_cls` annotation does not declare `cache_root`, which the concrete test datasets accept.
-        self.dataset = self.dataset_cls(cache_root=self.directory.name)  # type: ignore[call-arg]
+        kwargs: dict[str, Any] = {"cache_root": self.directory.name}
+        self.dataset = self.dataset_cls(**kwargs)
 
     def tearDown(self) -> None:
         """Tear down the test case by cleaning up the temporary cache directory."""
@@ -2186,14 +2186,13 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
 
     def test_equivalence(self) -> None:
         """Test equivalence between Evaluator.evaluate and evaluation loop."""
-        # `targets` is only defined on the concrete evaluation loop, not on the `EvaluationLoop` base.
-        if LABEL_RELATION in self.instance.targets:  # type: ignore[attr-defined]
+        assert isinstance(self.instance, pykeen.evaluation.evaluation_loop.LCWAEvaluationLoop)
+        if LABEL_RELATION in self.instance.targets:
             raise unittest.SkipTest("Evaluator.evaluate does not support relation prediction")
         result = self.instance.evaluator.evaluate(
             model=self.instance.model,
             mapped_triples=self.factory.mapped_triples,
-            # `targets` is only defined on the concrete evaluation loop, not on the `EvaluationLoop` base.
-            targets=self.instance.targets,  # type: ignore[attr-defined]
+            targets=self.instance.targets,
         )
         result2 = self.instance.evaluate()
         assert result.to_flat_dict() == result2.to_flat_dict()
@@ -2692,11 +2691,11 @@ class EarlyStopperTestCase(unittest_templates.GenericTestCase[EarlyStopper]):
         """Test for serialization."""
         summary = self.instance.get_summary_dict()
         new_stopper = EarlyStopper(
-            # not needed for test, so Ellipsis placeholders stand in for the required arguments
-            model=...,  # type: ignore[arg-type]
-            evaluator=...,  # type: ignore[arg-type]
-            training_triples_factory=...,  # type: ignore[arg-type]
-            evaluation_triples_factory=...,  # type: ignore[arg-type]
+            # not needed for test
+            model=Mock(),
+            evaluator=Mock(),
+            training_triples_factory=Mock(),
+            evaluation_triples_factory=Mock(),
         )
         new_stopper._write_from_summary_dict(**summary)
         for key in summary:

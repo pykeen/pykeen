@@ -1,6 +1,7 @@
 """Mocks for tests."""
 
 from collections.abc import Iterable
+from typing import Any
 
 import torch
 from torch import nn
@@ -62,9 +63,9 @@ class MockEvaluator(Evaluator):
         assert self.values_iter is not None
         if self.key not in result.data:
             raise KeyError(self.key)
-        # `data` is declared as a read-only `Mapping`, but the mock overwrites a metric value.
-        result.data[self.key] = next(self.values_iter)  # type: ignore[index]
-        return result
+        data: dict[Any, float] = dict(result.data)
+        data[self.key] = next(self.values_iter)
+        return RankBasedMetricResults(data=data)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(values={self.values})"
