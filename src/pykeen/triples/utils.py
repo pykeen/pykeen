@@ -1,6 +1,5 @@
 """Instance creation utilities."""
 
-import math
 import pathlib
 from collections.abc import Callable, Sequence
 from typing import IO
@@ -200,7 +199,7 @@ def compute_compressed_adjacency_list(
 
 def max_value(x: LongTensor | np.ndarray) -> int | None:
     """Return the maximum value, or None if the tensor / array is empty."""
-    if math.prod(x.shape):
+    if 0 not in x.shape:
         return x.max().item()
     return None
 

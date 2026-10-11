@@ -752,10 +752,10 @@ def test_compute_compressed_adjacency_list(
         assert torch.equal(actual, expected)
 
 
-@pytest.mark.parametrize("shape", [(0,), (0, 3), (5,), (4, 3)])
+@pytest.mark.parametrize("shape", [(0,), (0, 3), (), (5,), (4, 3)])
 def test_get_num_ids_torch_numpy_consistent(shape: tuple[int, ...]):
     """Test that `get_num_ids` agrees on torch tensors and numpy arrays, and returns zero for empty input."""
-    array = np.random.default_rng(42).integers(0, 10, size=shape)
+    array = np.asarray(np.random.default_rng(42).integers(0, 10, size=shape))
     num_ids = get_num_ids(array)
     assert num_ids == get_num_ids(torch.as_tensor(array))
     assert isinstance(num_ids, int)
