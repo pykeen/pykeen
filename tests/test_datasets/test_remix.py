@@ -13,6 +13,10 @@ class TestRemix(unittest.TestCase):
         reference = Nations()
         for random_state in range(20):
             derived = reference.remix(random_state=random_state)
+            assert reference.testing is not None
+            assert derived.testing is not None
+            assert reference.validation is not None
+            assert derived.validation is not None
             assert reference.training.num_triples == derived.training.num_triples
             assert not (reference.training.mapped_triples == derived.training.mapped_triples).all()
 

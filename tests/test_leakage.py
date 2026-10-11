@@ -90,9 +90,9 @@ class TestLeakage(unittest.TestCase):
         } == dict(sealant.candidate_inverse_relations)
 
         assert test_relation_id in sealant.inverses
-        assert test_relation_inverse_id == sealant.inverses[test_relation]
+        assert test_relation_inverse_id == sealant.inverses[test_relation_id]
         assert test_relation_inverse_id in sealant.inverses
-        assert test_relation == sealant.inverses[test_relation_inverse_id]
+        assert test_relation_id == sealant.inverses[test_relation_inverse_id]
 
         assert test_relation_inverse_id in sealant.inverse_relations_to_delete, (
             "The wrong relation was picked for deletion"
