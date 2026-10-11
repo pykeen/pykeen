@@ -16,6 +16,7 @@ import pykeen.nn.modules
 import pykeen.nn.sim
 import pykeen.utils
 from pykeen.nn import quaternion
+from pykeen.typing import LongTensor
 from pykeen.utils import (
     clamp_norm,
     complex_normalize,
@@ -35,7 +36,7 @@ class ComplExTests(cases.InteractionTestCase):
     dtype = torch.cfloat
 
     # TODO: we could move this part into the interaction module itself
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         return (h * r * torch.conj(t)).sum().real
 
 
@@ -51,7 +52,7 @@ class ConvETests(cases.InteractionTestCase):
         "embedding_dim": cases.InteractionTestCase.dim,
     }
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         t, t_bias = t
         x = torch.cat(
             [
@@ -85,7 +86,7 @@ class ConvKBTests(cases.InteractionTestCase):
         "num_filters": 2 * cases.InteractionTestCase.dim - 1,
     }
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         # W_L drop(act(W_C \ast ([h; r; t]) + b_C)) + b_L
         # prepare conv input (N, C, H, W)
         x = torch.stack([x.view(-1) for x in (h, r, t)], dim=1).view(1, 1, -1, 3)
@@ -102,7 +103,7 @@ class CPInteractionTests(cases.InteractionTestCase):
         "k": 3,
     }
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         return (h * r * t).sum(dim=(-2, -1))
 
 
@@ -114,7 +115,7 @@ class CrossETests(cases.InteractionTestCase):
         "embedding_dim": cases.InteractionTestCase.dim,
     }
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         r, c_r = r
         instance = self.instance
         assert isinstance(instance, pykeen.nn.modules.CrossEInteraction)
@@ -129,7 +130,7 @@ class DistMultTests(cases.InteractionTestCase):
 
     cls = pykeen.nn.modules.DistMultInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         return (h * r * t).sum(dim=-1)
 
 
@@ -138,7 +139,7 @@ class DistMATests(cases.InteractionTestCase):
 
     cls = pykeen.nn.modules.DistMAInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         return (h * r).sum() + (r * t).sum() + (h * t).sum()
 
 
@@ -151,7 +152,7 @@ class ERMLPTests(cases.InteractionTestCase):
         "hidden_dim": 2 * cases.InteractionTestCase.dim - 1,
     }
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         instance = self.instance
         assert isinstance(instance, pykeen.nn.modules.ERMLPInteraction)
         x = torch.cat([x.view(-1) for x in (h, r, t)])
@@ -167,7 +168,7 @@ class ERMLPETests(cases.InteractionTestCase):
         "hidden_dim": 2 * cases.InteractionTestCase.dim - 1,
     }
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         mlp = self.instance.mlp
         x = torch.cat([x.view(1, -1) for x in (h, r)], dim=-1)
         return mlp(x).view(1, -1) @ t.view(-1, 1)
@@ -178,7 +179,7 @@ class HolETests(cases.InteractionTestCase):
 
     cls = pykeen.nn.modules.HolEInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         h, t = (torch.fft.rfft(x.view(1, -1), dim=-1) for x in (h, t))
         h = torch.conj(h)
         c = torch.fft.irfft(h * t, n=h.shape[-1], dim=-1)
@@ -195,7 +196,7 @@ class NTNTests(cases.InteractionTestCase):
         "k": 11,
     }
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         w, vh, vt, b, u = r
         # f(h,r,t) = u^T act(h^T W t + V [h; t] + b)
         # shapes: w: (k, dim, dim), vh/vt: (k, dim), b/u: (k,), h/t: (dim,)
@@ -220,7 +221,7 @@ class ProjETests(cases.InteractionTestCase):
         "embedding_dim": cases.InteractionTestCase.dim,
     }
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         # f(h, r, t) = g(t z(D_e h + D_r r + b_c) + b_p)
         return self.instance.outer_activation(
             (
@@ -254,7 +255,7 @@ class RESCALTests(cases.InteractionTestCase):
 
     cls = pykeen.nn.modules.RESCALInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         # f(h, r, t) = h @ r @ t
         return h.view(1, -1) @ r @ t.view(-1, 1)
 
@@ -264,7 +265,7 @@ class KG2ETests(cases.InteractionTestCase):
 
     cls = pykeen.nn.modules.KG2EInteraction
 
-    def _exp_score(self, h, r, t):
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         assert isinstance(self.instance.similarity, pykeen.nn.sim.NegativeKullbackLeiblerDivergence)
         h_mean, h_var = h
         r_mean, r_var = r
@@ -283,7 +284,7 @@ class TuckerTests(cases.InteractionTestCase):
         "embedding_dim": cases.InteractionTestCase.dim,
     }
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         # DO_{hr}(BN_{hr}(DO_h(BN_h(h)) x_1 DO_r(W x_2 r))) x_3 t
         a = self.instance.relation_dropout(
             (self.instance.core_tensor * r[None, :, None]).sum(dim=1, keepdims=True)
@@ -308,7 +309,7 @@ class RotatETests(cases.InteractionTestCase):
         r = complex_normalize(r)
         return h, r, t
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         # check for unit modulus
         assert torch.allclose(r.abs(), torch.ones_like(r.abs()))
         d = h * r - t
@@ -352,7 +353,7 @@ class TransDTests(cases.TranslationalInteractionTests):
         scores = self.instance.score_hrt(h=(h, h_p), r=(r, r_p), t=(t, t_p))
         assert scores.item() == pytest.approx(-27, abs=0.01)
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         assert self.instance.power_norm
         h, h_p = h
         r, r_p = r
@@ -367,7 +368,7 @@ class TransETests(cases.TranslationalInteractionTests):
 
     cls = pykeen.nn.modules.TransEInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         instance = self.instance
         assert isinstance(instance, pykeen.nn.modules.TransEInteraction)
         assert not instance.power_norm
@@ -379,7 +380,7 @@ class TransHTests(cases.TranslationalInteractionTests):
 
     cls = pykeen.nn.modules.TransHInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         w_r, d_r = r
         assert not self.instance.power_norm
         h, t = (x - (x * w_r).sum() * w_r for x in (h, t))
@@ -405,7 +406,7 @@ class TransRTests(cases.TranslationalInteractionTests):
         first_score = scores[0].item()
         assert first_score == pytest.approx(-32, abs=1.0e-04)
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         r, m_r = r
         assert self.instance.power_norm
         h_bot, t_bot = (clamp_norm(x.unsqueeze(dim=0) @ m_r, p=2, dim=-1, maxnorm=1.0) for x in (h, t))
@@ -417,7 +418,7 @@ class SETests(cases.TranslationalInteractionTests):
 
     cls = pykeen.nn.modules.SEInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         r_h, r_t = r
         assert not self.instance.power_norm
         # -\|R_h h - R_t t\|
@@ -431,7 +432,7 @@ class UMTests(cases.TranslationalInteractionTests):
 
     cls = pykeen.nn.modules.UMInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         assert not r
         assert self.instance.power_norm
         # -\|h - t\|
@@ -443,7 +444,7 @@ class PairRETests(cases.TranslationalInteractionTests):
 
     cls = pykeen.nn.modules.PairREInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         r_h, r_t = r
         s = (h * r_h - t * r_t).norm(self.instance.p)
         if self.instance.power_norm:
@@ -456,7 +457,7 @@ class SimplEInteractionTests(cases.InteractionTestCase):
 
     cls = pykeen.nn.modules.SimplEInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         h_fwd, h_bwd = h
         r_fwd, r_bwd = r
         t_fwd, t_bwd = t
@@ -469,7 +470,7 @@ class MuRETests(cases.TranslationalInteractionTests):
 
     cls = pykeen.nn.modules.MuREInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         h, b_h = h
         r_vec, r_mat = r
         t, b_t = t
@@ -532,7 +533,7 @@ class MonotonicAffineTransformationInteractionTests(cases.InteractionTestCase):
     def test_scores(self):
         raise SkipTest("Not a functional interaction.")
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         # We do not need this, since we do not check for functional consistency anyway
         raise NotImplementedError
 
@@ -586,7 +587,7 @@ class MultiLinearTuckerInteractionTests(cases.InteractionTestCase):
         kwargs["tail_dim"] = self.shape_kwargs["f"]
         return kwargs
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         return einsum("ijk,i,j,k", self.instance.core_tensor, h, r, t)
 
 
@@ -681,7 +682,7 @@ class TripleRETests(cases.TranslationalInteractionTests):
 
     cls = pykeen.nn.modules.TripleREInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         assert not self.instance.power_norm
         r_head, r_mid, r_tail = r
         u = self.instance.u
@@ -718,7 +719,7 @@ class LineaRETests(cases.TranslationalInteractionTests):
 
     cls = pykeen.nn.modules.LineaREInteraction
 
-    def _exp_score(self, h, r, t) -> torch.FloatTensor:
+    def _exp_score(self, h: LongTensor, r: LongTensor, t: LongTensor) -> torch.FloatTensor:
         r_head, r_mid, r_tail = r
         s = h * r_head - t * r_tail + r_mid
         s = s.pow(self.instance.p).sum(dim=-1) if self.instance.power_norm else s.norm(p=self.instance.p)

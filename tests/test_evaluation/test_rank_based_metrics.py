@@ -2,7 +2,7 @@
 
 import unittest
 from collections.abc import Callable, Collection, Sequence
-from typing import Any, ClassVar
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -246,7 +246,7 @@ class WeightedTests(unittest.TestCase):
         generator = np.random.default_rng()
         self.array = generator.random(size=(10,))
 
-    def _test_equal_weights(self, func: Callable[[np.ndarray, np.ndarray | None], Any]):
+    def _test_equal_weights(self, func: Callable[[np.ndarray, np.ndarray | None], np.ndarray | np.floating]):
         """Verify that equal weights lead to unweighted results."""
         weights = np.full_like(self.array, fill_value=2.0)
         assert func(self.array, None).item() == pytest.approx(func(self.array, weights).item())
@@ -261,7 +261,7 @@ class WeightedTests(unittest.TestCase):
 
     def _test_weighted_mean_moment(
         self,
-        closed_form: Callable[[np.ndarray, np.ndarray | None], Any],
+        closed_form: Callable[[np.ndarray, np.ndarray | None], float],
         statistic: Callable[[np.ndarray], np.ndarray],
         key: str,
     ):
