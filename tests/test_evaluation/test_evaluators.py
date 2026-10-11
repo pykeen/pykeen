@@ -18,7 +18,11 @@ from more_itertools import pairwise
 from pykeen.constants import COLUMN_LABELS
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, OGBEvaluator, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
+from pykeen.evaluation.classification_evaluator import (
+    ClassificationEvaluator,
+    ClassificationMetricKey,
+    ClassificationMetricResults,
+)
 from pykeen.evaluation.evaluator import (
     create_dense_positive_mask_,
     create_sparse_positive_filter_,
@@ -34,6 +38,7 @@ from pykeen.evaluation.rank_based_evaluator import (
     summarize_values,
 )
 from pykeen.evaluation.ranks import Ranks
+from pykeen.metrics.classification import AveragePrecisionScore
 from pykeen.metrics.ranking import (
     AdjustedArithmeticMeanRankIndex,
     ArithmeticMeanRank,
@@ -858,3 +863,62 @@ class EvaluatorMetaTestCase(unittest_templates.MetaTestCase):
         mocks.MockEvaluator,
         DummyEvaluator,
     }
+
+
+@pytest.mark.parametrize(
+    ("string", "expected"),
+    [
+        (None, ClassificationMetricKey(side=SIDE_BOTH, metric=AveragePrecisionScore().key)),
+        ("average_precision_score", ClassificationMetricKey(side=SIDE_BOTH, metric="average_precision_score")),
+        ("head.average_precision_score", ClassificationMetricKey(side=LABEL_HEAD, metric="average_precision_score")),
+        # synonym
+        ("for", ClassificationMetricKey(side=SIDE_BOTH, metric="false_omission_rate")),
+        ("tail.for", ClassificationMetricKey(side=LABEL_TAIL, metric="false_omission_rate")),
+    ],
+)
+def test_classification_key_from_string(string, expected):
+    """Test resolving classification metric keys, including synonyms."""
+    assert ClassificationMetricResults.key_from_string(string) == expected
+
+
+@pytest.mark.parametrize(
+    "string", ["no_such_metric", "head.no_such_metric", "a.b.c", "head.both.average_precision_score"]
+)
+def test_classification_key_from_string_invalid(string):
+    """Test that invalid classification metric keys are rejected."""
+    with pytest.raises(ValueError, match=r"Invalid metric key|Unknown classification metric"):
+        ClassificationMetricResults.key_from_string(string)
+
+
+def test_metric_results_to_dict_nested():
+    """Test the nested structure of to_dict for a small hand-built result."""
+    results = ClassificationMetricResults(
+        data={
+            "head.average_precision_score": 0.25,
+            "head.false_omission_rate": 0.5,
+            "tail.average_precision_score": 0.75,
+        }
+    )
+    assert results.to_dict() == {
+        "head": {"average_precision_score": 0.25, "false_omission_rate": 0.5},
+        "tail": {"average_precision_score": 0.75},
+    }
+
+
+def test_metric_results_empty_to_df():
+    """Test that to_df works on empty results."""
+    df = ClassificationMetricResults(data={}).to_df()
+    assert isinstance(df, pd.DataFrame)
+    assert len(df) == 0
+    assert "Value" in df.columns
+
+
+def test_classification_evaluator_requires_positive_mask():
+    """Test that a missing positive mask raises a ValueError."""
+    with pytest.raises(ValueError, match="positive mask"):
+        ClassificationEvaluator().process_scores_(
+            hrt_batch=torch.zeros(1, 3, dtype=torch.long),
+            target=LABEL_TAIL,
+            scores=torch.zeros(1, 3),
+            dense_positive_mask=None,
+        )
