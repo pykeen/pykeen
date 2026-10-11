@@ -501,7 +501,7 @@ def sample_negatives(
     additional_filter_triples: MappedTriples | list[MappedTriples] | None = None,
     num_samples: int = 50,
     num_entities: int | None = None,
-    random_state: int | np.random.Generator | None = None,
+    random_state: int | numpy.random.Generator | None = None,
 ) -> Mapping[Target, LongTensor]:
     """
     Sample true negatives for sampled evaluation.
@@ -580,7 +580,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         num_negatives: int | None = None,
         head_negatives: LongTensor | None = None,
         tail_negatives: LongTensor | None = None,
-        random_state: int | np.random.Generator | None = None,
+        random_state: int | numpy.random.Generator | None = None,
         **kwargs,
     ):
         """
