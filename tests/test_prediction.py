@@ -365,7 +365,16 @@ def test_get_input_batch(
     assert batch.flatten().tolist() == list(batch_tuple)
 
 
-def _iter_get_targets_inputs() -> Iterable[tuple[Any, ...]]:
+def _iter_get_targets_inputs() -> Iterable[
+    tuple[
+        torch.Tensor | Collection[str | int] | None,
+        CoreTriplesFactory | None,
+        bool,
+        list[str] | int | None,
+        list[int] | None,
+        torch.Tensor | None,
+    ]
+]:
     """Iterate over test inputs for _get_targets."""
     factory = Nations().training
     for entity, id_to_label in ((True, factory.entity_id_to_label), (False, factory.relation_id_to_label)):
@@ -417,7 +426,16 @@ def test_get_targets(
         assert (ids_tensor == exp_tensor.to(device=device)).all()
 
 
-def _iter_predict_target_inputs() -> Iterable[tuple[Any, ...]]:
+def _iter_predict_target_inputs() -> Iterable[
+    tuple[
+        pykeen.models.Model,
+        int | None,
+        int | None,
+        int | None,
+        CoreTriplesFactory | None,
+        Sequence[int] | None,
+    ]
+]:
     # comment: we only use id-based input, since the normalization has already been tested
     # create model
     factory = Nations().training
