@@ -27,6 +27,10 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+#: the dtype of the distance matrix returned by :func:`scipy.sparse.csgraph.shortest_path`. This is fixed by scipy and
+#: only mirrored here, i.e., changing it does not change the dtype of the distances.
+DISTANCE_DTYPE = np.float64
+
 
 class AnchorSearcher(ExtraReprMixin, ABC):
     """A method for finding the closest anchors."""
@@ -111,7 +115,8 @@ class CSGraphAnchorSearcher(AnchorSearcher):
 
         If `chunk_size` was given explicitly, it is used as is. Otherwise, it is chosen as the largest number of
         anchors whose `(chunk_size, num_entities)` distance matrix fits into `max_memory`. Each element of this matrix
-        is a float64, i.e., takes 8 bytes. The result is at least one, so that progress is made even if a single row
+        has dtype :data:`DISTANCE_DTYPE` (float64), i.e., takes 8 bytes, which is obtained via
+        :attr:`numpy.dtype.itemsize`. The result is at least one, so that progress is made even if a single row
         exceeds the memory budget.
 
         :param num_entities: the number of entities, i.e., the number of columns of the distance matrix
@@ -120,7 +125,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         """
         if self.chunk_size:
             return self.chunk_size
-        return max(1, self.max_memory // (8 * max(num_entities, 1)))
+        return max(1, self.max_memory // (np.dtype(DISTANCE_DTYPE).itemsize * max(num_entities, 1)))
 
     @staticmethod
     def _merge_top_k(best: np.ndarray, candidates: np.ndarray, k: int) -> np.ndarray:
@@ -168,7 +173,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
             raise ValueError(f"Too many entities and anchors for exact key encoding: {n=:_}, {num_anchors=:_}")
         chunk_size = self._get_chunk_size(n)
         # the running top-k keys, shape: (k', n)
-        best = np.empty(shape=(0, n), dtype=np.float64)
+        best = np.empty(shape=(0, n), dtype=DISTANCE_DTYPE)
         for start in range(0, num_anchors, chunk_size):
             stop = min(start + chunk_size, num_anchors)
             # compute distances between anchors and all nodes, shape: (chunk_size, num_entities)
@@ -181,7 +186,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
             )
             # encode, in-place
             keys *= num_anchors
-            keys += np.arange(start, stop, dtype=np.float64)[:, None]
+            keys += np.arange(start, stop, dtype=DISTANCE_DTYPE)[:, None]
             best = self._merge_top_k(best=best, candidates=keys, k=k)
         # sort by distance (and anchor ID), shape: (n, k)
         best = np.sort(best.T, axis=1)
