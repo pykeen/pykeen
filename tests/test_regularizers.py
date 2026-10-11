@@ -24,13 +24,14 @@ class NoRegularizerTest(cases.RegularizerTestCase):
         return torch.zeros(1, device=x.device, dtype=x.dtype)
 
     def test_apply_only_once(self):
-        raise unittest.SkipTest
+        raise unittest.SkipTest("Not applicable.")
 
 
 class L1RegularizerTest(cases.LpRegularizerTest):
     """Test an L_1 normed regularizer."""
 
-    kwargs: ClassVar[Mapping[str, Any]] = {"p": 1}
+    # use a non-default weight, to test its application
+    kwargs: ClassVar[Mapping[str, Any]] = {"p": 1, "weight": 0.5}
 
 
 class NormedL2RegularizerTest(cases.LpRegularizerTest):

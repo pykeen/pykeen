@@ -66,7 +66,7 @@ class _NewAbstractModel(Model, ABC):
 
     def _reset_parameters_(self):
         """Reset all parameters of the model in-place."""
-        # cf. https://github.com/mberr/ea-sota-comparison/blob/6debd076f93a329753d819ff4d01567a23053720/src/kgm/utils/torch_utils.py#L317-L372   # noqa:E501
+        # cf. https://github.com/mberr/ea-sota-comparison/blob/6debd076f93a329753d819ff4d01567a23053720/src/kgm/utils/torch_utils.py#L317-L372
         # Make sure that all modules with parameters do have a reset_parameters method.
         uninitialized_parameters = set(map(id, self.parameters()))
         parents = defaultdict(list)

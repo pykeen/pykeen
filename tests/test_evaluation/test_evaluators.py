@@ -52,6 +52,7 @@ from pykeen.typing import (
     RANK_TYPES,
     SIDE_BOTH,
     SIDES,
+    ExtendedTarget,
     MappedTriples,
     Target,
     normalize_target,
@@ -76,7 +77,7 @@ def test_summarize_values(estimator, ci):
 class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
     """unittest for the RankBasedEvaluator."""
 
-    cls = RankBasedEvaluator
+    cls: ClassVar[type[Evaluator]] = RankBasedEvaluator
 
     def _validate_result(
         self,
@@ -86,8 +87,8 @@ class RankBasedEvaluatorTests(cases.EvaluatorTestCase):
         # Check for correct class
         assert isinstance(result, RankBasedMetricResults)
         # check correct num_entities
+        assert isinstance(self.instance, RankBasedEvaluator)
         assert self.instance.num_entities == self.dataset.num_entities
-        result: RankBasedMetricResults
 
         for (side, rank_type, metric), value in result.data.items():
             assert side in SIDES
@@ -175,7 +176,6 @@ class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
     ):
         # Check for correct class
         assert isinstance(result, ClassificationMetricResults)
-        result: ClassificationMetricResults
 
         for (side, metric_name), value in result.data.items():
             assert side in SIDES
@@ -372,15 +372,15 @@ class EvaluatorUtilsTests(unittest.TestCase):
         assert not torch.isfinite(filtered_tail_scores[exp_tail_filter_mask]).any()
 
 
-class DummyMetricResults(MetricResults[Target]):
+class DummyMetricResults(MetricResults[tuple[ExtendedTarget]]):
     """Dummy metric results."""
 
     @classmethod
-    def key_from_string(cls, s: str | None) -> Target:
-        return normalize_target(s)
+    def key_from_string(cls, s: str | None) -> tuple[ExtendedTarget]:
+        return (normalize_target(s),)
 
 
-class DummyEvaluator(Evaluator[Target]):
+class DummyEvaluator(Evaluator[tuple[ExtendedTarget]]):
     """A dummy evaluator for testing the structure of the evaluation function."""
 
     def __init__(self, *args, **kwargs) -> None:
@@ -401,8 +401,8 @@ class DummyEvaluator(Evaluator[Target]):
     def clear(self) -> None:
         self.counter.clear()
 
-    def finalize(self) -> MetricResults[Target]:
-        return DummyMetricResults(data={target: float(count) for target, count in self.counter.items()})
+    def finalize(self) -> MetricResults[tuple[ExtendedTarget]]:
+        return DummyMetricResults(data={(target,): float(count) for target, count in self.counter.items()})
 
 
 class TestEvaluationStructure(unittest.TestCase):
@@ -543,6 +543,7 @@ def test_sample_negatives():
     """Test for sample_negatives."""
     dataset = Nations()
     num_negatives = 2
+    assert dataset.validation is not None
     evaluation_triples = dataset.validation.mapped_triples
     additional_filter_triples = dataset.training.mapped_triples
     negatives = sample_negatives(
@@ -651,6 +652,7 @@ class CandidateSetSizeTests(unittest.TestCase):
 
     def test_single_filter(self):
         """Test with additional filter triples."""
+        assert self.dataset.validation is not None
         self._test_get_candidate_set_size(
             self.dataset.training.mapped_triples,
             None,
@@ -661,6 +663,7 @@ class CandidateSetSizeTests(unittest.TestCase):
 
     def test_multi_filter(self):
         """Test with multiple additional filter triples."""
+        assert self.dataset.validation is not None
         self._test_get_candidate_set_size(
             self.dataset.training.mapped_triples,
             None,
@@ -671,6 +674,7 @@ class CandidateSetSizeTests(unittest.TestCase):
 
     def test_all(self):
         """Test with filtering restriction and entity count inference."""
+        assert self.dataset.validation is not None
         self._test_get_candidate_set_size(
             self.dataset.training.mapped_triples,
             {0, 1, 2},
@@ -698,7 +702,7 @@ class CandidateSetSizeTests(unittest.TestCase):
 class ExpectedMetricsTests(unittest.TestCase):
     """Tests for expected metrics."""
 
-    def _iter_num_candidates(self) -> Iterable[tuple[tuple[int, ...], int]]:
+    def _iter_num_candidates(self) -> Iterable[tuple[np.ndarray, int]]:
         """Generate number of ranking candidate arrays of different shapes."""
         generator: np.random.Generator = np.random.default_rng(seed=42)
         # test different shapes
@@ -736,12 +740,13 @@ class ExpectedMetricsTests(unittest.TestCase):
     def test_expected_hits_at_k_manual(self):
         """Test expected Hits@k, where some candidate set sizes are smaller than k, but not all."""
         metric = HitsAtK(k=10)
-        assert metric.expected_value(num_candidates=[5, 20]) == pytest.approx((1 + 0.5) / 2)
+        assert metric.expected_value(num_candidates=np.asarray([5, 20])) == pytest.approx((1 + 0.5) / 2)
 
 
 def test_prepare_filter_triples():
     """Tests for prepare_filter_triples."""
     dataset = Nations()
+    assert dataset.validation is not None
     mapped_triples = dataset.testing.mapped_triples
     for additional_filter_triples in (
         None,  # no additional

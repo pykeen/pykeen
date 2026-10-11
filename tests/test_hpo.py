@@ -227,10 +227,12 @@ class TestHyperparameterOptimization(unittest.TestCase):
         class MockResultTracker(MagicMock, ResultTracker):
             """A mock result tracker."""
 
+            # replace the method with a mock to observe the calls
+            end_run = MagicMock()
+
         tracker_resolver.register(MockResultTracker)
 
         mock_result_tracker = MockResultTracker()
-        mock_result_tracker.end_run = MagicMock()
         result = hpo_pipeline(
             dataset="nations",
             model="distmult",

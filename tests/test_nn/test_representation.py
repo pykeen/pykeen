@@ -11,7 +11,6 @@ import numpy as np
 import pytest
 import torch
 import unittest_templates
-from PIL import Image
 
 import pykeen.nn.message_passing
 import pykeen.nn.node_piece
@@ -279,9 +278,23 @@ class VisualRepresentationTestCase(cases.RepresentationTestCase):
         kwargs["images"] = list(torch.rand(self.max_id, 3, 28, 28))
         return kwargs
 
+    def test_encoder_kwargs(self):
+        """Test that encoder kwargs are passed to the encoder upon instantiation."""
+        num_classes = 5
+        # squeezenet's classifier is a convolution with num_classes output channels
+        instance = self.cls(
+            images=list(torch.rand(self.max_id, 3, 28, 28)),
+            encoder="squeezenet1_0",
+            layer_name="classifier.1",
+            encoder_kwargs={"num_classes": num_classes},
+            transforms=[],
+            trainable=False,
+        )
+        assert instance.shape == (num_classes,)
+
 
 @constants.skip_if_windows
-@needs_packages("torchvision")
+@needs_packages("torchvision", "PIL")
 class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
     """Tests for Wikidata visual representations."""
 
@@ -299,13 +312,17 @@ class WikidataVisualRepresentationTestCase(cases.RepresentationTestCase):
     }
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
+        from PIL import Image
+
         kwargs = super()._pre_instantiation_hook(kwargs)
         kwargs.pop("max_id")
         self.max_id = len(kwargs["wikidata_ids"])
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
         fake_image_path = pathlib.Path(self._tmp.name) / "fake.jpg"
-        Image.new("RGB", (256, 256)).save(fake_image_path)
+        # use a non-constant image: a blank one is encoded to all-zero features (bias-free convolutions followed by
+        # batch normalization), which makes, e.g., dropout ineffective
+        Image.effect_noise((256, 256), 64).convert("RGB").save(fake_image_path)
         wikidata_ids = kwargs["wikidata_ids"]
         mock_cache = MagicMock()
         mock_cache.get_image_paths.return_value = [fake_image_path] * (len(wikidata_ids) - 1) + [None]

@@ -95,7 +95,7 @@ class KullbackLeiblerDivergenceKG2ESimilarityTests(GenericTestCase[NegativeKullb
     def test_against_torch_builtin(self):
         """Compare value against torch.distributions."""
         # compute using pykeen
-        h, r, t = (self._get(name=name) for name in "hrt")
+        h, r, t = (self._get(name=name) for name in ("h", "r", "t"))
         sim = self.instance(h=h, r=r, t=t)
         sim2 = _torch_kl_similarity(h=h, r=r, t=t)
         assert torch.allclose(sim, sim2), f"Difference: {(sim - sim2).abs()}"
@@ -116,6 +116,6 @@ class KullbackLeiblerDivergenceKG2ESimilarityTests(GenericTestCase[NegativeKullb
         """Check the value range."""
         # https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence#Properties
         # divergence >= 0 => similarity = -divergence <= 0
-        h, r, t = (self._get(name=name) for name in "hrt")
+        h, r, t = (self._get(name=name) for name in ("h", "r", "t"))
         sim = self.instance(h=h, r=r, t=t)
         assert (sim <= 0).all()

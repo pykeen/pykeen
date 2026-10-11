@@ -12,7 +12,7 @@ from pykeen.models.mocks import FixedModel
 from pykeen.training import bcwa
 from pykeen.triples.instances import BatchCWABatch
 from pykeen.triples.weights import RelationLossWeighter
-from pykeen.typing import LongTensor
+from pykeen.typing import LongTensor, Target, TargetColumn
 
 
 @pytest.fixture
@@ -153,7 +153,7 @@ def _batch_gradients(
 
 @pytest.mark.parametrize("loss_cls", [BCEWithLogitsLoss, CrossEntropyLoss])
 @pytest.mark.parametrize("target", ["head", "relation", "tail"])
-def test_slicing(target: str, loss_cls: type[Loss]) -> None:
+def test_slicing(target: Target, loss_cls: type[Loss]) -> None:
     """Test that slicing does not change the gradients."""
     triples_factory = Nations().training
     model = TransE(triples_factory=triples_factory, loss=loss_cls(), random_seed=0)
@@ -176,7 +176,7 @@ def test_slicing(target: str, loss_cls: type[Loss]) -> None:
 
 
 @pytest.mark.parametrize("target", [0, 1, 2])
-def test_target(target: int) -> None:
+def test_target(target: TargetColumn) -> None:
     """Test the loss for each target against a reference which scores each triple individually."""
     triples_factory = Nations().training
     model = TransE(triples_factory=triples_factory, loss=CrossEntropyLoss(), random_seed=0)
@@ -212,6 +212,7 @@ def test_schlichtkrull_sampler() -> None:
     model = DistMult(triples_factory=triples_factory)
     loop = bcwa.BatchCWATrainingLoop(model=model, triples_factory=triples_factory)
     losses = loop.train(triples_factory=triples_factory, num_epochs=1, batch_size=64, sampler="schlichtkrull")
+    assert losses is not None
     assert len(losses) == 1
 
 
