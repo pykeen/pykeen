@@ -130,7 +130,17 @@ def _get_resolver_lines2(
     link_fmt: str | None = None,
     skip: set[type[X]] | None = None,
     top_k: int = 2,
+    link_top_k: int = 2,
 ) -> Iterable[tuple[str, str, str | None]]:
+    """Get name, reference, and citation for each class of a resolver.
+
+    :param resolver: the resolver
+    :param link_fmt: the link format
+    :param skip: classes to skip
+    :param top_k: the number of module levels to keep in the displayed reference
+    :param link_top_k: the number of module levels to keep in the link target, i.e., the module where the
+        documentation lists the class
+    """
     for _, clsx in sorted(resolver.lookup_dict.items()):
         if skip and clsx in skip:
             continue
@@ -138,7 +148,8 @@ def _get_resolver_lines2(
         module, name = clsx.__module__, clsx.__qualname__
         if "pykeen.nn.meta" in module:
             continue
-        full = f"{module}.{name}"
+        link_module = ".".join(module.split(".")[:link_top_k])
+        link_target = f"{link_module}.{name}"
         # shorten to main module
         if top_k:
             module = ".".join(module.split(".", maxsplit=top_k)[:-1])
@@ -155,7 +166,7 @@ def _get_resolver_lines2(
         if not citation:
             click.secho(message=f"Missing citation for {short}", err=True)
         # compose reference
-        reference = _format_reference(reference=short, link_fmt=link_fmt, alt_reference=full)
+        reference = _format_reference(reference=short, link_fmt=link_fmt, alt_reference=link_target)
         yield name, reference, citation
 
 
@@ -177,6 +188,7 @@ def _help_interactions(tablefmt: str = "github", *, link_fmt: str | None = None)
         _get_resolver_lines2(
             resolver=interaction_resolver,
             link_fmt=link_fmt,
+            link_top_k=3,
         )
     )
     headers = ["Name", "Reference", "Citation"]
@@ -196,6 +208,7 @@ def _help_representations(tablefmt: str = "github", *, link_fmt: str | None = No
         for line in _get_resolver_lines2(
             resolver=representation_resolver,
             link_fmt=link_fmt,
+            link_top_k=3,
             # cf. https://github.com/python/mypy/issues/5374
             skip={MessagePassingRepresentation},  # type: ignore[type-abstract]
         )
@@ -582,7 +595,8 @@ def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Itera
         if tablefmt == "rst":
             reference = f":class:`{reference}`"
         elif link_fmt is not None:
-            reference = f"[`{reference}`]({link_fmt.format(reference)})"
+            # the documentation lists inductive datasets in the `pykeen.datasets.inductive` module
+            reference = f"[`{reference}`]({link_fmt.format(f'pykeen.datasets.inductive.{value.__name__}')})"
         else:
             reference = f"`{reference}`"
 

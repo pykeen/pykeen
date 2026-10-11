@@ -874,7 +874,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         \mathbb{V}[MR] &= \frac{C^2 - 1}{12n}
 
     ---
-    link: https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html#mean-rank
+    link: https://pykeen.readthedocs.io/en/latest/explanation/understanding_evaluation.html#mean-rank
     description: The arithmetic mean over all ranks.
     """
 
@@ -1546,7 +1546,7 @@ class StandardDeviation(RankBasedMetric):
     where $\bar{r} = \frac{1}{W} \sum_{i=1}^{n} w_i r_i$ is the weighted mean.
 
     ---
-    link: https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html
+    link: https://pykeen.readthedocs.io/en/latest/explanation/understanding_evaluation.html
     """
 
     name = "Standard Deviation (std)"
@@ -1588,7 +1588,7 @@ class Variance(RankBasedMetric):
         value/variance calculations).
 
     ---
-    link: https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html
+    link: https://pykeen.readthedocs.io/en/latest/explanation/understanding_evaluation.html
     """
 
     name = "Variance"
@@ -1629,7 +1629,7 @@ class MedianAbsoluteDeviation(RankBasedMetric):
     ``scale='normal'``.
 
     ---
-    link: https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html
+    link: https://pykeen.readthedocs.io/en/latest/explanation/understanding_evaluation.html
     """
 
     name = "Median Absolute Deviation (MAD)"
@@ -1754,7 +1754,7 @@ class HitsAtK(RankBasedMetric):
 
     ---
     description: The relative frequency of ranks not larger than a given k.
-    link: https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html#hits-k
+    link: https://pykeen.readthedocs.io/en/latest/explanation/understanding_evaluation.html#hits-k
     """
 
     name = "Hits @ K"
