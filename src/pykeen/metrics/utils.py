@@ -7,7 +7,6 @@ from typing import ClassVar
 
 import numpy as np
 from docdata import get_docdata
-from more_itertools import chunked
 from scipy import fft, special, stats
 
 from ..utils import ExtraReprMixin, camel_to_snake
@@ -376,6 +375,11 @@ _CHUNK_ELEMENTS = 2_000_000
 _MAX_PAIRWISE_WORK = 5e7
 
 
+def _chunks(a: np.ndarray, size: int) -> list[np.ndarray]:
+    """Split an array into consecutive views of at most the given size."""
+    return np.split(a, np.arange(size, len(a), size))
+
+
 def _group_candidates(num_candidates: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Group ranking tasks by their number of candidates.
 
@@ -438,7 +442,7 @@ def _count_cdf(ks: np.ndarray, counts: np.ndarray, x_grid: np.ndarray, c: int) -
     size = fft.next_fast_len(n + 1)
     chunk = max(1, _CHUNK_ELEMENTS // size)
     results = []
-    for x in map(np.asarray, chunked(x_grid, chunk)):
+    for x in _chunks(x_grid, chunk):
         spectrum = math.prod(_group_spectrum(x, k, n_g, size) for k, n_g in zip(ks, counts, strict=True))
         pmf = fft.irfft(spectrum, n=size, axis=-1)[:, : c + 1]
         results.append(np.clip(pmf, 0.0, None).sum(axis=-1))
@@ -549,7 +553,7 @@ def _pairwise_term(ks: np.ndarray, counts: np.ndarray, m: int) -> float:
     q = 1.0 - p
     chunk = max(1, _CHUNK_ELEMENTS // (size * k_max))
     total = 0.0
-    for a in map(np.asarray, chunked(np.arange(1, k_max), chunk)):
+    for a in _chunks(np.arange(1, k_max), chunk):
         b = np.arange(a[0] + 1, k_max + 1)
         acc = np.ones((len(a), len(b), size), dtype=complex)
         for g, n_g in enumerate(counts):
