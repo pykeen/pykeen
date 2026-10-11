@@ -18,6 +18,7 @@ from torch.nn import functional
 from .text import TextEncoder, text_encoder_resolver
 from .utils import iter_matrix_power, safe_diagonal
 from ..triples import CoreTriplesFactory, TriplesFactory
+from ..triples.utils import get_num_ids
 from ..typing import FloatTensor, Initializer, LongTensor, MappedTriples, OneOrSequence
 from ..utils import compose, get_edge_index, iter_weisfeiler_lehman, upgrade_to_sequence
 
@@ -397,7 +398,7 @@ class WeisfeilerLehmanInitializer(PretrainedInitializer):
         # make color initializer
         color_initializer = initializer_resolver.make(color_initializer, pos_kwargs=color_initializer_kwargs)
         # initialize color representations
-        num_colors = colors.max().item() + 1
+        num_colors = get_num_ids(colors)
         # note: this could be a representation?
         color_representation = color_initializer(colors.new_empty(num_colors, *shape, dtype=torch.get_default_dtype()))
         # init entity representations according to the color

@@ -23,7 +23,9 @@ def test_rank_builder(batch_shape: Sequence[int], num_batches: int, partial_num_
         y_pred = torch.rand(size=(*batch_shape, partial_num_choices), generator=generator)
         builder = builder.update(y_pred=y_pred)
         total += partial_num_choices
+        assert isinstance(builder.total, torch.Tensor)
         assert (builder.total == total).all()
+        assert isinstance(builder.larger, torch.Tensor)
         assert builder.larger.shape == batch_shape
     ranks = builder.compute()
     assert isinstance(ranks, pykeen.evaluation.ranks.Ranks)
