@@ -266,8 +266,29 @@ def weighted_harmonic_mean(a: np.ndarray, weights: np.ndarray | None = None) -> 
     return np.reciprocal(np.average(np.reciprocal(a.astype(float)), weights=weights))
 
 
-def weighted_median(a: np.ndarray, weights: np.ndarray | None = None) -> np.floating:
-    """Calculate weighted median."""
+def weighted_median(a: np.ndarray, weights: np.ndarray | None = None, rtol: float = 1.0e-9) -> np.floating:
+    r"""Calculate weighted median.
+
+    :param a: shape: (n,)
+        The values.
+    :param weights: shape: (n,)
+        The non-negative weights. If None, the unweighted median is returned.
+    :param rtol:
+        The relative tolerance, with respect to the total weight, used to decide whether the cumulative weight
+        is exactly half of the total weight. In this case, the median is the mean of the two middle values.
+
+        The cumulative sums are computed in float64, so the accumulated rounding error is on the order of
+        $10^{-16} \cdot n$ relative to the total weight, i.e., far below the default of $10^{-9}$ for any
+        realistic $n$. The default is chosen this small so that the tolerance only absorbs floating point noise,
+        but does not merge genuinely different cumulative weights; a larger value such as $10^{-6}$ could
+        misclassify weight distributions whose cumulative weight differs from one half by a small, but real, margin.
+
+    :return:
+        The weighted median.
+
+    :raises ValueError:
+        If the sum of weights is not positive.
+    """
     if weights is None:
         return np.median(a)
 
@@ -280,7 +301,7 @@ def weighted_median(a: np.ndarray, weights: np.ndarray | None = None) -> np.floa
     if not total > 0:
         raise ValueError(f"The sum of weights must be positive, but is {total}")
     half = 0.5 * total
-    tolerance = 1.0e-9 * total
+    tolerance = rtol * total
     # determine first value with cumulative weight >= 0.5 * total (up to numerical tolerance)
     idx = int(np.searchsorted(cdf, v=half - tolerance))
     # special case for exactly 0.5: average the two middle values
