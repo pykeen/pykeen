@@ -664,7 +664,7 @@ def get_candidate_set_size(
 
     The candidate set size includes the true entity, i.e., it is the number of entities minus the number of *other*
     known positives for the given (relation, other entity) key. This is the same convention as
-    :attr:`pykeen.evaluation.ranks.Ranks.number_of_options` and the `num_candidates` of the rank-based metrics.
+    `number_of_options` of :class:`~pykeen.evaluation.ranks.Ranks` and the `num_candidates` of the rank-based metrics.
 
     :returns: columns: "index" | "head" | "relation" | "tail" | "head_candidates" | "tail_candidates" a dataframe of all
         evaluation triples, with the number of head and tail candidates
