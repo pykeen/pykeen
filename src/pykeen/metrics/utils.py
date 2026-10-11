@@ -1,7 +1,6 @@
 """Utilities for metrics."""
 
-import functools
-import operator
+import math
 from collections.abc import Collection
 from dataclasses import dataclass
 from typing import ClassVar
@@ -440,9 +439,7 @@ def _count_cdf(ks: np.ndarray, counts: np.ndarray, x_grid: np.ndarray, c: int) -
     chunk = max(1, _CHUNK_ELEMENTS // size)
     results = []
     for x in map(np.asarray, chunked(x_grid, chunk)):
-        spectrum = functools.reduce(
-            operator.mul, (_group_spectrum(x, k, n_g, size) for k, n_g in zip(ks, counts, strict=True))
-        )
+        spectrum = math.prod(_group_spectrum(x, k, n_g, size) for k, n_g in zip(ks, counts, strict=True))
         pmf = fft.irfft(spectrum, n=size, axis=-1)[:, : c + 1]
         results.append(np.clip(pmf, 0.0, None).sum(axis=-1))
     return np.clip(np.concatenate(results), 0.0, 1.0)
@@ -552,7 +549,7 @@ def _pairwise_term(ks: np.ndarray, counts: np.ndarray, m: int) -> float:
     q = 1.0 - p
     chunk = max(1, _CHUNK_ELEMENTS // (size * k_max))
     total = 0.0
-    for a in map(np.asarray, chunked(range(1, k_max), chunk)):
+    for a in map(np.asarray, chunked(np.arange(1, k_max), chunk)):
         b = np.arange(a[0] + 1, k_max + 1)
         acc = np.ones((len(a), len(b), size), dtype=complex)
         for g, n_g in enumerate(counts):
@@ -601,7 +598,7 @@ def compute_median_moments(num_candidates: np.ndarray) -> tuple[float, float]:
 
         P(A > a, B > b) = P(C(b) \leq m) - P(C(a) = m, C(b) = m)
 
-    The first term only depends on $b$, the second one is summed by :func:`_pairwise_term`.
+    The first term only depends on $b$, the second one is summed by ``_pairwise_term``.
 
     Complexity: for a single unique number of candidates, $O(K)$. For $g$ unique values, odd $n$ needs
     $O(K \cdot g \cdot n \log n)$. For even $n$, the exact variance additionally needs $O(K^2 \cdot g \cdot n)$,
