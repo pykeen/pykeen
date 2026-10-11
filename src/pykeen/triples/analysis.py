@@ -218,15 +218,22 @@ class HeadTailPairIndex(NamedTuple):
     def from_mapped_triples(cls, mapped_triples: Collection[tuple[int, int, int]]) -> Self:
         """Build a pair index from ID-based triples."""
         triples = np.asarray(mapped_triples, dtype=np.int64).reshape(-1, 3)
-        # relations in the order of first occurrence
-        relation_ids, first_index = np.unique(triples[:, 1], return_index=True)
-        relation_order = relation_ids[np.argsort(first_index)]
+        return cls._from_mapped_triples(triples)
+
+    @classmethod
+    def _from_mapped_triples(cls, triples: np.ndarray) -> Self:
         num_entities = int(triples[:, [0, 2]].max(initial=-1)) + 1
         num_relations = int(triples[:, 1].max(initial=-1)) + 1
         if num_entities**2 > np.iinfo(np.int64).max:
             raise ValueError(f"Too many entities for an int64-based pair index: {num_entities}")
+
+        # relations in the order of first occurrence
+        relation_ids, first_index = np.unique(triples[:, 1], return_index=True)
+        relation_order = relation_ids[np.argsort(first_index)]
+
         # distinct triples
         heads, relations, tails = np.unique(triples, axis=0).T
+
         # distinct pairs
         pair_keys, pair_ids = np.unique(heads * num_entities + tails, return_inverse=True)
         incidence = scipy.sparse.csr_array(
