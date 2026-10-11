@@ -106,6 +106,22 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         yield f"chunk_size={self.chunk_size}"
         yield f"max_memory={self.max_memory}"
 
+    def _get_chunk_size(self, num_entities: int) -> int:
+        """Determine the number of anchors to process per chunk.
+
+        If `chunk_size` was given explicitly, it is used as is. Otherwise, it is chosen as the largest number of
+        anchors whose `(chunk_size, num_entities)` distance matrix fits into `max_memory`. Each element of this matrix
+        is a float64, i.e., takes 8 bytes. The result is at least one, so that progress is made even if a single row
+        exceeds the memory budget.
+
+        :param num_entities: the number of entities, i.e., the number of columns of the distance matrix
+
+        :returns: the chunk size, a positive integer
+        """
+        if self.chunk_size:
+            return self.chunk_size
+        return max(1, self.max_memory // (8 * max(num_entities, 1)))
+
     @staticmethod
     def _merge_top_k(best: np.ndarray, candidates: np.ndarray, k: int) -> np.ndarray:
         """Merge new candidates into the running top-$k$ (unsorted).
@@ -150,7 +166,7 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         # representable as long as n * num_anchors <= 2**53. Unreachable anchors have an infinite key.
         if n * num_anchors > 2**53:
             raise ValueError(f"Too many entities and anchors for exact key encoding: {n=:_}, {num_anchors=:_}")
-        chunk_size = self.chunk_size or max(1, self.max_memory // (8 * max(n, 1)))
+        chunk_size = self._get_chunk_size(n)
         # the running top-k keys, shape: (k', n)
         best = np.empty(shape=(0, n), dtype=np.float64)
         for start in range(0, num_anchors, chunk_size):
