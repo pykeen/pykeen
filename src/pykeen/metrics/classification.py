@@ -4,7 +4,7 @@ The metrics in this module assume the link prediction setting to be a (binary) c
 
 .. note::
 
-    many metrics in this module use `scikit-learn` under the hood, cf.
+    many metrics in this module use scikit-learn under the hood, cf.
     https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
 """
 
@@ -27,10 +27,14 @@ from .utils import Metric, ValueRange
 
 __all__ = [
     "ClassificationMetric",
+    "ConfusionMatrixClassificationMetric",
+    "FowlkesMallowsIndex",
+    "ZeroDivisionPolicy",
     "classification_metric_resolver",
     "construct_indicator",
 ]
 
+#: A policy for division by zero
 ZeroDivisionPolicy = Literal["warn", 0, 1]
 
 
@@ -67,8 +71,7 @@ def construct_indicator(*, y_score: np.ndarray, y_true: np.ndarray) -> np.ndarra
         Since the method uses the number of true labels to determine a threshold, the results will typically be overly
         optimistic estimates of the generalization performance.
 
-    .. todo:: Add a method which estimates a threshold based on a validation set, and applies this
-    threshold for binarization on the test set.
+    .. todo:: Add a method which estimates a threshold based on a validation set, and applies this threshold for binarization on the test set.
 
     :param y_score: A 1-D array of the score values
     :param y_true: A 1-D array of binary values (1 and 0)
@@ -225,8 +228,9 @@ class AreaUnderTheReceiverOperatingCharacteristicCurve(ClassificationMetric):
 class ConfusionMatrixClassificationMetric(ClassificationMetric, abc.ABC):
     """A classification metric based on the confusion matrix."""
 
+    #: Should
     binarize: ClassVar[bool] = True
-    zero_division: ZeroDivisionPolicy = "warn"
+    zero_division: ClassVar[ZeroDivisionPolicy] = "warn"
 
     @abc.abstractmethod
     def extract_from_confusion_matrix(self, tn: float, fp: float, fn: float, tp: float) -> float:
@@ -618,15 +622,15 @@ class FowlkesMallowsIndex(ConfusionMatrixClassificationMetric):
 
     .. math::
 
-        FM = \sqrt{PPV \cdot TPR} = \frac{TP}{\sqrt{(TP + FP)(TP + FN)}}
+        FM = \sqrt{PPV \cdot TPR} = \sqrt{\frac{TP}{TP + FP} \cdot \frac{TP}{TP + FN}} = \frac{TP}{\sqrt{(TP + FP)(TP + FN)}}
 
     ---
     link: https://en.wikipedia.org/wiki/Fowlkes%E2%80%93Mallows_index
-    description: The Fowlkes Mallows index.
+    description: The Fowlkes-Mallows index.
     """
 
-    name = "Fowlkes Mallows Index"
-    value_range = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
+    name: ClassVar[str] = "Fowlkes Mallows Index"
+    value_range: ClassVar[ValueRange] = ValueRange(lower=0, lower_inclusive=True, upper=1, upper_inclusive=True)
     increasing: ClassVar[bool] = True
     synonyms: ClassVar[Collection[str]] = ("fm", "fmi")
 
