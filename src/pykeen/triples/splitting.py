@@ -313,6 +313,11 @@ class RandomizedCleaner(Cleaner):
     1. Calculate ``move_id_mask`` as in ``_prepare_cleanup``
     2. Choose a triple to move, recalculate ``move_id_mask``
     3. Continue until ``move_id_mask`` has no true bits
+
+    Repeatedly choosing a uniformly random triple among those which (still) contain an uncovered entity or relation is
+    equivalent to iterating over a random permutation of the initial candidates and moving a triple only if it still
+    contains an uncovered entity or relation at the time it is visited. This implementation uses the latter
+    formulation, which requires only a single pass over the candidates.
     """
 
     def cleanup_pair(  # noqa: D102
@@ -323,24 +328,33 @@ class RandomizedCleaner(Cleaner):
     ) -> tuple[MappedTriples, MappedTriples]:
         generator = ensure_torch_random_state(random_state)
         move_id_mask = _prepare_cleanup(reference, other)
+        if not move_id_mask.any():
+            return reference, other
 
-        # While there are still triples that should be moved to the training set
-        while move_id_mask.any():
-            # Pick a random triple to move over to the training triples
-            (candidates,) = move_id_mask.nonzero(as_tuple=True)
-            # TODO: this could easily be extended to select a batch of triples
-            # -> speeds up the process at the cost of slightly larger movements
-            idx = torch.randint(candidates.shape[0], size=(1,), generator=generator)
-            idx = candidates[idx]
+        # coverage of entities and relations by the reference triples; only IDs occurring in other are relevant
+        columns = [[0, 2], [1]]
+        covered: list[list[bool]] = []
+        for col in columns:
+            mask = torch.zeros(int(other[:, col].max()) + 1, dtype=torch.bool)
+            ids = reference[:, col].reshape(-1)
+            mask[ids[ids < mask.shape[0]]] = True
+            covered.append(mask.tolist())
+        entity_covered, relation_covered = covered
 
-            # add to training
-            reference = torch.cat([reference, other[idx].view(1, -1)], dim=0)
-            # remove from testing
-            other = torch.cat([other[:idx], other[idx + 1 :]], dim=0)
-            # Recalculate the move_id_mask
-            move_id_mask = _prepare_cleanup(reference, other)
+        # visit the initial candidates in random order
+        (candidates,) = move_id_mask.nonzero(as_tuple=True)
+        candidates = candidates[torch.randperm(candidates.shape[0], generator=generator)]
+        moved = []
+        for i, (h, r, t) in zip(candidates.tolist(), other[candidates].tolist(), strict=True):
+            # skip triples which got covered by previously moved triples
+            if entity_covered[h] and relation_covered[r] and entity_covered[t]:
+                continue
+            entity_covered[h] = entity_covered[t] = relation_covered[r] = True
+            moved.append(i)
 
-        return reference, other
+        move_mask = torch.zeros(other.shape[0], dtype=torch.bool)
+        move_mask[moved] = True
+        return torch.cat([reference, other[move_mask]], dim=0), other[~move_mask]
 
 
 class DeterministicCleaner(Cleaner):
@@ -510,8 +524,7 @@ def split(
         The random state used to shuffle and split the triples.
     :param randomize_cleanup:
         If true, uses the non-deterministic method for moving triples to the training set. This has the advantage that
-        it does not necessarily have to move all of them, but it might be significantly slower since it moves one
-        triple at a time.
+        it does not necessarily have to move all of them, but it is slightly slower.
     :param method:
         The name of the method to use, cf. :data:`splitter_resolver`. Defaults to "coverage", i.e.,
         :class:`CoverageSplitter`.

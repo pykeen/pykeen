@@ -2,6 +2,7 @@
 
 import copy
 import itertools
+from collections import Counter
 from collections.abc import MutableMapping
 from typing import Any
 from unittest import mock
@@ -16,6 +17,7 @@ from pykeen.triples import LCWAInstances
 from pykeen.triples.instances import BatchedSLCWAInstances, SubGraphSLCWAInstances
 from pykeen.triples.triples_factory import TriplesFactory
 from pykeen.triples.weights import RelationLossWeighter
+from pykeen.utils import get_edge_index
 from tests import cases
 
 
@@ -234,3 +236,100 @@ class SubGraphSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
     """Tests for subgraph sLCWA training instances."""
 
     cls = SubGraphSLCWAInstances
+
+    def test_subgraph_sample(self):
+        """Test that a subgraph sample consists of batch_size unique, valid triple IDs."""
+        instance = SubGraphSLCWAInstances(mapped_triples=self.factory.mapped_triples, batch_size=64)
+        for _ in range(10):
+            triple_ids = instance.subgraph_sample()
+            assert len(triple_ids) == 64
+            assert len(set(triple_ids)) == 64
+            assert all(isinstance(i, int) and 0 <= i < self.factory.num_triples for i in triple_ids)
+
+    def test_subgraph_sample_reproducible(self):
+        """Test that subgraph sampling is reproducible via torch's global seed."""
+        torch.manual_seed(42)
+        first = [self.instance.subgraph_sample() for _ in range(3)]
+        torch.manual_seed(42)
+        second = [self.instance.subgraph_sample() for _ in range(3)]
+        assert first == second
+
+    def test_subgraph_sample_all(self):
+        """Test sampling all triples of a graph with isolated vertices, self-loops, and duplicate edges."""
+        mapped_triples = torch.as_tensor(
+            # vertex 3 is isolated
+            [[0, 0, 1], [1, 0, 2], [2, 0, 2], [0, 0, 1], [4, 0, 5], [5, 1, 5], [6, 0, 4]],
+            dtype=torch.long,
+        )
+        num_triples = mapped_triples.shape[0]
+        instance = SubGraphSLCWAInstances(mapped_triples=mapped_triples, batch_size=num_triples)
+        for _ in range(20):
+            assert sorted(instance.subgraph_sample()) == list(range(num_triples))
+        # requesting more triples than there are returns all of them
+        for size in (num_triples + 1, 2 * num_triples):
+            assert sorted(instance.subgraph_sample(size=size)) == list(range(num_triples))
+        instance.batch_size = num_triples + 1
+        assert sorted(instance.subgraph_sample()) == list(range(num_triples))
+
+    def test_subgraph_sample_size(self):
+        """Test sampling subgraphs of an explicitly requested size."""
+        assert self.instance.batch_size > 1
+        for size in range(self.instance.batch_size + 2):
+            triple_ids = self.instance.subgraph_sample(size=size)
+            assert len(triple_ids) == size
+            assert len(set(triple_ids)) == size
+            assert all(0 <= i < self.factory.num_triples for i in triple_ids)
+        with pytest.raises(ValueError, match="non-negative"):
+            self.instance.subgraph_sample(size=-1)
+
+    def test_subgraph_sample_distribution(self):
+        """Test that the empirical distribution of subgraph samples matches the exact one."""
+        mapped_triples = torch.as_tensor([[0, 0, 1], [1, 0, 2], [1, 0, 3], [3, 0, 3], [4, 0, 5]], dtype=torch.long)
+        batch_size = 3
+        expected = _subgraph_sample_distribution(
+            edges=get_edge_index(mapped_triples=mapped_triples).t().tolist(), batch_size=batch_size
+        )
+        instance = SubGraphSLCWAInstances(mapped_triples=mapped_triples, batch_size=batch_size)
+        torch.manual_seed(0)
+        num_samples = 20_000
+        counts = Counter(tuple(instance.subgraph_sample()) for _ in range(num_samples))
+        assert set(counts).issubset(expected)
+        total_variation = 0.5 * sum(abs(counts[key] / num_samples - p) for key, p in expected.items())
+        assert total_variation < 0.02
+
+
+def _subgraph_sample_distribution(edges: list[list[int]], batch_size: int) -> dict[tuple[int, ...], float]:
+    """Compute the exact distribution over ordered subgraph samples by enumerating the sampling process."""
+    num_vertices = max(itertools.chain.from_iterable(edges)) + 1
+    # half-edges per vertex; a self-loop occurs twice in its vertex's adjacency list
+    half_edges: list[list[tuple[int, int]]] = [[] for _ in range(num_vertices)]
+    for i, (s, o) in enumerate(edges):
+        half_edges[s].append((i, o))
+        half_edges[o].append((i, s))
+    result: dict[tuple[int, ...], float] = {}
+
+    def _pick(vertex: int, prob: float, visited: frozenset[int], picked: tuple[int, ...]) -> None:
+        # choose uniformly among the vertex' adjacency list entries whose edge has not been picked yet
+        candidates = [(i, o) for i, o in half_edges[vertex] if i not in picked]
+        for i, o in candidates:
+            _step(prob / len(candidates), visited | {o}, (*picked, i))
+
+    def _step(prob: float, visited: frozenset[int], picked: tuple[int, ...]) -> None:
+        if len(picked) == batch_size:
+            result[picked] = result.get(picked, 0.0) + prob
+            return
+        weights = {v: sum(i not in picked for i, _ in half_edges[v]) for v in visited}
+        total = sum(weights.values())
+        if total:
+            # degree-weighted choice among visited vertices
+            for vertex, weight in weights.items():
+                if weight:
+                    _pick(vertex, prob * weight / total, visited, picked)
+        else:
+            # uniform choice among unvisited (non-isolated) vertices
+            pool = [v for v in range(num_vertices) if v not in visited and half_edges[v]]
+            for vertex in pool:
+                _pick(vertex, prob / len(pool), visited | {vertex}, picked)
+
+    _step(1.0, frozenset(), ())
+    return result
