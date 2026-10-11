@@ -12,6 +12,7 @@ import scipy.sparse
 from tqdm.auto import tqdm
 
 from . import TriplesFactory
+from .utils import get_num_ids
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..typing import COLUMN_HEAD, COLUMN_RELATION, COLUMN_TAIL, LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, MappedTriples
 
@@ -222,8 +223,8 @@ class HeadTailPairIndex(NamedTuple):
 
     @classmethod
     def _from_mapped_triples(cls, triples: np.ndarray) -> Self:
-        num_entities = int(triples[:, [0, 2]].max(initial=-1)) + 1
-        num_relations = int(triples[:, 1].max(initial=-1)) + 1
+        num_entities = get_num_ids(triples[:, [0, 2]])
+        num_relations = get_num_ids(triples[:, 1])
         if num_entities**2 > np.iinfo(np.int64).max:
             raise ValueError(f"Too many entities for an int64-based pair index: {num_entities}")
 
