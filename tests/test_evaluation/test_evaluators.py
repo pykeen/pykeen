@@ -42,7 +42,7 @@ from pykeen.metrics.ranking import (
     InverseHarmonicMeanRank,
     rank_based_metric_resolver,
 )
-from pykeen.models import FixedModel, TransE
+from pykeen.models import FixedModel, Model, TransE
 from pykeen.typing import (
     LABEL_HEAD,
     LABEL_RELATION,
@@ -440,7 +440,12 @@ class TestEvaluationRestoresDevice(unittest.TestCase):
         self.evaluator = DummyEvaluator(filtered=False)
         # `Module.to` is in-place; track the device the model was last moved to
         self.moves: list[torch.device] = []
-        self.model.to = lambda device: self.moves.append(torch.device(device)) or self.model  # type: ignore[method-assign]
+
+        def _to(device: torch.device) -> Model:
+            self.moves.append(torch.device(device))
+            return self.model
+
+        self.model.to = _to
 
     def _evaluate(self, device: torch.device, fail_on: torch.device | None = None):
         """Evaluate, optionally raising a memory error whenever evaluating on the given device."""
