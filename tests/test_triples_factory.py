@@ -770,7 +770,7 @@ def test_non_injective_labeling_message_bounded() -> None:
 @pytest.mark.parametrize("compact_id", [False, True])
 def test_non_contiguous_label_to_id(compact_id: bool) -> None:
     """Test that valid, but non-contiguous, label-to-ID mappings are accepted."""
-    entity_to_id = {"a": 0, "b": 7, "c": np.int64(3)}
+    entity_to_id: dict[str, Any] = {"a": 0, "b": 7, "c": np.int64(3)}
     relation_to_id = {"r": 5, "s": 1}
     tf = TriplesFactory.from_labeled_triples(
         triples=_LABELED_TRIPLES, entity_to_id=entity_to_id, relation_to_id=relation_to_id, compact_id=compact_id
