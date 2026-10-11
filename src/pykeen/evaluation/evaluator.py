@@ -662,10 +662,9 @@ def get_candidate_set_size(
         plus one over all filter triples, since entity IDs are dense indices. Ignored if `restrict_entities_to` is
         given, in which case the number of entities is the size of the restriction.
 
-    .. note ::
-        The candidates exclude the true entity, i.e., the candidate set size is the number of entities minus the
-        number of known positives for the given (relation, other entity) key. This differs by one from
-        :attr:`pykeen.evaluation.ranks.Ranks.number_of_options`, which includes the true entity.
+    The candidate set size includes the true entity, i.e., it is the number of entities minus the number of *other*
+    known positives for the given (relation, other entity) key. This is the same convention as
+    :attr:`pykeen.evaluation.ranks.Ranks.number_of_options` and the `num_candidates` of the rank-based metrics.
 
     :returns: columns: "index" | "head" | "relation" | "tail" | "head_candidates" | "tail_candidates" a dataframe of all
         evaluation triples, with the number of head and tail candidates
@@ -715,10 +714,10 @@ def get_candidate_set_size(
         group_keys = TARGET_TO_KEY_LABELS[target]
         df_count = df_filter.groupby(by=group_keys).agg({target: "count"})
         column = f"{target}_candidates"
-        df_count[column] = total - df_count[target]
+        df_count[column] = total - df_count[target] + 1
         df_count = df_count.drop(columns=target)
         df_eval = df_eval.merge(df_count, on=group_keys, how="left")
-        df_eval[column] = df_eval[column].fillna(value=total)
+        df_eval[column] = df_eval[column].fillna(value=total + 1)
 
     return df_eval
 
