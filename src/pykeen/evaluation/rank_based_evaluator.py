@@ -373,13 +373,32 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
         self.ranks.clear()
         self.num_candidates.clear()
 
+    def _check_not_empty(self) -> None:
+        """Verify that scores have been processed since the last clearing of the buffers.
+
+        :raises ValueError:
+            if the buffers are empty
+        """
+        if not self.ranks:
+            raise ValueError(
+                f"{self.__class__.__name__} has no ranks to aggregate; call process_scores_ (or evaluate) first. "
+                "Note that finalize clears the buffers by default (cf. clear_on_finalize)."
+            )
+
+    def _get_rank_packs(self) -> list[RankPack]:
+        """Get the rank packs to aggregate, flattened over batches.
+
+        :returns:
+            the rank packs for individual sides and for both sides combined, for each rank type
+
+        :raises ValueError:
+            if the buffers are empty
+        """
+        self._check_not_empty()
+        return list(_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates))
+
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
-        if self.num_entities is None:
-            raise ValueError
-        result = RankBasedMetricResults.from_ranks(
-            metrics=self.metrics,
-            rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates),
-        )
+        result = RankBasedMetricResults.from_ranks(metrics=self.metrics, rank_and_candidates=self._get_rank_packs())
         if self.clear_on_finalize:
             self.clear()
         return result
@@ -396,10 +415,11 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
             a flat dictionary from metric names to list of values
         """
         result: defaultdict[str, list[float]] = defaultdict(list)
+        # flatten once, outside of the bootstrap loop
+        packs = self._get_rank_packs()
 
         for i in range(n_boot):
-            rank_and_candidates = _iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates)
-            rank_and_candidates = map(functools.partial(RankPack.resample, seed=seed + i), rank_and_candidates)
+            rank_and_candidates = map(functools.partial(RankPack.resample, seed=seed + i), packs)
             single_result = RankBasedMetricResults.from_ranks(
                 metrics=self.metrics, rank_and_candidates=rank_and_candidates
             )
@@ -680,7 +700,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
 class MacroRankBasedEvaluator(RankBasedEvaluator):
     """Macro-average rank-based evaluation."""
 
-    weights: MutableMapping[Target, list[np.ndarray]]
+    keys: MutableMapping[Target, list[np.ndarray]]
 
     def __init__(self, **kwargs):
         """
@@ -743,18 +763,9 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         super().clear()
         self.keys.clear()
 
-    def finalize(self) -> RankBasedMetricResults:  # noqa: D102
-        if self.num_entities is None:
-            raise ValueError
+    def _get_rank_packs(self) -> list[RankPack]:
+        self._check_not_empty()
         # compute macro weights
         # note: we wrap the array into a list to be able to re-use _iter_ranks
         weights = {target: [self._calculate_weights(keys=keys)] for target, keys in self.keys.items()}
-        # calculate weighted metrics
-        result = RankBasedMetricResults.from_ranks(
-            metrics=self.metrics,
-            rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights),
-        )
-        # Clear buffers
-        self.clear()
-
-        return result
+        return list(_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights))
