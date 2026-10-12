@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 #: a version of the relation pattern computation, which is part of the cache file name. Increase it whenever the
 #: results of :func:`~pykeen.triples.analysis.relation_pattern_types` change, to invalidate stale cache files.
 #: version 2: fixed inversion pattern, cf. :func:`~pykeen.triples.analysis.iter_binary_patterns`
-_RELATION_PATTERN_CACHE_VERSION = 2
+#: version 3: added implication pattern
+_RELATION_PATTERN_CACHE_VERSION = 3
 
 __all__ = [
     "get_entity_count_df",
@@ -208,11 +209,12 @@ def get_relation_pattern_types_df(
     The relation classifications are based upon checking whether the corresponding rules hold with sufficient support
     and confidence. By default, we do not require a minimum support, however, a relatively high confidence.
 
-    The following four non-exclusive classes for relations are considered:
+    The following five non-exclusive classes for relations are considered:
 
     - symmetry
     - anti-symmetry
     - inversion
+    - implication
     - composition
 
     This method generally follows the terminology of association rule mining. The patterns are expressed as
@@ -223,8 +225,8 @@ def get_relation_pattern_types_df(
 
     where $X_i$ is of the form $r_i(h_i, t_i)$, and some of the $h_i / t_i$ might re-occur in other atoms.
     The *support* of a pattern is the number of distinct instantiations of the variables shared by the left- and
-    right-hand side, i.e., the distinct $(x, y)$ pairs for symmetry, anti-symmetry, and inversion, and the distinct
-    $(x, z)$ pairs for composition (where the intermediate entity $y$ is projected out).
+    right-hand side, i.e., the distinct $(x, y)$ pairs for symmetry, anti-symmetry, inversion, and implication, and
+    the distinct $(x, z)$ pairs for composition (where the intermediate entity $y$ is projected out).
     The *confidence* is the proportion of these instantiations where the right-hand side is also true.
 
     .. note ::
