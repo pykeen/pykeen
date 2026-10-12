@@ -45,7 +45,13 @@ CARDINALITY_TYPE_MANY_TO_MANY: RelationCardinality = "many-to-many"
 RELATION_CARDINALITY_TYPES: set[RelationCardinality] = set(typing.get_args(RelationCardinality))
 
 #: A pattern type
-RelationPatternType: TypeAlias = Literal["symmetry", "anti-symmetry", "inversion", "implication", "composition"]
+RelationPatternType: TypeAlias = Literal[
+    "symmetry",
+    "anti-symmetry",
+    "inversion",
+    "implication",
+    "composition",
+]
 
 # constants
 PATTERN_TYPE_SYMMETRY: RelationPatternType = "symmetry"  # unary
