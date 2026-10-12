@@ -10,7 +10,7 @@ from pykeen.models import FixedModel, Model
 from pykeen.stoppers.early_stopping import EarlyStopper
 from pykeen.training import SLCWATrainingLoop
 from pykeen.triples import GroupedSLCWABatch, SLCWABatch, TriplesFactory
-from pykeen.typing import FloatTensor
+from pykeen.typing import RANK_REALISTIC, SIDE_BOTH, FloatTensor
 from tests.mocks import MockEvaluator
 
 
@@ -68,13 +68,11 @@ class TestTrainingEarlyStopping(unittest.TestCase):
     def setUp(self):
         """Prepare for testing the early stopper."""
         # Set automatic_memory_optimization to false for tests
-        self.mock_evaluator = MockEvaluator(key=None, values=self.mock_losses)
+        self.mock_evaluator = MockEvaluator(key=("hits_at_10", SIDE_BOTH, RANK_REALISTIC), values=self.mock_losses)
         self.triples_factory = Nations()
         assert self.triples_factory.validation is not None
         self.model = FixedModel(triples_factory=self.triples_factory.training)
         self.stopper = EarlyStopper(
-            # FIXME if you fix the typing here, the tests start failing
-            metric=None,  # type:ignore[arg-type]
             model=self.model,
             evaluator=self.mock_evaluator,
             training_triples_factory=self.triples_factory.training,

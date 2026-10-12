@@ -6,7 +6,6 @@ import functools
 import itertools
 import logging
 import math
-import random
 import re
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
@@ -374,13 +373,32 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
         self.ranks.clear()
         self.num_candidates.clear()
 
+    def _check_not_empty(self) -> None:
+        """Verify that scores have been processed since the last clearing of the buffers.
+
+        :raises ValueError:
+            if the buffers are empty
+        """
+        if not self.ranks:
+            raise ValueError(
+                f"{self.__class__.__name__} has no ranks to aggregate; call process_scores_ (or evaluate) first. "
+                "Note that finalize clears the buffers by default (cf. clear_on_finalize)."
+            )
+
+    def _get_rank_packs(self) -> list[RankPack]:
+        """Get the rank packs to aggregate, flattened over batches.
+
+        :returns:
+            the rank packs for individual sides and for both sides combined, for each rank type
+
+        :raises ValueError:
+            if the buffers are empty
+        """
+        self._check_not_empty()
+        return list(_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates))
+
     def finalize(self) -> RankBasedMetricResults:  # noqa: D102
-        if self.num_entities is None:
-            raise ValueError
-        result = RankBasedMetricResults.from_ranks(
-            metrics=self.metrics,
-            rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates),
-        )
+        result = RankBasedMetricResults.from_ranks(metrics=self.metrics, rank_and_candidates=self._get_rank_packs())
         if self.clear_on_finalize:
             self.clear()
         return result
@@ -397,10 +415,11 @@ class RankBasedEvaluator(Evaluator[RankBasedMetricKey]):
             a flat dictionary from metric names to list of values
         """
         result: defaultdict[str, list[float]] = defaultdict(list)
+        # flatten once, outside of the bootstrap loop
+        packs = self._get_rank_packs()
 
         for i in range(n_boot):
-            rank_and_candidates = _iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates)
-            rank_and_candidates = map(functools.partial(RankPack.resample, seed=seed + i), rank_and_candidates)
+            rank_and_candidates = map(functools.partial(RankPack.resample, seed=seed + i), packs)
             single_result = RankBasedMetricResults.from_ranks(
                 metrics=self.metrics, rank_and_candidates=rank_and_candidates
             )
@@ -502,7 +521,8 @@ def sample_negatives(
     additional_filter_triples: MappedTriples | list[MappedTriples] | None = None,
     num_samples: int = 50,
     num_entities: int | None = None,
-) -> Mapping[Target, FloatTensor]:
+    random_state: int | numpy.random.Generator | None = None,
+) -> Mapping[Target, LongTensor]:
     """
     Sample true negatives for sampled evaluation.
 
@@ -514,10 +534,18 @@ def sample_negatives(
         the number of samples
     :param num_entities:
         the number of entities
+    :param random_state:
+        the random state, either a seed or a numpy generator. If None, the sampling is not reproducible.
 
     :return:
-        A mapping of sides to negative samples
+        A mapping of sides to negative samples, each of shape (n, num_samples) and dtype long.
+        If a key has fewer than `num_samples` candidate entities, the candidates are repeated, i.e., the negatives
+        for the corresponding triples contain duplicates.
+
+    :raises ValueError:
+        if there is no candidate negative entity at all for some (relation, other entity) key
     """
+    generator = np.random.default_rng(seed=random_state)
     additional_filter_triples_t = prepare_filter_triples(
         mapped_triples=evaluation_triples,
         additional_filter_triples=additional_filter_triples,
@@ -532,17 +560,21 @@ def sample_negatives(
     for side in [LABEL_HEAD, LABEL_TAIL]:
         this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
         other = TARGET_TO_KEY_LABELS[side]
-        for _, group in id_df.merge(all_df, on=other, suffixes=["_eval", "_all"]).groupby(by=other):
-            pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
+        for key, group in id_df.merge(all_df, on=other, suffixes=["_eval", "_all"]).groupby(by=other):
+            pool = sorted(all_ids.difference(group[f"{side}_all"].unique().tolist()))
+            if not pool:
+                raise ValueError(f"There are no candidate negatives for side={side}, key={other}={key!r}.")
             if len(pool) < num_samples:
                 logger.warning(
-                    f"There are less than num_samples={num_samples} candidates for side={side}, triples={group}.",
+                    f"There are less than num_samples={num_samples} candidates for side={side}, "
+                    f"key={other}={key!r}: only {len(pool)} candidates; negatives will contain duplicates.",
                 )
                 # repeat
                 pool = math.ceil(num_samples / len(pool)) * pool
+            pool_array = np.asarray(pool, dtype=np.int64)
             for i in group["index"].unique():
                 this_negatives[i, :] = torch.as_tensor(
-                    data=random.sample(population=pool, k=num_samples),
+                    data=generator.choice(pool_array, size=num_samples, replace=False),
                     dtype=torch.long,
                 )
         negatives[side] = this_negatives
@@ -568,6 +600,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         num_negatives: int | None = None,
         head_negatives: LongTensor | None = None,
         tail_negatives: LongTensor | None = None,
+        random_state: int | numpy.random.Generator | None = None,
         **kwargs,
     ):
         """
@@ -585,6 +618,9 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             the entity IDs of negative samples for head prediction for each evaluation triple
         :param tail_negatives: shape: (num_triples, num_negatives)
             the entity IDs of negative samples for tail prediction for each evaluation triple
+        :param random_state:
+            the random state (seed or generator) used for sampling negatives; only relevant if not explicit negatives
+            are given. cf. :func:`~pykeen.evaluation.sample_negatives`
         :param kwargs:
             additional keyword-based arguments passed to
             :meth:`~pykeen.evaluation.rank_based_evaluator.RankBasedEvaluator.__init__`
@@ -607,6 +643,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
                 additional_filter_triples=additional_filter_triples,
                 num_entities=evaluation_factory.num_entities,
                 num_samples=num_negatives,
+                random_state=random_state,
             )
         elif head_negatives is None or tail_negatives is None:
             raise ValueError("Either both, head and tail negatives must be provided, or none.")
@@ -663,7 +700,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
 class MacroRankBasedEvaluator(RankBasedEvaluator):
     """Macro-average rank-based evaluation."""
 
-    weights: MutableMapping[Target, list[np.ndarray]]
+    keys: MutableMapping[Target, list[np.ndarray]]
 
     def __init__(self, **kwargs):
         """
@@ -726,18 +763,9 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
         super().clear()
         self.keys.clear()
 
-    def finalize(self) -> RankBasedMetricResults:  # noqa: D102
-        if self.num_entities is None:
-            raise ValueError
+    def _get_rank_packs(self) -> list[RankPack]:
+        self._check_not_empty()
         # compute macro weights
         # note: we wrap the array into a list to be able to re-use _iter_ranks
         weights = {target: [self._calculate_weights(keys=keys)] for target, keys in self.keys.items()}
-        # calculate weighted metrics
-        result = RankBasedMetricResults.from_ranks(
-            metrics=self.metrics,
-            rank_and_candidates=_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights),
-        )
-        # Clear buffers
-        self.clear()
-
-        return result
+        return list(_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights))
