@@ -316,21 +316,24 @@ def iter_unary_patterns(
 def iter_binary_patterns(
     mapped_triples: Collection[tuple[int, int, int]],
 ) -> Iterable[PatternMatch]:
-    r"""
-    Yield binary patterns from ID-based triples.
+    r"""Yield binary patterns from ID-based triples.
 
-    ===========  ===========================
-    Pattern      Equation
-    ===========  ===========================
-    Inversion    $r'(x, y) \implies r(y, x)$
-    Implication  $r'(x, y) \implies r(x, y)$
-    ===========  ===========================
+    =========== ===========================
+    Pattern     Equation
+    =========== ===========================
+    Inversion   $r'(x, y) \implies r(y, x)$
+    Implication $r'(x, y) \implies r(x, y)$
+    =========== ===========================
 
-    All ordered pairs of distinct relations $(r', r)$ are considered. The pattern match is attributed to $r$, and its
-    support is the number of distinct pairs of $r'$.
+    All ordered pairs of distinct relations $(r', r)$ are considered. The pattern match is
+    attributed to $r$, and its support is the number of distinct pairs of $r'$.
 
-    :param mapped_triples:
-        A collection of ID-based triples.
+    .. note::
+
+        implication is one way, corresponding to a "sub-property" relationship. If implication goes
+        both ways, then it can be considered as an equivalence.
+
+    :param mapped_triples: A collection of ID-based triples.
 
     :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
@@ -700,7 +703,7 @@ def relation_pattern_types(
 
     This method generally follows the terminology of association rule mining. The patterns are expressed as
 
-    .. math ::
+    .. math::
 
         X_1 \land \cdot \land X_k \implies Y
 
@@ -772,16 +775,19 @@ def relation_cardinality_types(
 
     The possible types are given in relation_cardinality_types.
 
-    .. note ::
+    .. note::
+
         In the current implementation, we have by definition
 
-        .. math ::
+        .. math::
+
             1 = \sum_{type} conf(relation, type)
 
-    .. note ::
-       These relation types are also mentioned in [wang2014]_. However, the paper does not provide any details on
-       their definition, nor is any code provided. Thus, their exact procedure is unknown and may not coincide with this
-       implementation.
+    .. note::
+
+        These relation types are also mentioned in [wang2014]_. However, the paper does not provide
+        any details on their definition, nor is any code provided. Thus, their exact procedure is
+        unknown and may not coincide with this implementation.
 
     :param mapped_triples:
         The ID-based triples.
