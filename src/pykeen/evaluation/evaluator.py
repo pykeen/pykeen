@@ -34,6 +34,7 @@ from ..utils import (
     determine_maximum_batch_size,
     flatten_dictionary,
     format_relative_comparison,
+    get_num_ids,
     normalize_string,
     prepare_filter_triples,
 )
@@ -657,7 +658,13 @@ def get_candidate_set_size(
         :func:`restrict_triples`.
     :param additional_filter_triples: shape: (n, 3) additional filter triples besides the evaluation triples themselves.
         cf. `_prepare_filter_triples`.
-    :param num_entities: the number of entities. If not given, this number is inferred from all triples
+    :param num_entities: the number of entities. If not given, this number is inferred as the maximum entity ID
+        plus one over all filter triples, since entity IDs are dense indices. Ignored if `restrict_entities_to` is
+        given, in which case the number of entities is the size of the restriction.
+
+    The candidate set size includes the true entity, i.e., it is the number of entities minus the number of *other*
+    known positives for the given (relation, other entity) key. This is the same convention as
+    `number_of_options` of :class:`~pykeen.evaluation.ranks.Ranks` and the `num_candidates` of the rank-based metrics.
 
     :returns: columns: "index" | "head" | "relation" | "tail" | "head_candidates" | "tail_candidates" a dataframe of all
         evaluation triples, with the number of head and tail candidates
@@ -680,13 +687,14 @@ def get_candidate_set_size(
         mapped_triples=mapped_triples,
         additional_filter_triples=additional_filter_triples,
     )
+    # de-duplicate, since positives must be counted once, even if the evaluation triples contain duplicates
+    filter_triples = filter_triples.unique(dim=0)
 
     # infer num_entities if not given
-    if restrict_entities_to:
+    if restrict_entities_to is not None:
         num_entities = len(restrict_entities_to)
-    else:
-        # TODO: unique, or max ID + 1?
-        num_entities = num_entities or filter_triples[:, [0, 2]].view(-1).unique().numel()
+    elif not num_entities:
+        num_entities = get_num_ids(filter_triples[:, [0, 2]])
 
     # optionally restrict triples
     filter_triples = restrict_triples(
@@ -706,10 +714,10 @@ def get_candidate_set_size(
         group_keys = TARGET_TO_KEY_LABELS[target]
         df_count = df_filter.groupby(by=group_keys).agg({target: "count"})
         column = f"{target}_candidates"
-        df_count[column] = total - df_count[target]
+        df_count[column] = total - df_count[target] + 1
         df_count = df_count.drop(columns=target)
         df_eval = df_eval.merge(df_count, on=group_keys, how="left")
-        df_eval[column] = df_eval[column].fillna(value=total)
+        df_eval[column] = df_eval[column].fillna(value=total + 1)
 
     return df_eval
 

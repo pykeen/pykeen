@@ -616,8 +616,8 @@ class CandidateSetSizeTests(unittest.TestCase):
             np.testing.assert_array_equal(df["index"], np.arange(mapped_triples.shape[0]))
             np.testing.assert_array_equal(df[list(COLUMN_LABELS)].values, mapped_triples.numpy())
         for candidate_column in (f"{LABEL_HEAD}_candidates", f"{LABEL_TAIL}_candidates"):
-            np.testing.assert_array_less(-1, df[candidate_column])
-            np.testing.assert_array_less(df[candidate_column], self.dataset.num_entities)
+            assert (df[candidate_column] >= 1).all()
+            assert (df[candidate_column] <= self.dataset.num_entities).all()
 
     def test_simple(self):
         """Test the simple case: nothing to restrict or filter or infer."""
@@ -697,6 +697,45 @@ class CandidateSetSizeTests(unittest.TestCase):
         )
         for column in df.columns:
             np.testing.assert_array_equal(df[column], df2[column])
+
+    def test_duplicate_evaluation_triples(self):
+        """Test that duplicate evaluation triples are not counted twice as positives."""
+        # entities 0..3; (0, 0, 1) occurs twice
+        mapped_triples = torch.as_tensor([[0, 0, 1], [0, 0, 1], [0, 0, 2]])
+        df = get_candidate_set_size(mapped_triples=mapped_triples, num_entities=4)
+        # tails for key (0, 0): {1, 2} -> 4 - 2 + 1 = 3 candidates (incl. the true one) for every row
+        assert df["tail_candidates"].tolist() == [3, 3, 3]
+        # heads for key (0, 1) / (0, 2): {0} -> 4 - 1 + 1 = 4 candidates
+        assert df["head_candidates"].tolist() == [4, 4, 4]
+
+    def test_entity_ids_with_gaps(self):
+        """Test that the inferred number of entities is the maximum ID plus one."""
+        # only entities 0, 2, 5 occur -> 3 unique, but 6 IDs
+        mapped_triples = torch.as_tensor([[0, 0, 5], [2, 0, 5]])
+        df = get_candidate_set_size(mapped_triples=mapped_triples)
+        # tails for (0, 0): {5} -> 6 - 1 + 1; tails for (2, 0): {5} -> 6 - 1 + 1
+        assert df["tail_candidates"].tolist() == [6, 6]
+        # heads for (0, 5): {0, 2} -> 6 - 2 + 1
+        assert df["head_candidates"].tolist() == [5, 5]
+
+    def test_naive_count(self):
+        """Compare against a naive count: all non-positive corruptions plus the true entity."""
+        mapped_triples = self.dataset.training.mapped_triples[:30]
+        num_entities = self.dataset.num_entities
+        known = {tuple(t) for t in mapped_triples.tolist()}
+        df = get_candidate_set_size(mapped_triples=mapped_triples, num_entities=num_entities)
+        for row in df.itertuples():
+            h, r, t = row.head, row.relation, row.tail
+            expected_head = 1 + sum((e, r, t) not in known for e in range(num_entities) if e != h)
+            expected_tail = 1 + sum((h, r, e) not in known for e in range(num_entities) if e != t)
+            assert row.head_candidates == expected_head
+            assert row.tail_candidates == expected_tail
+
+    def test_empty_entity_restriction(self):
+        """Test that an empty entity restriction is not treated as no restriction."""
+        mapped_triples = torch.as_tensor([[0, 0, 1], [1, 0, 2]])
+        df = get_candidate_set_size(mapped_triples=mapped_triples, restrict_entities_to=set())
+        assert len(df) == 0
 
 
 class ExpectedMetricsTests(unittest.TestCase):
