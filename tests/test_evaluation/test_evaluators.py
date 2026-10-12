@@ -577,6 +577,43 @@ def test_sample_negatives():
         # TODO: check no repetitions (if possible)
 
 
+def test_sample_negatives_seed():
+    """Test that sample_negatives is reproducible for a fixed seed and varies across seeds."""
+    dataset = Nations()
+    assert dataset.validation is not None
+    kwargs = {
+        "evaluation_triples": dataset.validation.mapped_triples,
+        "additional_filter_triples": dataset.training.mapped_triples,
+        "num_entities": dataset.num_entities,
+        "num_samples": 5,
+    }
+    first = sample_negatives(**kwargs, random_state=42)
+    second = sample_negatives(**kwargs, random_state=42)
+    other = sample_negatives(**kwargs, random_state=43)
+    for side in (LABEL_HEAD, LABEL_TAIL):
+        assert first[side].dtype == torch.long
+        assert first[side].shape == (dataset.validation.num_triples, 5)
+        assert torch.equal(first[side], second[side])
+    assert any(not torch.equal(first[side], other[side]) for side in (LABEL_HEAD, LABEL_TAIL))
+
+
+def test_sample_negatives_no_candidates():
+    """Test that a key without any candidate negative raises a ValueError."""
+    # all three entities are true tails for (h=0, r=0), so there is no tail candidate
+    triples = torch.as_tensor([[0, 0, 0], [0, 0, 1], [0, 0, 2]])
+    with pytest.raises(ValueError, match="no candidate"):
+        sample_negatives(evaluation_triples=triples, num_entities=3, num_samples=2, random_state=0)
+
+
+def test_sample_negatives_few_candidates():
+    """Test that fewer candidates than samples falls back to duplicates drawn from the candidates."""
+    # for tail prediction of (h=0, r=0), entity 2 is the only candidate
+    triples = torch.as_tensor([[0, 0, 0], [0, 0, 1]])
+    negatives = sample_negatives(evaluation_triples=triples, num_entities=3, num_samples=4, random_state=0)
+    assert negatives[LABEL_TAIL].shape == (2, 4)
+    assert (negatives[LABEL_TAIL] == 2).all()
+
+
 class CandidateSetSizeTests(unittest.TestCase):
     """Tests for candidate set size calculation."""
 

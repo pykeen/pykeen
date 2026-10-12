@@ -6,7 +6,6 @@ import functools
 import itertools
 import logging
 import math
-import random
 import re
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
@@ -502,7 +501,8 @@ def sample_negatives(
     additional_filter_triples: MappedTriples | list[MappedTriples] | None = None,
     num_samples: int = 50,
     num_entities: int | None = None,
-) -> Mapping[Target, FloatTensor]:
+    random_state: int | numpy.random.Generator | None = None,
+) -> Mapping[Target, LongTensor]:
     """
     Sample true negatives for sampled evaluation.
 
@@ -514,10 +514,18 @@ def sample_negatives(
         the number of samples
     :param num_entities:
         the number of entities
+    :param random_state:
+        the random state, either a seed or a numpy generator. If None, the sampling is not reproducible.
 
     :return:
-        A mapping of sides to negative samples
+        A mapping of sides to negative samples, each of shape (n, num_samples) and dtype long.
+        If a key has fewer than `num_samples` candidate entities, the candidates are repeated, i.e., the negatives
+        for the corresponding triples contain duplicates.
+
+    :raises ValueError:
+        if there is no candidate negative entity at all for some (relation, other entity) key
     """
+    generator = np.random.default_rng(seed=random_state)
     additional_filter_triples_t = prepare_filter_triples(
         mapped_triples=evaluation_triples,
         additional_filter_triples=additional_filter_triples,
@@ -532,17 +540,21 @@ def sample_negatives(
     for side in [LABEL_HEAD, LABEL_TAIL]:
         this_negatives = torch.empty(size=(num_triples, num_samples), dtype=torch.long)
         other = TARGET_TO_KEY_LABELS[side]
-        for _, group in id_df.merge(all_df, on=other, suffixes=["_eval", "_all"]).groupby(by=other):
-            pool = list(all_ids.difference(group[f"{side}_all"].unique().tolist()))
+        for key, group in id_df.merge(all_df, on=other, suffixes=["_eval", "_all"]).groupby(by=other):
+            pool = sorted(all_ids.difference(group[f"{side}_all"].unique().tolist()))
+            if not pool:
+                raise ValueError(f"There are no candidate negatives for side={side}, key={other}={key!r}.")
             if len(pool) < num_samples:
                 logger.warning(
-                    f"There are less than num_samples={num_samples} candidates for side={side}, triples={group}.",
+                    f"There are less than num_samples={num_samples} candidates for side={side}, "
+                    f"key={other}={key!r}: only {len(pool)} candidates; negatives will contain duplicates.",
                 )
                 # repeat
                 pool = math.ceil(num_samples / len(pool)) * pool
+            pool_array = np.asarray(pool, dtype=np.int64)
             for i in group["index"].unique():
                 this_negatives[i, :] = torch.as_tensor(
-                    data=random.sample(population=pool, k=num_samples),
+                    data=generator.choice(pool_array, size=num_samples, replace=False),
                     dtype=torch.long,
                 )
         negatives[side] = this_negatives
@@ -568,6 +580,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
         num_negatives: int | None = None,
         head_negatives: LongTensor | None = None,
         tail_negatives: LongTensor | None = None,
+        random_state: int | numpy.random.Generator | None = None,
         **kwargs,
     ):
         """
@@ -585,6 +598,9 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
             the entity IDs of negative samples for head prediction for each evaluation triple
         :param tail_negatives: shape: (num_triples, num_negatives)
             the entity IDs of negative samples for tail prediction for each evaluation triple
+        :param random_state:
+            the random state (seed or generator) used for sampling negatives; only relevant if not explicit negatives
+            are given. cf. :func:`~pykeen.evaluation.sample_negatives`
         :param kwargs:
             additional keyword-based arguments passed to
             :meth:`~pykeen.evaluation.rank_based_evaluator.RankBasedEvaluator.__init__`
@@ -607,6 +623,7 @@ class SampledRankBasedEvaluator(RankBasedEvaluator):
                 additional_filter_triples=additional_filter_triples,
                 num_entities=evaluation_factory.num_entities,
                 num_samples=num_negatives,
+                random_state=random_state,
             )
         elif head_negatives is None or tail_negatives is None:
             raise ValueError("Either both, head and tail negatives must be provided, or none.")
