@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import itertools
 import unittest
+import warnings
 from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, MutableMapping
 from typing import Any, ClassVar
@@ -20,6 +21,7 @@ from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, OGBEvaluator, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
 from pykeen.evaluation.evaluator import (
+    _optimal_batch_size_group_id,
     create_dense_positive_mask_,
     create_sparse_positive_filter_,
     filter_scores_,
@@ -162,6 +164,96 @@ class MacroRankBasedEvaluatorTests(RankBasedEvaluatorTests):
     """unittest for the MacroRankBasedEvaluator."""
 
     cls = MacroRankBasedEvaluator
+
+
+def _process_ranks_(evaluator: RankBasedEvaluator, true_ranks: list[int], num_entities: int, keys: list[int]) -> None:
+    """Feed head-prediction scores with the given true ranks; `keys` is the tail, i.e., (relation, tail) is the key."""
+    n = len(true_ranks)
+    # the true score is 0 and stored in the last column; exactly (rank - 1) of the other candidates are scored higher,
+    # all remaining ones are scored lower, i.e., there are no ties
+    scores = torch.full((n, num_entities), -1.0)
+    true_scores = torch.zeros(n, 1)
+    for i, rank in enumerate(true_ranks):
+        scores[i, : rank - 1] = 1.0
+    scores[:, -1] = true_scores[:, 0]
+    hrt_batch = torch.stack(
+        [torch.zeros(n, dtype=torch.long), torch.zeros(n, dtype=torch.long), torch.as_tensor(keys)], dim=-1
+    )
+    evaluator.process_scores_(hrt_batch=hrt_batch, target=LABEL_HEAD, scores=scores, true_scores=true_scores)
+
+
+_MRR_KEY = RankBasedMetricKey(side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=InverseHarmonicMeanRank().key)
+
+
+def _make_evaluators() -> dict[str, RankBasedEvaluator]:
+    dataset = Nations()
+    kwargs: dict[str, Any] = {"metrics": ["mrr"], "add_defaults": False}
+    return {
+        "rankbased": RankBasedEvaluator(**kwargs),
+        "macro": MacroRankBasedEvaluator(**kwargs),
+        "sampled": SampledRankBasedEvaluator(evaluation_factory=dataset.testing, num_negatives=3, **kwargs),
+    }
+
+
+@pytest.mark.parametrize("name", ["rankbased", "macro", "sampled"])
+def test_finalize_empty(name: str):
+    """Test that finalizing an evaluator without processed scores raises an informative error."""
+    evaluator = _make_evaluators()[name]
+    with pytest.raises(ValueError, match="no ranks to aggregate"):
+        evaluator.finalize()
+    with pytest.raises(ValueError, match="no ranks to aggregate"):
+        evaluator.finalize_multi(n_boot=2)
+
+
+@pytest.mark.parametrize("name", ["rankbased", "macro"])
+def test_finalize_twice(name: str):
+    """Test that finalize clears the buffers by default, i.e., a second call fails."""
+    evaluator = _make_evaluators()[name]
+    _process_ranks_(evaluator, true_ranks=[1, 2, 3], num_entities=5, keys=[0, 1, 2])
+    evaluator.finalize()
+    with pytest.raises(ValueError, match="no ranks to aggregate"):
+        evaluator.finalize()
+
+
+@pytest.mark.parametrize("cls", [RankBasedEvaluator, MacroRankBasedEvaluator])
+def test_clear_on_finalize_false(cls: type[RankBasedEvaluator]):
+    """Test that buffers are kept, and results are reproducible, if clear_on_finalize is disabled."""
+    evaluator = cls(metrics=["mrr"], add_defaults=False, clear_on_finalize=False)
+    _process_ranks_(evaluator, true_ranks=[1, 2, 3, 5], num_entities=5, keys=[0, 0, 1, 2])
+    first = evaluator.finalize()
+    assert evaluator.ranks
+    second = evaluator.finalize()
+    assert first.to_flat_dict() == second.to_flat_dict()
+
+
+def test_macro_finalize_multi_unique_keys():
+    """Test that macro and micro bootstrap coincide, if all keys are unique, i.e., all macro weights are equal."""
+    ranks, keys = [1, 2, 3, 4, 5, 1, 1, 2], list(range(8))
+    results = []
+    for cls in (RankBasedEvaluator, MacroRankBasedEvaluator):
+        evaluator = cls(metrics=["mrr"], add_defaults=False)
+        _process_ranks_(evaluator, true_ranks=ranks, num_entities=5, keys=keys)
+        results.append(evaluator.finalize_multi(n_boot=5))
+    micro, macro = results
+    assert micro.keys() == macro.keys()
+    for key, values in micro.items():
+        assert values == pytest.approx(macro[key])
+
+
+def test_macro_finalize_multi_uses_weights():
+    """Test that the macro bootstrap is centered around the macro-, not the micro-averaged value.
+
+    40 triples share a single key and have rank 1; 10 triples have unique keys and the worst rank (10). Thus, the
+    micro-averaged MRR is (40 + 10 * 0.1) / 50 = 0.82, while the macro-averaged MRR is (1 + 10 * 0.1) / 11 = 2 / 11.
+    """
+    num_entities = 10
+    true_ranks = [1] * 40 + [num_entities] * 10
+    keys = [0] * 40 + list(range(1, 11))
+    evaluator = MacroRankBasedEvaluator(metrics=["mrr"], add_defaults=False, clear_on_finalize=False)
+    _process_ranks_(evaluator, true_ranks=true_ranks, num_entities=num_entities, keys=keys)
+    assert evaluator.finalize().get_metric(_MRR_KEY) == pytest.approx(2 / 11)
+    values = evaluator.finalize_multi(n_boot=30)[f"{SIDE_BOTH}.{RANK_REALISTIC}.{_MRR_KEY.metric}"]
+    assert np.median(values) == pytest.approx(2 / 11, abs=0.1)
 
 
 class ClassificationEvaluatorTest(cases.EvaluatorTestCase):
@@ -577,6 +669,43 @@ def test_sample_negatives():
         # TODO: check no repetitions (if possible)
 
 
+def test_sample_negatives_seed():
+    """Test that sample_negatives is reproducible for a fixed seed and varies across seeds."""
+    dataset = Nations()
+    assert dataset.validation is not None
+    kwargs = {
+        "evaluation_triples": dataset.validation.mapped_triples,
+        "additional_filter_triples": dataset.training.mapped_triples,
+        "num_entities": dataset.num_entities,
+        "num_samples": 5,
+    }
+    first = sample_negatives(**kwargs, random_state=42)
+    second = sample_negatives(**kwargs, random_state=42)
+    other = sample_negatives(**kwargs, random_state=43)
+    for side in (LABEL_HEAD, LABEL_TAIL):
+        assert first[side].dtype == torch.long
+        assert first[side].shape == (dataset.validation.num_triples, 5)
+        assert torch.equal(first[side], second[side])
+    assert any(not torch.equal(first[side], other[side]) for side in (LABEL_HEAD, LABEL_TAIL))
+
+
+def test_sample_negatives_no_candidates():
+    """Test that a key without any candidate negative raises a ValueError."""
+    # all three entities are true tails for (h=0, r=0), so there is no tail candidate
+    triples = torch.as_tensor([[0, 0, 0], [0, 0, 1], [0, 0, 2]])
+    with pytest.raises(ValueError, match="no candidate"):
+        sample_negatives(evaluation_triples=triples, num_entities=3, num_samples=2, random_state=0)
+
+
+def test_sample_negatives_few_candidates():
+    """Test that fewer candidates than samples falls back to duplicates drawn from the candidates."""
+    # for tail prediction of (h=0, r=0), entity 2 is the only candidate
+    triples = torch.as_tensor([[0, 0, 0], [0, 0, 1]])
+    negatives = sample_negatives(evaluation_triples=triples, num_entities=3, num_samples=4, random_state=0)
+    assert negatives[LABEL_TAIL].shape == (2, 4)
+    assert (negatives[LABEL_TAIL] == 2).all()
+
+
 class CandidateSetSizeTests(unittest.TestCase):
     """Tests for candidate set size calculation."""
 
@@ -616,8 +745,8 @@ class CandidateSetSizeTests(unittest.TestCase):
             np.testing.assert_array_equal(df["index"], np.arange(mapped_triples.shape[0]))
             np.testing.assert_array_equal(df[list(COLUMN_LABELS)].values, mapped_triples.numpy())
         for candidate_column in (f"{LABEL_HEAD}_candidates", f"{LABEL_TAIL}_candidates"):
-            np.testing.assert_array_less(-1, df[candidate_column])
-            np.testing.assert_array_less(df[candidate_column], self.dataset.num_entities)
+            assert (df[candidate_column] >= 1).all()
+            assert (df[candidate_column] <= self.dataset.num_entities).all()
 
     def test_simple(self):
         """Test the simple case: nothing to restrict or filter or infer."""
@@ -698,6 +827,45 @@ class CandidateSetSizeTests(unittest.TestCase):
         for column in df.columns:
             np.testing.assert_array_equal(df[column], df2[column])
 
+    def test_duplicate_evaluation_triples(self):
+        """Test that duplicate evaluation triples are not counted twice as positives."""
+        # entities 0..3; (0, 0, 1) occurs twice
+        mapped_triples = torch.as_tensor([[0, 0, 1], [0, 0, 1], [0, 0, 2]])
+        df = get_candidate_set_size(mapped_triples=mapped_triples, num_entities=4)
+        # tails for key (0, 0): {1, 2} -> 4 - 2 + 1 = 3 candidates (incl. the true one) for every row
+        assert df["tail_candidates"].tolist() == [3, 3, 3]
+        # heads for key (0, 1) / (0, 2): {0} -> 4 - 1 + 1 = 4 candidates
+        assert df["head_candidates"].tolist() == [4, 4, 4]
+
+    def test_entity_ids_with_gaps(self):
+        """Test that the inferred number of entities is the maximum ID plus one."""
+        # only entities 0, 2, 5 occur -> 3 unique, but 6 IDs
+        mapped_triples = torch.as_tensor([[0, 0, 5], [2, 0, 5]])
+        df = get_candidate_set_size(mapped_triples=mapped_triples)
+        # tails for (0, 0): {5} -> 6 - 1 + 1; tails for (2, 0): {5} -> 6 - 1 + 1
+        assert df["tail_candidates"].tolist() == [6, 6]
+        # heads for (0, 5): {0, 2} -> 6 - 2 + 1
+        assert df["head_candidates"].tolist() == [5, 5]
+
+    def test_naive_count(self):
+        """Compare against a naive count: all non-positive corruptions plus the true entity."""
+        mapped_triples = self.dataset.training.mapped_triples[:30]
+        num_entities = self.dataset.num_entities
+        known = {tuple(t) for t in mapped_triples.tolist()}
+        df = get_candidate_set_size(mapped_triples=mapped_triples, num_entities=num_entities)
+        for row in df.itertuples():
+            h, r, t = row.head, row.relation, row.tail
+            expected_head = 1 + sum((e, r, t) not in known for e in range(num_entities) if e != h)
+            expected_tail = 1 + sum((h, r, e) not in known for e in range(num_entities) if e != t)
+            assert row.head_candidates == expected_head
+            assert row.tail_candidates == expected_tail
+
+    def test_empty_entity_restriction(self):
+        """Test that an empty entity restriction is not treated as no restriction."""
+        mapped_triples = torch.as_tensor([[0, 0, 1], [1, 0, 2]])
+        df = get_candidate_set_size(mapped_triples=mapped_triples, restrict_entities_to=set())
+        assert len(df) == 0
+
 
 class ExpectedMetricsTests(unittest.TestCase):
     """Tests for expected metrics."""
@@ -763,6 +931,57 @@ def test_prepare_filter_triples():
         assert filter_triples.shape[0] >= mapped_triples.shape[0]
         # check unique
         assert filter_triples.unique(dim=0).shape == filter_triples.shape
+
+
+def test_restrict_entities_to_collection_types():
+    """Test that `restrict_entities_to` can be given as set, list, or tensor, with identical results."""
+    dataset = Nations()
+    model = FixedModel(triples_factory=dataset.training)
+    entities = [0, 2, 3, 5, 7, 9]
+    results = []
+    for restrict in (set(entities), list(entities), torch.as_tensor(entities)):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", category=UserWarning)
+            result = RankBasedEvaluator(filtered=True).evaluate(
+                model=model,
+                mapped_triples=dataset.testing.mapped_triples,
+                additional_filter_triples=[dataset.training.mapped_triples],
+                restrict_entities_to=restrict,
+                pre_filtered_triples=False,
+                batch_size=8,
+                slice_size=None,
+                use_tqdm=False,
+            )
+        results.append(result.to_dict())
+    assert results[0] == results[1] == results[2]
+
+
+def test_optimal_batch_size_group_id():
+    """Test the stability of the batch size cache key."""
+    evaluator = RankBasedEvaluator()
+    model = FixedModel(triples_factory=Nations().training)
+
+    def make_kwargs(**overrides):
+        kwargs: dict[str, Any] = {
+            "evaluator": evaluator,
+            "mapped_triples": torch.zeros(10, 3, dtype=torch.long),
+            "batch_size": 4,
+            "slice_size": 5,
+            "progress_bar": None,
+            "model": model,
+            "all_pos_triples": torch.zeros(20, 3, dtype=torch.long),
+        }
+        kwargs.update(overrides)
+        return kwargs
+
+    key = _optimal_batch_size_group_id(make_kwargs())
+    # freshly created, equal-shaped tensors share the key; batch/slice size are ignored
+    assert key == _optimal_batch_size_group_id(make_kwargs(all_pos_triples=torch.ones(20, 3, dtype=torch.long)))
+    assert key == _optimal_batch_size_group_id(make_kwargs(batch_size=1, slice_size=2))
+    # different shapes, number of evaluation triples, or evaluator instances do not
+    assert key != _optimal_batch_size_group_id(make_kwargs(all_pos_triples=torch.zeros(21, 3, dtype=torch.long)))
+    assert key != _optimal_batch_size_group_id(make_kwargs(mapped_triples=torch.zeros(11, 3, dtype=torch.long)))
+    assert key != _optimal_batch_size_group_id(make_kwargs(evaluator=RankBasedEvaluator()))
 
 
 class RankBasedMetricResultTests(cases.MetricResultTestCase):

@@ -249,9 +249,10 @@ def _reference_iter_patterns(
 ) -> Iterable[triple_analysis.PatternMatch]:
     r"""Mine patterns with a pure-Python reference implementation.
 
-    For unary and ternary patterns, this is the implementation prior to vectorization. For inversion, it is a
-    straightforward set-based implementation of $r'(x, y) \implies r(y, x)$ (inversion) and
-    $r'(x, y) \implies r(x, y)$ (implication) for all ordered pairs $r' \neq r$.
+    For unary and ternary patterns, this is the implementation prior to vectorization. For
+    inversion, it is a straightforward set-based implementation of
+    $r'(x, y) \implies r(y, x)$ (inversion) and $r'(x, y) \implies r(x, y)$ (implication) for
+    all ordered pairs $r' \neq r$.
     """
     pairs: dict[int, set[tuple[int, int]]] = defaultdict(set)
     adj: dict[int, dict[int, set[int]]] = defaultdict(lambda: defaultdict(set))
@@ -358,7 +359,7 @@ class PatternMiningTests(unittest.TestCase):
         df = triple_analysis.relation_pattern_types([(0, 0, 1), (0, 1, 1)])
         assert triple_analysis.PATTERN_TYPE_INVERSION not in set(df[triple_analysis.PATTERN_TYPE_COLUMN_NAME])
 
-    def test_implication(self):
+    def test_implication(self) -> None:
         """Test that r'(x, y) => r(x, y) is detected for the superset relation only, and not as inversion."""
         # r0 = {(0, 1)} is contained in r1 = {(0, 1), (1, 2)}
         triples = [(0, 0, 1), (0, 1, 1), (1, 1, 2)]

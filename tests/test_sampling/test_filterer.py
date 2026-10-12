@@ -8,7 +8,16 @@ import torch
 import unittest_templates
 
 from pykeen.datasets import Nations
-from pykeen.sampling.filtering import BloomFilterer, Filterer, PythonSetFilterer, SortedKeyFilterer
+from pykeen.sampling import BasicNegativeSampler
+from pykeen.sampling.filtering import (
+    BloomFilterer,
+    Filterer,
+    PythonSetFilterer,
+    SortedKeyFilterer,
+    SortedKeyOverflowError,
+    filterer_resolver,
+    make_default_filterer,
+)
 from pykeen.utils import set_random_seed
 
 
@@ -126,8 +135,50 @@ class SortedKeyFiltererTest(FiltererTest):
 
     def test_overflow(self):
         """Test that an error is raised if keys would overflow."""
-        with pytest.raises(ValueError, match="overflow"):
+        with pytest.raises(SortedKeyOverflowError, match="overflow"):
             SortedKeyFilterer(mapped_triples=torch.as_tensor([[2**22, 2**20, 2**22]]))
+
+
+def test_default_filterer():
+    """Test that the sorted key filterer is the default filterer."""
+    mapped_triples = Nations().training.mapped_triples
+    assert filterer_resolver.default is SortedKeyFilterer
+    assert isinstance(make_default_filterer(mapped_triples=mapped_triples), SortedKeyFilterer)
+    sampler = BasicNegativeSampler(mapped_triples=mapped_triples, filtered=True)
+    assert isinstance(sampler.filterer, SortedKeyFilterer)
+
+
+def test_default_filterer_fallback(caplog: pytest.LogCaptureFixture):
+    """Test that the default filterer falls back to the bloom filterer if the sorted keys would overflow."""
+    mapped_triples = Nations().training.mapped_triples
+    # sizes are only used for the overflow check, i.e., no large tensors are allocated
+    huge = {"num_entities": 2**22, "num_relations": 2**20}
+    with caplog.at_level("WARNING", logger="pykeen.sampling.filtering"):
+        filterer = make_default_filterer(mapped_triples=mapped_triples, **huge)
+    assert isinstance(filterer, BloomFilterer)
+    assert "Falling back" in caplog.text
+    # also via the negative sampler
+    sampler = BasicNegativeSampler(mapped_triples=mapped_triples, filtered=True, filterer_kwargs=huge)
+    assert isinstance(sampler.filterer, BloomFilterer)
+    # inferred sizes also trigger the fallback
+    sampler = BasicNegativeSampler(
+        mapped_triples=torch.as_tensor([[2**22, 2**20, 2**22]]), num_negs_per_pos=1, filtered=True
+    )
+    assert isinstance(sampler.filterer, BloomFilterer)
+
+
+def test_explicit_filterer_no_fallback():
+    """Test that explicitly requested filterers are used, and the sorted key filterer does not fall back."""
+    mapped_triples = Nations().training.mapped_triples
+    sampler = BasicNegativeSampler(mapped_triples=mapped_triples, filtered=True, filterer="bloom")
+    assert isinstance(sampler.filterer, BloomFilterer)
+    with pytest.raises(SortedKeyOverflowError):
+        BasicNegativeSampler(
+            mapped_triples=mapped_triples,
+            filtered=True,
+            filterer="sorted-key",
+            filterer_kwargs={"num_entities": 2**22, "num_relations": 2**20},
+        )
 
 
 class FiltererMetaTestCase(unittest_templates.MetaTestCase[Filterer]):
