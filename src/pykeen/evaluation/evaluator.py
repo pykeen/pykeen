@@ -428,17 +428,17 @@ def _optimal_batch_size_group_id(kwargs: Mapping[str, Any]) -> int:
         # we want to separate optimize for each evaluator instance
         "evaluator",
     }
-    values: tuple[Hashable, ...] = (kwargs["mapped_triples"].shape[0], id(kwargs["evaluator"]))
-    for key, value in kwargs.items():
+    values: list[Hashable] = [kwargs["mapped_triples"].shape[0], id(kwargs["evaluator"])]
+    for key, value in sorted(kwargs.items()):
         if key in ignored_keys:
             continue
         if isinstance(value, torch.Tensor):
-            values += ((tuple(value.shape), value.dtype, value.device),)
+            values.append((tuple(value.shape), value.dtype, value.device))
         elif isinstance(value, Hashable):
-            values += (value,)
+            values.append(value)
         else:
             warnings.warn(f"Encountered {type(value)=} which cannot be hashed", category=UserWarning, stacklevel=3)
-    return hash(values)
+    return hash(tuple(values))
 
 
 @maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_optimal_batch_size_group_id)
