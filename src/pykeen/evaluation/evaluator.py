@@ -393,22 +393,25 @@ class Evaluator(ABC, Generic[MetricKeyType]):
 def _optimal_batch_size_group_id(kwargs: Mapping[str, Any]) -> int:
     """Share optimal batch size whenever this hash matches.
 
-    The key consists of the number of evaluation triples, the identity of the evaluator and all remaining keyword
-    arguments. Identity is the right notion for the evaluator (each instance is optimized separately) and for the model
-    (its architecture, and thus memory footprint, is fixed for the lifetime of the instance). Tensors, in contrast, are
-    often re-created for each call, e.g., `all_pos_triples` is rebuilt in every :meth:`Evaluator.evaluate` call, so
-    their identity would prevent re-using the cache across calls (e.g., for periodic evaluation during training) and
-    could even produce arbitrary hits after an `id` is re-used. Since memory consumption depends mainly on their size,
-    they enter the key via `(shape, dtype, device)`.
+    The key consists of the number of evaluation triples, the identity of the evaluator and all
+    remaining keyword arguments. Identity is the right notion for the evaluator (each instance is
+    optimized separately) and for the model (its architecture, and thus memory footprint, is fixed
+    for the lifetime of the instance). Tensors, in contrast, are often re-created for each call,
+    e.g., `all_pos_triples` is rebuilt in every :meth:`Evaluator.evaluate` call, so their identity
+    would prevent re-using the cache across calls (e.g., for periodic evaluation during training)
+    and could even produce arbitrary hits after an `id` is re-used. Since memory consumption depends
+    mainly on their size, they enter the key via `(shape, dtype, device)`.
 
-    This is safe although memory consumption is partially value-dependent: with filtering, the output of
-    :func:`create_sparse_positive_filter_` (and the subsequent indexing in :func:`filter_scores_`) scales with the
-    number of (batch row, positive entity) pairs, i.e., with tensor *values*, whereas the dense temporaries depend on
-    shapes only. This already varies between batches within a single evaluation, so no key can capture it; an
-    out-of-memory error on a later, denser batch is handled by the retry of the memory optimization (the evaluator is
-    cleared). Moreover, a cached value only acts as a ceiling (the minimum of the requested and the cached value) and is
-    still reduced upon out-of-memory errors. Thus, two calls which share a key but differ in content can at worst cost
-    throughput (e.g., through a ceiling learned on denser data), but never correctness.
+    This is safe although memory consumption is partially value-dependent: with filtering, the
+    output of :func:`create_sparse_positive_filter_` (and the subsequent indexing in
+    :func:`filter_scores_`) scales with the number of (batch row, positive entity) pairs, i.e., with
+    tensor *values*, whereas the dense temporaries depend on shapes only. This already varies
+    between batches within a single evaluation, so no key can capture it; an out-of-memory error on
+    a later, denser batch is handled by the retry of the memory optimization (the evaluator is
+    cleared). Moreover, a cached value only acts as a ceiling (the minimum of the requested and the
+    cached value) and is still reduced upon out-of-memory errors. Thus, two calls which share a key
+    but differ in content can at worst cost throughput (e.g., through a ceiling learned on denser
+    data), but never correctness.
 
     :param kwargs: the keyword-based parameters of :func:`evaluate`
 
