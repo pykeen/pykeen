@@ -2,6 +2,7 @@
 
 import hashlib
 import logging
+import typing
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from typing import Literal, NamedTuple, Self, TypeAlias
@@ -41,33 +42,19 @@ CARDINALITY_TYPE_ONE_TO_MANY: RelationCardinality = "one-to-many"
 CARDINALITY_TYPE_MANY_TO_ONE: RelationCardinality = "many-to-one"
 CARDINALITY_TYPE_MANY_TO_MANY: RelationCardinality = "many-to-many"
 
-RELATION_CARDINALITY_TYPES: set[RelationCardinality] = {
-    CARDINALITY_TYPE_ONE_TO_ONE,
-    CARDINALITY_TYPE_ONE_TO_MANY,
-    CARDINALITY_TYPE_MANY_TO_ONE,
-    CARDINALITY_TYPE_MANY_TO_MANY,
-}
+RELATION_CARDINALITY_TYPES: set[RelationCardinality] = set(typing.get_args(RelationCardinality))
 
 #: A pattern type
 RelationPatternType: TypeAlias = Literal["symmetry", "anti-symmetry", "inversion", "implication", "composition"]
 
 # constants
-PATTERN_TYPE_SYMMETRY: RelationPatternType = "symmetry"
-PATTERN_TYPE_ANTI_SYMMETRY: RelationPatternType = "anti-symmetry"
-PATTERN_TYPE_INVERSION: RelationPatternType = "inversion"
-PATTERN_TYPE_IMPLICATION: RelationPatternType = "implication"
-PATTERN_TYPE_COMPOSITION: RelationPatternType = "composition"
+PATTERN_TYPE_SYMMETRY: RelationPatternType = "symmetry"  # unary
+PATTERN_TYPE_ANTI_SYMMETRY: RelationPatternType = "anti-symmetry"  # unary
+PATTERN_TYPE_INVERSION: RelationPatternType = "inversion"  # binary
+PATTERN_TYPE_IMPLICATION: RelationPatternType = "implication"  # binary
+PATTERN_TYPE_COMPOSITION: RelationPatternType = "composition"  # ternary
 
-RELATION_PATTERN_TYPES: set[RelationPatternType] = {
-    # unary
-    PATTERN_TYPE_SYMMETRY,
-    PATTERN_TYPE_ANTI_SYMMETRY,
-    # binary
-    PATTERN_TYPE_INVERSION,
-    PATTERN_TYPE_IMPLICATION,
-    # ternary
-    PATTERN_TYPE_COMPOSITION,
-}
+RELATION_PATTERN_TYPES: set[RelationPatternType] = set(typing.get_args(RelationPatternType))
 
 # column names
 COUNT_COLUMN_NAME = "count"
