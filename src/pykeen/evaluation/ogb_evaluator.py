@@ -172,7 +172,6 @@ def evaluate_ogb(
     tqdm_kwargs = dict(tqdm_kwargs or {})
     tqdm_kwargs["disable"] = not use_tqdm
     for target in targets:
-        negatives = evaluator.negative_samples[target].to(device)
         with tqdm(**tqdm_kwargs) as progress_bar:
             y_pred_pos[target], y_pred_neg[target] = _evaluate_ogb(
                 evaluator=evaluator,
@@ -180,7 +179,7 @@ def evaluate_ogb(
                 slice_size=slice_size or model.num_entities,  # OGB evaluator supports head/tail only
                 mapped_triples=mapped_triples,
                 model=model,
-                negatives=negatives,
+                negatives=evaluator.negative_samples[target].to(device),
                 target=target,
                 progress_bar=progress_bar,
             )
