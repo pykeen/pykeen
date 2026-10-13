@@ -13,6 +13,12 @@ from ..typing import MappedTriples
 
 logger = logging.getLogger(__name__)
 
+#: a version of the relation pattern computation, which is part of the cache file name. Increase it whenever the
+#: results of :func:`~pykeen.triples.analysis.relation_pattern_types` change, to invalidate stale cache files.
+#: version 2: fixed inversion pattern, cf. :func:`~pykeen.triples.analysis.iter_binary_patterns`
+#: version 3: added implication pattern
+_RELATION_PATTERN_CACHE_VERSION = 3
+
 __all__ = [
     "get_entity_count_df",
     "get_entity_relation_co_occurrence_df",
@@ -203,11 +209,12 @@ def get_relation_pattern_types_df(
     The relation classifications are based upon checking whether the corresponding rules hold with sufficient support
     and confidence. By default, we do not require a minimum support, however, a relatively high confidence.
 
-    The following four non-exclusive classes for relations are considered:
+    The following five non-exclusive classes for relations are considered:
 
     - symmetry
     - anti-symmetry
     - inversion
+    - implication
     - composition
 
     This method generally follows the terminology of association rule mining. The patterns are expressed as
@@ -218,14 +225,20 @@ def get_relation_pattern_types_df(
 
     where $X_i$ is of the form $r_i(h_i, t_i)$, and some of the $h_i / t_i$ might re-occur in other atoms.
     The *support* of a pattern is the number of distinct instantiations of the variables shared by the left- and
-    right-hand side, i.e., the distinct $(x, y)$ pairs for symmetry, anti-symmetry, and inversion, and the distinct
-    $(x, z)$ pairs for composition (where the intermediate entity $y$ is projected out).
+    right-hand side, i.e., the distinct $(x, y)$ pairs for symmetry, anti-symmetry, inversion, and implication, and
+    the distinct $(x, z)$ pairs for composition (where the intermediate entity $y$ is projected out).
     The *confidence* is the proportion of these instantiations where the right-hand side is also true.
+
+    .. note ::
+
+        With the default ``min_support=0``, patterns supported by very few pairs, e.g., a single triple, can reach a
+        confidence of 1.0 and thus pass the confidence threshold. Consider setting a minimum support, in particular
+        for small or dense datasets, such as :class:`~pykeen.datasets.Nations`.
 
     :param dataset:
         The dataset to investigate.
     :param min_support:
-        A minimum support for patterns.
+        A minimum support for patterns. Defaults to 0, i.e., no filtering by support; see the note above.
     :param min_confidence:
         A minimum confidence for the tested patterns.
     :param drop_confidence:
@@ -254,7 +267,9 @@ def get_relation_pattern_types_df(
     ph = triple_analysis.triple_set_hash(mapped_triples=mapped_triples)[:16]
 
     # include part hash into cache-file name
-    cache_path = PYKEEN_DATASETS.joinpath(dataset.__class__.__name__.lower(), f"relation_patterns_{ph}.tsv.xz")
+    cache_path = PYKEEN_DATASETS.joinpath(
+        dataset.__class__.__name__.lower(), f"relation_patterns_v{_RELATION_PATTERN_CACHE_VERSION}_{ph}.tsv.xz"
+    )
 
     # re-use cached file if possible
     if not cache_path.is_file() or force:
