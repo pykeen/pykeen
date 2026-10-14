@@ -74,6 +74,7 @@ class CooccurrenceFilteredModel(Model):
         training_fill_value: float = -1.0e03,
         inference_fill_value: float = float("-inf"),
         conjunctive: bool = False,
+        inference_factory: CoreTriplesFactory | None = None,
         **kwargs,
     ) -> None:
         """
@@ -94,15 +95,19 @@ class CooccurrenceFilteredModel(Model):
             the inference fill value
         :param conjunctive:
             whether to use conjuction or disjunction to combine non-filter masks
+        :param inference_factory:
+            the inference graph's triples factory for inductive base models; used for creating the co-occurrence
+            masks for the modes "validation" and "testing", whose triples are both queries against this graph. If the
+            base model is instantiated here, it is also passed on to it.
         :param kwargs:
-            additional keyword-based parameters passed to the base model upon instantiation. For inductive base
-            models, the ``inference_factory`` is taken from here, too, and used to build the co-occurrence masks for
-            the modes "validation" and "testing".
+            additional keyword-based parameters passed to the base model upon instantiation
         """
         # avoid cyclic imports
         from .. import model_resolver
 
-        # create base model
+        # create base model; an already instantiated base model has to be given the inference factory itself
+        if inference_factory is not None and not isinstance(base, Model):
+            kwargs["inference_factory"] = inference_factory
         base = model_resolver.make(base, triples_factory=triples_factory, pos_kwargs=kwargs)
 
         super().__init__(
@@ -129,8 +134,7 @@ class CooccurrenceFilteredModel(Model):
             mapped_triples=mapped_triples, num_entities=self.num_entities
         )
 
-        # index triples of the inference graph (inductive setting); the factory is passed to the base model, too
-        inference_factory: CoreTriplesFactory | None = kwargs.get("inference_factory")
+        # index triples of the inference graph (inductive setting)
         self.inference_indexes = (
             None
             if inference_factory is None

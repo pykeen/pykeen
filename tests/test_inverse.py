@@ -244,11 +244,17 @@ def test_filtered_model_training_mask(use_inverse_triples: bool, conjunctive: bo
         assert torch.equal(torch.isfinite(scores), expected)
 
 
+@pytest.mark.parametrize("wrap_instance", [False, True])
 @pytest.mark.parametrize("apply_in_training", [False, True])
 @pytest.mark.parametrize("conjunctive", [False, True])
 @pytest.mark.parametrize("mode", [TRAINING, VALIDATION, TESTING])
-def test_filtered_model_inductive_mask(mode: InductiveMode, conjunctive: bool, apply_in_training: bool):
-    """Test that the co-occurrence mask is computed from the training graph, or the inference graph for evaluation."""
+def test_filtered_model_inductive_mask(
+    mode: InductiveMode, conjunctive: bool, apply_in_training: bool, wrap_instance: bool
+):
+    """Test that the co-occurrence mask is computed from the training graph, or the inference graph for evaluation.
+
+    The base model is either instantiated by the filtered model, or an already instantiated model is wrapped.
+    """
     # the inference graph has its own (fewer) entities than the training graph
     dataset = create_inductive_dataset(
         num_relations=3,
@@ -258,11 +264,17 @@ def test_filtered_model_inductive_mask(mode: InductiveMode, conjunctive: bool, a
         num_triples_inference=31,
         num_triples_testing=37,
     )
+    training, inference = dataset.transductive_training, dataset.inductive_inference
+    base_kwargs = {"embedding_dim": 2}
+    base: InductiveNodePiece | type[InductiveNodePiece] = InductiveNodePiece
+    if wrap_instance:
+        base = InductiveNodePiece(triples_factory=training, inference_factory=inference, embedding_dim=2)
+        base_kwargs = {}
     model = CooccurrenceFilteredModel(
-        triples_factory=dataset.transductive_training,
-        base=InductiveNodePiece,
-        inference_factory=dataset.inductive_inference,
-        embedding_dim=2,
+        triples_factory=training,
+        base=base,
+        inference_factory=inference,
+        **base_kwargs,
         apply_in_training=apply_in_training,
         conjunctive=conjunctive,
         training_fill_value=float("-inf"),
