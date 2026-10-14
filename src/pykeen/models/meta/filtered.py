@@ -119,9 +119,9 @@ class CooccurrenceFilteredModel(Model):
             mapped_triples=mapped_triples.numpy(),
             nums=[triples_factory.num_entities, self.num_real_relations, triples_factory.num_entities],
         )
-        self.training_indexes = self.indexes
         if self.use_inverse_triples:
-            # the scoring methods use the model's internal relation IDs, which comprise the inverse relations
+            # the scoring methods (used during training) operate on the model's internal relation IDs, which comprise
+            # the inverse relations, whereas the prediction methods use the real relation IDs. Hence, the masks differ
             relations = self.relation_inverter.to_internal(mapped_triples[:, 1])
             internal_triples = torch.cat(
                 [
@@ -136,6 +136,9 @@ class CooccurrenceFilteredModel(Model):
                 mapped_triples=internal_triples.numpy(),
                 nums=[triples_factory.num_entities, self.num_relations, triples_factory.num_entities],
             )
+        else:
+            # without inverse relations, the real and the internal relation IDs coincide
+            self.training_indexes = self.indexes
 
         # initialize base model's parameters
         self.reset_parameters_()
