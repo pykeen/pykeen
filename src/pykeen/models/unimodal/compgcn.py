@@ -77,6 +77,12 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
         encoder_kwargs.setdefault("entity_representations_kwargs", {"embedding_dim": embedding_dim})
         encoder_kwargs.setdefault("relation_representations_kwargs", encoder_kwargs["entity_representations_kwargs"])
 
+        # the encoder has to use the same inverse relation ID scheme as the model
+        if "relation_inverter" in encoder_kwargs:
+            raise ValueError(
+                "Do not pass a relation inverter via encoder_kwargs; the encoder uses the model's relation "
+                "inverter. Pass it as relation_inverter=... to CompGCN instead."
+            )
         relation_inverter = relation_inverter_resolver.make(relation_inverter)
 
         # combined representation
@@ -100,12 +106,3 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
             relation_inverter=relation_inverter,
             **kwargs,
         )
-        # the encoder has to use the same inverse relation ID scheme as the model
-        if "relation_inverter" in encoder_kwargs and type(combined.relation_inverter) is not type(
-            self.relation_inverter
-        ):
-            raise ValueError(
-                f"The encoder's relation inverter {combined.relation_inverter} differs from the model's "
-                f"{self.relation_inverter}; CompGCN uses the model's relation inverter, so do not pass a different "
-                f"one via encoder_kwargs."
-            )

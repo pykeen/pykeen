@@ -244,15 +244,24 @@ def test_compgcn_encoder_shares_model_relation_inverter():
     assert representation.combined.relation_inverter is model.relation_inverter
 
 
-def test_compgcn_rejects_different_encoder_relation_inverter():
-    """Test that CompGCN rejects an encoder relation inverter which differs from the model's."""
+def test_compgcn_rejects_encoder_relation_inverter():
+    """Test that CompGCN rejects a relation inverter in the encoder arguments, and uses the model's one."""
     tf = Nations().training
-    with pytest.raises(ValueError, match="differs from the model's"):
+    with pytest.raises(ValueError, match="encoder_kwargs"):
         CompGCN(
             triples_factory=tf,
             embedding_dim=4,
             random_seed=0,
             encoder_kwargs={"relation_inverter": _SwappedRelationInverter()},
         )
-    # passing the same kind of inverter explicitly is fine
-    CompGCN(triples_factory=tf, embedding_dim=4, random_seed=0, encoder_kwargs={"relation_inverter": "default"})
+    inverter = _SwappedRelationInverter()
+    model: CompGCN = CompGCN(triples_factory=tf, embedding_dim=4, random_seed=0, relation_inverter=inverter)
+    assert model.relation_inverter is inverter
+
+
+def test_relation_inverter_equality():
+    """Test that relation inverters are compared by type."""
+    assert DefaultRelationInverter() == DefaultRelationInverter()
+    assert hash(DefaultRelationInverter()) == hash(DefaultRelationInverter())
+    assert DefaultRelationInverter() != _SwappedRelationInverter()
+    assert DefaultRelationInverter() != "default"
