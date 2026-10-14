@@ -18,6 +18,7 @@ from ...typing import (
     LABEL_RELATION,
     LABEL_TAIL,
     TRAINING,
+    VALIDATION,
     FloatTensor,
     InductiveMode,
     LongTensor,
@@ -125,7 +126,7 @@ class CooccurrenceFilteredModel(Model):
             mapped_triples=triples_factory.mapped_triples, additional_filter_triples=additional_triples, warn=False
         )
         self.indexes, self.training_indexes = self._build_graph_indexes(
-            mapped_triples=mapped_triples, num_entities=triples_factory.num_entities
+            mapped_triples=mapped_triples, num_entities=self.num_entities
         )
 
         # index triples of the inference graph (inductive setting); the factory is passed to the base model, too
@@ -133,8 +134,9 @@ class CooccurrenceFilteredModel(Model):
         self.inference_indexes = (
             None
             if inference_factory is None
+            # validation and testing triples are both queries against the inference graph
             else self._build_graph_indexes(
-                mapped_triples=inference_factory.mapped_triples, num_entities=inference_factory.num_entities
+                mapped_triples=inference_factory.mapped_triples, num_entities=self._get_entity_len(mode=VALIDATION)
             )
         )
 
@@ -148,8 +150,10 @@ class CooccurrenceFilteredModel(Model):
             mapped_triples=mapped_triples.numpy(), nums=[num_entities, self.num_real_relations, num_entities]
         )
         if not self.use_inverse_triples:
+            # without inverse relations, the real and the internal relation IDs coincide
             return indexes, indexes
-        # the scoring methods use the model's internal relation IDs, which comprise the inverse relations
+        # the scoring methods (used during training) operate on the model's internal relation IDs, which comprise
+        # the inverse relations, whereas the prediction methods use the real relation IDs. Hence, the masks differ
         relations = self.relation_inverter.to_internal(mapped_triples[:, 1])
         internal_triples = torch.cat(
             [
