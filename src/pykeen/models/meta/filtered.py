@@ -180,8 +180,8 @@ class CooccurrenceFilteredModel(Model):
             )
         )
         # combine masks
-        # note: * is an elementwise and, and + and elementwise or
-        mask = (first_mask * second_mask) if self.conjunctive else (first_mask + second_mask)
+        # note: for sparse matrices, * is a matrix product; .multiply is an elementwise and, and + an elementwise or
+        mask = first_mask.multiply(second_mask) if self.conjunctive else (first_mask + second_mask)
         dense_mask = torch.as_tensor(mask.toarray(), device=scores.device, dtype=torch.bool)
         # restrict to the scored ids, shape: (num_ids,) or (batch_size, num_ids)
         if ids is not None:
