@@ -200,6 +200,59 @@ def test_filtered_model_mirrors_base_flag():
     assert model.num_relations == model.base.num_relations
 
 
+@pytest.mark.parametrize("conjunctive", [False, True])
+@pytest.mark.parametrize("use_inverse_triples", [False, True])
+def test_filtered_model_training_mask(use_inverse_triples: bool, conjunctive: bool):
+    """Test that the training-time co-occurrence mask is computed in the internal relation ID space."""
+    tf = Nations().training
+    model = CooccurrenceFilteredModel(
+        triples_factory=tf,
+        base=TransE,
+        use_inverse_triples=use_inverse_triples,
+        apply_in_training=True,
+        conjunctive=conjunctive,
+        training_fill_value=float("-inf"),
+        random_seed=0,
+    )
+    # the triples as seen by the scoring methods, i.e., with internal relation IDs and including the inverse triples
+    inverter = model.relation_inverter
+    h, r, t = tf.mapped_triples.t()
+    internal = tf.mapped_triples
+    if use_inverse_triples:
+        r = inverter.to_internal(r)
+        internal = torch.cat([torch.stack([h, r, t], dim=-1), torch.stack([t, inverter.get_inverse_id(r), h], dim=-1)])
+    # dense co-occurrence matrices; the mask is their elementwise conjunction / disjunction
+    num_entities, num_relations = tf.num_entities, model.num_relations
+    h_r, h_t, r_t = (
+        torch.zeros(n, m, dtype=torch.bool)
+        for n, m in ((num_entities, num_relations), (num_entities, num_entities), (num_relations, num_entities))
+    )
+    h_r[internal[:, 0], internal[:, 1]] = True
+    h_t[internal[:, 0], internal[:, 2]] = True
+    r_t[internal[:, 1], internal[:, 2]] = True
+
+    def combine(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+        return (a & b) if conjunctive else (a | b)
+
+    h, r, t = internal.t()
+    for scores, expected in (
+        (model.score_h(internal[:, 1:]), combine(h_r.t()[r], h_t.t()[t])),
+        (model.score_r(internal[:, 0::2]), combine(h_r[h], r_t.t()[t])),
+        (model.score_t(internal[:, :2]), combine(h_t[h], r_t[r])),
+    ):
+        assert torch.equal(torch.isfinite(scores), expected)
+
+
+@pytest.mark.parametrize("method_name", ["score_h", "score_r", "score_t", "predict_h", "predict_r", "predict_t"])
+def test_filtered_model_rejects_inductive_mode(method_name: str):
+    """Test that the filtered model rejects a pass mode, since the masks are built from the training graph only."""
+    tf = Nations().training
+    model = CooccurrenceFilteredModel(triples_factory=tf, base=TransE, random_seed=0)
+    batch = tf.mapped_triples[:3, :2]
+    with pytest.raises(NotImplementedError, match="transductive"):
+        getattr(model, method_name)(batch, mode="training")
+
+
 class _SwappedRelationInverter(DefaultRelationInverter):
     """A non-default relation inverter, which uses odd IDs for forward relations and even IDs for inverse ones."""
 
