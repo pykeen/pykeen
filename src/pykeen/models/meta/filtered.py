@@ -199,59 +199,85 @@ class CooccurrenceFilteredModel(Model):
     def collect_regularization_term(self) -> FloatTensor:  # noqa: D102
         return self.base.collect_regularization_term()
 
+    @staticmethod
+    def _require_transductive(mode: InductiveMode | None) -> None:
+        """Raise an error for the inductive setting, since the masks are built from the training graph only."""
+        if mode is not None:
+            raise NotImplementedError(
+                f"{CooccurrenceFilteredModel.__name__} only supports the transductive setting, but got mode={mode}."
+            )
+
     def score_hrt(self, hrt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         if self.apply_in_training:
             raise NotImplementedError
         return self.base.score_hrt(hrt_batch=hrt_batch, **kwargs)
 
-    def score_h(self, rt_batch: LongTensor, *, heads: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
+    def score_h(  # noqa: D102
+        self, rt_batch: LongTensor, *, heads: LongTensor | None = None, mode: InductiveMode | None = None, **kwargs
+    ) -> FloatTensor:
+        self._require_transductive(mode)
         return self._mask(
-            scores=self.base.score_h(rt_batch=rt_batch, heads=heads, **kwargs),
+            scores=self.base.score_h(rt_batch=rt_batch, heads=heads, mode=mode, **kwargs),
             batch=rt_batch,
             target=LABEL_HEAD,
             in_training=True,
             ids=heads,
         )
 
-    def score_r(self, ht_batch: LongTensor, *, relations: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
+    def score_r(  # noqa: D102
+        self, ht_batch: LongTensor, *, relations: LongTensor | None = None, mode: InductiveMode | None = None, **kwargs
+    ) -> FloatTensor:
+        self._require_transductive(mode)
         return self._mask(
-            scores=self.base.score_r(ht_batch=ht_batch, relations=relations, **kwargs),
+            scores=self.base.score_r(ht_batch=ht_batch, relations=relations, mode=mode, **kwargs),
             batch=ht_batch,
             target=LABEL_RELATION,
             in_training=True,
             ids=relations,
         )
 
-    def score_t(self, hr_batch: LongTensor, *, tails: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
+    def score_t(  # noqa: D102
+        self, hr_batch: LongTensor, *, tails: LongTensor | None = None, mode: InductiveMode | None = None, **kwargs
+    ) -> FloatTensor:
+        self._require_transductive(mode)
         return self._mask(
-            scores=self.base.score_t(hr_batch=hr_batch, tails=tails, **kwargs),
+            scores=self.base.score_t(hr_batch=hr_batch, tails=tails, mode=mode, **kwargs),
             batch=hr_batch,
             target=LABEL_TAIL,
             in_training=True,
             ids=tails,
         )
 
-    def predict_h(self, rt_batch: LongTensor, *, heads: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
+    def predict_h(  # noqa: D102
+        self, rt_batch: LongTensor, *, heads: LongTensor | None = None, mode: InductiveMode | None = None, **kwargs
+    ) -> FloatTensor:
+        self._require_transductive(mode)
         return self._mask(
-            scores=super().predict_h(rt_batch, heads=heads, **kwargs),
+            scores=super().predict_h(rt_batch, heads=heads, mode=mode, **kwargs),
             batch=rt_batch,
             target=LABEL_HEAD,
             in_training=False,
             ids=heads,
         )
 
-    def predict_t(self, hr_batch: LongTensor, *, tails: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
+    def predict_t(  # noqa: D102
+        self, hr_batch: LongTensor, *, tails: LongTensor | None = None, mode: InductiveMode | None = None, **kwargs
+    ) -> FloatTensor:
+        self._require_transductive(mode)
         return self._mask(
-            scores=super().predict_t(hr_batch, tails=tails, **kwargs),
+            scores=super().predict_t(hr_batch, tails=tails, mode=mode, **kwargs),
             batch=hr_batch,
             target=LABEL_TAIL,
             in_training=False,
             ids=tails,
         )
 
-    def predict_r(self, ht_batch: LongTensor, *, relations: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
+    def predict_r(  # noqa: D102
+        self, ht_batch: LongTensor, *, relations: LongTensor | None = None, mode: InductiveMode | None = None, **kwargs
+    ) -> FloatTensor:
+        self._require_transductive(mode)
         return self._mask(
-            scores=super().predict_r(ht_batch, relations=relations, **kwargs),
+            scores=super().predict_r(ht_batch, relations=relations, mode=mode, **kwargs),
             batch=ht_batch,
             target=LABEL_RELATION,
             in_training=False,

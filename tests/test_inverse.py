@@ -240,3 +240,13 @@ def test_filtered_model_training_mask(use_inverse_triples: bool, conjunctive: bo
         (model.score_t(internal[:, :2]), combine(h_t[h], r_t[r])),
     ):
         assert torch.equal(torch.isfinite(scores), expected)
+
+
+@pytest.mark.parametrize("method_name", ["score_h", "score_r", "score_t", "predict_h", "predict_r", "predict_t"])
+def test_filtered_model_rejects_inductive_mode(method_name: str):
+    """Test that the filtered model rejects a pass mode, since the masks are built from the training graph only."""
+    tf = Nations().training
+    model = CooccurrenceFilteredModel(triples_factory=tf, base=TransE, random_seed=0)
+    batch = tf.mapped_triples[:3, :2]
+    with pytest.raises(NotImplementedError, match="transductive"):
+        getattr(model, method_name)(batch, mode="training")
