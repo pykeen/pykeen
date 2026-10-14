@@ -3,9 +3,10 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
-from class_resolver import Hint
+from class_resolver import Hint, HintOrType
 
 from ..nbase import ERModel
+from ...inverse import RelationInverter, relation_inverter_resolver
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.representation import CombinedCompGCNRepresentations
 from ...triples import CoreTriplesFactory
@@ -43,8 +44,9 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
         interaction: Hint[Interaction[FloatTensor, RelationRepresentation, FloatTensor]] = None,
         interaction_kwargs: Mapping[str, Any] | None = None,
         use_inverse_triples: bool = True,
-        **kwargs,
-    ):
+        relation_inverter: HintOrType[RelationInverter] = None,
+        **kwargs: Any,
+    ) -> None:
         """Initialize the model.
 
         :param triples_factory:
@@ -75,11 +77,21 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
         encoder_kwargs.setdefault("entity_representations_kwargs", {"embedding_dim": embedding_dim})
         encoder_kwargs.setdefault("relation_representations_kwargs", encoder_kwargs["entity_representations_kwargs"])
 
+        # the encoder has to use the same inverse relation ID scheme as the model
+        if "relation_inverter" in encoder_kwargs:
+            raise ValueError(
+                "Do not pass a relation inverter via encoder_kwargs; the encoder uses the model's relation "
+                "inverter. Pass it as relation_inverter=... to CompGCN instead."
+            )
+        relation_inverter = relation_inverter_resolver.make(relation_inverter)
+
         # combined representation
-        entity_representations, relation_representations = CombinedCompGCNRepresentations(
+        combined = CombinedCompGCNRepresentations(
             triples_factory=triples_factory,
+            relation_inverter=relation_inverter,
             **encoder_kwargs,
-        ).split()
+        )
+        entity_representations, relation_representations = combined.split()
 
         # Resolve interaction function
         if interaction is None:
@@ -91,5 +103,6 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
             interaction_kwargs=interaction_kwargs,
             entity_representations=entity_representations,
             relation_representations=relation_representations,
+            relation_inverter=relation_inverter,
             **kwargs,
         )
