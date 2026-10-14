@@ -10,7 +10,6 @@ from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.inverse import DefaultRelationInverter, RelationInverter, relation_inverter_resolver
 from pykeen.models import CompGCN, ConvE, CooccurrenceFilteredModel, InductiveNodePiece, Model, NodePiece, TransE
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
-from pykeen.triples.generation import generate_triples_factory
 from pykeen.triples.instances import LCWAInstances
 from pykeen.typing import TESTING, TRAINING, VALIDATION, InductiveMode
 
@@ -249,7 +248,8 @@ def test_filtered_model_training_mask(use_inverse_triples: bool, conjunctive: bo
 @pytest.mark.parametrize("conjunctive", [False, True])
 @pytest.mark.parametrize("mode", [TRAINING, VALIDATION, TESTING])
 def test_filtered_model_inductive_mask(mode: InductiveMode, conjunctive: bool, apply_in_training: bool):
-    """Test that the co-occurrence mask is computed from the graph of the inductive mode."""
+    """Test that the co-occurrence mask is computed from the training graph, or the inference graph for evaluation."""
+    # the inference graph has its own (fewer) entities than the training graph
     dataset = create_inductive_dataset(
         num_relations=3,
         num_entities_transductive=13,
@@ -258,24 +258,18 @@ def test_filtered_model_inductive_mask(mode: InductiveMode, conjunctive: bool, a
         num_triples_inference=31,
         num_triples_testing=37,
     )
-    # a separate testing graph of different size, to distinguish it from the validation (= inference) graph
-    testing_graph = generate_triples_factory(num_entities=7, num_relations=3, num_triples=29, random_state=0)
     model = CooccurrenceFilteredModel(
         triples_factory=dataset.transductive_training,
         base=InductiveNodePiece,
         inference_factory=dataset.inductive_inference,
-        test_factory=testing_graph,
         embedding_dim=2,
         apply_in_training=apply_in_training,
         conjunctive=conjunctive,
         training_fill_value=float("-inf"),
         random_seed=0,
     )
-    graph = {
-        TRAINING: dataset.transductive_training,
-        VALIDATION: dataset.inductive_inference,
-        TESTING: testing_graph,
-    }[mode]
+    # validation and testing triples are queries against the inference graph
+    graph = dataset.transductive_training if mode == TRAINING else dataset.inductive_inference
     assert model._get_entity_len(mode=mode) == graph.num_entities
     triples = graph.mapped_triples
     num_relations = model.num_real_relations

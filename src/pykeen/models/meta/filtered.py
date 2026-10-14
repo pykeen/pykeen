@@ -17,9 +17,7 @@ from ...typing import (
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
-    TESTING,
     TRAINING,
-    VALIDATION,
     FloatTensor,
     InductiveMode,
     LongTensor,
@@ -61,9 +59,9 @@ class CooccurrenceFilteredModel(Model):
     #: inverse triples if the model uses inverse triples; otherwise, identical to :attr:`indexes`
     training_indexes: Indexes
 
-    #: the pairs of (:attr:`indexes`, :attr:`training_indexes`) analogues for the inference graphs of the inductive
-    #: modes "validation" and "testing"; empty in the transductive setting
-    inference_indexes: Mapping[InductiveMode, tuple[Indexes, Indexes]]
+    #: the pair of (:attr:`indexes`, :attr:`training_indexes`) analogues for the inference graph, which is used in the
+    #: inductive modes "validation" and "testing"; None in the transductive setting
+    inference_indexes: tuple[Indexes, Indexes] | None
 
     def __init__(
         self,
@@ -97,10 +95,8 @@ class CooccurrenceFilteredModel(Model):
             whether to use conjuction or disjunction to combine non-filter masks
         :param kwargs:
             additional keyword-based parameters passed to the base model upon instantiation. For inductive base
-            models, the inference graphs' factories are taken from here, too: the validation graph from
-            ``validation_factory`` or ``inference_factory``, and the testing graph from ``testing_factory`` or
-            ``test_factory``, falling back to the validation graph. They are used to build the co-occurrence masks
-            for the modes "validation" and "testing".
+            models, the ``inference_factory`` is taken from here, too, and used to build the co-occurrence masks for
+            the modes "validation" and "testing".
         """
         # avoid cyclic imports
         from .. import model_resolver
@@ -132,23 +128,15 @@ class CooccurrenceFilteredModel(Model):
             mapped_triples=mapped_triples, num_entities=triples_factory.num_entities
         )
 
-        # index triples of the inference graphs (inductive setting); the factories are passed to the base model, too
-        validation_factory = _first_not_none(kwargs.get("validation_factory"), kwargs.get("inference_factory"))
-        testing_factory = _first_not_none(kwargs.get("testing_factory"), kwargs.get("test_factory"), validation_factory)
-        inference_indexes: dict[InductiveMode, tuple[Indexes, Indexes]] = {}
-        if validation_factory is not None:
-            inference_indexes[VALIDATION] = self._build_graph_indexes(
-                mapped_triples=validation_factory.mapped_triples, num_entities=validation_factory.num_entities
+        # index triples of the inference graph (inductive setting); the factory is passed to the base model, too
+        inference_factory: CoreTriplesFactory | None = kwargs.get("inference_factory")
+        self.inference_indexes = (
+            None
+            if inference_factory is None
+            else self._build_graph_indexes(
+                mapped_triples=inference_factory.mapped_triples, num_entities=inference_factory.num_entities
             )
-        if testing_factory is not None:
-            inference_indexes[TESTING] = (
-                inference_indexes[VALIDATION]
-                if testing_factory is validation_factory
-                else self._build_graph_indexes(
-                    mapped_triples=testing_factory.mapped_triples, num_entities=testing_factory.num_entities
-                )
-            )
-        self.inference_indexes = inference_indexes
+        )
 
         # initialize base model's parameters
         self.reset_parameters_()
@@ -239,12 +227,12 @@ class CooccurrenceFilteredModel(Model):
         """Select the indexes of the graph corresponding to the mode, using real or internal relation IDs."""
         if mode is None or mode == TRAINING:
             indexes, training_indexes = self.indexes, self.training_indexes
-        elif mode in self.inference_indexes:
-            indexes, training_indexes = self.inference_indexes[mode]
+        elif self.inference_indexes is not None:
+            # the validation and testing triples are queries against the inference graph
+            indexes, training_indexes = self.inference_indexes
         else:
             raise ValueError(
-                f"{self.__class__.__name__} has no inference graph for mode={mode}. For inductive base models, pass "
-                f"`validation_factory` / `inference_factory` (and optionally `testing_factory` / `test_factory`)."
+                f"{self.__class__.__name__} has no inference graph for mode={mode}; pass `inference_factory`."
             )
         return training_indexes if in_training else indexes
 
@@ -324,8 +312,3 @@ class CooccurrenceFilteredModel(Model):
             mode=mode,
             ids=relations,
         )
-
-
-def _first_not_none(*values: CoreTriplesFactory | None) -> CoreTriplesFactory | None:
-    """Return the first value which is not None, if any."""
-    return next((value for value in values if value is not None), None)
