@@ -3,9 +3,10 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
-from class_resolver import Hint
+from class_resolver import Hint, HintOrType
 
 from ..nbase import ERModel
+from ...inverse import RelationInverter, relation_inverter_resolver
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.representation import CombinedCompGCNRepresentations
 from ...triples import CoreTriplesFactory
@@ -43,8 +44,9 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
         interaction: Hint[Interaction[FloatTensor, RelationRepresentation, FloatTensor]] = None,
         interaction_kwargs: Mapping[str, Any] | None = None,
         use_inverse_triples: bool = True,
-        **kwargs,
-    ):
+        relation_inverter: HintOrType[RelationInverter] = None,
+        **kwargs: Any,
+    ) -> None:
         """Initialize the model.
 
         :param triples_factory:
@@ -75,9 +77,12 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
         encoder_kwargs.setdefault("entity_representations_kwargs", {"embedding_dim": embedding_dim})
         encoder_kwargs.setdefault("relation_representations_kwargs", encoder_kwargs["entity_representations_kwargs"])
 
+        relation_inverter = relation_inverter_resolver.make(relation_inverter)
+
         # combined representation
         combined = CombinedCompGCNRepresentations(
             triples_factory=triples_factory,
+            relation_inverter=relation_inverter,
             **encoder_kwargs,
         )
         entity_representations, relation_representations = combined.split()
@@ -92,6 +97,7 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
             interaction_kwargs=interaction_kwargs,
             entity_representations=entity_representations,
             relation_representations=relation_representations,
+            relation_inverter=relation_inverter,
             **kwargs,
         )
         # the encoder has to use the same inverse relation ID scheme as the model
@@ -103,4 +109,3 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
                 f"{self.relation_inverter}; CompGCN uses the model's relation inverter, so do not pass a different "
                 f"one via encoder_kwargs."
             )
-        combined.relation_inverter = self.relation_inverter
