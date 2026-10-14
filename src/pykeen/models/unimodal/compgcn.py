@@ -76,10 +76,11 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
         encoder_kwargs.setdefault("relation_representations_kwargs", encoder_kwargs["entity_representations_kwargs"])
 
         # combined representation
-        entity_representations, relation_representations = CombinedCompGCNRepresentations(
+        combined = CombinedCompGCNRepresentations(
             triples_factory=triples_factory,
             **encoder_kwargs,
-        ).split()
+        )
+        entity_representations, relation_representations = combined.split()
 
         # Resolve interaction function
         if interaction is None:
@@ -93,3 +94,5 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
             relation_representations=relation_representations,
             **kwargs,
         )
+        # the encoder has to use the same inverse relation ID scheme as the model
+        combined.relation_inverter = self.relation_inverter
