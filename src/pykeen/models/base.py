@@ -66,6 +66,9 @@ class Model(nn.Module, ABC):
         for head prediction with inverse relations, to the inverse triples, before passing it to
         ``_score()``. The ``score_*_inverse`` methods share this code path, cf. ``_score_extended()``.
 
+        For :class:`~pykeen.models.ERModel`, the ``score_*`` methods are wrappers around ``_score()``, which is the
+        override point; do not override them.
+
         Unless the model uses inverse relations, the two ID spaces coincide.
     """
 
@@ -312,9 +315,15 @@ class Model(nn.Module, ABC):
     ) -> FloatTensor:
         """Calculate the scores for a scoring request.
 
-        The default implementation dispatches to the ``score_*`` methods, and hence only supports
-        requests with a single batch dimension. Subclasses may override it with a native implementation,
-        cf. in :class:`~pykeen.models.ERModel`.
+        This is the single override point for scoring: ``predict_*`` and ``score_*_inverse`` go through it, and
+        :class:`~pykeen.models.ERModel` implements it natively. It receives the model's *internal* relation IDs
+        on the model's device. It is protected rather than private: subclasses are meant to override it, while
+        callers should use ``predict_*``.
+
+        The default implementation is a temporary bridge for models which are not an
+        :class:`~pykeen.models.ERModel`, e.g., the baselines. It dispatches to the ``score_*`` methods, and hence
+        only supports requests with a single batch dimension. Such a model must not call ``_score()`` from its
+        own ``score_*`` methods, as the two would dispatch into each other.
 
         :param batch:
             the scoring request, with internal relation IDs

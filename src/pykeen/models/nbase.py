@@ -519,6 +519,8 @@ class ERModel(  # noqa:PYI059
         """Calculate the scores for a scoring request.
 
         This is the single implementation behind :meth:`score_h`, :meth:`score_r`, and :meth:`score_t`.
+        Subclasses customizing scoring should override this method; :meth:`score_h`, :meth:`score_r`, and
+        :meth:`score_t` are thin wrappers around it and should not be overridden.
 
         :param batch:
             the scoring request

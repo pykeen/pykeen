@@ -282,10 +282,15 @@ class TestDefaultScore:
         """Return a model which does not override ``_score``."""
         return FixedModel(triples_factory=KGInfo(num_entities=NUM_ENTITIES, num_relations=NUM_RELATIONS))
 
+    @staticmethod
+    def _expected(h: LongTensor, r: LongTensor, t: LongTensor) -> torch.Tensor:
+        """Return the closed form of :class:`~pykeen.models.mocks.FixedModel`'s score."""
+        return (h * (NUM_ENTITIES * NUM_RELATIONS) + r * NUM_ENTITIES + t).float()
+
     def test_triples(self, model: FixedModel, hrt_batch: LongTensor) -> None:
         """Test scoring triples."""
         torch.testing.assert_close(
-            model._score(TripleScoringBatch.from_batch(hrt_batch)), model.score_hrt(hrt_batch).squeeze(dim=-1)
+            model._score(TripleScoringBatch.from_batch(hrt_batch)), self._expected(*hrt_batch.unbind(dim=-1))
         )
 
     @pytest.mark.parametrize("target", TARGETS)
@@ -296,7 +301,16 @@ class TestDefaultScore:
         batch = TargetScoringBatch.from_indices(
             OptionalIndices(*hrt_batch.t()).with_target_ids(ids, target=target), target=target
         )
-        torch.testing.assert_close(model._score(batch), model.score(hrt_batch, target=target, ids=ids))
+        # the fixed triples as (batch_size, 1), with the target replaced by its candidates
+        h, r, t = (column.unsqueeze(dim=-1) for column in hrt_batch.unbind(dim=-1))
+        match target:
+            case "head":
+                h = ids
+            case "relation":
+                r = ids
+            case "tail":
+                t = ids
+        torch.testing.assert_close(model._score(batch), self._expected(h, r, t).expand(BATCH_SIZE, NUM_IDS))
 
     def test_broadcast(self, model: FixedModel, hrt_batch: LongTensor) -> None:
         """Test that a broadcast index tensor is expanded to the batch shape."""
