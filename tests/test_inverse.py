@@ -197,3 +197,38 @@ def test_filtered_model_mirrors_base_flag():
     assert model.use_inverse_triples
     assert model.base.use_inverse_triples
     assert model.num_relations == model.base.num_relations
+
+
+def test_filtered_model_training_mask_uses_internal_relation_ids():
+    """Test that the training-time co-occurrence mask is computed in the internal relation ID space."""
+    tf = Nations().training
+    model = CooccurrenceFilteredModel(
+        triples_factory=tf,
+        base=TransE,
+        use_inverse_triples=True,
+        apply_in_training=True,
+        training_fill_value=float("-inf"),
+        random_seed=0,
+    )
+    # the triples as seen by the scoring methods, i.e., with internal relation IDs and including the inverse triples
+    inverter = model.relation_inverter
+    h, r, t = tf.mapped_triples.t()
+    r = inverter.to_internal(r)
+    internal = torch.cat([torch.stack([h, r, t], dim=-1), torch.stack([t, inverter.get_inverse_id(r), h], dim=-1)])
+    # dense co-occurrence matrices; the mask is their disjunction
+    num_entities, num_relations = tf.num_entities, model.num_relations
+    h_r, h_t, r_t = (
+        torch.zeros(n, m, dtype=torch.bool)
+        for n, m in ((num_entities, num_relations), (num_entities, num_entities), (num_relations, num_entities))
+    )
+    h_r[internal[:, 0], internal[:, 1]] = True
+    h_t[internal[:, 0], internal[:, 2]] = True
+    r_t[internal[:, 1], internal[:, 2]] = True
+
+    h, r, t = internal.t()
+    for scores, expected in (
+        (model.score_h(internal[:, 1:]), h_r.t()[r] | h_t.t()[t]),
+        (model.score_r(internal[:, 0::2]), h_r[h] | r_t.t()[t]),
+        (model.score_t(internal[:, :2]), h_t[h] | r_t[r]),
+    ):
+        assert torch.equal(torch.isfinite(scores), expected)
