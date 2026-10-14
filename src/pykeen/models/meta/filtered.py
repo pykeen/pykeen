@@ -204,56 +204,56 @@ class CooccurrenceFilteredModel(Model):
             raise NotImplementedError
         return self.base.score_hrt(hrt_batch=hrt_batch, **kwargs)
 
-    def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def score_h(self, rt_batch: LongTensor, *, heads: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
-            scores=self.base.score_h(rt_batch=rt_batch, **kwargs),
+            scores=self.base.score_h(rt_batch=rt_batch, heads=heads, **kwargs),
             batch=rt_batch,
             target=LABEL_HEAD,
             in_training=True,
-            ids=kwargs.get("heads"),
+            ids=heads,
         )
 
-    def score_r(self, ht_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def score_r(self, ht_batch: LongTensor, *, relations: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
-            scores=self.base.score_r(ht_batch=ht_batch, **kwargs),
+            scores=self.base.score_r(ht_batch=ht_batch, relations=relations, **kwargs),
             batch=ht_batch,
             target=LABEL_RELATION,
             in_training=True,
-            ids=kwargs.get("relations"),
+            ids=relations,
         )
 
-    def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def score_t(self, hr_batch: LongTensor, *, tails: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
-            scores=self.base.score_t(hr_batch=hr_batch, **kwargs),
+            scores=self.base.score_t(hr_batch=hr_batch, tails=tails, **kwargs),
             batch=hr_batch,
             target=LABEL_TAIL,
             in_training=True,
-            ids=kwargs.get("tails"),
+            ids=tails,
         )
 
-    def predict_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def predict_h(self, rt_batch: LongTensor, *, heads: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
-            scores=super().predict_h(rt_batch, **kwargs),
+            scores=super().predict_h(rt_batch, heads=heads, **kwargs),
             batch=rt_batch,
             target=LABEL_HEAD,
             in_training=False,
-            ids=kwargs.get("heads"),
+            ids=heads,
         )
 
-    def predict_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def predict_t(self, hr_batch: LongTensor, *, tails: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
-            scores=super().predict_t(hr_batch, **kwargs),
+            scores=super().predict_t(hr_batch, tails=tails, **kwargs),
             batch=hr_batch,
             target=LABEL_TAIL,
             in_training=False,
-            ids=kwargs.get("tails"),
+            ids=tails,
         )
 
-    def predict_r(self, ht_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def predict_r(self, ht_batch: LongTensor, *, relations: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
         return self._mask(
-            scores=super().predict_r(ht_batch, **kwargs),
+            scores=super().predict_r(ht_batch, relations=relations, **kwargs),
             batch=ht_batch,
             target=LABEL_RELATION,
             in_training=False,
-            ids=kwargs.get("relations"),
+            ids=relations,
         )
