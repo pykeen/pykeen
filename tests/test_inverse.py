@@ -238,7 +238,7 @@ def test_compgcn_uses_relation_inverter():
 
 def test_compgcn_encoder_shares_model_relation_inverter():
     """Test that the CompGCN model's encoder uses the model's relation inverter."""
-    model = CompGCN(triples_factory=Nations().training, embedding_dim=4, random_seed=0)
+    model: CompGCN = CompGCN(triples_factory=Nations().training, embedding_dim=4, random_seed=0)
     representation = model.entity_representations[0]
     assert isinstance(representation, SingleCompGCNRepresentation)
     assert representation.combined.relation_inverter is model.relation_inverter
