@@ -8,6 +8,7 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.inverse import DefaultRelationInverter, RelationInverter, relation_inverter_resolver
 from pykeen.models import CompGCN, ConvE, CooccurrenceFilteredModel, Model, NodePiece, TransE
+from pykeen.nn.representation import CombinedCompGCNRepresentations, SingleCompGCNRepresentation
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples.instances import LCWAInstances
 
@@ -197,3 +198,70 @@ def test_filtered_model_mirrors_base_flag():
     assert model.use_inverse_triples
     assert model.base.use_inverse_triples
     assert model.num_relations == model.base.num_relations
+
+
+class _SwappedRelationInverter(DefaultRelationInverter):
+    """A non-default relation inverter, which uses odd IDs for forward relations and even IDs for inverse ones."""
+
+    def to_internal(self, relation_id):
+        return (relation_id << 1) | 1
+
+    def is_inverse(self, relation_id):
+        return (relation_id & 1) == 0
+
+
+def test_compgcn_uses_relation_inverter():
+    """Test that the CompGCN encoder picks forward and inverse relation representations via the relation inverter."""
+    tf = Nations().training
+    default, swapped = (
+        CombinedCompGCNRepresentations(
+            triples_factory=tf,
+            entity_representations_kwargs={"embedding_dim": 4},
+            relation_representations_kwargs={"embedding_dim": 4},
+            relation_inverter=relation_inverter,
+        ).eval()
+        for relation_inverter in (None, _SwappedRelationInverter())
+    )
+    assert type(default.relation_inverter) is DefaultRelationInverter
+    # use the same parameters, except for exchanging the forward and inverse relation representations
+    state = default.state_dict()
+    key = "relation_representations._embeddings.weight"
+    permutation = torch.arange(state[key].shape[0]) ^ 1
+    state[key] = state[key][permutation]
+    swapped.load_state_dict(state)
+    with torch.no_grad():
+        x_e_default, x_r_default = default()
+        x_e_swapped, x_r_swapped = swapped()
+    assert torch.allclose(x_e_default, x_e_swapped)
+    assert torch.allclose(x_r_default, x_r_swapped[permutation])
+
+
+def test_compgcn_encoder_shares_model_relation_inverter():
+    """Test that the CompGCN model's encoder uses the model's relation inverter."""
+    model: CompGCN = CompGCN(triples_factory=Nations().training, embedding_dim=4, random_seed=0)
+    representation = model.entity_representations[0]
+    assert isinstance(representation, SingleCompGCNRepresentation)
+    assert representation.combined.relation_inverter is model.relation_inverter
+
+
+def test_compgcn_rejects_encoder_relation_inverter():
+    """Test that CompGCN rejects a relation inverter in the encoder arguments, and uses the model's one."""
+    tf = Nations().training
+    with pytest.raises(ValueError, match="encoder_kwargs"):
+        CompGCN(
+            triples_factory=tf,
+            embedding_dim=4,
+            random_seed=0,
+            encoder_kwargs={"relation_inverter": _SwappedRelationInverter()},
+        )
+    inverter = _SwappedRelationInverter()
+    model: CompGCN = CompGCN(triples_factory=tf, embedding_dim=4, random_seed=0, relation_inverter=inverter)
+    assert model.relation_inverter is inverter
+
+
+def test_relation_inverter_equality():
+    """Test that relation inverters are compared by type."""
+    assert DefaultRelationInverter() == DefaultRelationInverter()
+    assert hash(DefaultRelationInverter()) == hash(DefaultRelationInverter())
+    assert DefaultRelationInverter() != _SwappedRelationInverter()
+    assert DefaultRelationInverter() != "default"
