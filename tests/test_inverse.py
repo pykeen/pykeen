@@ -6,10 +6,13 @@ import pytest
 import torch
 
 from pykeen.datasets import Nations
+from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.inverse import DefaultRelationInverter, RelationInverter, relation_inverter_resolver
-from pykeen.models import CompGCN, ConvE, CooccurrenceFilteredModel, Model, NodePiece, TransE
+from pykeen.models import CompGCN, ConvE, CooccurrenceFilteredModel, InductiveNodePiece, Model, NodePiece, TransE
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
+from pykeen.triples.generation import generate_triples_factory
 from pykeen.triples.instances import LCWAInstances
+from pykeen.typing import TESTING, TRAINING, VALIDATION, InductiveMode
 
 
 @pytest.fixture(params=relation_inverter_resolver.lookup_dict.values())
@@ -242,11 +245,69 @@ def test_filtered_model_training_mask(use_inverse_triples: bool, conjunctive: bo
         assert torch.equal(torch.isfinite(scores), expected)
 
 
-@pytest.mark.parametrize("method_name", ["score_h", "score_r", "score_t", "predict_h", "predict_r", "predict_t"])
-def test_filtered_model_rejects_inductive_mode(method_name: str):
-    """Test that the filtered model rejects a pass mode, since the masks are built from the training graph only."""
-    tf = Nations().training
-    model = CooccurrenceFilteredModel(triples_factory=tf, base=TransE, random_seed=0)
-    batch = tf.mapped_triples[:3, :2]
-    with pytest.raises(NotImplementedError, match="transductive"):
-        getattr(model, method_name)(batch, mode="training")
+@pytest.mark.parametrize("apply_in_training", [False, True])
+@pytest.mark.parametrize("conjunctive", [False, True])
+@pytest.mark.parametrize("mode", [TRAINING, VALIDATION, TESTING])
+def test_filtered_model_inductive_mask(mode: InductiveMode, conjunctive: bool, apply_in_training: bool):
+    """Test that the co-occurrence mask is computed from the graph of the inductive mode."""
+    dataset = create_inductive_dataset(
+        num_relations=3,
+        num_entities_transductive=13,
+        num_triples_training=33,
+        num_entities_inductive=5,
+        num_triples_inference=31,
+        num_triples_testing=37,
+    )
+    # a separate testing graph of different size, to distinguish it from the validation (= inference) graph
+    testing_graph = generate_triples_factory(num_entities=7, num_relations=3, num_triples=29, random_state=0)
+    model = CooccurrenceFilteredModel(
+        triples_factory=dataset.transductive_training,
+        base=InductiveNodePiece,
+        inference_factory=dataset.inductive_inference,
+        test_factory=testing_graph,
+        embedding_dim=2,
+        apply_in_training=apply_in_training,
+        conjunctive=conjunctive,
+        training_fill_value=float("-inf"),
+        random_seed=0,
+    )
+    graph = {
+        TRAINING: dataset.transductive_training,
+        VALIDATION: dataset.inductive_inference,
+        TESTING: testing_graph,
+    }[mode]
+    assert model._get_entity_len(mode=mode) == graph.num_entities
+    triples = graph.mapped_triples
+    num_relations = model.num_real_relations
+    if apply_in_training:
+        # the scoring methods see the internal relation IDs, including the inverse triples
+        inverter = model.relation_inverter
+        h, r, t = triples.t()
+        r = inverter.to_internal(r)
+        triples = torch.cat([torch.stack([h, r, t], dim=-1), torch.stack([t, inverter.get_inverse_id(r), h], dim=-1)])
+        num_relations = model.num_relations
+        methods = (model.score_h, model.score_r, model.score_t)
+    else:
+        methods = (model.predict_h, model.predict_r, model.predict_t)
+    # dense co-occurrence matrices; the mask is their elementwise conjunction / disjunction
+    num_entities = graph.num_entities
+    h_r, h_t, r_t = (
+        torch.zeros(n, m, dtype=torch.bool)
+        for n, m in ((num_entities, num_relations), (num_entities, num_entities), (num_relations, num_entities))
+    )
+    h_r[triples[:, 0], triples[:, 1]] = True
+    h_t[triples[:, 0], triples[:, 2]] = True
+    r_t[triples[:, 1], triples[:, 2]] = True
+
+    def combine(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+        return (a & b) if conjunctive else (a | b)
+
+    h, r, t = triples.t()
+    score_h, score_r, score_t = methods
+    for scores, expected in (
+        (score_h(triples[:, 1:], mode=mode), combine(h_r.t()[r], h_t.t()[t])),
+        (score_r(triples[:, 0::2], mode=mode), combine(h_r[h], r_t.t()[t])),
+        (score_t(triples[:, :2], mode=mode), combine(h_t[h], r_t[r])),
+    ):
+        assert scores.shape == expected.shape
+        assert torch.equal(torch.isfinite(scores), expected)
