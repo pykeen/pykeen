@@ -6,7 +6,7 @@ import pathlib
 import re
 from collections.abc import Callable, Collection, Iterable, Mapping, MutableMapping, Sequence
 from io import TextIOWrapper
-from typing import IO, Any, ClassVar, Self
+from typing import IO, Any, ClassVar, Self, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -48,6 +48,9 @@ __all__ = [
     "splits_similarity",
     "splits_steps",
 ]
+
+if TYPE_CHECKING:
+    import rdflib
 
 logger = logging.getLogger(__name__)
 
@@ -1268,6 +1271,18 @@ class TriplesFactory(CoreTriplesFactory):
                 **(metadata or {}),
             },
         )
+
+    @classmethod
+    def from_rdflib(cls, graph: rdflib.Graph, **kwargs: Any) -> Self:
+        """Construct a triples factory from an RDFLib graph."""
+        from rdflib import URIRef, Node
+
+        triples = [
+            (str(s), str(p), str(o))
+            for s, p, o in graph.triples((None, None, None))
+            if isinstance(s, Node) and isinstance(p, URIRef) and isinstance(o, URIRef)
+        ]
+        return cls.from_labeled_triples(triples, **kwargs)
 
     def __eq__(self, __o: object, /) -> bool:
         return (
