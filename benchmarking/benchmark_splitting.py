@@ -1,3 +1,16 @@
+#!/usr/bin/env -S uv run --script
+
+# /// script
+# requires-python = ">=3.14"
+# dependencies = [
+#     "humanize>=4.16.0",
+#     "pykeen[plotting]",
+# ]
+#
+# [tool.uv.sources]
+# pykeen = { path = "../", editable = true }
+# ///
+
 """Benchmark the speed for generating new datasets by remixing old ones."""
 
 import itertools as itt
@@ -48,7 +61,7 @@ def _log(s):
 @click.command()
 @click.option("-r", "--replicates", type=int, default=5, show_default=True)
 @click.option("-f", "--force", is_flag=True)
-def main(replicates: int, force: bool):
+def main(replicates: int, force: bool) -> None:
     """Run the benchmark."""
     import pykeen.triples.splitting
 
@@ -77,13 +90,14 @@ def main(replicates: int, force: bool):
 
         _log(f"loading {dataset}")
         t = time.time()
-        dataset = get_dataset(dataset=dataset)
-        dataset_name = dataset.__class__.__name__
+        dataset_instance = get_dataset(dataset=dataset)
+        dataset_name = dataset_instance.__class__.__name__
         ccl = [
-            dataset.training.mapped_triples,
-            dataset.testing.mapped_triples,
-            dataset.validation.mapped_triples,
+            dataset_instance.training.mapped_triples,
+            dataset_instance.testing.mapped_triples,
         ]
+        if dataset_instance.validation is not None:
+            ccl.append(dataset_instance.validation.mapped_triples)
         load_time = time.time() - t
         _log(f"done loading {dataset_name} after {load_time:.3f} seconds")
         _log(f"concatenating {dataset_name}")
@@ -92,7 +106,7 @@ def main(replicates: int, force: bool):
         concat_time = time.time() - t
         _log(f"done concatenating {dataset_name} after {concat_time:.3f} seconds")
         _log(f"deleting {dataset_name}")
-        del dataset
+        del dataset_instance
         _log(f"done deleting {dataset_name}")
 
         dataset_rows = []

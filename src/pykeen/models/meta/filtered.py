@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
+import numpy as np
 import scipy.sparse
 import torch
 from class_resolver import HintOrType
@@ -47,8 +48,12 @@ class CooccurrenceFilteredModel(Model):
         "conjunctive": {"type": bool},
     }
 
-    #: the indexed filter triples, i.e., sparse masks
+    #: the indexed filter triples, i.e., sparse masks, using the "real" relation IDs (for prediction)
     indexes: Mapping[Target, Mapping[Target, scipy.sparse.csr_matrix]]
+
+    #: the indexed filter triples using the model's internal relation IDs (for scoring), i.e., including the
+    #: inverse triples if the model uses inverse triples; otherwise, identical to :attr:`indexes`
+    training_indexes: Mapping[Target, Mapping[Target, scipy.sparse.csr_matrix]]
 
     def __init__(
         self,
@@ -108,9 +113,41 @@ class CooccurrenceFilteredModel(Model):
         # index triples
         mapped_triples = prepare_filter_triples(
             mapped_triples=triples_factory.mapped_triples, additional_filter_triples=additional_triples, warn=False
-        ).numpy()
-        nums = [triples_factory.num_entities, self.num_relations, triples_factory.num_entities]
-        self.indexes = {
+        )
+        # the prediction methods use the "real" relation IDs
+        self.indexes = self._build_indexes(
+            mapped_triples=mapped_triples.numpy(),
+            nums=[triples_factory.num_entities, self.num_real_relations, triples_factory.num_entities],
+        )
+        if self.use_inverse_triples:
+            # the scoring methods (used during training) operate on the model's internal relation IDs, which comprise
+            # the inverse relations, whereas the prediction methods use the real relation IDs. Hence, the masks differ
+            relations = self.relation_inverter.to_internal(mapped_triples[:, 1])
+            internal_triples = torch.cat(
+                [
+                    torch.stack([mapped_triples[:, 0], relations, mapped_triples[:, 2]], dim=-1),
+                    torch.stack(
+                        [mapped_triples[:, 2], self.relation_inverter.get_inverse_id(relations), mapped_triples[:, 0]],
+                        dim=-1,
+                    ),
+                ]
+            )
+            self.training_indexes = self._build_indexes(
+                mapped_triples=internal_triples.numpy(),
+                nums=[triples_factory.num_entities, self.num_relations, triples_factory.num_entities],
+            )
+        else:
+            # without inverse relations, the real and the internal relation IDs coincide
+            self.training_indexes = self.indexes
+
+        # initialize base model's parameters
+        self.reset_parameters_()
+
+    @staticmethod
+    def _build_indexes(
+        mapped_triples: np.ndarray, nums: list[int]
+    ) -> Mapping[Target, Mapping[Target, scipy.sparse.csr_matrix]]:
+        return {
             col_label: {
                 row_label: get_csr_matrix(
                     row_indices=mapped_triples[:, row_index],
@@ -126,35 +163,35 @@ class CooccurrenceFilteredModel(Model):
             for num_cols, (col_label, col_index) in zip(nums, TARGET_TO_INDEX.items(), strict=False)
         }
 
-        # initialize base model's parameters
-        self.reset_parameters_()
-
     def _mask(
         self,
         scores: FloatTensor,
         batch: LongTensor,
         target: Target,
         in_training: bool,
+        ids: LongTensor | None = None,
     ) -> FloatTensor:
         if in_training and not self.apply_in_training:
             return scores
         fill_value = self.training_fill_value if in_training else self.inference_fill_value
+        indexes = self.training_indexes if in_training else self.indexes
         # get masks, shape: (batch_size, num_entities/num_relations)
         first_mask, second_mask = (
             index[batch_indices.cpu().numpy()]
             for batch_indices, (_target, index) in zip(
-                batch.t(), sorted(self.indexes[target].items(), key=lambda kv: TARGET_TO_INDEX[kv[0]]), strict=False
+                batch.t(), sorted(indexes[target].items(), key=lambda kv: TARGET_TO_INDEX[kv[0]]), strict=False
             )
         )
         # combine masks
-        # note: * is an elementwise and, and + and elementwise or
-        mask = (first_mask * second_mask) if self.conjunctive else (first_mask + second_mask)
-        # get non-zero entries
-        rows, cols = (torch.as_tensor(ind, device=scores.device, dtype=torch.long) for ind in mask.nonzero())
+        # note: for sparse matrices, * is a matrix product; .multiply is an elementwise and, and + an elementwise or
+        mask = first_mask.multiply(second_mask) if self.conjunctive else (first_mask + second_mask)
+        dense_mask = torch.as_tensor(mask.toarray(), device=scores.device, dtype=torch.bool)
+        # restrict to the scored ids, shape: (num_ids,) or (batch_size, num_ids)
+        if ids is not None:
+            ids = ids.to(device=scores.device)
+            dense_mask = dense_mask[:, ids] if ids.ndim == 1 else dense_mask.gather(dim=1, index=ids)
         # set scores for fill value for every non-occuring entry
-        new_scores = scores.new_full(size=scores.shape, fill_value=fill_value)
-        new_scores[rows, cols] = scores[rows, cols]
-        return new_scores
+        return scores.masked_fill(~dense_mask, fill_value)
 
     def _get_entity_len(self, *, mode: InductiveMode | None) -> int:
         return self.base._get_entity_len(mode=mode)
@@ -165,55 +202,87 @@ class CooccurrenceFilteredModel(Model):
     def collect_regularization_term(self) -> FloatTensor:  # noqa: D102
         return self.base.collect_regularization_term()
 
+    @staticmethod
+    def _require_transductive(mode: InductiveMode | None) -> None:
+        """Raise an error for the inductive setting, since the masks are built from the training graph only."""
+        if mode is not None:
+            raise NotImplementedError(
+                f"{CooccurrenceFilteredModel.__name__} only supports the transductive setting, but got mode={mode}."
+            )
+
     def score_hrt(self, hrt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
         if self.apply_in_training:
             raise NotImplementedError
         return self.base.score_hrt(hrt_batch=hrt_batch, **kwargs)
 
-    def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def score_h(  # noqa: D102
+        self, rt_batch: LongTensor, *, heads: LongTensor | None = None, mode: InductiveMode | None = None, **kwargs
+    ) -> FloatTensor:
+        self._require_transductive(mode)
         return self._mask(
-            scores=self.base.score_h(rt_batch=rt_batch, **kwargs),
+            scores=self.base.score_h(rt_batch=rt_batch, heads=heads, mode=mode, **kwargs),
             batch=rt_batch,
             target=LABEL_HEAD,
             in_training=True,
+            ids=heads,
         )
 
-    def score_r(self, ht_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def score_r(  # noqa: D102
+        self, ht_batch: LongTensor, *, relations: LongTensor | None = None, mode: InductiveMode | None = None, **kwargs
+    ) -> FloatTensor:
+        self._require_transductive(mode)
         return self._mask(
-            scores=self.base.score_r(ht_batch=ht_batch, **kwargs),
+            scores=self.base.score_r(ht_batch=ht_batch, relations=relations, mode=mode, **kwargs),
             batch=ht_batch,
             target=LABEL_RELATION,
             in_training=True,
+            ids=relations,
         )
 
-    def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def score_t(  # noqa: D102
+        self, hr_batch: LongTensor, *, tails: LongTensor | None = None, mode: InductiveMode | None = None, **kwargs
+    ) -> FloatTensor:
+        self._require_transductive(mode)
         return self._mask(
-            scores=self.base.score_t(hr_batch=hr_batch, **kwargs),
+            scores=self.base.score_t(hr_batch=hr_batch, tails=tails, mode=mode, **kwargs),
             batch=hr_batch,
             target=LABEL_TAIL,
             in_training=True,
+            ids=tails,
         )
 
-    def predict_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def predict_h(  # noqa: D102
+        self, rt_batch: LongTensor, *, heads: LongTensor | None = None, mode: InductiveMode | None = None, **kwargs
+    ) -> FloatTensor:
+        self._require_transductive(mode)
         return self._mask(
-            scores=super().predict_h(rt_batch, **kwargs),
+            scores=super().predict_h(rt_batch, heads=heads, mode=mode, **kwargs),
             batch=rt_batch,
             target=LABEL_HEAD,
             in_training=False,
+            ids=heads,
         )
 
-    def predict_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def predict_t(  # noqa: D102
+        self, hr_batch: LongTensor, *, tails: LongTensor | None = None, mode: InductiveMode | None = None, **kwargs
+    ) -> FloatTensor:
+        self._require_transductive(mode)
         return self._mask(
-            scores=super().predict_t(hr_batch, **kwargs),
+            scores=super().predict_t(hr_batch, tails=tails, mode=mode, **kwargs),
             batch=hr_batch,
             target=LABEL_TAIL,
             in_training=False,
+            ids=tails,
         )
 
-    def predict_r(self, ht_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def predict_r(  # noqa: D102
+        self, ht_batch: LongTensor, *, relations: LongTensor | None = None, mode: InductiveMode | None = None, **kwargs
+    ) -> FloatTensor:
+        self._require_transductive(mode)
         return self._mask(
-            scores=super().predict_r(ht_batch, **kwargs),
+            scores=super().predict_r(ht_batch, relations=relations, mode=mode, **kwargs),
             batch=ht_batch,
             target=LABEL_RELATION,
             in_training=False,
+            ids=relations,
         )

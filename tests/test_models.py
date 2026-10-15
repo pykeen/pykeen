@@ -4,15 +4,15 @@ import contextlib
 import importlib
 import pathlib
 import unittest
-from collections.abc import Iterable, MutableMapping
-from typing import Any
+from collections.abc import Mapping, MutableMapping, Sequence
+from typing import Any, ClassVar
 
 import pytest
 import torch
 import unittest_templates
 
-import pykeen.experiments
 import pykeen.models
+from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.models import (
     ERModel,
     EvaluationOnlyModel,
@@ -27,6 +27,7 @@ from pykeen.nn import Embedding, NodePieceRepresentation
 from pykeen.nn.combination import ConcatAggregationCombination
 from pykeen.nn.perceptron import ConcatMLP
 from pykeen.triples.triples_factory import CoreTriplesFactory
+from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
@@ -53,7 +54,6 @@ class TestCompGCN(cases.ModelTestCase):
     cls = pykeen.models.CompGCN
     use_inverse_triples = True
     num_constant_init = 3  # BN(2) + Bias
-    cli_extras = ["--use-inverse-triples"]
 
     def _pre_instantiation_hook(self, kwargs: MutableMapping[str, Any]) -> MutableMapping[str, Any]:
         kwargs = super()._pre_instantiation_hook(kwargs=kwargs)
@@ -81,7 +81,7 @@ class TestConvE(cases.ModelTestCase):
     cls = pykeen.models.ConvE
     embedding_dim = 12
     use_inverse_triples = True
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "output_channels": 2,
         "embedding_height": 3,
         "embedding_width": 4,
@@ -97,7 +97,7 @@ class TestConvKB(cases.ModelTestCase):
     """Test the ConvKB model."""
 
     cls = pykeen.models.ConvKB
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "num_filters": 2,
     }
     # two bias terms, one conv-filter
@@ -128,7 +128,7 @@ class TestERMLP(cases.ModelTestCase):
     """Test the ERMLP model."""
 
     cls = pykeen.models.ERMLP
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "hidden_dim": 4,
     }
     # Two linear layer biases
@@ -139,7 +139,7 @@ class TestERMLPE(cases.ModelTestCase):
     """Test the extended ERMLP model."""
 
     cls = pykeen.models.ERMLPE
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "hidden_dim": 4,
     }
     # Two BN layers, bias & scale
@@ -164,7 +164,7 @@ class TestHolE(cases.ModelTestCase):
 class TestKG2EWithKL(cases.BaseKG2ETest):
     """Test the KG2E model with KL similarity."""
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "dist_similarity": "negativekullbackleiblerdivergence",
     }
 
@@ -179,7 +179,7 @@ class TestMuRE(cases.ModelTestCase):
 class TestKG2EWithEL(cases.BaseKG2ETest):
     """Test the KG2E model with EL similarity."""
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "dist_similarity": "expectedlikelihood",
     }
 
@@ -199,7 +199,7 @@ class TestNodePiece(cases.BaseNodePieceTest):
 class TestNodePieceMLP(cases.BaseNodePieceTest):
     """Test the NodePiece model with MLP aggregation."""
 
-    kwargs = {"aggregation": "mlp"}
+    kwargs: ClassVar[Mapping[str, Any]] = {"aggregation": "mlp"}
 
     def test_aggregation(self):
         """Test that the MLP gets registered properly and is trainable."""
@@ -224,7 +224,7 @@ class TestNodePieceMLP(cases.BaseNodePieceTest):
 class TestNodePieceAnchors(cases.BaseNodePieceTest):
     """Test the NodePiece model with anchors."""
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "tokenizers": "anchor",
     }
 
@@ -238,8 +238,8 @@ class TestNodePieceJoint(cases.BaseNodePieceTest):
     """Test the NodePiece model with joint anchor and relation tokenization."""
 
     num_anchors = 5
-    num_tokens = [3, 2]
-    kwargs = {
+    num_tokens: ClassVar[Sequence[int]] = [3, 2]
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "tokenizers": ["anchor", "relation"],
         "tokenizers_kwargs": [
             {
@@ -309,7 +309,7 @@ class TestNTN(cases.ModelTestCase):
 
     cls = pykeen.models.NTN
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "num_slices": 2,
     }
 
@@ -343,7 +343,7 @@ class TestRESCAL(cases.ModelTestCase):
 class TestRGCNBasis(cases.BaseRGCNTest):
     """Test the R-GCN model."""
 
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "interaction": "transe",
         "interaction_kwargs": {"p": 1},
         "decomposition": "bases",
@@ -357,7 +357,7 @@ class TestRGCNBlock(cases.BaseRGCNTest):
     """Test the R-GCN model with block decomposition."""
 
     embedding_dim = 6
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "interaction": "distmult",
         "decomposition": "block",
         "decomposition_kwargs": {
@@ -411,7 +411,7 @@ class TestTransD(cases.DistanceModelTestCase):
     """Test the TransD model."""
 
     cls = pykeen.models.TransD
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "relation_dim": 4,
     }
 
@@ -560,6 +560,11 @@ class TestTransE(cases.DistanceModelTestCase):
         entity_norms = self.instance.entity_representations[0](indices=None).norm(p=2, dim=-1)
         assert torch.allclose(entity_norms, torch.ones_like(entity_norms))
 
+    @pytest.mark.slow
+    def test_cli_training_nations(self):
+        """Test running the pipeline via the CLI with only training data, i.e., evaluating on the training data."""
+        self._help_test_cli(["-t", NATIONS_TRAIN_PATH, *self._cli_extras])
+
 
 class TestTransF(cases.ModelTestCase):
     """Test the TransF model."""
@@ -585,7 +590,7 @@ class TestTransR(cases.DistanceModelTestCase):
     """Test the TransR model."""
 
     cls = pykeen.models.TransR
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "relation_dim": 4,
     }
 
@@ -602,7 +607,7 @@ class TestTuckEr(cases.ModelTestCase):
     """Test the TuckEr model."""
 
     cls = pykeen.models.TuckER
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "relation_dim": 4,
     }
     #: 2xBN (bias & scale)
@@ -647,7 +652,8 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
 
     base_test = cases.ModelTestCase
     base_cls = Model
-    skip_cls = SKIP_MODULES
+    # `SKIP_MODULES` holds abstract classes, which mypy does not accept as `type[Model]`.
+    skip_cls = SKIP_MODULES  # type: ignore[assignment]
 
     def test_documentation(self):
         """Test all models have appropriate structured documentation."""
@@ -689,43 +695,6 @@ class TestTesting(unittest_templates.MetaTestCase[Model]):
         model_names.difference_update(m.__name__ for m in SKIP_MODULES)
         assert model_names.issubset(pykeen.models.__all__), "Forgot to add some imports"
 
-    @unittest.skip("no longer necessary?")
-    def test_models_have_experiments(self):
-        """Test that each model has an experiment folder in :mod:`pykeen.experiments`."""
-        experiments_path = pathlib.Path(pykeen.experiments.__file__).parent.absolute()
-        experiment_blacklist = {
-            "DistMultLiteral",  # FIXME
-            "ComplExLiteral",  # FIXME
-            "UnstructuredModel",
-            "StructuredEmbedding",
-            "RESCAL",
-            "NTN",
-            "ERMLP",
-            "ProjE",  # FIXME
-            "ERMLPE",  # FIXME
-            "PairRE",
-            "QuatE",
-        }
-        model_names = _remove_non_models(set(pykeen.models.__all__) - SKIP_MODULES - experiment_blacklist)
-        for model in _remove_non_models(model_names):
-            model_name = model_resolver.normalize_cls(model)
-            with self.subTest(model=model):
-                assert experiments_path.joinpath(model_name.lower()).exists(), (
-                    f"Missing experimental configuration for {model}"
-                )
-
-
-def _remove_non_models(elements: Iterable[str | type[Model]]) -> set[type[Model]]:
-    rv = set()
-    for element in elements:
-        try:
-            model_cls = model_resolver.lookup(element)
-        except KeyError:  # invalid model name - aka not actually a model
-            continue
-        else:
-            rv.add(model_cls)
-    return rv
-
 
 class TestModelUtilities(unittest.TestCase):
     """Extra tests for utility functions."""
@@ -760,7 +729,7 @@ class ERModelTests(cases.ModelTestCase):
     """Tests for the general ER-Model."""
 
     cls = pykeen.models.ERModel
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "interaction": "distmult",  # use name to test interaction resolution
     }
 
@@ -788,10 +757,30 @@ class ERModelTests(cases.ModelTestCase):
         )
         sliced_ts = self.instance.score_t(hr_batch=hr_batch, slice_size=2, tails=tails)
         ts = self.instance.score_t(hr_batch=hr_batch, tails=tails)
-        torch.allclose(sliced_ts, ts)
+        assert torch.allclose(sliced_ts, ts)
 
 
 class CooccurrenceFilteredModelTests(cases.ModelTestCase):
     """Tests for the filtered meta model."""
 
     cls = pykeen.models.meta.filtered.CooccurrenceFilteredModel
+
+    def test_predict_restricted_ids(self):
+        """Test that restricting the prediction to some ids selects the corresponding columns of the full one."""
+        hrt_batch = self.factory.mapped_triples[: self.batch_size].to(self.device)
+        generator = torch.Generator().manual_seed(42)
+        for target, num in (
+            (LABEL_HEAD, self.factory.num_entities),
+            (LABEL_RELATION, self.factory.num_relations),
+            (LABEL_TAIL, self.factory.num_entities),
+        ):
+            full = self.instance.predict(hrt_batch=hrt_batch, target=target)
+            # shared ids, and individual ids per batch element
+            for ids in (
+                torch.randperm(num, generator=generator)[: num // 2].to(self.device),
+                torch.randint(num, size=(hrt_batch.shape[0], 3), generator=generator).to(self.device),
+            ):
+                with self.subTest(target=target, shape=ids.shape):
+                    expected = full[:, ids] if ids.ndim == 1 else full.gather(dim=1, index=ids)
+                    restricted = self.instance.predict(hrt_batch=hrt_batch, target=target, ids=ids)
+                    torch.testing.assert_close(restricted, expected)

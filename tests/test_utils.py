@@ -295,7 +295,8 @@ class TestUtils(unittest.TestCase):
             for _ in range(10):
                 x = torch.rand(10, 20, 30, generator=gen)
                 for dim in range(x.ndimension()):
-                    x_c = clamp_norm(x, maxnorm=max_norm, p=p, dim=dim)
+                    # `p=float("inf")` is supported by `torch.norm`, but the signature declares `str | int`.
+                    x_c = clamp_norm(x, maxnorm=max_norm, p=p, dim=dim)  # type: ignore[arg-type]
 
                     # check maximum norm constraint
                     assert (x_c.norm(p=p, dim=dim) <= max_norm + eps).all()
@@ -386,14 +387,14 @@ class TestUtils(unittest.TestCase):
             with self.subTest(first=first, second=second):
                 assert calculate_broadcasted_elementwise_result_shape(first=first, second=second) == expected
                 assert expected == tuple(torch.broadcast_shapes(first, second))
-        for first, second in (
+        for first_, second_ in (
             ((2,), (3,)),
             ((3, 4), (3,)),
             ((0,), (2,)),
             ((2, 3), (4, 3, 1)),
         ):
-            with self.subTest(first=first, second=second), pytest.raises(ValueError, match="not broadcastable"):
-                calculate_broadcasted_elementwise_result_shape(first=first, second=second)
+            with self.subTest(first=first_, second=second_), pytest.raises(ValueError, match="not broadcastable"):
+                calculate_broadcasted_elementwise_result_shape(first=first_, second=second_)
 
     def test_calculate_broadcasted_elementwise_result_shape_random(self):
         """Compare calculate_broadcasted_elementwise_result_shape against torch.broadcast_shapes on random shapes."""
@@ -417,24 +418,6 @@ class TestUtils(unittest.TestCase):
         assert estimate_cost_of_sequence((4,), (3, 4)) == 12
         # (5, 1, 1) + (3, 1) -> (5, 3, 1): 15; (5, 3, 1) + (2,) -> (5, 3, 2): 30
         assert estimate_cost_of_sequence((5, 1, 1), (3, 1), (2,)) == 15 + 30
-
-    @unittest.skip("This is often failing non-deterministically")
-    def test_estimate_cost_of_add_sequence(self):
-        """Test ``estimate_cost_of_add_sequence()``."""
-        _, generator, _ = set_random_seed(seed=42)
-        # create random array, estimate the costs of addition, and measure some execution times.
-        # then, compute correlation between the estimated cost, and the measured time.
-        data = []
-        for shapes in _generate_shapes(generator=generator):
-            arrays = [torch.empty(*shape) for shape in shapes]
-            cost = estimate_cost_of_sequence(*(a.shape for a in arrays))
-            n_samples, time = timeit.Timer(stmt="sum(arrays)", globals={"arrays": arrays}).autorange()
-            consumption = time / n_samples
-            data.append((cost, consumption))
-        a = np.asarray(data)
-
-        # check for strong correlation between estimated costs and measured execution time
-        assert (np.corrcoef(x=a[:, 0], y=a[:, 1])[0, 1]) > 0.8
 
     @pytest.mark.slow
     def test_get_optimal_sequence_caching(self):
@@ -614,11 +597,11 @@ def test_get_connected_components(pairs: list[tuple[int, int]], expected: list[l
 
 def _normalize_components(components: Iterable[Iterable[int]]) -> set[frozenset[int]]:
     """Convert components to a set of frozensets, and verify that there are no duplicates."""
-    components = [list(component) for component in components]
-    result = {frozenset(component) for component in components}
+    component_lists = [list(component) for component in components]
+    result = {frozenset(component) for component in component_lists}
     # no duplicate nodes, neither within nor across components
-    assert sum(map(len, components)) == sum(map(len, result))
-    assert len(result) == len(components)
+    assert sum(map(len, component_lists)) == sum(map(len, result))
+    assert len(result) == len(component_lists)
     return result
 
 

@@ -507,7 +507,8 @@ def _get_targets(
                 )
             ids = [i if isinstance(i, int) else label_to_id[i] for i in ids]
         # now, restriction is a sequence of integers
-        assert all(isinstance(i, int) for i in ids)
+        if not all(isinstance(i, int) for i in ids):
+            raise TypeError("Expected all ids to be integers.")
         id_list = sorted(ids)  # type: ignore[arg-type]
         tensor = torch.as_tensor(id_list, dtype=torch.long, device=device)
     # if explicit ids have been given, and label information is available, extract list of labels
@@ -650,7 +651,8 @@ class TopKScoreConsumer(ScoreConsumer):
         scores: FloatTensor,
     ) -> None:
         batch_size, num_scores = scores.shape
-        assert batch.shape == (batch_size, 2)
+        if batch.shape != (batch_size, 2):
+            raise ValueError("Expected batch.shape == (batch_size, 2).")
 
         # reshape, shape: (batch_size * num_entities,)
         top_scores = scores.view(-1)
@@ -707,7 +709,8 @@ class AllScoreConsumer(ScoreConsumer):
         :param num_relations:
             the number of relations
         """
-        assert num_entities**2 * num_relations < (2**63 - 1)
+        if num_entities**2 * num_relations >= 2**63 - 1:
+            raise ValueError("Expected num_entities ** 2 * num_relations < 2 ** 63 - 1.")
         # initialize buffer on cpu
         self.scores = torch.empty(num_entities, num_relations, num_entities, device="cpu")
         # Explicitly create triples
@@ -870,10 +873,11 @@ class PartiallyRestrictedPredictionDataset(PredictionDataset):
             if restriction is None:
                 raise NotImplementedError("Requires size info")
             if isinstance(restriction, int):
-                restriction = [restriction]
-            restriction = torch.as_tensor(restriction)
-            parts.append(restriction)
-        assert len(parts) == 2
+                parts.append(torch.as_tensor([restriction]))
+            else:
+                parts.append(torch.as_tensor(restriction))
+        if len(parts) != 2:
+            raise ValueError("Expected len(parts) == 2.")
         self.parts = (parts[0], parts[1])  # for mypy
 
     def __len__(self) -> int:
@@ -926,8 +930,8 @@ def consume_scores(
         raise ValueError("Did not receive any consumer")
 
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
-    for batch in tqdm(data_loader, desc="scoring", unit="batch", unit_scale=True, leave=False):
-        batch = batch.to(model.device)
+    for raw_batch in tqdm(data_loader, desc="scoring", unit="batch", unit_scale=True, leave=False):
+        batch = raw_batch.to(model.device)
         # calculate batch scores onces
         scores = model.predict(batch, target=dataset.target, full_batch=False, mode=mode)
         # consume by all consumers

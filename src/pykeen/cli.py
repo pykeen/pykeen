@@ -130,7 +130,17 @@ def _get_resolver_lines2(
     link_fmt: str | None = None,
     skip: set[type[X]] | None = None,
     top_k: int = 2,
+    link_top_k: int = 2,
 ) -> Iterable[tuple[str, str, str | None]]:
+    """Get name, reference, and citation for each class of a resolver.
+
+    :param resolver: the resolver
+    :param link_fmt: the link format
+    :param skip: classes to skip
+    :param top_k: the number of module levels to keep in the displayed reference
+    :param link_top_k: the number of module levels to keep in the link target, i.e., the module where the
+        documentation lists the class
+    """
     for _, clsx in sorted(resolver.lookup_dict.items()):
         if skip and clsx in skip:
             continue
@@ -138,7 +148,8 @@ def _get_resolver_lines2(
         module, name = clsx.__module__, clsx.__qualname__
         if "pykeen.nn.meta" in module:
             continue
-        full = f"{module}.{name}"
+        link_module = ".".join(module.split(".")[:link_top_k])
+        link_target = f"{link_module}.{name}"
         # shorten to main module
         if top_k:
             module = ".".join(module.split(".", maxsplit=top_k)[:-1])
@@ -147,17 +158,15 @@ def _get_resolver_lines2(
         if name not in dir(importlib.import_module(module)):
             click.secho(message=f"{name} not visible in {module}", err=True)
         # get docdata and extract name & citation
-        docdata = resolver.docdata(clsx) or {}
-        assert isinstance(docdata, dict)
+        docdata: dict[str, Any] = resolver.docdata(clsx) or {}
         # fallback for name: capitalized class name without base suffix
         name = docdata.get("name", clsx.__name__.replace(resolver.base.__name__, ""))
-        assert isinstance(name, str)
         # extract citation information and warn about lack thereof
         citation = _citation(docdata)
         if not citation:
             click.secho(message=f"Missing citation for {short}", err=True)
         # compose reference
-        reference = _format_reference(reference=short, link_fmt=link_fmt, alt_reference=full)
+        reference = _format_reference(reference=short, link_fmt=link_fmt, alt_reference=link_target)
         yield name, reference, citation
 
 
@@ -179,6 +188,7 @@ def _help_interactions(tablefmt: str = "github", *, link_fmt: str | None = None)
         _get_resolver_lines2(
             resolver=interaction_resolver,
             link_fmt=link_fmt,
+            link_top_k=3,
         )
     )
     headers = ["Name", "Reference", "Citation"]
@@ -198,6 +208,7 @@ def _help_representations(tablefmt: str = "github", *, link_fmt: str | None = No
         for line in _get_resolver_lines2(
             resolver=representation_resolver,
             link_fmt=link_fmt,
+            link_top_k=3,
             # cf. https://github.com/python/mypy/issues/5374
             skip={MessagePassingRepresentation},  # type: ignore[type-abstract]
         )
@@ -405,19 +416,18 @@ def _get_lines_alternative(tablefmt, d, torch_prefix, pykeen_prefix, link_fmt: s
             path = f"{pykeen_prefix}.{cls.__qualname__}"
 
         docdata = get_docdata(cls)
-        if docdata is not None:
-            name = docdata.get("name", name)
+        display_name = name if docdata is None else docdata.get("name") or name
 
         if tablefmt == "rst":
-            yield name, f":class:`{path}`"
+            yield display_name, f":class:`{path}`"
         elif tablefmt == "github":
             doc = cls.__doc__
             reference = f"[`{path}`]({link_fmt.format(path)})" if link_fmt else f"`{path}`"
 
-            yield name, reference, get_until_first_blank(doc or "")
+            yield display_name, reference, get_until_first_blank(doc or "")
         else:
             doc = cls.__doc__
-            yield name, path, get_until_first_blank(doc or "")
+            yield display_name, path, get_until_first_blank(doc or "")
 
 
 @ls.command()
@@ -537,7 +547,8 @@ def _get_resolver_lines(
 
             yield name, reference, doc
         else:
-            assert isinstance(value.__doc__, str)
+            if not isinstance(value.__doc__, str):
+                raise ValueError(f"{name} has no docstring.")
             yield name, value.__doc__.splitlines()[0]
 
 
@@ -556,7 +567,7 @@ def _get_dataset_lines(tablefmt, link_fmt: str | None = None) -> Iterable[tuple[
             yield name, reference, "", "", "", ""
             continue
 
-        name = docdata["name"]
+        display_name = docdata["name"]
         statistics = docdata["statistics"]
         entities = statistics["entities"]
         relations = statistics["relations"]
@@ -575,7 +586,7 @@ def _get_dataset_lines(tablefmt, link_fmt: str | None = None) -> Iterable[tuple[
             elif github:
                 link = f"https://github.com/{github}"
                 citation_str = _link(github if tablefmt == "rst" else f"`{github}`", link, tablefmt)
-        yield name, reference, citation_str, entities, relations, triples
+        yield display_name, reference, citation_str, entities, relations, triples
 
 
 def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Iterable[tuple[str, ...]]:
@@ -584,7 +595,8 @@ def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Itera
         if tablefmt == "rst":
             reference = f":class:`{reference}`"
         elif link_fmt is not None:
-            reference = f"[`{reference}`]({link_fmt.format(reference)})"
+            # the documentation lists inductive datasets in the `pykeen.datasets.inductive` module
+            reference = f"[`{reference}`]({link_fmt.format(f'pykeen.datasets.inductive.{value.__name__}')})"
         else:
             reference = f"`{reference}`"
 
@@ -593,7 +605,7 @@ def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Itera
             yield name, reference, "", "", "", ""
             continue
 
-        name = docdata["name"]
+        display_name = docdata["name"]
 
         citation_str = ""
         citation = docdata.get("citation")
@@ -608,7 +620,7 @@ def _get_inductive_dataset_lines(tablefmt, link_fmt: str | None = None) -> Itera
             elif github:
                 link = f"https://github.com/{github}"
                 citation_str = _link(github if tablefmt == "rst" else f"`{github}`", link, tablefmt)
-        yield name, reference, citation_str
+        yield display_name, reference, citation_str
 
 
 def _link(text: str, link: str, fmt: str) -> str:

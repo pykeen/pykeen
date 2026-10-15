@@ -1,7 +1,7 @@
 """Implementation of the R-GCN model."""
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, ClassVar
 
 from class_resolver import Hint, HintOrType
 from torch import nn
@@ -60,7 +60,7 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
     """
 
     #: The default strategy for optimizing the model's hyper-parameters
-    hpo_default = {
+    hpo_default: ClassVar[Mapping[str, Any]] = {
         "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
         "num_layers": {"type": int, "low": 1, "high": 5, "q": 1},
         "use_bias": {"type": "bool"},
@@ -175,7 +175,7 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
                 "edge_weighting": edge_weighting,
                 "decomposition": decomposition,
                 "decomposition_kwargs": decomposition_kwargs,
-                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501
+                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67
                 "regularizer": regularizer,
                 "regularizer_kwargs": regularizer_kwargs,
             },
@@ -184,7 +184,7 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
                 "shape": embedding_dim,
                 "initializer": relation_initializer,
                 "initializer_kwargs": relation_initializer_kwargs,
-                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67  # noqa: E501
+                # cf. https://github.com/MichSchli/RelationPrediction/blob/c77b094fe5c17685ed138dae9ae49b304e0d8d89/code/decoders/bilinear_diag.py#L64-L67
                 "regularizer": regularizer,
                 "regularizer_kwargs": regularizer_kwargs,
             },

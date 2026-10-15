@@ -1,7 +1,7 @@
 """
 Ranking metrics.
 
-This module comprises various rank-based metrics, which get an array of individual ranks as input, as summarize them
+This module comprises various rank-based metrics, which get an array of individual ranks as input, and summarize them
 into a single-figure metric measuring different aspects of ranking performance.
 
 We can generally distinguish:
@@ -10,7 +10,7 @@ Base Metrics
 ------------
 These metrics directly operate on the ranks:
 
-The following metrics measures summarize the central tendency of ranks
+The following metrics summarize the central tendency of ranks
 
 - :class:`~pykeen.metrics.ranking.ArithmeticMeanRank`
 - :class:`~pykeen.metrics.ranking.GeometricMeanRank`
@@ -28,7 +28,7 @@ The next metrics summarize the dispersion of ranks
 - :class:`~pykeen.metrics.ranking.Variance`
 - :class:`~pykeen.metrics.ranking.StandardDeviation`
 
-and finally there is a simple metric to store the number of ranks which where aggregated
+and finally there is a simple metric to store the number of ranks which were aggregated
 
 - :class:`~pykeen.metrics.ranking.Count`
 
@@ -83,6 +83,7 @@ density function of the standard Gaussian distribution to retrieve a *p*-value. 
 - :class:`~pykeen.metrics.ranking.ZInverseHarmonicMeanRank`
 """
 
+import functools
 import math
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Collection, Iterable
@@ -98,7 +99,8 @@ from .utils import (
     Metric,
     ValueRange,
     compute_log_expected_power,
-    compute_median_survival_function,
+    compute_median_mean,
+    compute_median_moments,
     weighted_harmonic_mean,
     weighted_mean_expectation,
     weighted_mean_variance,
@@ -151,7 +153,7 @@ EPSILON = 1.0e-12
 
 #: The consistency constant for MAD with scale="normal": the 0.75 quantile of the
 #: standard normal distribution (Φ^(-1)(0.75))
-WEIGHTED_MEDIAN_SCALE = 0.67449
+WEIGHTED_MEDIAN_SCALE = float(stats.norm.ppf(0.75))  # 0.6744897501960817
 
 
 def generate_ranks(
@@ -172,7 +174,7 @@ def generate_ranks(
     :param dtype:
         the data type
 
-    :return: shape: dims + s
+    :return: shape: prefix_shape + s
         an array of sampled rank values
     """
     if dtype is None:
@@ -200,7 +202,9 @@ def generate_num_candidates_and_ranks(
         a pair of integer arrays, ranks and num_candidates for each individual ranking task
     """
     generator = np.random.default_rng(seed=seed)
-    num_candidates = generator.integers(low=1, high=max_num_candidates, size=(num_ranks,))
+    # endpoint=True: the upper bound is inclusive, so `max_num_candidates` itself is a reachable number of candidates
+    # (e.g., a ranking task against all entities). The default would exclude it.
+    num_candidates = generator.integers(low=1, high=max_num_candidates, size=(num_ranks,), endpoint=True)
     ranks = generate_ranks(num_candidates=num_candidates, seed=generator)
     return ranks, num_candidates
 
@@ -281,7 +285,9 @@ class RankBasedMetric(Metric):
         :param generator:
             a random state for reproducibility
         :param memory_intense:
-            whether to use a more memory-intense, but more time-efficient variant
+            whether to use a more memory-intense variant, which draws all rank samples in a single batched
+            (vectorized) call. Note that the metric itself is still evaluated sample by sample in a Python-level loop
+            (via :func:`numpy.apply_along_axis`), so the speed-up is limited to the rank sampling.
 
         :return: shape: (num_samples,)
             the metric evaluated on `num_samples` sampled rank arrays
@@ -310,7 +316,7 @@ class RankBasedMetric(Metric):
 
     def _bootstrap(
         self,
-        func: Callable[[np.ndarray], np.ndarray],
+        func: Callable[[np.ndarray], np.floating | np.ndarray],
         num_candidates: np.ndarray,
         num_samples: int,
         confidence_level: float = 95.0,
@@ -422,7 +428,7 @@ class RankBasedMetric(Metric):
 
     def numeric_variance_with_ci(self, **kwargs) -> np.ndarray:
         """Estimate variance with confidence intervals."""
-        return self._bootstrap(func=np.var, **kwargs)
+        return self._bootstrap(func=functools.partial(np.var, ddof=1), **kwargs)
 
     def variance(
         self,
@@ -662,7 +668,7 @@ class ZMetric(DerivedRankBasedMetric):
 
     .. note::
 
-        For non-increasing metrics, i.e., where larger values correspond to better
+        For non-increasing metrics, i.e., where smaller values correspond to better
         results, we additionally change the sign of the result such that a larger
         z-value always corresponds to a better result irrespective of the base metric's
         direction.
@@ -874,7 +880,7 @@ class ArithmeticMeanRank(RankBasedMetric):
         \mathbb{V}[MR] &= \frac{C^2 - 1}{12n}
 
     ---
-    link: https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html#mean-rank
+    link: https://pykeen.readthedocs.io/en/latest/explanation/understanding_evaluation.html#mean-rank
     description: The arithmetic mean over all ranks.
     """
 
@@ -976,9 +982,9 @@ class GeometricMeanRank(RankBasedMetric):
 
         \log \mathbb{E}[r_i^{w_i/W}]
             &= \log \frac{1}{C_i} \sum \limits_{j=1}^{C_i} j^{w_i/W} \\
-            &= -\log \frac{1}{C_i} + \log \sum \limits_{j=1}^{C_i} j^{w_i/W} \\
-            &= -\log \frac{1}{C_i} + \log \sum \limits_{j=1}^{C_i} \exp \log j^{w_i/W} \\
-            &= -\log \frac{1}{C_i} + \log \sum \limits_{j=1}^{C_i} \exp ( \frac{w_i}{W} \cdot \log j )
+            &= -\log C_i + \log \sum \limits_{j=1}^{C_i} j^{w_i/W} \\
+            &= -\log C_i + \log \sum \limits_{j=1}^{C_i} \exp \log j^{w_i/W} \\
+            &= -\log C_i + \log \sum \limits_{j=1}^{C_i} \exp ( \frac{w_i}{W} \cdot \log j )
 
     For the second summand in the last line, we observe a log-sum-exp term, with known numerically stable
     implementation.
@@ -995,7 +1001,7 @@ class GeometricMeanRank(RankBasedMetric):
         \mathbb{E}[M]
             &= \exp \sum \limits_{i=1}^{n} \log \mathbb{E}[r_i^{w_i/W}] \\
             &= \exp \sum \limits_{i=1}^{n} (\log H_{-w_i/W}(C_i) - \log C_i) \\
-            &= \exp \sum \limits_{i=1}^{n} \log H_{-w_i/W}(C_i) - \exp \sum \limits_{i=1}^{n} \log C_i
+            &= \exp \left( \sum \limits_{i=1}^{n} \log H_{-w_i/W}(C_i) - \sum \limits_{i=1}^{n} \log C_i \right)
 
     where $C_i$ denotes the number of candidates for ranking task $i$, and $H_p(c)$ denotes
     the generalized harmonic number, cf. :func:`generalized_harmonic_numbers`.
@@ -1021,9 +1027,16 @@ class GeometricMeanRank(RankBasedMetric):
     def _normalize_weights(weights: np.ndarray | None, n: int) -> np.ndarray:
         if weights is None:
             return np.full(shape=n, fill_value=1 / n)
+        weights = np.asarray(weights, dtype=float)
         total = np.sum(weights)
         safe_total = np.clip(total, a_min=np.finfo(weights.dtype).eps, a_max=None)
         return weights / safe_total
+
+    def _log_moment(self, num_candidates: np.ndarray, weights: np.ndarray | None, order: int) -> float:
+        """Compute the log of the k-th raw moment of the geometric mean rank."""
+        alpha = self._normalize_weights(weights, n=len(num_candidates))
+        # E[G^k] = Product( E[ X_i^(k * alpha_i) ] ); we calculate this in log space
+        return compute_log_expected_power(num_candidates, powers=order * alpha)
 
     def expected_value(  # noqa: D102
         self,
@@ -1032,11 +1045,7 @@ class GeometricMeanRank(RankBasedMetric):
         weights: np.ndarray | None = None,
         **kwargs,
     ) -> float:
-        alpha = self._normalize_weights(weights, n=len(num_candidates))
-
-        # E[G] = Product( E[ X_i^alpha_i ] )
-        # We calculate this in log space
-        log_expectation = compute_log_expected_power(num_candidates, powers=alpha)
+        log_expectation = self._log_moment(num_candidates, weights, order=1)
 
         return np.exp(log_expectation)
 
@@ -1047,15 +1056,9 @@ class GeometricMeanRank(RankBasedMetric):
         weights: np.ndarray | None = None,
         **kwargs,
     ) -> float:
-        alpha = self._normalize_weights(weights, n=len(num_candidates))
-
-        # 1. Calculate Log of First Moment E[G]
-        # Power p = alpha
-        log_expectation = compute_log_expected_power(num_candidates, alpha)
-
-        # 2. Calculate Log of Second Moment E[G^2]
-        # Power p = 2 * alpha
-        log_squared_expectation = compute_log_expected_power(num_candidates, 2 * alpha)
+        # 1. Log of first moment E[G], and 2. log of second moment E[G^2]
+        log_expectation = self._log_moment(num_candidates, weights, order=1)
+        log_squared_expectation = self._log_moment(num_candidates, weights, order=2)
 
         # 3. Calculate Variance using Expm1 for stability
         # Var = E[G^2] - (E[G])^2
@@ -1162,12 +1165,17 @@ def generalized_harmonic_numbers(n: int, p: float = -1.0) -> np.ndarray:
 
     .. math::
 
-        H_p(n) = \sum \limits_{i=1}^{n} i^{-p}
+        \sum \limits_{i=1}^{n} i^{p}
+
+    Following the common convention, the generalized harmonic number of order $m$ is
+    $H_m(n) = \sum_{i=1}^{n} i^{-m}$, i.e., this function returns $H_{-p}(n)$.
+    In particular, the default $p=-1$ yields the ordinary harmonic numbers $H_1(n)$,
+    and $p=-2$ yields $H_2(n)$.
 
     :param n:
         the maximum number for which the generalized harmonic numbers are calculated
     :param p:
-        the power, typically negative
+        the exponent, typically negative
 
     :return: shape: (n,)
         the first $n$ generalized harmonic numbers
@@ -1186,9 +1194,10 @@ def harmonic_variances(n: int) -> np.ndarray:
 
     .. math::
 
-        H_p(n) = \sum \limits_{i=1}^{n} i^{-p}
+        H_m(n) = \sum \limits_{i=1}^{n} i^{-m}
 
-    denoting the generalized harmonic numbers, and abbreviating $H(n) := H_1(n)$, we have
+    denoting the generalized harmonic numbers (cf. :func:`generalized_harmonic_numbers`, which is called with
+    exponent $p = -m$), and abbreviating $H(n) := H_1(n)$, we have
 
     .. math::
 
@@ -1199,8 +1208,8 @@ def harmonic_variances(n: int) -> np.ndarray:
     :param n:
         the maximum rank number
 
-    :return: shape: (n+1,)
-        the variances for the discrete uniform distribution over $\{\frac{1}{1}, \dots, \frac{1}{k}\}$`
+    :return: shape: (n,)
+        the variances for the discrete uniform distribution over $\{\frac{1}{1}, \dots, \frac{1}{k}\}$
     """
     h = generalized_harmonic_numbers(n)
     h2 = generalized_harmonic_numbers(n, p=-2)
@@ -1221,6 +1230,16 @@ class InverseHarmonicMeanRank(RankBasedMetric):
     .. math::
 
         IHMR = MRR = \frac{1}{n} \sum_{i=1}^{n} r_i^{-1}
+
+    Optionally, individual weights $\{w_i\}_{i=1}^n$ can be provided, in which case the (weighted)
+    mean is defined as:
+
+    .. math::
+
+        IHMR = MRR = \frac{\sum_{i=1}^{n} w_i r_i^{-1}}{\sum_{i=1}^{n} w_i}
+
+    For the variance, the weights are scaled quadratically,
+    cf. :func:`~pykeen.metrics.utils.weighted_mean_variance`.
 
     .. warning::
 
@@ -1376,64 +1395,83 @@ class ZGeometricMeanRank(ZMetric):
 class MedianRank(RankBasedMetric):
     r"""The median rank.
 
-    The median rank is a robust measure of central tendency that is less sensitive to outliers than the arithmetic
-    mean. For a set of ranks $\mathcal{I}$, the median is the middle value when ranks are sorted.
+    The median rank is a robust measure of central tendency that is less sensitive to outliers than
+    the arithmetic mean. For a set of ranks $\mathcal{I}$, the median is the middle value when ranks
+    are sorted.
 
     .. warning::
 
-        Like other rank-based metrics, the median rank is dependent on the number of candidates. A median rank of 10
-        has different interpretations for a candidate set size of 100 versus 1,000,000.
+        Like other rank-based metrics, the median rank is dependent on the number of candidates. A
+        median rank of 10 has different interpretations for a candidate set size of 100 versus
+        1,000,000.
 
     **Weighted Median**
 
-    When weights $w_1, \ldots, w_n$ are provided, the weighted median is computed as the value $m$ such that the
-    cumulative weight of all ranks less than or equal to $m$ is at least half of the total weight, and the cumulative
-    weight of all ranks greater than or equal to $m$ is also at least half of the total weight. Formally, the weighted
-    median $m$ satisfies:
+    When weights $w_1, \ldots, w_n$ are provided, the weighted median is computed as the value $m$
+    such that the cumulative weight of all ranks less than or equal to $m$ is at least half of the
+    total weight, and the cumulative weight of all ranks greater than or equal to $m$ is also at
+    least half of the total weight. Formally, the weighted median $m$ satisfies:
 
     .. math::
 
         \sum_{r_i \leq m} w_i \geq \frac{1}{2} \sum_j w_j \quad
             \text{and} \quad \sum_{r_i \geq m} w_i \geq \frac{1}{2} \sum_j w_j
 
-    The weighted median generalizes the standard median: when all weights are equal, it reduces to the unweighted
-    median. The implementation uses PyKEEN's :func:`~pykeen.metrics.utils.weighted_median` utility function.
+    The weighted median generalizes the standard median: when all weights are equal, it reduces to
+    the unweighted median. The implementation uses PyKEEN's
+    :func:`~pykeen.metrics.utils.weighted_median` utility function.
 
     **Expected Value (Unweighted Case)**
 
-    For the unweighted case, the expected value $\mathbb{E}[\text{Median}]$ can be computed exactly using dynamic
-    programming. The computation uses the survival function $P(\text{Median} > x)$ and the identity:
+    For the unweighted case, the expected value $\mathbb{E}[\text{Median}]$ can be computed exactly.
+    We model each rank as $r_i \sim \mathcal{U}(1, N_i)$ and denote by $C(x) = \|\{i : r_i \leq
+    x\}\|$ the number of ranks not larger than $x$. The $j$-th smallest rank $X_{(j)}$ exceeds $x$
+    if and only if $C(x) \leq j - 1$. The count $C(x)$ is a sum of independent binomial variables,
+    one for each group of ranking tasks with identical number of candidates $N$, with success
+    probability $\min(1, x / N)$. The expected value then follows from $\mathbb{E}[X] =
+    \sum_{x=0}^{\infty} P(X > x)$.
 
-    .. math::
-
-        \mathbb{E}[\text{Median}] = \sum_{x=0}^{\infty} P(\text{Median} > x)
-
-    The survival function is derived by modeling the median as the order statistic of discrete uniform random
-    variables $r_i \sim \mathcal{U}(1, N_i)$ and computing the distribution via dynamic programming with
-    complexity $O(K \cdot n)$, where $K = \max_i N_i$ and $n$ is the number of ranks.
+    The median follows :func:`numpy.median`: for an odd number $n$ of ranks it is
+    $X_{(\frac{n+1}{2})}$, and for an even number of ranks it is the average $\frac{1}{2}(X_{(n/2)}
+    + X_{(n/2 + 1)})$ of the two middle order statistics.
 
     **Variance (Unweighted Case)**
 
-    The variance $\mathbb{V}[\text{Median}]$ is similarly computed using:
-
-    .. math::
-
-        \mathbb{V}[\text{Median}] = \mathbb{E}[\text{Median}^2] - \mathbb{E}[\text{Median}]^2
-
-    where $\mathbb{E}[\text{Median}^2]$ is obtained from:
+    The variance is computed from the first and second moments, where for non-negative integer
+    variables
 
     .. math::
 
         \mathbb{E}[X^2] = \sum_{x=0}^{\infty} (2x + 1) \cdot P(X > x)
 
+    For an even number of ranks, the second moment of the average of the two middle order statistics
+    $A \leq B$ additionally requires $\mathbb{E}[AB] = \sum_{a, b \geq 0} P(A > a, B > b)$, which
+    reduces to terms of the form $P(C(a) = m, C(b) = m)$ with $m = n / 2$, cf.
+    :func:`~pykeen.metrics.utils.compute_median_moments`. The result is clamped to be non-negative.
+
+    **Complexity**
+
+    Let $n$ be the number of ranks, $K = \max_i N_i$, and $g$ the number of distinct numbers of
+    candidates.
+
+    - For $g = 1$ (e.g., full ranking against all entities), the expected value and the variance are
+      computed in $O(K)$ time, irrespective of $n$.
+    - For $g > 1$, the expected value, and the variance for odd $n$, take $O(K \cdot g \cdot n \log
+      n)$ time. Memory is bounded, as the values of $x$ are processed in chunks.
+    - For the variance with even $n$ and $g > 1$, the exact computation additionally needs $O(K^2
+      \cdot g \cdot n)$ time. If this exceeds a fixed work limit, it falls back to **numeric
+      estimation via sampling** (which requires ``num_samples`` to be given, and raises
+      :class:`NoClosedFormError` otherwise).
+
     **Weighted Case**
 
     .. warning::
 
-        Computing the expected value and variance for the weighted median is computationally intractable, as it
-        reduces to a variant of the `Subset Sum Problem <https://en.wikipedia.org/wiki/Subset_sum_problem>`_
-        (NP-complete). Therefore, when weights are provided, the metric falls back to **numeric estimation via
-        sampling**, which may be slow and less accurate.
+        Computing the expected value and variance for the weighted median is computationally
+        intractable, as it reduces to a variant of the `Subset Sum Problem
+        <https://en.wikipedia.org/wiki/Subset_sum_problem>`_ (NP-complete). Therefore, when weights
+        are provided, the metric falls back to **numeric estimation via sampling**, which may be
+        slow and less accurate.
 
     ---
     link: https://arxiv.org/abs/2203.07544
@@ -1450,9 +1488,6 @@ class MedianRank(RankBasedMetric):
     def __call__(  # noqa: D102
         self, ranks: np.ndarray, num_candidates: np.ndarray | None = None, weights: np.ndarray | None = None
     ) -> float:
-        if weights is None:
-            return np.median(ranks).item()
-
         return weighted_median(a=ranks, weights=weights).item()
 
     def expected_value(  # noqa: D102
@@ -1468,12 +1503,7 @@ class MedianRank(RankBasedMetric):
                 num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs
             )
 
-        # Get P(M > x) for x = 0, ..., k_max
-        sf = compute_median_survival_function(num_candidates)
-
-        # For non-negative integer variables: E[X] = Sum_{x=0}^{inf} P(X > x)
-        # We slice [:-1] because the array goes up to x=k_max, and P(M > k_max) is 0.
-        return np.sum(sf[:-1])
+        return compute_median_mean(num_candidates)
 
     def variance(  # noqa: D102
         self, num_candidates: np.ndarray, num_samples: int | None = None, weights: np.ndarray | None = None, **kwargs
@@ -1482,25 +1512,17 @@ class MedianRank(RankBasedMetric):
         if weights is not None:
             return super().variance(num_candidates=num_candidates, num_samples=num_samples, weights=weights, **kwargs)
 
-        # Get P(M > x)
-        sf = compute_median_survival_function(num_candidates)
-
-        # Calculate E[M]
-        # Sum P(M > x)
-        exp_val = np.sum(sf[:-1])
-
-        # Calculate E[M^2]
-        # Formula: E[X^2] = Sum_{x=0}^{inf} (2x + 1) * P(X > x)
-        x_indices = np.arange(len(sf) - 1)
-        exp_sq = np.sum((2 * x_indices + 1) * sf[:-1])
-
-        # Var(M) = E[M^2] - (E[M])^2
-        return exp_sq - exp_val**2
+        try:
+            _, variance = compute_median_moments(num_candidates)
+        except NotImplementedError:
+            # even number of ranks with multiple distinct numbers of candidates, and too expensive
+            return super().variance(num_candidates=num_candidates, num_samples=num_samples, weights=None, **kwargs)
+        return variance
 
 
 @parse_docdata
 class InverseMedianRank(RankBasedMetric):
-    """The inverse median rank.
+    """The inverse of the (optionally weighted) median rank.
 
     ---
     link: https://arxiv.org/abs/2203.07544
@@ -1533,7 +1555,7 @@ class StandardDeviation(RankBasedMetric):
     where $\bar{r} = \frac{1}{W} \sum_{i=1}^{n} w_i r_i$ is the weighted mean.
 
     ---
-    link: https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html
+    link: https://pykeen.readthedocs.io/en/latest/explanation/understanding_evaluation.html
     """
 
     name = "Standard Deviation (std)"
@@ -1575,7 +1597,7 @@ class Variance(RankBasedMetric):
         value/variance calculations).
 
     ---
-    link: https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html
+    link: https://pykeen.readthedocs.io/en/latest/explanation/understanding_evaluation.html
     """
 
     name = "Variance"
@@ -1616,7 +1638,7 @@ class MedianAbsoluteDeviation(RankBasedMetric):
     ``scale='normal'``.
 
     ---
-    link: https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html
+    link: https://pykeen.readthedocs.io/en/latest/explanation/understanding_evaluation.html
     """
 
     name = "Median Absolute Deviation (MAD)"
@@ -1685,6 +1707,15 @@ class HitsAtK(RankBasedMetric):
 
         H_k = \frac{1}{n} \sum \limits_{i=1}^{n} \mathbb{I}[r_i \leq k]
 
+    Optionally, individual weights $\{w_i\}_{i=1}^n$ can be provided, in which case:
+
+    .. math::
+
+        H_k = \frac{\sum_{i=1}^{n} w_i \mathbb{I}[r_i \leq k]}{\sum_{i=1}^{n} w_i}
+
+    For the variance, the weights are scaled quadratically, cf.
+    :func:`~pykeen.metrics.utils.weighted_mean_variance`.
+
     For example, if Google shows 20 results on the first page, then the percentage of results that are relevant is the
     hits @ 20. The hits @ k, regardless of $k$, lies on the $[0, 1]$ where closer to 1 is better.
 
@@ -1732,7 +1763,7 @@ class HitsAtK(RankBasedMetric):
 
     ---
     description: The relative frequency of ranks not larger than a given k.
-    link: https://pykeen.readthedocs.io/en/stable/explanation/understanding_evaluation.html#hits-k
+    link: https://pykeen.readthedocs.io/en/latest/explanation/understanding_evaluation.html#hits-k
     """
 
     name = "Hits @ K"
@@ -1843,7 +1874,7 @@ class ZHitsAtK(ZMetric):
 class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
     """The adjusted arithmetic mean rank (AMR).
 
-    The adjusted (arithmetic) mean rank (AMR) was introduced by [berrendorf2020]. It is defined as the ratio of the
+    The adjusted (arithmetic) mean rank (AMR) was introduced by [berrendorf2020]_. It is defined as the ratio of the
     mean rank to the expected mean rank. It lies on the open interval $(0, 2)$ where lower is better.
 
     ---
@@ -1852,7 +1883,7 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
     """
 
     name = "Adjusted Arithmetic Mean Rank (AAMR)"
-    value_range = ValueRange(lower=0, lower_inclusive=True, upper=2, upper_inclusive=False)
+    value_range = ValueRange(lower=0, lower_inclusive=False, upper=2, upper_inclusive=False)
     synonyms: ClassVar[Collection[str]] = ("adjusted_mean_rank", "amr", "aamr")
     supported_rank_types = (RANK_REALISTIC,)
     needs_candidates = True
@@ -1865,7 +1896,7 @@ class AdjustedArithmeticMeanRank(ExpectationNormalizedMetric):
 class AdjustedArithmeticMeanRankIndex(ReindexedMetric):
     """The adjusted arithmetic mean rank index (AMRI).
 
-    The adjusted (arithmetic) mean rank index (AMRI) was introduced by [berrendorf2020] to make the AMR more intuitive.
+    The adjusted (arithmetic) mean rank index (AMRI) was introduced by [berrendorf2020]_ to make the AMR more intuitive.
     The AMRI has a bounded value range of $[-1, 1]$ where closer to 1 is better.
 
     ---

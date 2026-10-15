@@ -59,7 +59,7 @@ def summarize(dataset_regex: str | None, min_triples: int | None, max_triples: i
         click.secho(f"Loading {name}", fg="green", bold=True)
         try:
             dataset.summarize(show_examples=None)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 -- keep summarizing the remaining datasets
             click.secho(f"Failed {name}", fg="red", bold=True)
             click.secho(str(e), fg="red", bold=True)
 

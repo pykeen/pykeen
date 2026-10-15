@@ -538,6 +538,9 @@ class CoreTriplesFactory(KGInfo):
             and bool((self.mapped_triples == __o.mapped_triples).all().item())
         )
 
+    # defining __eq__ implicitly sets __hash__ to None; make this explicit
+    __hash__ = None  # type: ignore[assignment]
+
     @property
     def num_triples(self) -> int:
         """The number of triples."""
@@ -548,9 +551,10 @@ class CoreTriplesFactory(KGInfo):
         yield from super().iter_extra_repr()
         yield f"num_triples={self.num_triples}"
         for k, v in sorted(self.metadata.items()):
+            v_repr = v
             if isinstance(v, str | pathlib.Path):
-                v = f'"{v}"'
-            yield f"{k}={v}"
+                v_repr = f'"{v}"'
+            yield f"{k}={v_repr}"
 
     def with_labels(
         self,
@@ -629,7 +633,8 @@ class CoreTriplesFactory(KGInfo):
         """
         logger.info(f"applying cutoff of {n} to {self}")
         if isinstance(n, float):
-            assert 0 < n < 1
+            if not (0 < n < 1):
+                raise ValueError("Expected 0 < n < 1.")
             n = int(self.num_relations * n)
         elif not isinstance(n, int):
             raise TypeError("n must be either an integer or a float")
@@ -1272,6 +1277,9 @@ class TriplesFactory(CoreTriplesFactory):
             and (self.relation_to_id == __o.relation_to_id)
         )
 
+    # defining __eq__ implicitly sets __hash__ to None; make this explicit
+    __hash__ = None
+
     def apply_condenser(self, condenser: TripleCondenser) -> Self:  # noqa: D102
         if not condenser:
             return self
@@ -1518,7 +1526,8 @@ class TriplesFactory(CoreTriplesFactory):
             "relation": self.relation_labeling,
             "tail": self.entity_labeling,
         }.items():
-            assert labeling is not None
+            if labeling is None:
+                raise RuntimeError(f"No labeling available for the {column} column.")
             data[f"{column}_label"] = labeling.label(
                 ids=data[f"{column}_id"],
                 unknown_label=("[unknown_" + column + "]").upper(),

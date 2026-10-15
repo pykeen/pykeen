@@ -34,6 +34,7 @@ from ..utils import (
     determine_maximum_batch_size,
     flatten_dictionary,
     format_relative_comparison,
+    get_num_ids,
     normalize_string,
     prepare_filter_triples,
 )
@@ -58,7 +59,7 @@ class MetricResults(Generic[MetricKeyType]):
     metrics: ClassVar[Mapping[str, type[Metric]]]
     data: Mapping[MetricKeyType, float]
 
-    def __init__(self, data: Mapping[MetricKeyType | str, float]):
+    def __init__(self, data: Mapping[MetricKeyType | str, float]) -> None:
         """Initialize the result wrapper."""
         self.data = {self.string_or_key_to_key(key): value for key, value in data.items()}
 
@@ -333,6 +334,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         all_pos_triples: MappedTriples | None,
         targets: Collection[Target],
         tqdm_kwargs: Mapping[str, Any],
+        restrict_entities_to: Collection[int] | None = None,
         **kwargs,
     ) -> MetricResults:
         """Evaluate the model on the given device."""
@@ -343,6 +345,11 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         if all_pos_triples is not None:
             all_pos_triples = all_pos_triples.to(device=device)
         mapped_triples = mapped_triples.to(device=device)
+        # normalize the restriction to a sorted index tensor: sets are not valid indices, and lists are not hashable
+        if restrict_entities_to is not None:
+            restrict_entities_to = torch.as_tensor(sorted(set(map(int, restrict_entities_to))), dtype=torch.long).to(
+                device=device
+            )
         num_triples = mapped_triples.shape[0]
         # no batch size -> automatic memory optimization
         batch_size = determine_maximum_batch_size(batch_size, device, num_triples)
@@ -377,6 +384,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
                 targets=targets,
                 # kwargs
                 all_pos_triples=all_pos_triples,
+                restrict_entities_to=restrict_entities_to,
                 model=model,
                 mode=self.mode,
                 **kwargs,
@@ -384,7 +392,32 @@ class Evaluator(ABC, Generic[MetricKeyType]):
 
 
 def _optimal_batch_size_group_id(kwargs: Mapping[str, Any]) -> int:
-    """Share optimal batch size whenever this hash matches."""
+    """Share optimal batch size whenever this hash matches.
+
+    The key consists of the number of evaluation triples, the identity of the evaluator and all
+    remaining keyword arguments. Identity is the right notion for the evaluator (each instance is
+    optimized separately) and for the model (its architecture, and thus memory footprint, is fixed
+    for the lifetime of the instance). Tensors, in contrast, are often re-created for each call,
+    e.g., `all_pos_triples` is rebuilt in every :meth:`Evaluator.evaluate` call, so their identity
+    would prevent re-using the cache across calls (e.g., for periodic evaluation during training)
+    and could even produce arbitrary hits after an `id` is re-used. Since memory consumption depends
+    mainly on their size, they enter the key via `(shape, dtype, device)`.
+
+    This is safe although memory consumption is partially value-dependent: with filtering, the
+    output of :func:`create_sparse_positive_filter_` (and the subsequent indexing in
+    :func:`filter_scores_`) scales with the number of (batch row, positive entity) pairs, i.e., with
+    tensor *values*, whereas the dense temporaries depend on shapes only. This already varies
+    between batches within a single evaluation, so no key can capture it; an out-of-memory error on
+    a later, denser batch is handled by the retry of the memory optimization (the evaluator is
+    cleared). Moreover, a cached value only acts as a ceiling (the minimum of the requested and the
+    cached value) and is still reduced upon out-of-memory errors. Thus, two calls which share a key
+    but differ in content can at worst cost throughput (e.g., through a ceiling learned on denser
+    data), but never correctness.
+
+    :param kwargs: the keyword-based parameters of :func:`evaluate`
+
+    :returns: the hash of the group identifier
+    """
     ignored_keys = {
         # we ignore keys which clearly do not have an effect on the memory consumptions
         "progress_bar",
@@ -396,15 +429,17 @@ def _optimal_batch_size_group_id(kwargs: Mapping[str, Any]) -> int:
         # we want to separate optimize for each evaluator instance
         "evaluator",
     }
-    values: tuple[Hashable, ...] = (kwargs["mapped_triples"].shape[0], id(kwargs["evaluator"]))
-    for key, value in kwargs.items():
+    values: list[Hashable] = [kwargs["mapped_triples"].shape[0], id(kwargs["evaluator"])]
+    for key, value in sorted(kwargs.items()):
         if key in ignored_keys:
             continue
-        if not isinstance(value, Hashable):
+        if isinstance(value, torch.Tensor):
+            values.append((tuple(value.shape), value.dtype, value.device))
+        elif isinstance(value, Hashable):
+            values.append(value)
+        else:
             warnings.warn(f"Encountered {type(value)=} which cannot be hashed", category=UserWarning, stacklevel=3)
-            continue
-        values += (value,)
-    return hash(values)
+    return hash(tuple(values))
 
 
 @maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_optimal_batch_size_group_id)
@@ -608,7 +643,8 @@ def _evaluate_batch(
         positive_filter = relation_filter = None
 
     if evaluator.filtered:
-        assert positive_filter is not None
+        if positive_filter is None:
+            raise ValueError("positive_filter must not be None.")
         # overwrite filtered scores
         scores = filter_scores_(scores=scores, filter_batch=positive_filter)
         # The scores for the true triples have to be rewritten to the scores tensor
@@ -616,7 +652,8 @@ def _evaluate_batch(
 
     # Create a positive mask with the size of the scores from the positive filter
     if evaluator.requires_positive_mask:
-        assert positive_filter is not None
+        if positive_filter is None:
+            raise ValueError("positive_filter must not be None.")
         positive_mask = create_dense_positive_mask_(zero_tensor=torch.zeros_like(scores), filter_batch=positive_filter)
     else:
         positive_mask = None
@@ -655,7 +692,13 @@ def get_candidate_set_size(
         :func:`restrict_triples`.
     :param additional_filter_triples: shape: (n, 3) additional filter triples besides the evaluation triples themselves.
         cf. `_prepare_filter_triples`.
-    :param num_entities: the number of entities. If not given, this number is inferred from all triples
+    :param num_entities: the number of entities. If not given, this number is inferred as the maximum entity ID
+        plus one over all filter triples, since entity IDs are dense indices. Ignored if `restrict_entities_to` is
+        given, in which case the number of entities is the size of the restriction.
+
+    The candidate set size includes the true entity, i.e., it is the number of entities minus the number of *other*
+    known positives for the given (relation, other entity) key. This is the same convention as
+    `number_of_options` of :class:`~pykeen.evaluation.ranks.Ranks` and the `num_candidates` of the rank-based metrics.
 
     :returns: columns: "index" | "head" | "relation" | "tail" | "head_candidates" | "tail_candidates" a dataframe of all
         evaluation triples, with the number of head and tail candidates
@@ -678,13 +721,14 @@ def get_candidate_set_size(
         mapped_triples=mapped_triples,
         additional_filter_triples=additional_filter_triples,
     )
+    # de-duplicate, since positives must be counted once, even if the evaluation triples contain duplicates
+    filter_triples = filter_triples.unique(dim=0)
 
     # infer num_entities if not given
-    if restrict_entities_to:
+    if restrict_entities_to is not None:
         num_entities = len(restrict_entities_to)
-    else:
-        # TODO: unique, or max ID + 1?
-        num_entities = num_entities or filter_triples[:, [0, 2]].view(-1).unique().numel()
+    elif not num_entities:
+        num_entities = get_num_ids(filter_triples[:, [0, 2]])
 
     # optionally restrict triples
     filter_triples = restrict_triples(
@@ -704,10 +748,10 @@ def get_candidate_set_size(
         group_keys = TARGET_TO_KEY_LABELS[target]
         df_count = df_filter.groupby(by=group_keys).agg({target: "count"})
         column = f"{target}_candidates"
-        df_count[column] = total - df_count[target]
+        df_count[column] = total - df_count[target] + 1
         df_count = df_count.drop(columns=target)
         df_eval = df_eval.merge(df_count, on=group_keys, how="left")
-        df_eval[column] = df_eval[column].fillna(value=total)
+        df_eval[column] = df_eval[column].fillna(value=total + 1)
 
     return df_eval
 

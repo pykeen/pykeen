@@ -46,7 +46,7 @@ class KG2E(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
     }
 
     #: The default settings for the entity constrainer
-    constrainer_default_kwargs = {"maxnorm": 1.0, "p": 2, "dim": -1}
+    constrainer_default_kwargs: ClassVar[Mapping[str, Any]] = {"maxnorm": 1.0, "p": 2, "dim": -1}
 
     @update_docstring_with_resolver_keys(
         ResolverKey(name="dist_similarity", resolver="pykeen.nn.sim.kg2e_similarity_resolver")

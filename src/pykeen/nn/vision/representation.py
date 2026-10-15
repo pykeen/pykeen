@@ -25,8 +25,9 @@ try:
     from PIL import Image
     from torchvision import models
     from torchvision import transforms as vision_transforms
+    from torchvision.models import feature_extraction
 except ImportError:
-    models = vision_transforms = Image = None
+    models = vision_transforms = feature_extraction = Image = None
 
 __all__ = [
     "ImageHint",
@@ -39,7 +40,11 @@ __all__ = [
 
 def _ensure_vision(instance: object, module: Any | None):
     if module is None:
-        raise ImportError(f"{instance.__class__.__name__} requires `torchvision` to be installed.")
+        raise ImportError(
+            f"{instance.__class__.__name__} requires `torchvision` and `pillow` to be installed. Install them with "
+            "`pip install pykeen[vision]`, or see the PyKEEN installation docs at "
+            "https://pykeen.readthedocs.io/en/stable/installation.html for more information."
+        )
 
 
 #: A path to an image file or a tensor representation of the image
@@ -90,7 +95,8 @@ class VisionDataset(torch.utils.data.Dataset):
             if not path.is_absolute():
                 path = self.root.joinpath(path)
             image = Image.open(path)
-        assert isinstance(image, torch.Tensor | Image.Image)
+        if not isinstance(image, torch.Tensor | Image.Image):
+            raise TypeError(f"Expected image to be of type torch.Tensor | Image.Image, but got {type(image).__name__}.")
         return self.transforms(image)
 
     def __len__(self) -> int:
@@ -140,13 +146,11 @@ class VisualRepresentation(Representation):
 
         if isinstance(encoder, str):
             cls = getattr(models, encoder)
-            encoder = cls(encoder_kwargs or {})
+            encoder = cls(**(encoder_kwargs or {}))
 
         pool = functools.partial(torch.mean, dim=(-1, -2))
 
-        encoder = models.feature_extraction.create_feature_extractor(
-            model=encoder, return_nodes={layer_name: "feature"}
-        )
+        encoder = feature_extraction.create_feature_extractor(model=encoder, return_nodes={layer_name: "feature"})
 
         # infer shape
         with torch.inference_mode():

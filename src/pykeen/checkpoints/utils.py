@@ -43,7 +43,7 @@ class ResultListenerAdapter(ResultTracker):
     def __post_init__(self):
         self.best = float("-inf") if self.metric_selection.maximize else float("+inf")
         self.base_log_metrics = self.base.log_metrics
-        self.base.log_metrics = self.log_metrics
+        self.base.log_metrics = self.log_metrics  # type: ignore[method-assign]
 
     def log_metrics(  # noqa: D102
         self,

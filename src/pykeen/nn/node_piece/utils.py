@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from tqdm.auto import tqdm
 
+from ...triples.utils import get_num_ids
 from ...typing import LongTensor
 
 __all__ = [
@@ -45,8 +46,8 @@ def random_sample_no_replacement(
     # TODO: vectorization?
     for idx, this_pool in tqdm(pool.items(), desc="sampling", leave=False, unit_scale=True):
         this_pool_t = torch.as_tensor(data=list(this_pool), dtype=torch.long)
-        this_pool = this_pool_t[torch.randperm(this_pool_t.shape[0])[:num_tokens]]
-        assignment[idx, : len(this_pool_t)] = this_pool
+        sampled_pool = this_pool_t[torch.randperm(this_pool_t.shape[0])[:num_tokens]]
+        assignment[idx, : len(this_pool_t)] = sampled_pool
     return assignment
 
 
@@ -54,7 +55,7 @@ def ensure_num_entities(edge_index: np.ndarray, num_entities: int | None = None)
     """Calculate the number of entities from the edge index if not given."""
     if num_entities is not None:
         return num_entities
-    return edge_index.max().item() + 1
+    return get_num_ids(edge_index)
 
 
 def prepare_edges_for_metis(edge_index: torch.Tensor) -> LongTensor:

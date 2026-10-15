@@ -31,6 +31,20 @@ class RelationInverter(ABC):
     Subclasses only define the ID-level translation; the batch-level operations are derived from it.
     """
 
+    def __eq__(self, other: object) -> bool:
+        """Check whether two inverters are equal.
+
+        The base implementation compares the type only, which suffices for stateless inverters.
+        Stateful subclasses have to override this method, and :meth:`__hash__` accordingly.
+        """
+        if not isinstance(other, RelationInverter):
+            return NotImplemented
+        return type(self) is type(other)
+
+    def __hash__(self) -> int:
+        """Hash the inverter, consistent with :meth:`__eq__`."""
+        return hash(type(self))
+
     @abstractmethod
     def to_internal(self, relation_id: RelationID) -> RelationID:
         """Convert a real relation ID to the corresponding internal (forward) relation ID."""

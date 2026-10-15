@@ -51,7 +51,7 @@ class BoxE(
     }
 
     loss_default = NSSALoss
-    loss_default_kwargs = {"margin": 3, "adversarial_temperature": 2.0, "reduction": "sum"}
+    loss_default_kwargs: ClassVar[Mapping[str, Any]] = {"margin": 3, "adversarial_temperature": 2.0, "reduction": "sum"}
 
     def __init__(
         self,

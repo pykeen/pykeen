@@ -15,7 +15,7 @@ jobs:
   welcome:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/first-interaction@v2
+      - uses: actions/first-interaction@2d4393e6bc0e2efb2e48fba7e06819c3bf61ffc9 # v2.0.0
         with:
           pr-message: |-
             Congrats on making your first Pull Request and thanks for taking the time to improve PyKEEN! ❤️! 🎉

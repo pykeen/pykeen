@@ -1,11 +1,14 @@
 """Tests for inverse relation handling."""
 
+from collections.abc import Callable
+
 import pytest
 import torch
 
 from pykeen.datasets import Nations
 from pykeen.inverse import DefaultRelationInverter, RelationInverter, relation_inverter_resolver
 from pykeen.models import CompGCN, ConvE, CooccurrenceFilteredModel, Model, NodePiece, TransE
+from pykeen.nn.representation import CombinedCompGCNRepresentations, SingleCompGCNRepresentation
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples.instances import LCWAInstances
 
@@ -59,8 +62,8 @@ def test_default_inverter_ids():
     mapped = inverter.to_internal_batch(batch=batch)
     assert mapped[0, 1].item() == 6
     assert inverter.get_inverse_id(relation_id=mapped[0, 1]).item() == 7
-    assert not inverter.is_inverse(mapped[:, 1]).any()
-    assert inverter.is_inverse(inverter.to_internal_batch(batch=batch, invert=True)[:, 1]).all()
+    assert not torch.as_tensor(inverter.is_inverse(mapped[:, 1])).any()
+    assert torch.as_tensor(inverter.is_inverse(inverter.to_internal_batch(batch=batch, invert=True)[:, 1])).all()
 
 
 @pytest.mark.parametrize(
@@ -166,7 +169,7 @@ def test_training_with_model_flag(training_loop_cls: type[TrainingLoop]):
 
 
 @pytest.mark.parametrize("model_cls", [ConvE, NodePiece, CompGCN])
-def test_model_builds_with_inverse_relations(model_cls: type[Model]):
+def test_model_builds_with_inverse_relations(model_cls: Callable[..., Model]):
     """Test that models requiring inverse relations enable them."""
     tf = Nations().training
     model = model_cls(triples_factory=tf, embedding_dim=16, random_seed=0)
@@ -177,7 +180,7 @@ def test_model_builds_with_inverse_relations(model_cls: type[Model]):
 
 
 @pytest.mark.parametrize("model_cls", [NodePiece, CompGCN])
-def test_model_requires_flag(model_cls: type[Model]):
+def test_model_requires_flag(model_cls: Callable[..., Model]):
     """Test that models requiring inverse relations raise an error if they are disabled."""
     with pytest.raises(ValueError, match="use_inverse_triples=True"):
         model_cls(
@@ -195,3 +198,123 @@ def test_filtered_model_mirrors_base_flag():
     assert model.use_inverse_triples
     assert model.base.use_inverse_triples
     assert model.num_relations == model.base.num_relations
+
+
+@pytest.mark.parametrize("conjunctive", [False, True])
+@pytest.mark.parametrize("use_inverse_triples", [False, True])
+def test_filtered_model_training_mask(use_inverse_triples: bool, conjunctive: bool):
+    """Test that the training-time co-occurrence mask is computed in the internal relation ID space."""
+    tf = Nations().training
+    model = CooccurrenceFilteredModel(
+        triples_factory=tf,
+        base=TransE,
+        use_inverse_triples=use_inverse_triples,
+        apply_in_training=True,
+        conjunctive=conjunctive,
+        training_fill_value=float("-inf"),
+        random_seed=0,
+    )
+    # the triples as seen by the scoring methods, i.e., with internal relation IDs and including the inverse triples
+    inverter = model.relation_inverter
+    h, r, t = tf.mapped_triples.t()
+    internal = tf.mapped_triples
+    if use_inverse_triples:
+        r = inverter.to_internal(r)
+        internal = torch.cat([torch.stack([h, r, t], dim=-1), torch.stack([t, inverter.get_inverse_id(r), h], dim=-1)])
+    # dense co-occurrence matrices; the mask is their elementwise conjunction / disjunction
+    num_entities, num_relations = tf.num_entities, model.num_relations
+    h_r, h_t, r_t = (
+        torch.zeros(n, m, dtype=torch.bool)
+        for n, m in ((num_entities, num_relations), (num_entities, num_entities), (num_relations, num_entities))
+    )
+    h_r[internal[:, 0], internal[:, 1]] = True
+    h_t[internal[:, 0], internal[:, 2]] = True
+    r_t[internal[:, 1], internal[:, 2]] = True
+
+    def combine(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+        return (a & b) if conjunctive else (a | b)
+
+    h, r, t = internal.t()
+    for scores, expected in (
+        (model.score_h(internal[:, 1:]), combine(h_r.t()[r], h_t.t()[t])),
+        (model.score_r(internal[:, 0::2]), combine(h_r[h], r_t.t()[t])),
+        (model.score_t(internal[:, :2]), combine(h_t[h], r_t[r])),
+    ):
+        assert torch.equal(torch.isfinite(scores), expected)
+
+
+@pytest.mark.parametrize("method_name", ["score_h", "score_r", "score_t", "predict_h", "predict_r", "predict_t"])
+def test_filtered_model_rejects_inductive_mode(method_name: str):
+    """Test that the filtered model rejects a pass mode, since the masks are built from the training graph only."""
+    tf = Nations().training
+    model = CooccurrenceFilteredModel(triples_factory=tf, base=TransE, random_seed=0)
+    batch = tf.mapped_triples[:3, :2]
+    with pytest.raises(NotImplementedError, match="transductive"):
+        getattr(model, method_name)(batch, mode="training")
+
+
+class _SwappedRelationInverter(DefaultRelationInverter):
+    """A non-default relation inverter, which uses odd IDs for forward relations and even IDs for inverse ones."""
+
+    def to_internal(self, relation_id):
+        return (relation_id << 1) | 1
+
+    def is_inverse(self, relation_id):
+        return (relation_id & 1) == 0
+
+
+def test_compgcn_uses_relation_inverter():
+    """Test that the CompGCN encoder picks forward and inverse relation representations via the relation inverter."""
+    tf = Nations().training
+    default, swapped = (
+        CombinedCompGCNRepresentations(
+            triples_factory=tf,
+            entity_representations_kwargs={"embedding_dim": 4},
+            relation_representations_kwargs={"embedding_dim": 4},
+            relation_inverter=relation_inverter,
+        ).eval()
+        for relation_inverter in (None, _SwappedRelationInverter())
+    )
+    assert type(default.relation_inverter) is DefaultRelationInverter
+    # use the same parameters, except for exchanging the forward and inverse relation representations
+    state = default.state_dict()
+    key = "relation_representations._embeddings.weight"
+    permutation = torch.arange(state[key].shape[0]) ^ 1
+    state[key] = state[key][permutation]
+    swapped.load_state_dict(state)
+    with torch.no_grad():
+        x_e_default, x_r_default = default()
+        x_e_swapped, x_r_swapped = swapped()
+    assert torch.allclose(x_e_default, x_e_swapped)
+    assert torch.allclose(x_r_default, x_r_swapped[permutation])
+
+
+def test_compgcn_encoder_shares_model_relation_inverter():
+    """Test that the CompGCN model's encoder uses the model's relation inverter."""
+    model: CompGCN = CompGCN(triples_factory=Nations().training, embedding_dim=4, random_seed=0)
+    representation = model.entity_representations[0]
+    assert isinstance(representation, SingleCompGCNRepresentation)
+    assert representation.combined.relation_inverter is model.relation_inverter
+
+
+def test_compgcn_rejects_encoder_relation_inverter():
+    """Test that CompGCN rejects a relation inverter in the encoder arguments, and uses the model's one."""
+    tf = Nations().training
+    with pytest.raises(ValueError, match="encoder_kwargs"):
+        CompGCN(
+            triples_factory=tf,
+            embedding_dim=4,
+            random_seed=0,
+            encoder_kwargs={"relation_inverter": _SwappedRelationInverter()},
+        )
+    inverter = _SwappedRelationInverter()
+    model: CompGCN = CompGCN(triples_factory=tf, embedding_dim=4, random_seed=0, relation_inverter=inverter)
+    assert model.relation_inverter is inverter
+
+
+def test_relation_inverter_equality():
+    """Test that relation inverters are compared by type."""
+    assert DefaultRelationInverter() == DefaultRelationInverter()
+    assert hash(DefaultRelationInverter()) == hash(DefaultRelationInverter())
+    assert DefaultRelationInverter() != _SwappedRelationInverter()
+    assert DefaultRelationInverter() != "default"

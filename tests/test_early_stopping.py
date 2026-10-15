@@ -1,6 +1,8 @@
 """Tests of early stopping."""
 
 import unittest
+from collections.abc import Mapping
+from typing import Any, ClassVar
 from unittest.mock import patch
 
 import numpy as np
@@ -48,7 +50,7 @@ class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLog
     """Tests for early stopping logic."""
 
     cls = EarlyStoppingLogic
-    kwargs = {
+    kwargs: ClassVar[Mapping[str, Any]] = {
         "patience": 2,
         "relative_delta": 0.1,
         "larger_is_better": False,
@@ -63,7 +65,7 @@ class TestEarlyStoppingLogic(unittest_templates.GenericTestCase[EarlyStoppingLog
 
         # assert that reporting another metric for this epoch raises an error
         with pytest.raises(ValueError, match="Cannot report more than one metric for one epoch"):
-            self.instance.report_result(metric=..., epoch=epoch)
+            self.instance.report_result(metric=metric, epoch=epoch)
 
     def test_early_stopping(self):
         """Test early stopping."""
@@ -76,19 +78,19 @@ class TestEarlyStopper(cases.EarlyStopperTestCase):
     """Tests for early stopping."""
 
     patience: int = 2
-    mock_losses: list[float] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
+    mock_losses: ClassVar[list[float]] = [10.0, 9.0, 8.0, 9.0, 8.0, 8.0]
     stop_constant: int = 4
     delta: float = 0.0
-    best_results: list[float] = [10.0, 9.0, 8.0, 8.0, 8.0]
+    best_results: ClassVar[list[float]] = [10.0, 9.0, 8.0, 8.0, 8.0]
 
 
 class TestEarlyStopperDelta(cases.EarlyStopperTestCase):
     """Test early stopping with a tiny delta."""
 
-    mock_losses: list[float] = [10.0, 9.0, 8.0, 7.99, 7.98, 7.97]
+    mock_losses: ClassVar[list[float]] = [10.0, 9.0, 8.0, 7.99, 7.98, 7.97]
     stop_constant: int = 4
     delta: float = 0.1
-    best_results: list[float] = [10.0, 10.0, 8.0, 8.0, 8.0]
+    best_results: ClassVar[list[float]] = [10.0, 10.0, 8.0, 8.0, 8.0]
 
 
 class TestEarlyStopperRealWorld(unittest.TestCase):
@@ -120,6 +122,7 @@ class TestEarlyStopperRealWorld(unittest.TestCase):
         """Tests early stopping."""
         # Set automatic_memory_optimization to false during testing
         nations = Nations()
+        assert nations.validation is not None
         model: Model = TransE(triples_factory=nations.training)
         evaluator = RankBasedEvaluator()
         stopper = EarlyStopper(
