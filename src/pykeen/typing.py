@@ -17,6 +17,7 @@ __all__ = [
     "EA_SIDES",
     "EA_SIDE_LEFT",
     "EA_SIDE_RIGHT",
+    "INVERSE_TARGET",
     "LABEL_HEAD",
     "LABEL_RELATION",
     "LABEL_TAIL",
@@ -178,3 +179,11 @@ EA_SIDES: tuple[EASide, EASide] = (EA_SIDE_LEFT, EA_SIDE_RIGHT)
 
 #: A hint for transductive splitting ratios
 TransductiveRatiosHint = tuple[float, float] | tuple[float, float, float]
+
+#: the target of the inverse scoring request, e.g., predicting heads of $(*, r, t)$ is
+#: predicting tails of $(t, r_{inv}, *)$
+INVERSE_TARGET: dict[Target, Target] = {
+    LABEL_HEAD: LABEL_TAIL,
+    LABEL_RELATION: LABEL_RELATION,
+    LABEL_TAIL: LABEL_HEAD,
+}

@@ -29,7 +29,7 @@ import torch
 
 from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
 from ..inverse import RelationInverter
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, LongTensor, Target
+from ..typing import INVERSE_TARGET, LongTensor, Target
 from ..utils import broadcast_index_shapes, pad_trailing_dims
 
 __all__ = [
@@ -126,15 +126,6 @@ class OptionalIndices(NamedTuple):
         if self.relation is None:
             raise ValueError("Cannot invert missing relation IDs; materialize the internal relation IDs first.")
         return self.__class__(self.tail, relation_inverter.get_inverse_id(self.relation), self.head)
-
-
-#: the target of the inverse scoring request, e.g., predicting heads of $(*, r, t)$ is
-#: predicting tails of $(t, r_{inv}, *)$
-_INVERSE_TARGET: dict[Target, Target] = {
-    LABEL_HEAD: LABEL_TAIL,
-    LABEL_RELATION: LABEL_RELATION,
-    LABEL_TAIL: LABEL_HEAD,
-}
 
 
 _IndicesType = TypeVar("_IndicesType", Indices, OptionalIndices)
@@ -392,7 +383,7 @@ class TargetScoringBatch(NamedTuple):
 
         :raises ValueError: if scoring against *all* relations, cf. :meth:`OptionalIndices.invert`
         """
-        return self._replace(indices=self.indices.invert(relation_inverter), target=_INVERSE_TARGET[self.target])
+        return self._replace(indices=self.indices.invert(relation_inverter), target=INVERSE_TARGET[self.target])
 
 
 #: A scoring request: either the given triples, or one position scored against many candidates.
