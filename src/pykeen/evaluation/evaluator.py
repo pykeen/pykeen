@@ -224,7 +224,8 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         :param batch_size: >0 A positive integer used as batch size. Generally chosen as large as possible. Defaults to
             1 if None.
         :param slice_size: >0 The divisor for the scoring function when using slicing.
-        :param device: The device on which the evaluation shall be run. If None is given, use the model's device.
+        :param device: The device on which the evaluation shall be run. If None is given, use the model's device. The
+            model is moved back to its original device after the evaluation.
         :param use_tqdm: Should a progress bar be displayed?
         :param tqdm_kwargs: Additional keyword based arguments passed to the progress bar.
         :param restrict_entities_to: Optionally restrict the evaluation to the given entity IDs. This may be useful if
@@ -298,7 +299,8 @@ class Evaluator(ABC, Generic[MetricKeyType]):
             )
         else:
             all_pos_triples = None
-        device = device or model.device
+        original_device = model.device
+        device = device or original_device
         tqdm_kwargs = dict(tqdm_kwargs or {})
         if not use_tqdm:
             tqdm_kwargs["disable"] = True
@@ -332,6 +334,9 @@ class Evaluator(ABC, Generic[MetricKeyType]):
                 targets=targets,
                 tqdm_kwargs=tqdm_kwargs,
             )
+        finally:
+            # `Module.to` is in-place; undo the move, e.g., when called mid-training or after a fallback to cpu
+            model.to(original_device)
         stop = timeit.default_timer()
         logger.info("Evaluation took %.2fs seconds", stop - start)
         return result

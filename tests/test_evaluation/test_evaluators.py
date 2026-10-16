@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import itertools
 import unittest
+import unittest.mock
 import warnings
 from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, MutableMapping
@@ -44,7 +45,7 @@ from pykeen.metrics.ranking import (
     InverseHarmonicMeanRank,
     rank_based_metric_resolver,
 )
-from pykeen.models import FixedModel
+from pykeen.models import FixedModel, Model, TransE
 from pykeen.typing import (
     LABEL_HEAD,
     LABEL_RELATION,
@@ -586,6 +587,53 @@ class TestEvaluationStructure(unittest.TestCase):
         assert eval_results.get_metric(name=LABEL_HEAD) == eval_results.get_metric(name=LABEL_TAIL), (
             "Should be evaluated on the same number of batches per side"
         )
+
+
+class TestEvaluationRestoresDevice(unittest.TestCase):
+    """Tests that evaluation leaves the model on its original device."""
+
+    def setUp(self):
+        """Prepare a tiny model and a recorder for device moves (only CPU is available in tests)."""
+        self.dataset = Nations()
+        self.model = TransE(triples_factory=self.dataset.training, embedding_dim=2)
+        self.evaluator = DummyEvaluator(filtered=False)
+        # `Module.to` is in-place; track the device the model was last moved to
+        self.moves: list[torch.device] = []
+
+        def _to(device: torch.device) -> Model:
+            self.moves.append(torch.device(device))
+            return self.model
+
+        self.model.to = _to
+
+    def _evaluate(self, device: torch.device, fail_on: torch.device | None = None):
+        """Evaluate, optionally raising a memory error whenever evaluating on the given device."""
+
+        def _patched(evaluator, model, device, **kwargs):
+            model.to(device)
+            if device == fail_on:
+                raise MemoryError
+            return DummyMetricResults(data={})
+
+        with unittest.mock.patch.object(Evaluator, "_evaluate_on_device", _patched):
+            self.evaluator.evaluate(
+                model=self.model,
+                mapped_triples=self.dataset.testing.mapped_triples,
+                device=device,
+                use_tqdm=False,
+            )
+
+    def test_restore_after_explicit_device(self):
+        """Test that passing another device does not move the model permanently."""
+        fake = torch.device("meta")
+        self._evaluate(device=fake)
+        assert self.moves == [fake, torch.device("cpu")]
+
+    def test_restore_after_memory_error_fallback(self):
+        """Test that the model is moved back after falling back to cpu."""
+        fake = torch.device("meta")
+        self._evaluate(device=fake, fail_on=fake)
+        assert self.moves == [fake, torch.device("cpu"), torch.device("cpu")]
 
 
 class TestEvaluationFiltering(unittest.TestCase):
