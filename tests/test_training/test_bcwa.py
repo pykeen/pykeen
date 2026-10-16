@@ -7,7 +7,7 @@ import torch
 
 from pykeen.datasets import Nations
 from pykeen.losses import BCEWithLogitsLoss, CrossEntropyLoss, Loss
-from pykeen.models import DistMult, TransE
+from pykeen.models import ConvE, DistMult, TransE
 from pykeen.models.mocks import FixedModel
 from pykeen.training import bcwa
 from pykeen.triples.instances import BatchCWABatch
@@ -242,3 +242,15 @@ def test_missing_batch_targets() -> None:
     batch = cast(BatchCWABatch, {"heads": h, "relations": r, "tails": t})
     with pytest.raises(bcwa.MissingBatchTargetsError):
         loop._process_batch(batch, start=0, stop=3)
+
+
+def test_slicing_batch_norm() -> None:
+    """Test that slicing is rejected for models with batch normalization, whose result depends on the batch division."""
+    triples_factory = Nations().training
+    model = ConvE(triples_factory=triples_factory, loss=BCEWithLogitsLoss(), random_seed=0)
+    loop = bcwa.BatchCWATrainingLoop(model=model, triples_factory=triples_factory)
+    batch = next(iter(loop._create_training_data_loader(triples_factory, sampler=None, batch_size=32, drop_last=True)))
+    with pytest.raises(ValueError, match="batch normalization"):
+        _batch_gradients(loop, batch, slice_size=4)
+    # without slicing, training works
+    assert _batch_gradients(loop, batch, slice_size=None)

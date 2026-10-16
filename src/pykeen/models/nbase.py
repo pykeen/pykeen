@@ -475,9 +475,12 @@ class ERModel(  # noqa:PYI059
 
         :raises NotImplementedError:
             if score repetition becomes necessary
+        :raises ValueError:
+            if slicing is requested, but the model does not support it, e.g., since it has batch normalization layers
         """
         if not self.entity_representations or not self.relation_representations:
             raise NotImplementedError("repeat scores not implemented for general case.")
+        self._check_slicing(slice_size=slice_size)
         h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode)
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
