@@ -39,7 +39,6 @@ def create_index(
     heads, tails = create_relation_to_entity_set_mapping(triples=mapped_triples.tolist())
     relations = set(heads.keys()).union(tails.keys())
 
-    # TODO: move this warning to PseudoTypeNegativeSampler's constructor?
     for r in relations:
         if len(heads[r]) < 2 and len(tails[r]) < 2:
             logger.warning(f"Relation {r} does not have a sufficient number of distinct heads and tails.")

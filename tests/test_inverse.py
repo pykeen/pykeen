@@ -8,7 +8,17 @@ import torch
 from pykeen.datasets import Nations
 from pykeen.datasets.mocks import create_inductive_dataset
 from pykeen.inverse import DefaultRelationInverter, RelationInverter, relation_inverter_resolver
-from pykeen.models import CompGCN, ConvE, CooccurrenceFilteredModel, InductiveNodePiece, Model, NodePiece, TransE
+from pykeen.models import (
+    CompGCN,
+    ConvE,
+    CooccurrenceFilteredModel,
+    InductiveNodePiece,
+    Model,
+    NodePiece,
+    TargetScoringBatch,
+    TransE,
+    TripleScoringBatch,
+)
 from pykeen.nn.representation import CombinedCompGCNRepresentations, SingleCompGCNRepresentation
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop, TrainingLoop
 from pykeen.triples.instances import LCWAInstances
@@ -107,9 +117,9 @@ def test_get_inverse_relation_id():
         assert 0 <= inverse_id < model.num_relations
         assert model.relation_inverter.is_inverse(torch.as_tensor([inverse_id])).item()
         # this is the relation ID a model actually uses for the inverse of ``relation``
-        batch = torch.as_tensor([[0, relation, 1]])
-        expected = model._prepare_inverse_batch(model._prepare_batch(batch, index_relation=1), index_relation=1)
-        assert expected[0, 1].item() == inverse_id
+        batch = TripleScoringBatch.from_batch(torch.as_tensor([[0, relation, 1]]))
+        expected = batch.to_internal(model.relation_inverter).invert(model.relation_inverter)
+        assert expected.indices.relation.item() == inverse_id
 
 
 def test_get_inverse_relation_id_errors():
@@ -200,6 +210,99 @@ def test_filtered_model_mirrors_base_flag():
     assert model.use_inverse_triples
     assert model.base.use_inverse_triples
     assert model.num_relations == model.base.num_relations
+
+
+def test_scoring_batch_invert(relation_inverter: RelationInverter):
+    """Test that inverting a scoring request swaps head and tail, and inverts the relations."""
+    head, relation, tail = torch.as_tensor([0, 1]), torch.as_tensor([2, 5]), torch.as_tensor([3, 4])
+    triples = TripleScoringBatch.from_transposed_batch(head=head, relation=relation, tail=tail)
+    inverse = triples.invert(relation_inverter)
+    assert torch.equal(inverse.indices.head, tail)
+    assert torch.equal(inverse.indices.relation, relation_inverter.get_inverse_id(relation))
+    assert torch.equal(inverse.indices.tail, head)
+    # inverting twice is the identity
+    assert all(map(torch.equal, inverse.invert(relation_inverter).indices, triples.indices))
+
+    # predicting heads of (*, r, t) becomes predicting tails of (t, r_inv, *), for the same candidates
+    ids = torch.as_tensor([6, 7, 8])
+    batch = TargetScoringBatch.from_transposed_batch(head=ids, relation=relation, tail=tail, target="head")
+    inverse_target = batch.invert(relation_inverter)
+    assert inverse_target.target == "tail"
+    assert inverse_target.target_ids is not None
+    assert torch.equal(inverse_target.target_ids, ids)
+    assert inverse_target.indices.head is not None
+    assert torch.equal(inverse_target.indices.head, tail)
+    assert inverse_target.batch_shape == batch.batch_shape
+
+    # scoring against all relations cannot be inverted or converted, since the candidates' order is undefined
+    batch = TargetScoringBatch.from_transposed_batch(head=head, relation=None, tail=tail, target="relation")
+    for method in (batch.invert, batch.to_internal):
+        with pytest.raises(ValueError, match="materialize"):
+            method(relation_inverter)
+
+
+def test_predict_h_via_inverse(model: Model):
+    """Test that head prediction scores the tails of the inverse triples, including a heads restriction."""
+    rt_batch = Nations().testing.mapped_triples[:3, 1:]
+    heads = torch.as_tensor([0, 2, 4])
+    # the inverse triples, (t, r_inv, *), with internal relation IDs
+    tr_inv_batch = model.relation_inverter.to_internal_batch(batch=rt_batch, index=0, invert=True).flip(1)
+    expected = model.score_t(tr_inv_batch, tails=heads)
+    torch.testing.assert_close(model.predict_h(rt_batch, heads=heads), expected)
+    # the inverse scoring method operates on internal relation IDs
+    rt_internal = model.relation_inverter.to_internal_batch(batch=rt_batch, index=0)
+    torch.testing.assert_close(model.score_h_inverse(rt_internal, heads=heads), expected)
+
+
+def test_inverse_scoring_requires_flag():
+    """Test that the inverse scoring methods raise an error for models without inverse relations."""
+    model = TransE(triples_factory=Nations().training, embedding_dim=2, random_seed=0)
+    with pytest.raises(ValueError, match="use_inverse_triples=True"):
+        model.score_h_inverse(rt_batch=Nations().testing.mapped_triples[:3, 1:])
+
+
+def test_predict_h_slice_and_per_batch_heads(model: Model):
+    """Test that head prediction with per-batch heads and slicing matches scoring the tails of the inverse triples."""
+    rt_batch = Nations().testing.mapped_triples[:3, 1:]
+    heads = torch.randint(model.num_entities, size=(3, 4), generator=torch.manual_seed(0))
+    tr_inv_batch = model.relation_inverter.to_internal_batch(batch=rt_batch, index=0, invert=True).flip(1)
+    expected = model.score_t(tr_inv_batch, tails=heads)
+    torch.testing.assert_close(model.predict_h(rt_batch, heads=heads), expected)
+    torch.testing.assert_close(model.predict_h(rt_batch, heads=heads, slice_size=2), expected)
+
+
+def test_score_t_inverse(model: Model):
+    """Test that the tail scores via inverse relations equal the head scores of the manually inverted pairs."""
+    hr_batch = Nations().testing.mapped_triples[:3, :2]
+    hr_internal = model.relation_inverter.to_internal_batch(batch=hr_batch, index=1)
+    r_inv = model.relation_inverter.get_inverse_id(hr_internal[:, 1])
+    expected = model.score_h(torch.stack([r_inv, hr_internal[:, 0]], dim=-1))
+    torch.testing.assert_close(model.score_t_inverse(hr_internal), expected)
+
+
+def test_subclass_score_is_used(model: Model):
+    """Test that an overridden ``_score`` is used by both ``predict_*`` and ``score_*_inverse``."""
+
+    class ShiftedTransE(TransE):
+        """A model overriding the single scoring override point."""
+
+        def _score(self, batch, **kwargs):
+            return super()._score(batch, **kwargs) + 1.0
+
+    shifted = ShiftedTransE(
+        triples_factory=Nations().training, embedding_dim=2, random_seed=0, use_inverse_triples=True
+    )
+    triples = Nations().testing.mapped_triples[:3]
+    hr_batch = triples[:, :2]
+    torch.testing.assert_close(shifted.predict_t(hr_batch), model.predict_t(hr_batch) + 1.0)
+    hr_internal = model.relation_inverter.to_internal_batch(batch=hr_batch, index=1)
+    torch.testing.assert_close(shifted.score_t_inverse(hr_internal), model.score_t_inverse(hr_internal) + 1.0)
+
+
+def test_predict_unknown_kwarg(model: Model):
+    """Test that unknown keyword arguments are rejected."""
+    with pytest.raises(TypeError):
+        model.predict_t(Nations().testing.mapped_triples[:3, :2], foo=1)
 
 
 @pytest.mark.parametrize("conjunctive", [False, True])
@@ -318,6 +421,14 @@ def test_filtered_model_inductive_mask(
     ):
         assert scores.shape == expected.shape
         assert torch.equal(torch.isfinite(scores), expected)
+
+
+@pytest.mark.parametrize("mode", [VALIDATION, TESTING])
+def test_filtered_model_requires_inference_factory(mode: InductiveMode):
+    """Test that the filtered model rejects an inference mode without an inference graph."""
+    model = CooccurrenceFilteredModel(triples_factory=Nations().training, base=TransE, random_seed=0)
+    with pytest.raises(ValueError, match="inference_factory"):
+        model._get_indexes(mode=mode, in_training=False)
 
 
 class _SwappedRelationInverter(DefaultRelationInverter):

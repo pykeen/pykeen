@@ -2,6 +2,7 @@
 
 from collections.abc import Mapping, MutableMapping
 from typing import Any, ClassVar
+from unittest import mock
 
 import pytest
 import torch
@@ -96,3 +97,52 @@ def test_dataset_additional_filter_triples(filtered: bool, as_sequence: bool):
         filtered=filtered,
         additional_filter_triples=[additional_filter_triples] if as_sequence else additional_filter_triples,
     )
+
+
+def _num_ranking_tasks(evaluator: RankBasedEvaluator) -> int:
+    """Count the ranks collected by the evaluator, across all targets (using the realistic rank type)."""
+    return sum(
+        len(chunk) for (_, rank_type), chunks in evaluator.ranks.items() if rank_type == "realistic" for chunk in chunks
+    )
+
+
+@pytest.mark.parametrize("use_loop", [False, True])
+def test_oom_retry_does_not_double_count(use_loop: bool):
+    """Test that batches processed before an out-of-memory error are not counted again after the retry."""
+    dataset = Nations()
+    num_triples = dataset.testing.num_triples
+
+    def _run(model: FixedModel) -> tuple[RankBasedEvaluator, dict[str, float]]:
+        evaluator = RankBasedEvaluator(filtered=False, clear_on_finalize=False)
+        if use_loop:
+            result = LCWAEvaluationLoop(model=model, triples_factory=dataset.testing, evaluator=evaluator).evaluate(
+                batch_size=64, use_tqdm=False
+            )
+        else:
+            result = evaluator.evaluate(
+                model=model, mapped_triples=dataset.testing.mapped_triples, batch_size=64, use_tqdm=False
+            )
+        return evaluator, result.to_flat_dict()
+
+    reference_evaluator, reference = _run(FixedModel(triples_factory=dataset.training))
+
+    # raise an out-of-memory error exactly once, on the third call of `predict`. we patch the instance rather than
+    # subclassing, since every `Model` subclass is required to have its own test case (cf. `TestTesting`)
+    model = FixedModel(triples_factory=dataset.training)
+    original_predict = model.predict
+    fail_on_call = 3
+
+    def predict(*args, **kwargs):
+        if mock_predict.call_count == fail_on_call:
+            raise torch.cuda.OutOfMemoryError("CUDA out of memory.")
+        return original_predict(*args, **kwargs)
+
+    with mock.patch.object(model, "predict", side_effect=predict) as mock_predict:
+        evaluator, result = _run(model)
+
+    # sanity check: the fake error was raised, and evaluation continued afterwards
+    assert mock_predict.call_count > fail_on_call
+    # each test triple is ranked once for head and once for tail prediction
+    assert _num_ranking_tasks(reference_evaluator) == 2 * num_triples
+    assert _num_ranking_tasks(evaluator) == 2 * num_triples
+    assert result == pytest.approx(reference)
