@@ -38,6 +38,7 @@ from .text.encoder import TextEncoder, text_encoder_resolver
 from .utils import BaseShapeError, ShapeError
 from .weighting import EdgeWeighting, SymmetricEdgeWeighting, edge_weight_resolver
 from ..datasets import Dataset
+from ..inverse import RelationInverter, relation_inverter_resolver
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import CoreTriplesFactory, TriplesFactory
 from ..triples.triples_factory import Labeling
@@ -842,6 +843,7 @@ class CompGCNLayer(nn.Module):
         x_r: FloatTensor,
         edge_index: LongTensor,
         edge_type: LongTensor,
+        relation_inverter: RelationInverter | None = None,
     ) -> tuple[FloatTensor, FloatTensor]:
         r"""
         Update entity and relation representations.
@@ -860,18 +862,28 @@ class CompGCNLayer(nn.Module):
         :param edge_index: shape: ``(2, num_edges)``
             The edge index, pairs of source and target entity for each triple.
         :param edge_type: shape ``(num_edges,)``
-            The edge type, i.e., relation ID, for each triple.
+            The edge type, i.e., real relation ID, for each triple.
+        :param relation_inverter:
+            The relation inverter defining which rows of ``x_r`` belong to the forward and the inverse relations.
+            Defaults to :class:`~pykeen.inverse.DefaultRelationInverter`.
 
         :return: shape: ``(num_entities, output_dim)`` / ``(2 * num_relations, output_dim)``
             The updated entity and relation representations.
         """
+        relation_inverter = relation_inverter_resolver.make(relation_inverter)
         # prepare for inverse relations
-        edge_type = 2 * edge_type
+        edge_type = relation_inverter.to_internal(edge_type)
         # update entity representations: mean over self-loops / forward edges / backward edges
         x_e = (
             self.composition(x_e, self.self_loop) @ self.w_loop
             + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index, edge_type=edge_type, weight=self.w_fwd)
-            + self.message(x_e=x_e, x_r=x_r, edge_index=edge_index.flip(0), edge_type=edge_type + 1, weight=self.w_bwd)
+            + self.message(
+                x_e=x_e,
+                x_r=x_r,
+                edge_index=edge_index.flip(0),
+                edge_type=relation_inverter.get_inverse_id(edge_type),
+                weight=self.w_bwd,
+            )
         ) / 3
 
         if self.bias:
@@ -923,6 +935,9 @@ class CombinedCompGCNRepresentations(nn.Module):
     # Buffered enriched entity and relation representations
     enriched_representations: tuple[FloatTensor, FloatTensor] | None
 
+    #: The relation inverter defining the IDs of the forward and inverse relation representations
+    relation_inverter: RelationInverter
+
     @update_docstring_with_resolver_keys(
         ResolverKey("entity_representations", resolver="pykeen.nn.representation_resolver"),
         ResolverKey("relation_representations", resolver="pykeen.nn.representation_resolver"),
@@ -938,6 +953,7 @@ class CombinedCompGCNRepresentations(nn.Module):
         num_layers: int | None = 1,
         dims: int | Sequence[int] | None = None,
         layer_kwargs: Mapping[str, Any] | None = None,
+        relation_inverter: HintOrType[RelationInverter] = None,
     ):
         """
         Initialize the combined entity and relation representation module.
@@ -964,6 +980,10 @@ class CombinedCompGCNRepresentations(nn.Module):
         :param layer_kwargs:
             Additional key-word based parameters passed to the individual layers;
             cf. :class:`~pykeen.nn.representation.CompGCNLayer`.
+        :param relation_inverter:
+            The relation inverter defining which relation representations belong to the forward and inverse
+            relations. Should match the one of the model using these representations. Defaults to
+            :class:`~pykeen.inverse.DefaultRelationInverter`.
         :raises ValueError: For several invalid combinations of arguments:
             1. If the dimensions were given as an integer but no number of layers were given
             2. If the dimensions were given as a ist but it does not match the number of layers that were given
@@ -1020,6 +1040,8 @@ class CombinedCompGCNRepresentations(nn.Module):
         self.register_buffer(name="edge_index", tensor=get_edge_index(triples_factory=triples_factory))
         self.register_buffer(name="edge_type", tensor=triples_factory.mapped_triples[:, 1])
 
+        self.relation_inverter = relation_inverter_resolver.make(relation_inverter)
+
         # initialize buffer of enriched representations
         self.enriched_representations = None
 
@@ -1044,7 +1066,13 @@ class CombinedCompGCNRepresentations(nn.Module):
             x_r = self.relation_representations()
             # enrich
             for layer in self.layers:
-                x_e, x_r = layer(x_e=x_e, x_r=x_r, edge_index=self.edge_index, edge_type=self.edge_type)
+                x_e, x_r = layer(
+                    x_e=x_e,
+                    x_r=x_r,
+                    edge_index=self.edge_index,
+                    edge_type=self.edge_type,
+                    relation_inverter=self.relation_inverter,
+                )
             self.enriched_representations = (x_e, x_r)
         return self.enriched_representations
 

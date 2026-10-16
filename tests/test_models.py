@@ -27,6 +27,7 @@ from pykeen.nn import Embedding, NodePieceRepresentation
 from pykeen.nn.combination import ConcatAggregationCombination
 from pykeen.nn.perceptron import ConcatMLP
 from pykeen.triples.triples_factory import CoreTriplesFactory
+from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL
 from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
@@ -763,3 +764,23 @@ class CooccurrenceFilteredModelTests(cases.ModelTestCase):
     """Tests for the filtered meta model."""
 
     cls = pykeen.models.meta.filtered.CooccurrenceFilteredModel
+
+    def test_predict_restricted_ids(self):
+        """Test that restricting the prediction to some ids selects the corresponding columns of the full one."""
+        hrt_batch = self.factory.mapped_triples[: self.batch_size].to(self.device)
+        generator = torch.Generator().manual_seed(42)
+        for target, num in (
+            (LABEL_HEAD, self.factory.num_entities),
+            (LABEL_RELATION, self.factory.num_relations),
+            (LABEL_TAIL, self.factory.num_entities),
+        ):
+            full = self.instance.predict(hrt_batch=hrt_batch, target=target)
+            # shared ids, and individual ids per batch element
+            for ids in (
+                torch.randperm(num, generator=generator)[: num // 2].to(self.device),
+                torch.randint(num, size=(hrt_batch.shape[0], 3), generator=generator).to(self.device),
+            ):
+                with self.subTest(target=target, shape=ids.shape):
+                    expected = full[:, ids] if ids.ndim == 1 else full.gather(dim=1, index=ids)
+                    restricted = self.instance.predict(hrt_batch=hrt_batch, target=target, ids=ids)
+                    torch.testing.assert_close(restricted, expected)

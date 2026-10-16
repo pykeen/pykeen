@@ -2,6 +2,7 @@
 
 import hashlib
 import logging
+import typing
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from typing import Literal, NamedTuple, Self, TypeAlias
@@ -41,31 +42,25 @@ CARDINALITY_TYPE_ONE_TO_MANY: RelationCardinality = "one-to-many"
 CARDINALITY_TYPE_MANY_TO_ONE: RelationCardinality = "many-to-one"
 CARDINALITY_TYPE_MANY_TO_MANY: RelationCardinality = "many-to-many"
 
-RELATION_CARDINALITY_TYPES: set[RelationCardinality] = {
-    CARDINALITY_TYPE_ONE_TO_ONE,
-    CARDINALITY_TYPE_ONE_TO_MANY,
-    CARDINALITY_TYPE_MANY_TO_ONE,
-    CARDINALITY_TYPE_MANY_TO_MANY,
-}
+RELATION_CARDINALITY_TYPES: set[RelationCardinality] = set(typing.get_args(RelationCardinality))
 
 #: A pattern type
-RelationPatternType: TypeAlias = Literal["symmetry", "anti-symmetry", "inversion", "composition"]
+RelationPatternType: TypeAlias = Literal[
+    "symmetry",
+    "anti-symmetry",
+    "inversion",
+    "implication",
+    "composition",
+]
 
 # constants
-PATTERN_TYPE_SYMMETRY: RelationPatternType = "symmetry"
-PATTERN_TYPE_ANTI_SYMMETRY: RelationPatternType = "anti-symmetry"
-PATTERN_TYPE_INVERSION: RelationPatternType = "inversion"
-PATTERN_TYPE_COMPOSITION: RelationPatternType = "composition"
+PATTERN_TYPE_SYMMETRY: RelationPatternType = "symmetry"  # unary
+PATTERN_TYPE_ANTI_SYMMETRY: RelationPatternType = "anti-symmetry"  # unary
+PATTERN_TYPE_INVERSION: RelationPatternType = "inversion"  # binary
+PATTERN_TYPE_IMPLICATION: RelationPatternType = "implication"  # binary
+PATTERN_TYPE_COMPOSITION: RelationPatternType = "composition"  # ternary
 
-RELATION_PATTERN_TYPES: set[RelationPatternType] = {
-    # unary
-    PATTERN_TYPE_SYMMETRY,
-    PATTERN_TYPE_ANTI_SYMMETRY,
-    # binary
-    PATTERN_TYPE_INVERSION,
-    # ternary
-    PATTERN_TYPE_COMPOSITION,
-}
+RELATION_PATTERN_TYPES: set[RelationPatternType] = set(typing.get_args(RelationPatternType))
 
 # column names
 COUNT_COLUMN_NAME = "count"
@@ -280,13 +275,16 @@ def _iter_unary_patterns(stats: _PairStatistics, skip_zero: bool = False) -> Ite
 
 def _iter_binary_patterns(stats: _PairStatistics, skip_zero: bool = False) -> Iterable[PatternMatch]:
     """Yield binary patterns from pair statistics, cf. :func:`iter_binary_patterns`."""
-    logger.debug("Evaluating binary patterns: {inversion}")
-    # only pairs (r', r) where r' occurs (first) before r
-    i, j = np.triu_indices(len(stats.relations), k=1)
+    logger.debug("Evaluating binary patterns: {inversion, implication}")
+    # all ordered pairs (r', r) with r' != r; the diagonal corresponds to symmetry
+    i, j = np.nonzero(~np.eye(len(stats.relations), dtype=bool))
     support = np.diag(stats.overlap)[i]
-    # note: this uses `overlap` (r'(x, y) => r(x, y)) rather than `reverse_overlap` (r'(x, y) => r(y, x))
-    confidence = stats.overlap[i, j] / support
+    # confidence of r'(x, y) => r(y, x)
+    confidence = stats.reverse_overlap[i, j] / support
     yield from _iter_pattern_matches(PATTERN_TYPE_INVERSION, stats.relations[j], support, confidence, skip_zero)
+    # confidence of r'(x, y) => r(x, y)
+    confidence = stats.overlap[i, j] / support
+    yield from _iter_pattern_matches(PATTERN_TYPE_IMPLICATION, stats.relations[j], support, confidence, skip_zero)
 
 
 def iter_unary_patterns(
@@ -318,19 +316,24 @@ def iter_unary_patterns(
 def iter_binary_patterns(
     mapped_triples: Collection[tuple[int, int, int]],
 ) -> Iterable[PatternMatch]:
-    r"""
-    Yield binary patterns from ID-based triples.
+    r"""Yield binary patterns from ID-based triples.
 
-    =========  ===========================
-    Pattern    Equation
-    =========  ===========================
-    Inversion  $r'(x, y) \implies r(y, x)$
-    =========  ===========================
+    =========== ===========================
+    Pattern     Equation
+    =========== ===========================
+    Inversion   $r'(x, y) \implies r(y, x)$
+    Implication $r'(x, y) \implies r(x, y)$
+    =========== ===========================
 
-    Relation pairs $(r', r)$ are only considered for $r'$ occurring before $r$ in the triples.
+    All ordered pairs of distinct relations $(r', r)$ are considered. The pattern match is
+    attributed to $r$, and its support is the number of distinct pairs of $r'$.
 
-    :param mapped_triples:
-        A collection of ID-based triples.
+    .. note::
+
+        implication is one way, corresponding to a "sub-property" relationship. If implication goes
+        both ways, then it can be considered as an equivalence.
+
+    :param mapped_triples: A collection of ID-based triples.
 
     :yields: A pattern match tuple of relation_id, pattern_type, support, and confidence.
     """
@@ -700,7 +703,7 @@ def relation_pattern_types(
 
     This method generally follows the terminology of association rule mining. The patterns are expressed as
 
-    .. math ::
+    .. math::
 
         X_1 \land \cdot \land X_k \implies Y
 
@@ -709,6 +712,13 @@ def relation_pattern_types(
     right-hand side, i.e., the distinct $(x, y)$ pairs for symmetry, anti-symmetry, and inversion, and the distinct
     $(x, z)$ pairs for composition (where the intermediate entity $y$ is projected out).
     The *confidence* is the proportion of these instantiations where the right-hand side is also true.
+
+    .. note ::
+
+        The returned support-confidence skyline also contains patterns supported by very few pairs, e.g., a single
+        triple, which can reach a confidence of 1.0. Consider filtering by a minimum support (in addition to a minimum
+        confidence), in particular for small or dense datasets, cf.
+        :func:`~pykeen.datasets.analysis.get_relation_pattern_types_df`.
 
     :param mapped_triples:
         A collection of ID-based triples.
@@ -765,16 +775,19 @@ def relation_cardinality_types(
 
     The possible types are given in relation_cardinality_types.
 
-    .. note ::
+    .. note::
+
         In the current implementation, we have by definition
 
-        .. math ::
+        .. math::
+
             1 = \sum_{type} conf(relation, type)
 
-    .. note ::
-       These relation types are also mentioned in [wang2014]_. However, the paper does not provide any details on
-       their definition, nor is any code provided. Thus, their exact procedure is unknown and may not coincide with this
-       implementation.
+    .. note::
+
+        These relation types are also mentioned in [wang2014]_. However, the paper does not provide
+        any details on their definition, nor is any code provided. Thus, their exact procedure is
+        unknown and may not coincide with this implementation.
 
     :param mapped_triples:
         The ID-based triples.

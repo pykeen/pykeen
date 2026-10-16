@@ -333,7 +333,6 @@ class CombinedRegularizer(Regularizer):
 
     hpo_default: ClassVar[Mapping[str, Any]] = {
         "total_weight": {"type": float, "low": 0.01, "high": 1.0, "scale": "log"},
-        "regularizers": (),
     }
 
     def __init__(

@@ -12,7 +12,7 @@ from tqdm.auto import tqdm
 
 from .evaluator import MetricResults
 from .rank_based_evaluator import RankBasedMetricKey, RankBasedMetricResults, SampledRankBasedEvaluator
-from ..metrics import RankBasedMetric
+from ..constants import TARGET_TO_INDEX
 from ..metrics.ranking import HitsAtK, InverseHarmonicMeanRank
 from ..models import Model
 from ..typing import (
@@ -64,7 +64,7 @@ class OGBEvaluator(SampledRankBasedEvaluator):
     ) -> MetricResults:
         """Run :func:`~pykeen.evaluation.evaluate_ogb` with this evaluator."""
         if (
-            {restrict_relations_to, restrict_entities_to, additional_filter_triples} != {None}
+            any(x is not None for x in (restrict_relations_to, restrict_entities_to, additional_filter_triples))
             or do_time_consuming_checks is False
             or pre_filtered_triples is False
         ):
@@ -78,6 +78,7 @@ class OGBEvaluator(SampledRankBasedEvaluator):
             mapped_triples=mapped_triples,
             batch_size=batch_size,
             slice_size=slice_size,
+            device=device,
             use_tqdm=use_tqdm,
             tqdm_kwargs=tqdm_kwargs,
             targets=targets,
@@ -144,14 +145,14 @@ def evaluate_ogb(
         )
 
     # filter supported metrics
-    metrics: list[RankBasedMetric] = []
+    supported_keys: set[str] = set()
     for metric in evaluator.metrics:
         if not isinstance(metric, HitsAtK | InverseHarmonicMeanRank) or (
             isinstance(metric, HitsAtK) and metric.k not in {1, 3, 10}
         ):
             logger.warning(f"{metric} is not supported by OGB evaluator")
             continue
-        metrics.append(metric)
+        supported_keys.add(metric.key)
 
     # prepare input format, cf. `evaluator.expected_input``
     # y_pred_pos: shape: (num_edge,)
@@ -170,8 +171,7 @@ def evaluate_ogb(
     # iterate over prediction targets
     tqdm_kwargs = dict(tqdm_kwargs or {})
     tqdm_kwargs["disable"] = not use_tqdm
-    for target, target_negatives in evaluator.negative_samples.items():
-        negatives = target_negatives.to(device)
+    for target in targets:
         with tqdm(**tqdm_kwargs) as progress_bar:
             y_pred_pos[target], y_pred_neg[target] = _evaluate_ogb(
                 evaluator=evaluator,
@@ -179,7 +179,7 @@ def evaluate_ogb(
                 slice_size=slice_size or model.num_entities,  # OGB evaluator supports head/tail only
                 mapped_triples=mapped_triples,
                 model=model,
-                negatives=negatives,
+                negatives=evaluator.negative_samples[target].to(device),
                 target=target,
                 progress_bar=progress_bar,
             )
@@ -207,6 +207,9 @@ def evaluate_ogb(
         for ogb_key, ogb_value in ogb_result.items():
             # normalize name
             key = RankBasedMetricResults.key_from_string(ogb_key.replace("_list", "")).metric
+            # only report the metrics requested from the evaluator
+            if key not in supported_keys:
+                continue
             # OGB does not aggregate values across triples
             value = ogb_value.mean().item()
             result[RankBasedMetricKey(side=ext_target, rank_type=rank_type, metric=key)] = value
@@ -218,6 +221,7 @@ def _hasher(kwargs: Mapping[str, Any]) -> int:
 
 
 @maximize_memory_utilization(parameter_name=("batch_size", "slice_size"), hasher=_hasher)
+@torch.inference_mode()
 def _evaluate_ogb(
     *,
     evaluator: SampledRankBasedEvaluator,
@@ -243,8 +247,8 @@ def _evaluate_ogb(
     for hrt_batch, negatives_batch in zip(
         mapped_triples.split(split_size=batch_size), negatives.split(split_size=batch_size), strict=False
     ):
-        # combine ids, shape: (batch_size, num_negatives + 1)
-        ids = torch.cat([hrt_batch[:, 2, None], negatives_batch], dim=1)
+        # combine ids (true entity of the target column first), shape: (batch_size, num_negatives + 1)
+        ids = torch.cat([hrt_batch[:, TARGET_TO_INDEX[target], None], negatives_batch], dim=1)
         # get scores, shape: (batch_size, num_negatives + 1)
         scores = model.predict(hrt_batch=hrt_batch, target=target, ids=ids, mode=evaluator.mode, slice_size=slice_size)
         # store positive and negative scores

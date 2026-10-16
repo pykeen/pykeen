@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 _OPTIONAL_MAP = {Optional[int]: int, Optional[str]: str}  # noqa:UP045
 _SKIP_ARGS = {
     "return",
+    "kwargs",
     "triples_factory",
     "regularizer",
     # TODO rethink after RGCN update

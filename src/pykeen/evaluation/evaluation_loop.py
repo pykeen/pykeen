@@ -73,6 +73,9 @@ def _evaluate(
 
     :returns: the evaluation results
     """
+    # this function may be re-invoked with a smaller batch size after an out-of-memory error; discard any partial
+    # results from the failed attempt, otherwise the already processed batches would be counted twice
+    loop.evaluator.clear()
     loop.model.eval()
     loader = loop.get_loader(batch_size=batch_size, **kwargs)
     total = len(loader)
