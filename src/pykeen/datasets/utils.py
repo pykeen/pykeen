@@ -5,7 +5,7 @@ import hashlib
 import logging
 import pathlib
 import re
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Iterable, Mapping
 from re import Pattern
 from typing import Any
 
@@ -172,11 +172,9 @@ def get_dataset(
     )
 
 
-def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = ()) -> str:
+def _digest_kwargs(dataset_kwargs: Mapping[str, Any]) -> str:
     digester = hashlib.sha256()
     for key in sorted(dataset_kwargs.keys()):
-        if key in ignore:
-            continue
         digester.update(key.encode(encoding="utf8"))
         digester.update(str(dataset_kwargs[key]).encode(encoding="utf8"))
     return base64.urlsafe_b64encode(digester.digest()).decode("utf8")[:32]
@@ -185,7 +183,6 @@ def _digest_kwargs(dataset_kwargs: Mapping[str, Any], ignore: Collection[str] = 
 def _cached_get_dataset(
     dataset: str,
     dataset_kwargs: Mapping[str, Any] | None,
-    force: bool = False,
 ) -> Dataset:
     """Get dataset by name, potentially using file-based cache."""
     from . import dataset_resolver
@@ -194,7 +191,7 @@ def _cached_get_dataset(
     dataset_kwargs = dict(dataset_kwargs or {})
 
     # enable passing force option via dataset_kwargs
-    force = force or dataset_kwargs.pop("force", False)
+    force = dataset_kwargs.pop("force", False)
 
     # hash kwargs
     digest = _digest_kwargs(dataset_kwargs)
