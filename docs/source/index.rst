@@ -16,6 +16,7 @@ four kinds of content: learning-oriented *tutorials*, goal-oriented *how-to guid
     tutorial/first_steps
     tutorial/translational_toy_example
     tutorial/inductive_lp
+    tutorial/rdf
 
 .. toctree::
     :caption: How-to Guides
