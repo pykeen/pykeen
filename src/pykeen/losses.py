@@ -308,7 +308,7 @@ class Loss(_Loss):
         Initialize the loss.
 
         :param reduction:
-            the reduction, cf. :class:`torch.nn.modules.loss._Loss`
+            the reduction, either ``"mean"`` or ``"sum"``; cf. :class:`torch.nn.modules.loss._Loss`
         """
         super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
