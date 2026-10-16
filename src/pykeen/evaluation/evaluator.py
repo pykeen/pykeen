@@ -28,6 +28,8 @@ from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
 from ..typing import (
+    COLUMN_HEAD,
+    COLUMN_TAIL,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
@@ -51,6 +53,7 @@ from ..utils import (
 __all__ = [
     "Evaluator",
     "MetricResults",
+    "create_sparse_positive_filter_",
     "filter_scores_",
     "normalize_flattened_metric_results",
     "prepare_filter_triples",
@@ -524,17 +527,18 @@ def create_sparse_positive_filter_(
     :param all_pos_triples: shape: (num_positive_triples, 3) All positive triples to base the filtering on.
     :param relation_filter: shape: (batch_size, num_positive_triples) A boolean mask R[i, j] which is True iff the j-th
         positive triple contains the same relation as the i-th triple in the batch.
-    :param filter_col: The column along which to filter.
-
-        .. warning:: A value of 1, corresponding to relation-based filtering has not been implemented
+    :param filter_col: The column along which to filter. Allowed are :data:`~pykeen.typing.COLUMN_HEAD`,
+        which corresponds to filtering head-based and :data`~pykeen.typing.COLUMN_TAIL`, which corresponds
+        to filtering tail-based.
 
     :returns: - positives, shape: (2, m)
               The indices of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
 
-    :raises NotImplementedError: if the `filter_col` is 1
+    :raises NotImplementedError: if the `filter_col` is not one of :data:`~pykeen.typing.COLUMN_HEAD`
+        or :data`~pykeen.typing.COLUMN_TAIL`
     """
-    if filter_col == 1:
+    if filter_col not in {COLUMN_HEAD, COLUMN_TAIL}:
         raise NotImplementedError(
             "This code has only been written for updating head (filter_col=0) or "
             f"tail (filter_col=2) mask, but filter_col={filter_col} was given.",
