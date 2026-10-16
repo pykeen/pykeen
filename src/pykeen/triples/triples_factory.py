@@ -199,10 +199,10 @@ def _validate_and_invert_label_to_id(label_to_id: Mapping[str, int], name: str) 
         )
     id_to_label = {i: label for label, i in label_to_id.items()}
     if id_to_label and min(id_to_label.keys()) < 0:
-        offending = [(label, i) for label, i in label_to_id.items() if i < 0]
+        negative = [(label, i) for label, i in label_to_id.items() if i < 0]
         raise ValueError(
-            f"All IDs of the {description} have to be non-negative, but {len(offending)} labels have negative IDs: "
-            f"{_format_truncated(offending)}",
+            f"All IDs of the {description} have to be non-negative, but {len(negative)} labels have negative IDs: "
+            f"{_format_truncated(negative)}",
         )
     if len(id_to_label) < len(label_to_id):
         # slow path: only executed in the error case
