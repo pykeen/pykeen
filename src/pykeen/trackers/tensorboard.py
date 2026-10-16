@@ -20,8 +20,7 @@ __all__ = [
 class TensorBoardResultTracker(ResultTracker):
     """A tracker for TensorBoard."""
 
-    summary_writer: "torch.utils.tensorboard.SummaryWriter"
-    path: pathlib.Path
+    writer: "torch.utils.tensorboard.SummaryWriter"
 
     def __init__(
         self,
