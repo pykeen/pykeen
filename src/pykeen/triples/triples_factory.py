@@ -189,12 +189,10 @@ def _validate_and_invert_label_to_id(label_to_id: Mapping[str, int], name: str =
         if any ID is not a non-negative integer, or if multiple labels are mapped to the same ID.
     """
     description = f"{name}-to-ID mapping"
-    # check the ID types; this is cheap since we only check the (few) distinct types
-    invalid_types = {
-        t for t in set(map(type, label_to_id.values())) if not issubclass(t, int | np.integer) or issubclass(t, bool)
-    }
-    if invalid_types:
-        offending = [(label, i) for label, i in label_to_id.items() if type(i) in invalid_types]
+    offending = [
+        (label, i) for label, i in label_to_id.items() if not isinstance(i, int | np.integer) or isinstance(i, bool)
+    ]
+    if offending:
         raise ValueError(
             f"All IDs of the {description} have to be integers, but {len(offending)} labels have non-integer IDs: "
             f"{_format_truncated(offending)}",
