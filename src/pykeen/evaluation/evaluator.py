@@ -546,7 +546,7 @@ def create_sparse_positive_filter_(
         relation_filter = (all_pos_triples[:, 1:2]).view(1, -1) == relations
 
     # Split batch
-    other_col = COLUMN_TAIL - filter_col
+    other_col = 2 - filter_col
     entities = hrt_batch[:, other_col : other_col + 1]
 
     entity_filter_test = (all_pos_triples[:, other_col : other_col + 1]).view(1, -1) == entities
