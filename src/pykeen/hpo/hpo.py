@@ -174,17 +174,11 @@ class Objective:
             kwargs_ranges=self.model_kwargs_ranges,
         )
 
-        try:
-            loss_default_kwargs_ranges = self.loss.hpo_default
-        except AttributeError:
-            logger.warning("using a loss function with no hpo_default field: %s", self.loss)
-            loss_default_kwargs_ranges = {}
-
         # 3. Loss
         _loss_kwargs = _get_kwargs(
             trial=trial,
             prefix="loss",
-            default_kwargs_ranges=loss_default_kwargs_ranges,
+            default_kwargs_ranges=self.loss.hpo_default,
             kwargs=self.loss_kwargs,
             kwargs_ranges=self.loss_kwargs_ranges,
         )
@@ -264,7 +258,7 @@ class Objective:
         result_tracker = tracker_resolver.make(query=self.result_tracker, pos_kwargs=self.result_tracker_kwargs)
 
         _stopper_kwargs = dict(self.stopper_kwargs or {})
-        if self.stopper is not None and issubclass(self.stopper, EarlyStopper):
+        if issubclass(self.stopper, EarlyStopper):
             self._update_stopper_callbacks(_stopper_kwargs, trial, metric=self.metric, result_tracker=result_tracker)
 
         try:
