@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typing
 from collections.abc import Callable, Collection, Mapping, Sequence
-from typing import Literal, NamedTuple, TypeAlias, TypeVar, cast
+from typing import Final, Literal, NamedTuple, TypeAlias, TypeVar, cast
 
 import numpy as np
 import torch
@@ -124,9 +124,9 @@ LABEL_TAIL: Target = "tail"
 
 #: the prediction target index
 TargetColumn = Literal[0, 1, 2]
-COLUMN_HEAD: TargetColumn = 0
-COLUMN_RELATION: TargetColumn = 1
-COLUMN_TAIL: TargetColumn = 2
+COLUMN_HEAD: Final = 0
+COLUMN_RELATION: Final = 1
+COLUMN_TAIL: Final = 2
 
 TargetHint: TypeAlias = TargetColumn | Target | None
 

@@ -29,6 +29,9 @@ from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
 from ..typing import (
+    COLUMN_HEAD,
+    COLUMN_RELATION,
+    COLUMN_TAIL,
     LABEL_HEAD,
     LABEL_RELATION,
     LABEL_TAIL,
@@ -511,7 +514,7 @@ def create_sparse_positive_filter_(
     all_pos_triples: LongTensor,
     *,
     relation_filter: BoolTensor | None = None,
-    filter_col: Literal[0, 2],
+    filter_col: Literal[0, 2],  # COLUMN_HEAD or COLUMN_TAIL
 ) -> tuple[LongTensor, BoolTensor]:
     """Compute indices of all positives for head- or tail-based filtering.
 
@@ -535,7 +538,7 @@ def create_sparse_positive_filter_(
 
     :raises ValueError: if the `filter_col` is not in `{0, 2}`
     """
-    if filter_col not in {0, 2}:
+    if filter_col not in {COLUMN_HEAD, COLUMN_TAIL}:
         raise ValueError(f"filter_col must be 0 (head) or 2 (tail), but filter_col={filter_col} was given.")
 
     if relation_filter is None:
@@ -543,7 +546,7 @@ def create_sparse_positive_filter_(
         relation_filter = (all_pos_triples[:, 1:2]).view(1, -1) == relations
 
     # Split batch
-    other_col = 2 - filter_col
+    other_col = COLUMN_TAIL - filter_col
     entities = hrt_batch[:, other_col : other_col + 1]
 
     entity_filter_test = (all_pos_triples[:, other_col : other_col + 1]).view(1, -1) == entities
@@ -667,7 +670,7 @@ def _evaluate_batch(
             )
 
         # Create filter
-        if column == 1:  # relation-based
+        if column == COLUMN_RELATION:
             # the relation filter is not applicable to relation-based filtering
             positive_filter = create_sparse_positive_relation_filter_(hrt_batch=batch, all_pos_triples=all_pos_triples)
         else:
