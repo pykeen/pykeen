@@ -574,10 +574,10 @@ def create_sparse_positive_relation_filter_(
         The indices of positives in format [(batch_index, relation_id)].
     """
     # mask[i, j] is True iff the j-th positive triple has the same head and tail as the i-th triple in the batch
-    mask = all_pos_triples[:, 0].view(1, -1) == hrt_batch[:, 0:1]
-    mask &= all_pos_triples[:, 2].view(1, -1) == hrt_batch[:, 2:3]
+    mask = all_pos_triples[:, COLUMN_HEAD].view(1, -1) == hrt_batch[:, COLUMN_HEAD].view(-1, 1)
+    mask &= all_pos_triples[:, COLUMN_TAIL].view(1, -1) == hrt_batch[:, COLUMN_TAIL].view(-1, 1)
     filter_batch = mask.nonzero(as_tuple=False)
-    filter_batch[:, 1] = all_pos_triples[filter_batch[:, 1], 1]
+    filter_batch[:, 1] = all_pos_triples[filter_batch[:, 1], COLUMN_RELATION]
     return filter_batch
 
 
