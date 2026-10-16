@@ -24,6 +24,7 @@ from pykeen.evaluation.evaluator import (
     _optimal_batch_size_group_id,
     create_dense_positive_mask_,
     create_sparse_positive_filter_,
+    create_sparse_positive_relation_filter_,
     filter_scores_,
     get_candidate_set_size,
     prepare_filter_triples,
@@ -415,7 +416,7 @@ class EvaluatorUtilsTests(unittest.TestCase):
         all_triples = Nations().training.mapped_triples
         batch = all_triples[:batch_size, :]
 
-        positives, _ = create_sparse_positive_filter_(hrt_batch=batch, all_pos_triples=all_triples, filter_col=1)
+        positives = create_sparse_positive_relation_filter_(hrt_batch=batch, all_pos_triples=all_triples)
 
         triples = {tuple(map(int, t)) for t in all_triples.tolist()}
         expected = {
@@ -429,12 +430,12 @@ class EvaluatorUtilsTests(unittest.TestCase):
         assert all((i, int(r)) in expected for i, r in enumerate(batch[:, 1]))
 
     def test_create_sparse_positive_filter_invalid_column(self):
-        """Test that an invalid column raises."""
+        """Test that relation column is rejected by the head/tail filter."""
         with pytest.raises(ValueError, match="filter_col"):
             create_sparse_positive_filter_(
                 hrt_batch=torch.zeros(1, 3, dtype=torch.long),
                 all_pos_triples=torch.zeros(1, 3, dtype=torch.long),
-                filter_col=3,  # type: ignore[arg-type]
+                filter_col=1,  # type: ignore[arg-type]
             )
 
     def test_create_dense_positive_mask_(self):

@@ -12,6 +12,7 @@ from typing import (
     Any,
     ClassVar,
     Generic,
+    Literal,
     NamedTuple,
     TypeVar,
     cast,
@@ -35,7 +36,6 @@ from ..typing import (
     InductiveMode,
     MappedTriples,
     Target,
-    TargetColumn,
 )
 from ..utils import (
     FloatTensor,
@@ -511,43 +511,32 @@ def create_sparse_positive_filter_(
     all_pos_triples: LongTensor,
     *,
     relation_filter: BoolTensor | None = None,
-    filter_col: TargetColumn,
+    filter_col: Literal[0, 2],
 ) -> tuple[LongTensor, BoolTensor]:
-    """Compute indices of all positives.
+    """Compute indices of all positives for head- or tail-based filtering.
 
     For simplicity, only the head-side is described, i.e. filter_col=0. The tail-side is processed alike.
 
     For each (h, r, t) triple in the batch, the entity identifiers are computed such that (h', r, t) exists in all
     positive triples.
 
+    .. seealso:: :func:`create_sparse_positive_relation_filter_` for relation-based filtering.
+
     :param hrt_batch: shape: (batch_size, 3) A batch of triples.
     :param all_pos_triples: shape: (num_positive_triples, 3) All positive triples to base the filtering on.
     :param relation_filter: shape: (batch_size, num_positive_triples) A boolean mask R[i, j] which is True iff the j-th
-        positive triple contains the same relation as the i-th triple in the batch. Only used for `filter_col` in
-        `{0, 2}`; ignored for `filter_col=1`.
-    :param filter_col: The column along which to filter. For `filter_col=1`, relation-based filtering is performed,
-        i.e., for each (h, r, t) triple in the batch, the relation identifiers r' are computed such that (h, r', t)
-        exists in all positive triples.
+        positive triple contains the same relation as the i-th triple in the batch.
+    :param filter_col: The column along which to filter. Allowed are {0, 2}, where 0 corresponds to filtering head-based
+        and 2 corresponds to filtering tail-based.
 
     :returns: - positives, shape: (2, m)
-              The indices of positives in format [(batch_index, entity_or_relation_id)].
-        - the mask for re-usage. For `filter_col in {0, 2}`, this is the relation filter. For `filter_col=1`, it is the
-          analogous mask over the head and tail columns, which must not be passed on as `relation_filter` to a
-          head- or tail-based call.
+              The indices of positives in format [(batch_index, entity_id)].
+        - the relation filter for re-usage.
 
-    :raises ValueError: if the `filter_col` is not in `{0, 1, 2}`
+    :raises ValueError: if the `filter_col` is not in `{0, 2}`
     """
-    if filter_col not in {0, 1, 2}:
-        raise ValueError(f"filter_col must be one of {{0, 1, 2}}, but filter_col={filter_col} was given.")
-
-    if filter_col == 1:
-        # the "fixed" columns are head and tail; the mask plays the role of the relation filter above
-        mask = (all_pos_triples[:, 0].view(1, -1) == hrt_batch[:, 0:1]) & (
-            all_pos_triples[:, 2].view(1, -1) == hrt_batch[:, 2:3]
-        )
-        filter_batch = mask.nonzero(as_tuple=False)
-        filter_batch[:, 1] = all_pos_triples[filter_batch[:, 1], 1]
-        return filter_batch, mask
+    if filter_col not in {0, 2}:
+        raise ValueError(f"filter_col must be 0 (head) or 2 (tail), but filter_col={filter_col} was given.")
 
     if relation_filter is None:
         relations = hrt_batch[:, 1:2]
@@ -562,6 +551,31 @@ def create_sparse_positive_filter_(
     filter_batch[:, 1] = all_pos_triples[:, filter_col : filter_col + 1].view(1, -1)[:, filter_batch[:, 1]]
 
     return filter_batch, relation_filter
+
+
+def create_sparse_positive_relation_filter_(
+    hrt_batch: MappedTriples,
+    all_pos_triples: LongTensor,
+) -> LongTensor:
+    """Compute indices of all positives for relation-based filtering.
+
+    For each (h, r, t) triple in the batch, the relation identifiers are computed such that (h, r', t) exists in all
+    positive triples.
+
+    .. seealso:: :func:`create_sparse_positive_filter_` for head- and tail-based filtering.
+
+    :param hrt_batch: shape: (batch_size, 3) A batch of triples.
+    :param all_pos_triples: shape: (num_positive_triples, 3) All positive triples to base the filtering on.
+
+    :returns: shape: (m, 2)
+        The indices of positives in format [(batch_index, relation_id)].
+    """
+    mask = (all_pos_triples[:, 0].view(1, -1) == hrt_batch[:, 0:1]) & (
+        all_pos_triples[:, 2].view(1, -1) == hrt_batch[:, 2:3]
+    )
+    filter_batch = mask.nonzero(as_tuple=False)
+    filter_batch[:, 1] = all_pos_triples[filter_batch[:, 1], 1]
+    return filter_batch
 
 
 def create_dense_positive_mask_(
@@ -653,12 +667,16 @@ def _evaluate_batch(
             )
 
         # Create filter
-        positive_filter, relation_filter = create_sparse_positive_filter_(
-            hrt_batch=batch,
-            all_pos_triples=all_pos_triples,
-            relation_filter=relation_filter,
-            filter_col=column,
-        )
+        if column == 1:  # relation-based
+            # the relation filter is not applicable to relation-based filtering
+            positive_filter = create_sparse_positive_relation_filter_(hrt_batch=batch, all_pos_triples=all_pos_triples)
+        else:
+            positive_filter, relation_filter = create_sparse_positive_filter_(
+                hrt_batch=batch,
+                all_pos_triples=all_pos_triples,
+                relation_filter=relation_filter,
+                filter_col=column,
+            )
     else:
         positive_filter = relation_filter = None
 
