@@ -34,7 +34,6 @@ from ..typing import (
     BoolTensor,
     InductiveMode,
     MappedTriples,
-    OuterColumn,
     Target,
     TargetColumn,
 )
