@@ -3,11 +3,14 @@
 import pathlib
 import time
 from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .base import ResultTracker
 from ..constants import PYKEEN_LOGS
 from ..utils import flatten_dictionary, normalize_path
+
+if TYPE_CHECKING:
+    import torch.utils.tensorboard
 
 __all__ = [
     "TensorBoardResultTracker",
@@ -16,6 +19,8 @@ __all__ = [
 
 class TensorBoardResultTracker(ResultTracker):
     """A tracker for TensorBoard."""
+
+    writer: "torch.utils.tensorboard.SummaryWriter"
 
     def __init__(
         self,
