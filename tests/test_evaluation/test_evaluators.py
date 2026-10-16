@@ -37,6 +37,7 @@ from pykeen.evaluation.rank_based_evaluator import (
 )
 from pykeen.evaluation.ranks import Ranks
 from pykeen.metrics.ranking import (
+    HITS_METRICS,
     AdjustedArithmeticMeanRankIndex,
     ArithmeticMeanRank,
     HitsAtK,
@@ -158,6 +159,72 @@ class OGBEvaluatorTests(RankBasedEvaluatorTests):
         model = FixedModel(triples_factory=self.factory)
         result = self.instance.evaluate(model=model, mapped_triples=self.factory.mapped_triples, batch_size=1)
         assert isinstance(result, MetricResults)
+
+
+@needs_packages("ogb")
+class OGBEvaluatorValueTests(unittest.TestCase):
+    """Value-level tests for the OGB evaluator with a model with known scores."""
+
+    def setUp(self) -> None:
+        """Prepare a tiny dataset; FixedModel scores increase with h, then r, then t."""
+        from pykeen.triples import TriplesFactory
+
+        self.factory = TriplesFactory.from_labeled_triples(
+            np.asarray([[f"e{h}", "r", f"e{t}"] for h, t in [(0, 1), (1, 4), (2, 3)]], dtype=str),
+            entity_to_id={f"e{i}": i for i in range(5)},
+            relation_to_id={"r": 0},
+        )
+        # triples are sorted by the factory; true heads (0, 1, 2) are all outranked by the head negatives -> rank 3 each
+        # true tails (1, 4, 3) outrank all tail negatives -> rank 1 each
+        self.evaluator = OGBEvaluator(
+            evaluation_factory=self.factory,
+            head_negatives=torch.as_tensor([[3, 4], [2, 3], [3, 4]]),
+            tail_negatives=torch.as_tensor([[0, 0], [0, 3], [0, 1]]),
+        )
+        self.model = FixedModel(triples_factory=self.factory)
+
+    def _evaluate(self, **kwargs) -> Mapping[Any, float]:
+        return self.evaluator.evaluate(
+            model=self.model, mapped_triples=self.factory.mapped_triples, use_tqdm=False, **kwargs
+        ).data
+
+    def test_head_uses_true_head(self):
+        """Test that the head side scores the true head, not the true tail."""
+        data = self._evaluate()
+        assert data[RankBasedMetricKey(side="head", rank_type="realistic", metric="inverse_harmonic_mean_rank")] == (
+            pytest.approx(1 / 3)
+        )
+        assert data[RankBasedMetricKey(side="tail", rank_type="realistic", metric="inverse_harmonic_mean_rank")] == (
+            pytest.approx(1.0)
+        )
+        assert data[RankBasedMetricKey(side="both", rank_type="realistic", metric="inverse_harmonic_mean_rank")] == (
+            pytest.approx(2 / 3)
+        )
+
+    def test_targets_restricts_sides(self):
+        """Test that only the requested targets are evaluated."""
+        data = self._evaluate(targets=("tail",))
+        assert {key.side for key in data} == {"tail", "both"}
+
+    def test_only_requested_metrics(self):
+        """Test that only the evaluator's supported metrics are reported."""
+        evaluator = OGBEvaluator(
+            evaluation_factory=self.factory,
+            head_negatives=self.evaluator.negative_samples["head"],
+            tail_negatives=self.evaluator.negative_samples["tail"],
+            metrics=["hits_at_k"],
+            metrics_kwargs={"k": 3},
+            add_defaults=False,
+        )
+        data = evaluator.evaluate(model=self.model, mapped_triples=self.factory.mapped_triples, use_tqdm=False).data
+        assert {key.metric for key in data} == {"hits_at_3"}
+
+    def test_unsupported_restrictions(self):
+        """Test that list-valued restrictions raise the intended ValueError."""
+        with pytest.raises(ValueError, match="does not support"):
+            self._evaluate(restrict_entities_to=[0, 1])
+        with pytest.raises(ValueError, match="does not support"):
+            self._evaluate(additional_filter_triples=[self.factory.mapped_triples])
 
 
 class MacroRankBasedEvaluatorTests(RankBasedEvaluatorTests):
@@ -629,6 +696,25 @@ class TestEvaluationFiltering(unittest.TestCase):
 def test_resolve_metric_name(string, expected):
     """Test metric name resolution."""
     assert RankBasedMetricResults.key_from_string(string) == expected
+
+
+def test_default_metric_keys_unique():
+    """Test that the default metrics of the rank-based evaluator have unique keys."""
+    keys = [metric.key for metric in RankBasedEvaluator().metrics]
+    duplicates = [key for key, count in Counter(keys).items() if count > 1]
+    assert not duplicates
+
+
+@pytest.mark.parametrize("cls", HITS_METRICS)
+@pytest.mark.parametrize("k", [1, 3, 5, 10])
+def test_hits_at_k_key_roundtrip(cls, k):
+    """Test that keys of (derived) Hits@k metrics contain k, and can be resolved back to the same key."""
+    metric = cls(k=k)
+    assert metric.key.endswith(f"hits_at_{k}")
+    assert f"k={k}" in metric.extra_repr()
+    assert RankBasedMetricResults.key_from_string(metric.key) == RankBasedMetricKey(
+        side=SIDE_BOTH, rank_type=RANK_REALISTIC, metric=metric.key
+    )
 
 
 def test_sample_negatives():

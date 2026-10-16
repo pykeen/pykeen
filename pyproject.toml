@@ -217,7 +217,7 @@ select = [
     # flake8-copyright (CPY)
     # "CPY",
     # flake8-datetimez (DTZ)
-    # "DTZ",
+    "DTZ",
     # flake8-debugger (T10)
     "T10",
     # flake8-django (DJ)

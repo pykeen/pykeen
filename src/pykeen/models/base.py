@@ -107,6 +107,7 @@ class Model(nn.Module, ABC):
         predict_with_sigmoid: bool = False,
         random_seed: int | None = None,
         use_inverse_triples: bool = False,
+        relation_inverter: HintOrType[RelationInverter] = None,
     ) -> None:
         """Initialize the module.
 
@@ -125,6 +126,8 @@ class Model(nn.Module, ABC):
         :param use_inverse_triples:
             Whether to model inverse relations, i.e., to add an artificial inverse relation for each relation, and
             train on the inverse triples, too.
+        :param relation_inverter:
+            A relation inverter or a hint for constructing one
         """
         super().__init__()
 
@@ -147,7 +150,7 @@ class Model(nn.Module, ABC):
         self.num_relations = (
             2 * triples_factory.real_num_relations if use_inverse_triples else triples_factory.real_num_relations
         )
-        self.relation_inverter = relation_inverter_resolver.make(query=None)
+        self.relation_inverter = relation_inverter_resolver.make(relation_inverter)
 
         self.predict_with_sigmoid = predict_with_sigmoid
 

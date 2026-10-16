@@ -161,7 +161,6 @@ triples $\mathcal{b}$ in the subset $\mathcal{B} \in 2^{2^{\mathcal{T}}}$.
 
 from __future__ import annotations
 
-import logging
 import math
 from abc import abstractmethod
 from collections.abc import Callable, Mapping
@@ -203,8 +202,6 @@ __all__ = [
     "SoftplusLoss",
     "loss_resolver",
 ]
-
-logger = logging.getLogger(__name__)
 
 DEFAULT_MARGIN_HPO_STRATEGY = {"type": float, "low": 0, "high": 3}
 DEFAULT_HPO_STRATEGY_REDUCTION = {"type": "categorical", "choices": ["mean", "sum"]}
@@ -311,7 +308,7 @@ class Loss(_Loss):
         Initialize the loss.
 
         :param reduction:
-            the reduction, cf. :class:`torch.nn.modules.loss._Loss`
+            the reduction, either ``"mean"`` or ``"sum"``; cf. :class:`torch.nn.modules.loss._Loss`
         """
         super().__init__(reduction=reduction)
         self._reduction_method = _REDUCTION_METHODS[reduction]
@@ -1042,10 +1039,6 @@ class DoubleMarginLoss(PointwiseLoss):
             positive_loss = self._reduction_method(positive_loss)
             if self.reduction == "sum":
                 positive_loss = positive_loss * negative_scores.shape[1]
-            elif self.reduction != "mean":
-                raise NotImplementedError(
-                    f"There is not implementation for reduction={self.reduction} and filtered negatives",
-                )
         else:
             num_neg_per_pos = batch_filter.shape[1]
             positive_scores = positive_scores.repeat(1, num_neg_per_pos)[batch_filter]
@@ -1056,20 +1049,6 @@ class DoubleMarginLoss(PointwiseLoss):
         # negative_scores have already been filtered in the sampler!
         negative_loss = self._reduction_method(self.margin_activation(self.negative_margin + negative_scores))
         return self.positive_weight * positive_loss + self.negative_weight * negative_loss
-
-    def process_lcwa_scores(  # noqa: D102
-        self,
-        predictions: FloatTensor,
-        labels: FloatTensor,
-        *,
-        label_smoothing: float | None = None,
-        num_entities: int,
-        weights: FloatTensor | None = None,
-    ) -> FloatTensor:
-        # Sanity check
-        if label_smoothing is not None:
-            labels = apply_label_smoothing(labels=labels, epsilon=label_smoothing, num_classes=num_entities)
-        return self(x=predictions, target=labels, weight=weights)
 
     def forward(self, x: FloatTensor, target: FloatTensor, weight: FloatTensor | None = None) -> FloatTensor:  # noqa: D102
         self._raise_on_weights(weight)
