@@ -520,11 +520,6 @@ def prepare_ablation(
         if stopper_kwargs is not None:
             hpo_config["stopper_kwargs"] = stopper_kwargs
 
-        # TODO incorporate setting of random seed
-        # pipeline_kwargs=dict(
-        #    random_seed=random_non_negative_int(),
-        # ),
-
         def _set_arguments(config: Mapping3D | None, key: str, value: str) -> None:
             """Set argument and its values."""
             d = {}
