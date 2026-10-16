@@ -409,6 +409,34 @@ class EvaluatorUtilsTests(unittest.TestCase):
             same = batch[batch_id, 1:]
             assert (int(entity_id), *tuple(map(int, same))) in triples
 
+    def test_create_sparse_positive_filter_relation(self):
+        """Test relation-based filtering against a brute-force reference."""
+        batch_size = 8
+        all_triples = Nations().training.mapped_triples
+        batch = all_triples[:batch_size, :]
+
+        positives, _ = create_sparse_positive_filter_(hrt_batch=batch, all_pos_triples=all_triples, filter_col=1)
+
+        triples = {tuple(map(int, t)) for t in all_triples.tolist()}
+        expected = {
+            (i, r)
+            for i, (h, _, t) in enumerate(batch.tolist())
+            for r in range(int(all_triples[:, 1].max()) + 1)
+            if (h, r, t) in triples
+        }
+        assert {tuple(map(int, x)) for x in positives.tolist()} == expected
+        # each batch triple is itself a positive
+        assert all((i, int(r)) in expected for i, r in enumerate(batch[:, 1]))
+
+    def test_create_sparse_positive_filter_invalid_column(self):
+        """Test that an invalid column raises."""
+        with pytest.raises(ValueError, match="filter_col"):
+            create_sparse_positive_filter_(
+                hrt_batch=torch.zeros(1, 3, dtype=torch.long),
+                all_pos_triples=torch.zeros(1, 3, dtype=torch.long),
+                filter_col=3,  # type: ignore[arg-type]
+            )
+
     def test_create_dense_positive_mask_(self):
         """Test method create_dense_positive_mask_."""
         batch_size = 3

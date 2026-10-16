@@ -523,22 +523,31 @@ def create_sparse_positive_filter_(
     :param hrt_batch: shape: (batch_size, 3) A batch of triples.
     :param all_pos_triples: shape: (num_positive_triples, 3) All positive triples to base the filtering on.
     :param relation_filter: shape: (batch_size, num_positive_triples) A boolean mask R[i, j] which is True iff the j-th
-        positive triple contains the same relation as the i-th triple in the batch.
-    :param filter_col: The column along which to filter.
-
-        .. warning:: A value of 1, corresponding to relation-based filtering has not been implemented
+        positive triple contains the same relation as the i-th triple in the batch. Only used for `filter_col` in
+        `{0, 2}`; ignored for `filter_col=1`.
+    :param filter_col: The column along which to filter. For `filter_col=1`, relation-based filtering is performed,
+        i.e., for each (h, r, t) triple in the batch, the relation identifiers r' are computed such that (h, r', t)
+        exists in all positive triples.
 
     :returns: - positives, shape: (2, m)
-              The indices of positives in format [(batch_index, entity_id)].
-        - the relation filter for re-usage.
+              The indices of positives in format [(batch_index, entity_or_relation_id)].
+        - the mask for re-usage. For `filter_col in {0, 2}`, this is the relation filter. For `filter_col=1`, it is the
+          analogous mask over the head and tail columns, which must not be passed on as `relation_filter` to a
+          head- or tail-based call.
 
-    :raises NotImplementedError: if the `filter_col` is 1
+    :raises ValueError: if the `filter_col` is not in `{0, 1, 2}`
     """
+    if filter_col not in {0, 1, 2}:
+        raise ValueError(f"filter_col must be one of {{0, 1, 2}}, but filter_col={filter_col} was given.")
+
     if filter_col == 1:
-        raise NotImplementedError(
-            "This code has only been written for updating head (filter_col=0) or "
-            f"tail (filter_col=2) mask, but filter_col={filter_col} was given.",
+        # the "fixed" columns are head and tail; the mask plays the role of the relation filter above
+        mask = (all_pos_triples[:, 0].view(1, -1) == hrt_batch[:, 0:1]) & (
+            all_pos_triples[:, 2].view(1, -1) == hrt_batch[:, 2:3]
         )
+        filter_batch = mask.nonzero(as_tuple=False)
+        filter_batch[:, 1] = all_pos_triples[filter_batch[:, 1], 1]
+        return filter_batch, mask
 
     if relation_filter is None:
         relations = hrt_batch[:, 1:2]
