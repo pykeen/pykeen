@@ -73,7 +73,6 @@ __all__ = [
     "predict_hrt_uncertain",
     "predict_r_uncertain",
     "predict_t_uncertain",
-    "predict_uncertain_helper",
 ]
 
 
@@ -102,7 +101,7 @@ class UncertainPrediction(NamedTuple):
 
 
 @torch.inference_mode()
-def predict_uncertain_helper(
+def _predict_uncertain_helper(
     model: Model,
     batch: ScoringBatch,
     num_samples: int,
@@ -183,8 +182,6 @@ def predict_hrt_uncertain(
         The score for each triple, and an uncertainty score, where larger scores
         correspond to less certain predictions.
 
-        This function delegates to :func:`predict_uncertain_helper`.
-
     .. warning::
         This function sets the model to evaluation mode. Dropout layers are only enabled
         while drawing the samples.
@@ -200,7 +197,7 @@ def predict_hrt_uncertain(
             hrt_batch=result.training.mapped_triples[0:8],
         )
     """
-    prediction = predict_uncertain_helper(
+    prediction = _predict_uncertain_helper(
         model=model,
         batch=TripleScoringBatch.from_batch(hrt_batch.to(model.device)),
         num_samples=num_samples,
@@ -246,13 +243,11 @@ def predict_h_uncertain(
     :return: shape: (batch_size, num_entities)
         For each r-t pair, the scores for all possible heads.
 
-        This function delegates to :func:`predict_uncertain_helper`.
-
     .. warning::
         This function sets the model to evaluation mode. Dropout layers are only enabled
         while drawing the samples.
     """
-    return predict_uncertain_helper(
+    return _predict_uncertain_helper(
         model=model,
         batch=TargetScoringBatch.from_transposed_batch(
             head=None, relation=rt_batch[:, 0].to(model.device), tail=rt_batch[:, 1].to(model.device), target=LABEL_HEAD
@@ -291,13 +286,11 @@ def predict_r_uncertain(
     :return: shape: (batch_size, num_relations)
         For each h-t pair, the scores for all possible relations.
 
-        This function delegates to :func:`predict_uncertain_helper`.
-
     .. warning::
         This function sets the model to evaluation mode. Dropout layers are only enabled
         while drawing the samples.
     """
-    return predict_uncertain_helper(
+    return _predict_uncertain_helper(
         model=model,
         batch=TargetScoringBatch.from_transposed_batch(
             head=ht_batch[:, 0].to(model.device),
@@ -348,13 +341,11 @@ def predict_t_uncertain(
     :return: shape: (batch_size, num_entities)
         For each h-r pair, the scores for all possible tails.
 
-        This function delegates to :func:`predict_uncertain_helper`.
-
     .. warning::
         This function sets the model to evaluation mode. Dropout layers are only enabled
         while drawing the samples.
     """
-    return predict_uncertain_helper(
+    return _predict_uncertain_helper(
         model=model,
         batch=TargetScoringBatch.from_transposed_batch(
             head=hr_batch[:, 0].to(model.device), relation=hr_batch[:, 1].to(model.device), tail=None, target=LABEL_TAIL
