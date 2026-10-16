@@ -89,19 +89,6 @@ def models(tablefmt: str) -> None:
     click.echo(_help_models(tablefmt=tablefmt)[0])
 
 
-def format_class(cls: type, module: str | None = None) -> str:
-    """Generate the fully-qualified class name.
-
-    :param cls: the class
-    :param module: the module name to use instead of `cls.__module__`
-
-    :returns: the fully qualified class name
-    """
-    if module is None:
-        module = cls.__module__
-    return f"{module}.{cls.__qualname__}"
-
-
 def _citation(dd):
     citation = (dd or {}).get("citation")
     if citation is None:
@@ -444,8 +431,6 @@ def _help_metrics(tablefmt: str) -> str:
         "Direction",
         "Description",
         "Type",
-        # "Closed-Form Expectation",
-        # "Closed-Form Variance",
     ]
     if tablefmt != "github":
         headers.append("Reference")
@@ -515,8 +500,6 @@ def _get_metrics_lines(tablefmt: str) -> Iterable[tuple[str, ...]]:
             "📈" if metric.increasing else "📉",
             getattr_or_docdata(metric, "description"),
             METRIC_NAMES[metric_results_cls],
-            # "✓" if metric.closed_expectation else "",
-            # "✓" if metric.closed_variance else "",
         ]
         if tablefmt != "github":
             yv.append(f"pykeen.evaluation.{metric_results_cls.__name__}")
@@ -528,12 +511,7 @@ def _get_resolver_lines(
 ) -> Iterable[tuple[str, str]] | Iterable[tuple[str, str, str | None]]:
     for name, value in sorted(d.items()):
         if tablefmt == "rst":
-            if isinstance(value, type):
-                reference = f":class:`pykeen.{submodule}.{value.__name__}`"
-            else:
-                reference = f":class:`pykeen.{submodule}.{name}`"
-
-            yield name, reference
+            yield name, f":class:`pykeen.{submodule}.{value.__name__}`"
         elif tablefmt == "github":
             try:
                 ref = value.__name__
@@ -719,8 +697,7 @@ def get_readme() -> str:
 
 
 @main.group()
-@click.pass_context
-def train(ctx: click.Context) -> None:
+def train() -> None:
     """Train a KGE model."""
 
 
