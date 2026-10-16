@@ -27,7 +27,17 @@ from ..metrics.utils import Metric
 from ..models import Model
 from ..triples.triples_factory import restrict_triples
 from ..triples.utils import get_entities, get_relations
-from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, BoolTensor, InductiveMode, MappedTriples, Target
+from ..typing import (
+    LABEL_HEAD,
+    LABEL_RELATION,
+    LABEL_TAIL,
+    BoolTensor,
+    InductiveMode,
+    MappedTriples,
+    OuterColumn,
+    Target,
+    TargetColumn,
+)
 from ..utils import (
     FloatTensor,
     LongTensor,
@@ -500,8 +510,9 @@ def evaluate(
 def create_sparse_positive_filter_(
     hrt_batch: MappedTriples,
     all_pos_triples: LongTensor,
+    *,
     relation_filter: BoolTensor | None = None,
-    filter_col: int = 0,
+    filter_col: TargetColumn,
 ) -> tuple[LongTensor, BoolTensor]:
     """Compute indices of all positives.
 
@@ -514,16 +525,17 @@ def create_sparse_positive_filter_(
     :param all_pos_triples: shape: (num_positive_triples, 3) All positive triples to base the filtering on.
     :param relation_filter: shape: (batch_size, num_positive_triples) A boolean mask R[i, j] which is True iff the j-th
         positive triple contains the same relation as the i-th triple in the batch.
-    :param filter_col: The column along which to filter. Allowed are {0, 2}, where 0 corresponds to filtering head-based
-        and 2 corresponds to filtering tail-based.
+    :param filter_col: The column along which to filter.
+
+        .. warning:: A value of 1, corresponding to relation-based filtering has not been implemented
 
     :returns: - positives, shape: (2, m)
               The indices of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
 
-    :raises NotImplementedError: if the `filter_col` is not in `{0, 2}`
+    :raises NotImplementedError: if the `filter_col` is 1
     """
-    if filter_col not in {0, 2}:
+    if filter_col == 1:
         raise NotImplementedError(
             "This code has only been written for updating head (filter_col=0) or "
             f"tail (filter_col=2) mask, but filter_col={filter_col} was given.",
