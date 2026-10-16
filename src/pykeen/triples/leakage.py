@@ -171,6 +171,8 @@ class Sealant:
 
     triples_factory: CoreTriplesFactory
     minimum_frequency: float
+    inverses: Mapping[int, int]
+    inverse_relations_to_delete: set[int]
 
     def __init__(
         self,
