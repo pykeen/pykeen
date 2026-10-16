@@ -138,7 +138,6 @@ def _get_triple_mask(
     triples: MappedTriples,
     columns: int | Collection[int],
     invert: bool = False,
-    max_id: int | None = None,
 ) -> BoolTensor:
     # normalize input
     triples = triples[:, columns]
@@ -228,9 +227,6 @@ class Labeling:
     #: The inverse mapping for label_to_id; initialized automatically
     id_to_label: Mapping[int, str] = dataclasses.field(init=False)
 
-    #: A vectorized version of entity_label_to_id; initialized automatically
-    _vectorized_mapper: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
-
     #: A vectorized version of entity_id_to_label; initialized automatically
     _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
 
@@ -247,7 +243,6 @@ class Labeling:
             if the IDs are not non-negative integers, or the mapping is not injective
         """
         self.id_to_label = _validate_and_invert_label_to_id(self.label_to_id, name=name)
-        self._vectorized_mapper = np.vectorize(self.label_to_id.get, otypes=[int])
         self._vectorized_labeler = np.vectorize(self.id_to_label.get, otypes=[str])
 
     def label(
@@ -1000,7 +995,6 @@ class CoreTriplesFactory(KGInfo):
             triples=self.mapped_triples,
             columns=1,
             invert=invert,
-            max_id=self.num_relations,
         )
 
     def tensor_to_df(
@@ -1602,8 +1596,6 @@ class TriplesFactory(CoreTriplesFactory):
             "relation": self.relation_labeling,
             "tail": self.entity_labeling,
         }.items():
-            if labeling is None:
-                raise RuntimeError(f"No labeling available for the {column} column.")
             data[f"{column}_label"] = labeling.label(
                 ids=data[f"{column}_id"],
                 unknown_label=("[unknown_" + column + "]").upper(),

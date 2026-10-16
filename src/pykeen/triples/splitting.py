@@ -1,7 +1,6 @@
 """Implementation of triples splitting functions."""
 
 import logging
-import typing
 from abc import abstractmethod
 from collections.abc import Collection, Sequence
 
@@ -269,7 +268,6 @@ class Cleaner:
 def _prepare_cleanup(
     training: MappedTriples,
     testing: MappedTriples,
-    max_ids: tuple[int, int] | None = None,
 ) -> BoolTensor:
     """
     Calculate a mask for the test triples with triples containing test-only entities or relations.
@@ -278,8 +276,6 @@ def _prepare_cleanup(
         The training triples.
     :param testing: shape: (m, 3)
         The testing triples.
-    :param max_ids:
-        The maximum identifier in each column. Calculates it automatically if not given.
 
     :return: shape: (m,)
         The move mask.
@@ -292,11 +288,7 @@ def _prepare_cleanup(
 
     columns = [[0, 2], [1]]
     to_move_mask = torch.zeros(1, dtype=torch.bool)
-    if max_ids is None:
-        max_ids = typing.cast(
-            tuple[int, int],
-            tuple(max(get_num_ids(training[:, col]), get_num_ids(testing[:, col])) for col in columns),
-        )
+    max_ids = [max(get_num_ids(training[:, col]), get_num_ids(testing[:, col])) for col in columns]
     for col, max_id in zip(columns, max_ids, strict=False):
         # IDs not in training
         not_in_training_mask = torch.ones(max_id, dtype=torch.bool)
