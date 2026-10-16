@@ -340,7 +340,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         targets: Collection[Target],
         tqdm_kwargs: Mapping[str, Any],
         restrict_entities_to: Collection[int] | None = None,
-        **kwargs,
     ) -> MetricResults:
         """Evaluate the model on the given device."""
         # Ensure evaluation mode
@@ -392,7 +391,6 @@ class Evaluator(ABC, Generic[MetricKeyType]):
                 restrict_entities_to=restrict_entities_to,
                 model=model,
                 mode=self.mode,
-                **kwargs,
             )
 
 
@@ -756,7 +754,6 @@ def get_candidate_set_size(
         df_count[column] = total - df_count[target] + 1
         df_count = df_count.drop(columns=target)
         df_eval = df_eval.merge(df_count, on=group_keys, how="left")
-        df_eval[column] = df_eval[column].fillna(value=total + 1)
 
     return df_eval
 
