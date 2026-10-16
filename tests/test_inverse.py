@@ -312,7 +312,7 @@ def test_subclass_score_is_used(model: Model):
 def test_predict_unknown_kwarg(model: Model):
     """Test that unknown keyword arguments are rejected."""
     with pytest.raises(TypeError):
-        model.predict_t(Nations().testing.mapped_triples[:3, :2], foo=1)
+        model.predict_t(Nations().testing.mapped_triples[:3, :2], foo=1)  # type: ignore[call-arg]
 
 
 @pytest.mark.parametrize("conjunctive", [False, True])
