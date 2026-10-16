@@ -8,8 +8,8 @@ from collections.abc import Mapping
 from ..trackers.base import ResultTracker
 
 __all__ = [
+    "BestMetricListener",
     "MetricSelection",
-    "ResultListenerAdapter",
 ]
 
 
@@ -29,8 +29,8 @@ class MetricSelection:
 
 
 @dataclasses.dataclass
-class ResultListenerAdapter:
-    """An adapter to keep track of the best value and step for a given metric."""
+class BestMetricListener:
+    """A listener hooking the base tracker's `log_metrics` to keep track of the best value and step for a metric."""
 
     base: ResultTracker
 

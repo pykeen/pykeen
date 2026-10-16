@@ -8,7 +8,7 @@ from collections.abc import Collection, Sequence
 
 from class_resolver import ClassResolver, OneOrManyHintOrType, OneOrManyOptionalKwargs
 
-from .utils import MetricSelection, ResultListenerAdapter
+from .utils import BestMetricListener, MetricSelection
 from ..trackers.base import ResultTracker
 
 __all__ = [
@@ -63,13 +63,13 @@ class BestCheckpointSchedule(CheckpointSchedule):
     metric_selection: MetricSelection
 
     # note: internal detail
-    _adapter: ResultListenerAdapter = dataclasses.field(init=False)
+    _listener: BestMetricListener = dataclasses.field(init=False)
 
     def __post_init__(self):
-        self._adapter = ResultListenerAdapter(self.result_tracker, metric_selection=self.metric_selection)
+        self._listener = BestMetricListener(self.result_tracker, metric_selection=self.metric_selection)
 
     def __call__(self, step: int) -> bool:  # noqa: D102  # dunder override, see D105
-        return self._adapter.is_best(step)
+        return self._listener.is_best(step)
 
 
 @dataclasses.dataclass
