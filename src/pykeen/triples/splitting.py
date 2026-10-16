@@ -284,7 +284,7 @@ def _prepare_cleanup(training: MappedTriples, testing: MappedTriples) -> BoolTen
     if len(training) == 0:
         return torch.ones(testing.shape[0], dtype=torch.bool)
 
-    columns = [[COLUMN_HEAD, COLUMN_TAIL], COLUMN_RELATION]
+    columns = [[COLUMN_HEAD, COLUMN_TAIL], [COLUMN_RELATION]]
     to_move_mask = torch.zeros(1, dtype=torch.bool)
     for col in columns:
         max_id = max(get_num_ids(training[:, col]), get_num_ids(testing[:, col]))
