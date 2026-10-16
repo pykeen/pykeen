@@ -121,9 +121,11 @@ LABEL_HEAD: Target = "head"
 LABEL_RELATION: Target = "relation"
 LABEL_TAIL: Target = "tail"
 
+#: Only the column head and tail
+OutsideTargetColumn: TypeAlias = Literal[0, 2]
 
 #: the prediction target index
-TargetColumn = Literal[0, 1, 2]
+TargetColumn = OutsideTargetColumn | Literal[1]
 COLUMN_HEAD: TargetColumn = 0
 COLUMN_RELATION: TargetColumn = 1
 COLUMN_TAIL: TargetColumn = 2

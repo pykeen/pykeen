@@ -36,8 +36,8 @@ from ..typing import (
     BoolTensor,
     InductiveMode,
     MappedTriples,
+    OutsideTargetColumn,
     Target,
-    TargetColumn,
 )
 from ..utils import (
     FloatTensor,
@@ -519,9 +519,9 @@ def create_sparse_positive_filter_(
     all_pos_triples: LongTensor,
     *,
     relation_filter: BoolTensor | None = None,
-    filter_col: TargetColumn,
+    filter_col: OutsideTargetColumn,
 ) -> tuple[LongTensor, BoolTensor]:
-    """Compute indices of all positives.
+    """Compute indices of all positives for head- or tail-based filtering.
 
     For simplicity, only the head-side is described, i.e. filter_col=0. The tail-side is processed alike.
 
@@ -544,10 +544,7 @@ def create_sparse_positive_filter_(
         or :data`~pykeen.typing.COLUMN_TAIL`
     """
     if filter_col not in {COLUMN_HEAD, COLUMN_TAIL}:
-        raise NotImplementedError(
-            "This code has only been written for updating head (filter_col=0) or "
-            f"tail (filter_col=2) mask, but filter_col={filter_col} was given.",
-        )
+        raise ValueError(f"filter_col must be 0 (head) or 2 (tail), but filter_col={filter_col} was given.")
 
     if relation_filter is None:
         relations = hrt_batch[:, 1:2]
