@@ -265,10 +265,7 @@ class Cleaner:
         return reference, *result
 
 
-def _prepare_cleanup(
-    training: MappedTriples,
-    testing: MappedTriples,
-) -> BoolTensor:
+def _prepare_cleanup(training: MappedTriples, testing: MappedTriples) -> BoolTensor:
     """
     Calculate a mask for the test triples with triples containing test-only entities or relations.
 
@@ -288,8 +285,9 @@ def _prepare_cleanup(
 
     columns = [[0, 2], [1]]
     to_move_mask = torch.zeros(1, dtype=torch.bool)
-    max_ids = [max(get_num_ids(training[:, col]), get_num_ids(testing[:, col])) for col in columns]
-    for col, max_id in zip(columns, max_ids, strict=False):
+    for col in columns:
+        max_id = max(get_num_ids(training[:, col]), get_num_ids(testing[:, col]))
+
         # IDs not in training
         not_in_training_mask = torch.ones(max_id, dtype=torch.bool)
         not_in_training_mask[training[:, col].view(-1)] = False
