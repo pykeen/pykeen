@@ -37,8 +37,8 @@ from ..typing import (
     BoolTensor,
     InductiveMode,
     MappedTriples,
-    OutsideTargetColumn,
     Target,
+    TargetColumnOutside,
 )
 from ..utils import (
     FloatTensor,
@@ -55,6 +55,7 @@ __all__ = [
     "Evaluator",
     "MetricResults",
     "create_sparse_positive_filter_",
+    "create_sparse_positive_relation_filter_",
     "filter_scores_",
     "normalize_flattened_metric_results",
     "prepare_filter_triples",
@@ -520,7 +521,7 @@ def create_sparse_positive_filter_(
     all_pos_triples: LongTensor,
     *,
     relation_filter: BoolTensor | None = None,
-    filter_col: OutsideTargetColumn,
+    filter_col: TargetColumnOutside,
 ) -> tuple[LongTensor, BoolTensor]:
     """Compute indices of all positives for head- or tail-based filtering.
 

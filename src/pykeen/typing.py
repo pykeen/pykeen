@@ -45,6 +45,7 @@ __all__ = [
     "TailRepresentation",
     "Target",
     "TargetColumn",
+    "TargetColumnOutside",
     "TorchRandomHint",
     "TransductiveRatiosHint",
     "cast_constrainer",
@@ -122,10 +123,10 @@ LABEL_RELATION: Target = "relation"
 LABEL_TAIL: Target = "tail"
 
 #: Only the column head and tail
-OutsideTargetColumn: TypeAlias = Literal[0, 2]
+TargetColumnOutside: TypeAlias = Literal[0, 2]
 
 #: the prediction target index
-TargetColumn = Literal[0, 1, 2]
+TargetColumn: TypeAlias = TargetColumnOutside | Literal[1]
 COLUMN_HEAD: Final = 0
 COLUMN_RELATION: Final = 1
 COLUMN_TAIL: Final = 2
