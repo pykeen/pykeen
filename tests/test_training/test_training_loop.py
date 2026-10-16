@@ -193,3 +193,18 @@ def test_bcwa_initial_slice_size(target: Target, batch_size: int, expected: int)
     model = TransE(triples_factory=triples_factory)
     loop = BatchCWATrainingLoop(model=model, triples_factory=triples_factory, target=target)
     assert loop._get_initial_slice_size(batch_size=batch_size) == expected
+
+
+@pytest.mark.parametrize("use_inverse_triples", [False, True])
+def test_symmetric_lcwa_uses_internal_relation_ids(use_inverse_triples: bool) -> None:
+    """Test that the symmetric LCWA feeds the model's internal relation IDs to the scoring methods."""
+    tf = Nations().training
+    model = TransE(triples_factory=tf, embedding_dim=2, random_seed=0, use_inverse_triples=use_inverse_triples)
+    loop = SymmetricLCWATrainingLoop(model=model, triples_factory=tf)
+    (batch,) = next(iter(loop._create_training_data_loader(tf, sampler=None, batch_size=tf.num_triples, shuffle=False)))
+    expected = tf.mapped_triples
+    if use_inverse_triples:
+        expected = model.relation_inverter.to_internal_batch(batch=expected)
+    assert (batch == expected).all()
+    # all relation IDs are valid for the model
+    assert batch[:, 1].max() < model.num_relations
