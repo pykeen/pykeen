@@ -38,6 +38,7 @@ from ..typing import (
     BoolTensor,
     InductiveMode,
     MappedTriples,
+    OutsideTargetColumn,
     Target,
 )
 from ..utils import (
@@ -54,6 +55,7 @@ from ..utils import (
 __all__ = [
     "Evaluator",
     "MetricResults",
+    "create_sparse_positive_filter_",
     "filter_scores_",
     "normalize_flattened_metric_results",
     "prepare_filter_triples",
@@ -224,7 +226,8 @@ class Evaluator(ABC, Generic[MetricKeyType]):
         :param batch_size: >0 A positive integer used as batch size. Generally chosen as large as possible. Defaults to
             1 if None.
         :param slice_size: >0 The divisor for the scoring function when using slicing.
-        :param device: The device on which the evaluation shall be run. If None is given, use the model's device.
+        :param device: The device on which the evaluation shall be run. If None is given, use the model's device. The
+            model is moved back to its original device after the evaluation.
         :param use_tqdm: Should a progress bar be displayed?
         :param tqdm_kwargs: Additional keyword based arguments passed to the progress bar.
         :param restrict_entities_to: Optionally restrict the evaluation to the given entity IDs. This may be useful if
@@ -298,7 +301,8 @@ class Evaluator(ABC, Generic[MetricKeyType]):
             )
         else:
             all_pos_triples = None
-        device = device or model.device
+        original_device = model.device
+        device = device or original_device
         tqdm_kwargs = dict(tqdm_kwargs or {})
         if not use_tqdm:
             tqdm_kwargs["disable"] = True
@@ -332,6 +336,9 @@ class Evaluator(ABC, Generic[MetricKeyType]):
                 targets=targets,
                 tqdm_kwargs=tqdm_kwargs,
             )
+        finally:
+            # `Module.to` is in-place; undo the move, e.g., when called mid-training or after a fallback to cpu
+            model.to(original_device)
         stop = timeit.default_timer()
         logger.info("Evaluation took %.2fs seconds", stop - start)
         return result
@@ -514,7 +521,7 @@ def create_sparse_positive_filter_(
     all_pos_triples: LongTensor,
     *,
     relation_filter: BoolTensor | None = None,
-    filter_col: Literal[0, 2],  # COLUMN_HEAD or COLUMN_TAIL
+    filter_col: OutsideTargetColumn,
 ) -> tuple[LongTensor, BoolTensor]:
     """Compute indices of all positives for head- or tail-based filtering.
 
@@ -529,14 +536,16 @@ def create_sparse_positive_filter_(
     :param all_pos_triples: shape: (num_positive_triples, 3) All positive triples to base the filtering on.
     :param relation_filter: shape: (batch_size, num_positive_triples) A boolean mask R[i, j] which is True iff the j-th
         positive triple contains the same relation as the i-th triple in the batch.
-    :param filter_col: The column along which to filter. Allowed are {0, 2}, where 0 corresponds to filtering head-based
-        and 2 corresponds to filtering tail-based.
+    :param filter_col: The column along which to filter. Allowed are :data:`~pykeen.typing.COLUMN_HEAD`,
+        which corresponds to filtering head-based and :data`~pykeen.typing.COLUMN_TAIL`, which corresponds
+        to filtering tail-based.
 
     :returns: - positives, shape: (2, m)
               The indices of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
 
-    :raises ValueError: if the `filter_col` is not in `{0, 2}`
+    :raises ValueError: if the `filter_col` is not one of :data:`~pykeen.typing.COLUMN_HEAD`
+        or :data`~pykeen.typing.COLUMN_TAIL`
     """
     if filter_col not in {COLUMN_HEAD, COLUMN_TAIL}:
         raise ValueError(f"filter_col must be 0 (head) or 2 (tail), but filter_col={filter_col} was given.")
