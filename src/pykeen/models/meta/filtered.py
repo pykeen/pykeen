@@ -174,7 +174,9 @@ class CooccurrenceFilteredModel(Model):
         mode: InductiveMode | None,
         ids: LongTensor | None = None,
     ) -> FloatTensor:
-        in_training = self.training
+        # note: the mask during prediction differs from the one during (training-time) forward calls, which may also
+        # happen in evaluation mode, e.g., when evaluating the loss on validation data
+        in_training = not self._predicting
         if in_training and not self.apply_in_training:
             return scores
         fill_value = self.training_fill_value if in_training else self.inference_fill_value

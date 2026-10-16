@@ -166,6 +166,10 @@ class Model(nn.Module, ABC):
     #: after training, but has no effect on the training.
     predict_with_sigmoid: bool
 
+    #: whether the model is currently scoring a prediction request, cf. :meth:`Model._predict_batch`; as opposed to a
+    #: training-time call of :meth:`Model.forward`. Models whose scores depend on this, e.g., by masking, can read it.
+    _predicting: bool = False
+
     def __init__(
         self,
         *,
@@ -468,8 +472,12 @@ class Model(nn.Module, ABC):
                 )
             batch = batch.invert(self.relation_inverter)
 
-        with _monte_carlo_dropout(self, enabled=mc_dropout):
-            scores = self(batch, slice_size=slice_size, mode=mode)
+        self._predicting = True
+        try:
+            with _monte_carlo_dropout(self, enabled=mc_dropout):
+                scores = self(batch, slice_size=slice_size, mode=mode)
+        finally:
+            self._predicting = False
         if self.predict_with_sigmoid:
             scores = torch.sigmoid(scores)
         return scores

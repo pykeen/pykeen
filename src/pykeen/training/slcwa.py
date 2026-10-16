@@ -54,10 +54,10 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
             for every positive one
         :param grouped: whether to keep negatives grouped by corrupted position and score each group with a single
-            :meth:`~pykeen.models.Model.score_h` / :meth:`~pykeen.models.Model.score_r` /
-            :meth:`~pykeen.models.Model.score_t` call, instead of flattening them to independent triples scored via
-            :meth:`~pykeen.models.Model.score_hrt`. This can substantially speed up training, especially for models
-            with expensive interaction functions or encoders (e.g., ConvE, NodePiece, message passing models).
+            :class:`~pykeen.models.scoring.TargetScoringBatch`, instead of flattening them to independent triples scored
+            via a :class:`~pykeen.models.scoring.TripleScoringBatch`. This can substantially speed up training,
+            especially for models with expensive interaction functions or encoders (e.g., ConvE, NodePiece, message
+            passing models).
 
             This is opt-in and defaults to `False`, because grouping changes the per-target corruption split (cf.
             :class:`~pykeen.sampling.BasicNegativeSampler`), and hence the training signal, and because models with

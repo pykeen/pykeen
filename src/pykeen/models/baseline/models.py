@@ -34,6 +34,11 @@ class EvaluationOnlyModel(Model):
             random_seed=0,
         )
 
+    @property
+    def device(self) -> torch.device:
+        """Return the device; non-parametric models have no parameters to infer it from, and run on the CPU."""
+        return torch.device("cpu")
+
     def _get_entity_len(self, *, mode: InductiveMode | None) -> int:
         return self.num_entities
 

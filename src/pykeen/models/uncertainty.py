@@ -117,7 +117,7 @@ def predict_uncertain_helper(
     :param model:
         the model used for predicting scores
     :param batch:
-        the scoring request, with the *real* relation IDs, on any device
+        the scoring request, with the *real* relation IDs, on the model's device
     :param num_samples: >1
         The number of samples to use. More samples lead to better estimates, but
         increase memory requirements and runtime.
@@ -127,7 +127,7 @@ def predict_uncertain_helper(
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
     :param invert:
-        whether to score by means of the inverse triples, cf. :class:`~pykeen.models.PredictKwargs`
+        whether to score by means of the inverse triples, cf. :class:`~pykeen.models.base.PredictKwargs`
 
     :return:
         A tuple (score_mean, score_std) of the mean and std of the scores sampled
@@ -200,11 +200,15 @@ def predict_hrt_uncertain(
             hrt_batch=result.training.mapped_triples[0:8],
         )
     """
-    return predict_uncertain_helper(
+    prediction = predict_uncertain_helper(
         model=model,
         batch=TripleScoringBatch.from_batch(hrt_batch.to(model.device)),
         num_samples=num_samples,
         mode=mode,
+    )
+    # the scores of triples have shape (batch_size,); add the trailing dimension, as for the other prediction methods
+    return UncertainPrediction(
+        score=prediction.score.unsqueeze(dim=-1), uncertainty=prediction.uncertainty.unsqueeze(dim=-1)
     )
 
 

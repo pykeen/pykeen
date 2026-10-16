@@ -228,7 +228,7 @@ def _repeat_when_missing_representations(
     Repeat score tensor if necessary.
 
     If a model does not have entity/relation representations, the scores for
-    `score_{h,t}` / `score_r` are always the same. For efficiency, they are thus
+    `predict_{h,t}` / `predict_r` are always the same. For efficiency, they are thus
     only computed once, but to meet the API, they have to be brought into the correct shape afterwards.
 
     For example, this is the case for :class:`~pykeen.models.UM`, which does not have any relation

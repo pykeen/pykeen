@@ -133,8 +133,9 @@ class NegativeSampler(nn.Module):
         """Generate negative samples from the positive batch, grouped by corrupted target.
 
         Unlike :meth:`corrupt_batch`, this keeps the replacement IDs grouped by which column of the triple they
-        replace, which allows scoring each group with a single call to e.g. :meth:`~pykeen.models.Model.score_t`
-        instead of scoring `num_negs_per_pos` independent triples via :meth:`~pykeen.models.Model.score_hrt`.
+        replace, which allows scoring each group with a single call to :meth:`~pykeen.models.Model.forward`
+        with a :class:`~pykeen.models.scoring.TargetScoringBatch` instead of scoring `num_negs_per_pos` independent
+        triples via a :class:`~pykeen.models.scoring.TripleScoringBatch`.
 
         :param positive_batch: shape: `(*batch_dims, 3)` The positive triples.
 

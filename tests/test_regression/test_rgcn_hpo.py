@@ -5,6 +5,7 @@ import torch
 
 from pykeen.datasets import Nations
 from pykeen.models import RGCN
+from tests.utils import forward_hrt
 
 
 @pytest.mark.parametrize("interaction", RGCN.hpo_default["interaction"]["choices"])
@@ -31,7 +32,7 @@ def _check_interaction(interaction: str, interaction_kwargs: dict[str, int] | No
         self_loop_dropout=0.0,
         random_seed=0,
     ).cpu()
-    scores = model.predict_hrt(training.mapped_triples[:4])
+    scores = forward_hrt(model, training.mapped_triples[:4]).unsqueeze(dim=-1)
     assert scores.shape == (4, 1)
     assert torch.isfinite(scores).all()
     scores.sum().backward()

@@ -404,17 +404,7 @@ def test_filtered_model_inductive_mask(
     r = inverter.to_internal(r)
     triples = torch.cat([torch.stack([h, r, t], dim=-1), torch.stack([t, inverter.get_inverse_id(r), h], dim=-1)])
     num_relations = model.num_relations
-    # the masking is only applied in training mode if requested; otherwise, it is applied for predictions
-    model.train(apply_in_training)
-
-    def score_h(pairs, mode):
-        return _forward(model, pairs, "head", mode=mode)
-
-    def score_r(pairs, mode):
-        return _forward(model, pairs, "relation", mode=mode)
-
-    def score_t(pairs, mode):
-        return _forward(model, pairs, "tail", mode=mode)
+    num_real = len(graph.mapped_triples)
 
     # dense co-occurrence matrices; the mask is their elementwise conjunction / disjunction
     num_entities = graph.num_entities
@@ -430,11 +420,33 @@ def test_filtered_model_inductive_mask(
         return (a & b) if conjunctive else (a | b)
 
     h, r, t = triples.t()
-    for scores, expected in (
-        (score_h(triples[:, 1:], mode=mode), combine(h_r.t()[r], h_t.t()[t])),
-        (score_r(triples[:, 0::2], mode=mode), combine(h_r[h], r_t.t()[t])),
-        (score_t(triples[:, :2], mode=mode), combine(h_t[h], r_t[r])),
-    ):
+    if apply_in_training:
+        # forward calls are masked, independent of the module's mode
+        model.eval()
+        checks = (
+            (_forward(model, triples[:, 1:], "head", mode=mode), combine(h_r.t()[r], h_t.t()[t])),
+            (_forward(model, triples[:, 0::2], "relation", mode=mode), combine(h_r[h], r_t.t()[t])),
+            (_forward(model, triples[:, :2], "tail", mode=mode), combine(h_t[h], r_t[r])),
+        )
+    else:
+        # forward calls are not masked, not even in evaluation mode, where the validation loss may be computed
+        model.eval()
+        assert torch.isfinite(_forward(model, triples[:, :2], "tail", mode=mode)).all()
+        # predictions are masked; they use the real relation IDs, and predict heads via the inverse triples
+        real_h, real_r, real_t = triples[:num_real].t()
+        forward_ids = inverter.to_internal(torch.arange(model.num_real_relations))
+        checks = (
+            (
+                model.predict_h(graph.mapped_triples[:, 1:], mode=mode),
+                combine(h_t[real_t], r_t[inverter.get_inverse_id(real_r)]),
+            ),
+            (
+                model.predict_r(graph.mapped_triples[:, 0::2], mode=mode),
+                combine(h_r[real_h], r_t.t()[real_t])[:, forward_ids],
+            ),
+            (model.predict_t(graph.mapped_triples[:, :2], mode=mode), combine(h_t[real_h], r_t[real_r])),
+        )
+    for scores, expected in checks:
         assert scores.shape == expected.shape
         assert torch.equal(torch.isfinite(scores), expected)
 

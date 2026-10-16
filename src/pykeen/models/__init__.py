@@ -5,7 +5,7 @@ $(h,r,t) \in \mathbb{K}$, where a larger score indicates a higher plausibility. 
 model-dependent, and usually it cannot be directly interpreted as a probability.
 
 In PyKEEN, the API of a model is defined in :class:`Model`, where the scoring function is exposed as
-:meth:`Model.score_hrt`, which can be used to compute plausibility scores for (a batch of) triples. In addition, the
+:meth:`Model.predict_hrt`, which can be used to compute plausibility scores for (a batch of) triples. In addition, the
 :class:`Model` class also offers additional scoring methods, which can be used to (efficiently) compute scores for a
 large number of triples sharing some parts, e.g., to compute scores for triples $(h, r, e)$ for a given $(h, r)$ pair
 and all available entities $e \in \mathcal{E}$.
