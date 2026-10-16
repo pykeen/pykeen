@@ -171,7 +171,7 @@ def _format_truncated(items: Sequence[Any], max_items: int = 5, formatter: Calla
     return text
 
 
-def _validate_and_invert_label_to_id(label_to_id: Mapping[str, int], name: str = "label") -> dict[int, str]:
+def _validate_and_invert_label_to_id(label_to_id: Mapping[str, int], name: str) -> dict[int, str]:
     """Validate a label-to-ID mapping and return its inverse.
 
     The IDs have to be non-negative integers (:class:`bool` is not accepted), and the mapping has to be injective,
@@ -235,7 +235,7 @@ class Labeling:
     _vectorized_labeler: Callable[..., np.ndarray] = dataclasses.field(init=False, compare=False)
 
     #: The name of the kind of labels, e.g., "entity"; only used for error messages
-    name: dataclasses.InitVar[str] = "label"
+    name: dataclasses.InitVar[str]
 
     def __post_init__(self, name: str):
         """Validate the mapping and precompute inverse mappings.

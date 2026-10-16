@@ -757,13 +757,13 @@ def test_invalid_label_to_id(
 def test_non_injective_labeling_truncated_message() -> None:
     """Test that the error message for many collisions is truncated."""
     with pytest.raises(ValueError, match=r"100 ID\(s\) shared.*\.\.\. \(95 more\)"):
-        Labeling(label_to_id={f"{prefix}{i}": i for i in range(100) for prefix in "xy"})
+        Labeling(name="entity", label_to_id={f"{prefix}{i}": i for i in range(100) for prefix in "xy"})
 
 
 def test_non_injective_labeling_message_bounded() -> None:
     """Test that the error message stays short when many labels share a single ID."""
     with pytest.raises(ValueError, match=r"1 ID\(s\) shared.*\.\.\. \(99995 more\)") as exc_info:
-        Labeling(label_to_id={f"x{i}": 0 for i in range(100_000)})
+        Labeling(name="entity", label_to_id={f"x{i}": 0 for i in range(100_000)})
     assert len(str(exc_info.value)) < 500
 
 
