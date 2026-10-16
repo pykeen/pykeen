@@ -12,7 +12,6 @@ from typing import (
     Any,
     ClassVar,
     Generic,
-    Literal,
     NamedTuple,
     TypeVar,
     cast,
