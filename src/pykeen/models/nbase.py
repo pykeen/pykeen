@@ -5,11 +5,10 @@ from __future__ import annotations
 import logging
 from abc import ABC
 from collections import defaultdict
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from operator import itemgetter
 from typing import Any, ClassVar, Generic, Literal, cast
 
-import torch
 from class_resolver import HintOrType, OptionalKwargs
 from class_resolver.utils import OneOrManyHintOrType, OneOrManyOptionalKwargs, normalize_with_default
 from torch import nn
@@ -22,9 +21,7 @@ from ..nn.representation import Representation
 from ..regularizers import Regularizer, regularizer_resolver
 from ..triples import KGInfo
 from ..typing import (
-    LABEL_HEAD,
     LABEL_RELATION,
-    LABEL_TAIL,
     FloatTensor,
     HeadRepresentation,
     InductiveMode,
@@ -32,7 +29,7 @@ from ..typing import (
     RelationRepresentation,
     TailRepresentation,
 )
-from ..utils import check_shapes, get_batchnorm_modules, prefix_unsqueeze_target
+from ..utils import check_shapes, prefix_unsqueeze_target
 
 __all__ = [
     "ERModel",
@@ -253,32 +250,6 @@ def _repeat_when_missing_representations(
     return scores.repeat(*(1,) * (scores.ndim - 1), num)
 
 
-def iter_slices(
-    ids: LongTensor | None, slice_size: int, total: int, device: torch.device, dim: int = -1
-) -> Iterator[LongTensor]:
-    """
-    Iterate over slices of an (implicit) index tensor.
-
-    :param ids:
-        The ID tensor, or None to indicate :code:`torch.arange(total)`
-    :param slice_size: $>0$
-        The (maximum) size of each individual slice.
-    :param total:
-        The total number of IDs; only used when ``ids`` is ``None``.
-    :param device:
-        The device on which to create the slices of the implicit :code:`torch.arange(total)`.
-    :param dim:
-        The dimension along which to slice.
-
-    :yields: Slices of the index tensor
-    """
-    if ids is None:
-        for start in range(0, total, slice_size):
-            yield torch.arange(start=start, end=min(start + slice_size, total), device=device)
-    else:
-        yield from ids.split(split_size=slice_size, dim=dim)
-
-
 # FIXME fixing the order here breaks the generics usage
 class ERModel(  # noqa:PYI059
     Generic[HeadRepresentation, RelationRepresentation, TailRepresentation],
@@ -441,7 +412,7 @@ class ERModel(  # noqa:PYI059
             regularizer.add_parameter(parameter=weight)
         self.weight_regularizers.append(regularizer)
 
-    def forward(
+    def _score_grid(
         self,
         h_indices: LongTensor,
         r_indices: LongTensor,
@@ -451,10 +422,11 @@ class ERModel(  # noqa:PYI059
         *,
         mode: InductiveMode | None,
     ) -> FloatTensor:
-        """Forward pass.
+        """Score broadcastable head, relation and tail indices.
 
         This method takes head, relation and tail indices and calculates the corresponding scores.
-        It supports broadcasting.
+        It supports broadcasting, and slicing along an arbitrary dimension of the broadcasted result, which
+        :meth:`~pykeen.models.Model.forward` does not offer for triples.
 
         :param h_indices:
             The head indices.
@@ -481,83 +453,19 @@ class ERModel(  # noqa:PYI059
         h, r, t = self._get_representations(h=h_indices, r=r_indices, t=t_indices, mode=mode)
         return self.interaction.score(h=h, r=r, t=t, slice_size=slice_size, slice_dim=slice_dim)
 
-    def score_hrt(self, hrt_batch: LongTensor, *, mode: InductiveMode | None = None) -> FloatTensor:
-        """Forward pass.
-
-        This method takes head, relation and tail of each triple and calculates the corresponding score.
-
-        :param hrt_batch: shape: (batch_size, 3), dtype: long
-            The indices of (head, relation, tail) triples.
-        :param mode:
-            The pass mode, which is None in the transductive setting and one of "training",
-            "validation", or "testing" in the inductive setting.
-
-        :return: shape: (batch_size, 1), dtype: float
-            The score for each triple.
-        """
-        # Note: slicing cannot be used here: the indices for score_hrt only have a batch
-        # dimension, and slicing along this dimension is already considered by sub-batching.
-        # Note: repetition is not necessary here
-        return self._score(TripleScoringBatch.from_batch(hrt_batch), mode=mode).unsqueeze(dim=-1)
-
-    def _check_slicing(self, slice_size: int | None) -> None:
-        """Raise an error, if slicing is requested, but the model does not support it."""
-        if not slice_size:
-            return
-        # batch normalization modules use batch statistics in training mode
-        # -> different batch divisions lead to different results
-        if self.training and get_batchnorm_modules(self):
-            raise ValueError("This model does not support slicing, since it has batch normalization layers.")
-
-    def _score(
-        self,
-        batch: ScoringBatch,
-        *,
-        slice_size: int | None = None,
-        mode: InductiveMode | None = None,
-    ) -> FloatTensor:
-        """Calculate the scores for a scoring request.
-
-        This is the single implementation behind :meth:`score_h`, :meth:`score_r`, and :meth:`score_t`.
-        Subclasses customizing scoring should override this method; :meth:`score_h`, :meth:`score_r`, and
-        :meth:`score_t` are thin wrappers around it and should not be overridden.
-
-        :param batch:
-            the scoring request
-        :param slice_size: >0
-            the maximum number of candidates to score at once; only supported for 1:n scoring
-        :param mode:
-            the pass mode, which is None in the transductive setting and one of "training", "validation", or
-            "testing" in the inductive setting
-
-        :raises ValueError:
-            if slicing is requested for a batch without a scoring target
-
-        :return: shape: (*batch_shape,) or (*batch_shape, num)
-            the scores
-        """
+    def _score(self, batch: ScoringBatch, *, mode: InductiveMode | None = None) -> FloatTensor:
         match batch:
             case TripleScoringBatch():
-                if slice_size:
-                    raise ValueError("Slicing requires a target; there is nothing to slice along.")
                 h, r, t = self._get_representations(*batch.indices, mode=mode)
                 return self.interaction(h=h, r=r, t=t)
             case TargetScoringBatch():
-                return self._score_target(batch, slice_size=slice_size, mode=mode)
+                return self._score_target(batch, mode=mode)
 
-    def _score_target(
-        self,
-        batch: TargetScoringBatch,
-        *,
-        slice_size: int | None = None,
-        mode: InductiveMode | None = None,
-    ) -> FloatTensor:
+    def _score_target(self, batch: TargetScoringBatch, *, mode: InductiveMode | None = None) -> FloatTensor:
         """Score a single position against many candidates.
 
         :param batch:
             the scoring request
-        :param slice_size: >0
-            the maximum number of candidates to score at once
         :param mode:
             the pass mode, which is None in the transductive setting and one of "training", "validation", or
             "testing" in the inductive setting
@@ -573,23 +481,6 @@ class ERModel(  # noqa:PYI059
             target_representations = self.entity_representations
             total = self._get_entity_len(mode=mode)
 
-        # normalize before checking
-        if slice_size and slice_size >= total:
-            slice_size = None
-        self._check_slicing(slice_size=slice_size)
-
-        # slice early to allow lazy computation of target representations
-        if slice_size:
-            return torch.cat(
-                [
-                    self._score_target(batch.with_target_ids(partial_ids), slice_size=None, mode=mode)
-                    for partial_ids in iter_slices(
-                        ids=batch.target_ids, slice_size=slice_size, total=total, device=batch.device
-                    )
-                ],
-                dim=-1,
-            )
-
         h, r, t = self._get_representations(*batch.lookup_indices, mode=mode)
         # the same candidates are scored for each batch element -> prepend the batch dimensions
         if batch.shared_target:
@@ -598,54 +489,6 @@ class ERModel(  # noqa:PYI059
             scores=self.interaction(h=h, r=r, t=t),
             representations=target_representations,
             num=total if batch.target_ids is None else batch.target_ids.shape[-1],
-        )
-
-    def score_t(  # noqa: D102
-        self,
-        hr_batch: LongTensor,
-        *,
-        slice_size: int | None = None,
-        mode: InductiveMode | None = None,
-        tails: LongTensor | None = None,
-    ) -> FloatTensor:
-        return self._score(
-            TargetScoringBatch.from_transposed_batch(
-                head=hr_batch[..., 0], relation=hr_batch[..., 1], tail=tails, target=LABEL_TAIL
-            ),
-            slice_size=slice_size,
-            mode=mode,
-        )
-
-    def score_h(  # noqa: D102
-        self,
-        rt_batch: LongTensor,
-        *,
-        slice_size: int | None = None,
-        mode: InductiveMode | None = None,
-        heads: LongTensor | None = None,
-    ) -> FloatTensor:
-        return self._score(
-            TargetScoringBatch.from_transposed_batch(
-                head=heads, relation=rt_batch[..., 0], tail=rt_batch[..., 1], target=LABEL_HEAD
-            ),
-            slice_size=slice_size,
-            mode=mode,
-        )
-
-    def score_r(  # noqa: D102
-        self,
-        ht_batch: LongTensor,
-        *,
-        slice_size: int | None = None,
-        mode: InductiveMode | None = None,
-        relations: LongTensor | None = None,
-    ) -> FloatTensor:
-        return self._score(
-            TargetScoringBatch.from_transposed_batch(
-                head=ht_batch[..., 0], relation=relations, tail=ht_batch[..., 1], target=LABEL_RELATION
-            ),
-            slice_size=slice_size,
-            mode=mode,
         )
 
     def _get_entity_representations_from_inductive_mode(

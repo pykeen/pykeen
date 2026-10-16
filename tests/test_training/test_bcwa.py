@@ -13,6 +13,7 @@ from pykeen.training import bcwa
 from pykeen.triples.instances import BatchCWABatch
 from pykeen.triples.weights import RelationLossWeighter
 from pykeen.typing import LongTensor, Target, TargetColumn
+from tests.utils import forward_hrt
 
 
 @pytest.fixture
@@ -199,7 +200,7 @@ def test_target(target: TargetColumn) -> None:
             if not labels.any():
                 continue
             hrt = torch.as_tensor([[ids[dim][x[dim]] for dim in range(3)] for x in local])
-            scores = model.score_hrt(hrt).view(-1)
+            scores = forward_hrt(model, hrt).view(-1)
             row_losses.append(torch.nn.functional.cross_entropy(scores, labels / labels.sum()))
     expected = torch.stack(row_losses).mean()
     actual = loop._process_batch(batch, start=0, stop=loop._get_batch_size(batch))

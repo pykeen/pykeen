@@ -40,7 +40,7 @@ from pykeen.sampling import NegativeSampler
 from pykeen.training import LCWATrainingLoop, SLCWATrainingLoop
 from pykeen.triples.instances import BatchedSLCWAInstances, LCWAInstances
 from pykeen.triples.triples_factory import CoreTriplesFactory
-from pykeen.typing import FloatTensor, InductiveMode, LongTensor, OneOrSequence
+from pykeen.typing import LABEL_TAIL, FloatTensor, InductiveMode, LongTensor, OneOrSequence
 
 __all__ = [
     "LCWALitModule",
@@ -197,7 +197,8 @@ class SLCWALitModule(LitModule):
         return torch.utils.data.DataLoader(
             dataset=BatchedSLCWAInstances.from_triples_factory(
                 triples_factory,
-                create_inverse_triples=self.model.use_inverse_triples,
+                mapped_triples=self.model.prepare_training_triples(triples_factory.mapped_triples),
+                num_relations=self.model.num_relations,
                 batch_size=self.batch_size,
                 # TODO:
                 # shuffle=shuffle,
@@ -225,7 +226,7 @@ class LCWALitModule(LitModule):
     def _step(self, batch, prefix: str):
         loss = LCWATrainingLoop._process_batch_static(
             model=self.model,
-            score_method=self.model.score_t,
+            target=LABEL_TAIL,
             loss=self.loss,
             num_targets=self.model.num_entities,
             mode=self.mode,
@@ -242,7 +243,9 @@ class LCWALitModule(LitModule):
     def _dataloader(self, triples_factory: CoreTriplesFactory, shuffle: bool = False) -> torch.utils.data.DataLoader:
         return torch.utils.data.DataLoader(
             dataset=LCWAInstances.from_triples_factory(
-                triples_factory, create_inverse_triples=self.model.use_inverse_triples
+                triples_factory,
+                mapped_triples=self.model.prepare_training_triples(triples_factory.mapped_triples),
+                num_relations=self.model.num_relations,
             ),
             batch_size=self.batch_size,
             shuffle=shuffle,

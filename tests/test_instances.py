@@ -12,6 +12,7 @@ import pytest
 import torch
 
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
+from pykeen.models import TransE
 from pykeen.sampling import BernoulliNegativeSampler
 from pykeen.triples import LCWAInstances
 from pykeen.triples.instances import BatchedSLCWAInstances, SubGraphSLCWAInstances
@@ -86,7 +87,12 @@ class BatchedSLCWAInstancesTestCase(cases.BatchSLCWATrainingInstancesTestCase):
         ]
         triples = np.array(t, dtype=str)
         factory = TriplesFactory.from_labeled_triples(triples=triples)
-        instances = BatchedSLCWAInstances.from_triples_factory(factory, create_inverse_triples=True)
+        model = TransE(triples_factory=factory, embedding_dim=2, random_seed=0, use_inverse_triples=True)
+        instances = BatchedSLCWAInstances.from_triples_factory(
+            factory,
+            mapped_triples=model.prepare_training_triples(factory.mapped_triples),
+            num_relations=model.num_relations,
+        )
         assert len(instances) == 4
 
     @staticmethod

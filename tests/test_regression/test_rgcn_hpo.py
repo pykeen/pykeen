@@ -31,7 +31,7 @@ def _check_interaction(interaction: str, interaction_kwargs: dict[str, int] | No
         self_loop_dropout=0.0,
         random_seed=0,
     ).cpu()
-    scores = model.score_hrt(training.mapped_triples[:4])
+    scores = model.predict_hrt(training.mapped_triples[:4])
     assert scores.shape == (4, 1)
     assert torch.isfinite(scores).all()
     scores.sum().backward()

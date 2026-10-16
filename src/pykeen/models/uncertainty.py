@@ -57,13 +57,13 @@ A collection of related work on uncertainty quantification can be found here:
 https://github.com/uncertainty-toolbox/uncertainty-toolbox/blob/master/docs/paper_list.md
 """
 
-from collections.abc import Callable
 from typing import NamedTuple
 
 import torch
 
 from .base import Model
-from ..typing import FloatTensor, InductiveMode, LongTensor
+from .scoring import ScoringBatch, TargetScoringBatch, TripleScoringBatch
+from ..typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, FloatTensor, InductiveMode, LongTensor
 from ..utils import get_dropout_modules
 
 __all__ = [
@@ -104,12 +104,12 @@ class UncertainPrediction(NamedTuple):
 @torch.inference_mode()
 def predict_uncertain_helper(
     model: Model,
-    batch: LongTensor,
-    score_method: Callable[..., FloatTensor],
+    batch: ScoringBatch,
     num_samples: int,
     slice_size: int | None = None,
     *,
     mode: InductiveMode | None,
+    invert: bool | None = None,
 ) -> UncertainPrediction:
     """
     Predict with uncertainty estimates via Monte-Carlo dropout.
@@ -117,10 +117,7 @@ def predict_uncertain_helper(
     :param model:
         the model used for predicting scores
     :param batch:
-        the batch on which to predict. Its shape and content has to match what
-        the `score_method` requires.
-    :param score_method:
-        the base score method to use (from `score_{hrt,h,r,t}`)
+        the scoring request, with the *real* relation IDs, on any device
     :param num_samples: >1
         The number of samples to use. More samples lead to better estimates, but
         increase memory requirements and runtime.
@@ -129,6 +126,8 @@ def predict_uncertain_helper(
     :param mode:
         The pass mode, which is None in the transductive setting and one of "training",
         "validation", or "testing" in the inductive setting.
+    :param invert:
+        whether to score by means of the inverse triples, cf. :class:`~pykeen.models.PredictKwargs`
 
     :return:
         A tuple (score_mean, score_std) of the mean and std of the scores sampled
@@ -139,30 +138,22 @@ def predict_uncertain_helper(
         if the model does not contain dropout layers.
 
     .. warning::
-        This function sets the model to evaluation mode and all dropout layers to
-        training mode.
+        This function sets the model to evaluation mode. Dropout layers are only enabled
+        while drawing the samples.
     """
-    dropout_modules = get_dropout_modules(model)
-    if not dropout_modules:
+    if not get_dropout_modules(model):
         raise MissingDropoutError(
             "Model needs to contain at least one dropout layer to use the Monte-Carlo Dropout technique.",
         )
 
-    # Enforce evaluation mode
-    model.eval()
-
-    # set dropout layers to training mode
-    for module in dropout_modules:
-        module.train()
-
-    # draw samples
-    batch = batch.to(model.device)
-    kwargs = {}
-    if slice_size is not None:
-        kwargs["slice_size"] = slice_size
-    scores = torch.stack([score_method(batch, mode=mode, **kwargs) for _ in range(num_samples)], dim=0)
-    if model.predict_with_sigmoid:
-        scores = torch.sigmoid(scores)
+    # draw samples; note: this also applies the sigmoid, if configured
+    scores = torch.stack(
+        [
+            model._predict_batch(batch, slice_size=slice_size, mode=mode, invert=invert, mc_dropout=True)
+            for _ in range(num_samples)
+        ],
+        dim=0,
+    )
 
     # compute mean and std
     return UncertainPrediction.from_scores(scores)
@@ -192,12 +183,11 @@ def predict_hrt_uncertain(
         The score for each triple, and an uncertainty score, where larger scores
         correspond to less certain predictions.
 
-        This function delegates to :func:`predict_uncertain_helper` by using
-        :func:`~pykeen.models.Model.score_hrt` as the ``score_method``.
+        This function delegates to :func:`predict_uncertain_helper`.
 
     .. warning::
-        This function sets the model to evaluation mode and all dropout layers
-        to training mode.
+        This function sets the model to evaluation mode. Dropout layers are only enabled
+        while drawing the samples.
 
     Example Usage::
 
@@ -212,8 +202,7 @@ def predict_hrt_uncertain(
     """
     return predict_uncertain_helper(
         model=model,
-        batch=model._prepare_batch(batch=hrt_batch, index_relation=1),
-        score_method=model.score_hrt,
+        batch=TripleScoringBatch.from_batch(hrt_batch.to(model.device)),
         num_samples=num_samples,
         mode=mode,
     )
@@ -253,18 +242,17 @@ def predict_h_uncertain(
     :return: shape: (batch_size, num_entities)
         For each r-t pair, the scores for all possible heads.
 
-        This function delegates to :func:`predict_uncertain_helper` by using
-        :func:`~pykeen.models.Model.score_h` (or :func:`~pykeen.models.Model.score_h_inverse`
-        if the model uses inverse triples) as the ``score_method``.
+        This function delegates to :func:`predict_uncertain_helper`.
 
     .. warning::
-        This function sets the model to evaluation mode and all dropout layers
-        to training mode.
+        This function sets the model to evaluation mode. Dropout layers are only enabled
+        while drawing the samples.
     """
     return predict_uncertain_helper(
         model=model,
-        batch=model._prepare_batch(batch=rt_batch, index_relation=0),
-        score_method=model.score_h_inverse if model.use_inverse_triples else model.score_h,
+        batch=TargetScoringBatch.from_transposed_batch(
+            head=None, relation=rt_batch[:, 0].to(model.device), tail=rt_batch[:, 1].to(model.device), target=LABEL_HEAD
+        ),
         num_samples=num_samples,
         slice_size=slice_size,
         mode=mode,
@@ -299,17 +287,20 @@ def predict_r_uncertain(
     :return: shape: (batch_size, num_relations)
         For each h-t pair, the scores for all possible relations.
 
-        This function delegates to :func:`predict_uncertain_helper` by using
-        :func:`~pykeen.models.Model.score_r` as the ``score_method``.
+        This function delegates to :func:`predict_uncertain_helper`.
 
     .. warning::
-        This function sets the model to evaluation mode and all dropout layers
-        to training mode.
+        This function sets the model to evaluation mode. Dropout layers are only enabled
+        while drawing the samples.
     """
     return predict_uncertain_helper(
         model=model,
-        batch=ht_batch,
-        score_method=model.score_r,
+        batch=TargetScoringBatch.from_transposed_batch(
+            head=ht_batch[:, 0].to(model.device),
+            relation=torch.arange(model.num_real_relations, device=model.device),
+            tail=ht_batch[:, 1].to(model.device),
+            target=LABEL_RELATION,
+        ),
         num_samples=num_samples,
         slice_size=slice_size,
         mode=mode,
@@ -353,17 +344,17 @@ def predict_t_uncertain(
     :return: shape: (batch_size, num_entities)
         For each h-r pair, the scores for all possible tails.
 
-        This function delegates to :func:`predict_uncertain_helper` by using
-        :func:`~pykeen.models.Model.score_t` as the ``score_method``.
+        This function delegates to :func:`predict_uncertain_helper`.
 
     .. warning::
-        This function sets the model to evaluation mode and all dropout layers
-        to training mode.
+        This function sets the model to evaluation mode. Dropout layers are only enabled
+        while drawing the samples.
     """
     return predict_uncertain_helper(
         model=model,
-        batch=model._prepare_batch(batch=hr_batch, index_relation=1),
-        score_method=model.score_t,
+        batch=TargetScoringBatch.from_transposed_batch(
+            head=hr_batch[:, 0].to(model.device), relation=hr_batch[:, 1].to(model.device), tail=None, target=LABEL_TAIL
+        ),
         num_samples=num_samples,
         slice_size=slice_size,
         mode=mode,

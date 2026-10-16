@@ -1,12 +1,15 @@
 """Non-parametric baseline models."""
 
+from abc import abstractmethod
+
 import numpy as np
 import torch
 
 from .utils import get_csr_matrix, get_relation_similarity, marginal_score
 from ..base import Model
+from ..scoring import ScoringBatch, TargetScoringBatch
 from ...triples import CoreTriplesFactory
-from ...typing import FloatTensor, InductiveMode, LongTensor
+from ...typing import LABEL_HEAD, LABEL_TAIL, FloatTensor, InductiveMode, LongTensor
 
 __all__ = [
     "EvaluationOnlyModel",
@@ -42,13 +45,59 @@ class EvaluationOnlyModel(Model):
         """Non-parametric models do not implement :meth:`Model.collect_regularization_term`."""
         raise RuntimeError
 
-    def score_hrt(self, hrt_batch: LongTensor, **kwargs):
-        """Non-parametric models do not implement :meth:`Model.score_hrt`."""
-        raise RuntimeError
+    def _score(self, batch: ScoringBatch, *, mode: InductiveMode | None = None) -> FloatTensor:
+        """Score the head or tail of the given pairs; scoring triples or relations is not supported.
 
-    def score_r(self, ht_batch: LongTensor, **kwargs):
-        """Non-parametric models do not implement :meth:`Model.score_r`."""
-        raise RuntimeError
+        :param batch:
+            the scoring request
+        :param mode:
+            ignored
+
+        :raises RuntimeError:
+            if the request is neither for head nor tail prediction
+        :raises NotImplementedError:
+            if the request has more than one batch dimension
+
+        :return: shape: (batch_size, num)
+            the scores
+        """
+        if not isinstance(batch, TargetScoringBatch) or batch.target not in (LABEL_HEAD, LABEL_TAIL):
+            raise RuntimeError(f"{self.__class__.__name__} only supports head and tail prediction.")
+        if batch.batch_ndim != 1:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} only supports scoring requests with a single batch dimension, but got "
+                f"batch_shape={batch.batch_shape}"
+            )
+        pairs = batch.pairs
+        scores = self._score_head(pairs) if batch.target == LABEL_HEAD else self._score_tail(pairs)
+        # restrict to the requested candidates
+        ids = batch.target_ids
+        if ids is None:
+            return scores
+        ids = ids.to(scores.device)
+        return scores[:, ids] if ids.ndim == 1 else scores.gather(dim=1, index=ids)
+
+    @abstractmethod
+    def _score_head(self, rt_batch: LongTensor) -> FloatTensor:
+        """Score all heads for the given (relation, tail) pairs.
+
+        :param rt_batch: shape: (batch_size, 2)
+            the (relation, tail) pairs
+
+        :return: shape: (batch_size, num_entities)
+            the scores
+        """
+
+    @abstractmethod
+    def _score_tail(self, hr_batch: LongTensor) -> FloatTensor:
+        """Score all tails for the given (head, relation) pairs.
+
+        :param hr_batch: shape: (batch_size, 2)
+            the (head, relation) pairs
+
+        :return: shape: (batch_size, num_entities)
+            the scores
+        """
 
 
 class MarginalDistributionBaseline(EvaluationOnlyModel):
@@ -119,7 +168,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
         else:
             self.head_per_tail = self.tail_per_head = None
 
-    def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def _score_tail(self, hr_batch: LongTensor) -> FloatTensor:
         return marginal_score(
             entity_relation_batch=hr_batch,
             per_entity=self.tail_per_head,
@@ -127,7 +176,7 @@ class MarginalDistributionBaseline(EvaluationOnlyModel):
             num_entities=self.num_entities,
         )
 
-    def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def _score_head(self, rt_batch: LongTensor) -> FloatTensor:
         return marginal_score(
             entity_relation_batch=rt_batch.flip(1),
             per_entity=self.head_per_tail,
@@ -175,13 +224,13 @@ class SoftInverseTripleBaseline(EvaluationOnlyModel):
             for col_indices in (h, t)
         )
 
-    def score_t(self, hr_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def _score_tail(self, hr_batch: LongTensor) -> FloatTensor:
         r = hr_batch[:, 1].cpu().numpy()
         scores = self.sim[r, :] @ self.rel_to_tail + self.sim_inv[r, :] @ self.rel_to_head
         scores = np.asarray(scores.todense())
         return torch.from_numpy(scores)
 
-    def score_h(self, rt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
+    def _score_head(self, rt_batch: LongTensor) -> FloatTensor:
         r = rt_batch[:, 0].cpu().numpy()
         scores = self.sim[r, :] @ self.rel_to_head + self.sim_inv[r, :] @ self.rel_to_tail
         scores = np.asarray(scores.todense())

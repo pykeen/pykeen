@@ -90,9 +90,9 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
         .. note::
 
             the repeated batch is created via :func:`pykeen.utils.extend_batch` and passed to
-            :meth:`pykeen.models.base.Model.score_hrt`.
+            :meth:`pykeen.models.base.Model.predict_hrt`.
 
-        :param score_func: the optimized score function, e.g., :meth:`pykeen.models.base.Model.score_t`
+        :param score_func: the optimized score function, e.g., :meth:`pykeen.models.base.Model.predict_t`
         :param dim: the dimension
         """
         batch = torch.tensor([[0, 0], [1, 0]], dtype=torch.long, device=self.device)
@@ -102,17 +102,17 @@ class TestBaseModelScoringFunctions(unittest.TestCase):
             dim=dim,
         )
         optimized_output = score_func(batch).flatten()
-        extended_output = self.model.score_hrt(hrt_batch=hrt_batch).flatten()
+        extended_output = self.model.predict_hrt(hrt_batch).flatten()
         assert torch.allclose(optimized_output, extended_output)
 
     def test_alignment_of_score_t_fall_back(self) -> None:
-        """Test if ``BaseModule.score_t`` aligns with ``BaseModule.score_hrt``."""
-        self._test(score_func=self.model.score_t, dim=COLUMN_TAIL)
+        """Test if ``Model.predict_t`` aligns with ``Model.predict_hrt``."""
+        self._test(score_func=self.model.predict_t, dim=COLUMN_TAIL)
 
     def test_alignment_of_score_h_fall_back(self) -> None:
-        """Test if ``BaseModule.score_h`` aligns with ``BaseModule.score_hrt``."""
-        self._test(score_func=self.model.score_h, dim=COLUMN_HEAD)
+        """Test if ``Model.predict_h`` aligns with ``Model.predict_hrt``."""
+        self._test(score_func=self.model.predict_h, dim=COLUMN_HEAD)
 
     def test_alignment_of_score_r_fall_back(self) -> None:
-        """Test if ``BaseModule.score_r`` aligns with ``BaseModule.score_hrt``."""
-        self._test(score_func=self.model.score_r, dim=COLUMN_RELATION)
+        """Test if ``Model.predict_r`` aligns with ``Model.predict_hrt``."""
+        self._test(score_func=self.model.predict_r, dim=COLUMN_RELATION)
