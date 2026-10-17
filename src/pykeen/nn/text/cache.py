@@ -60,7 +60,7 @@ PYOBO_PREFIXES_WARNED: set[str] = set()
 class PyOBOTextCache(TextCache):
     """A cache that looks up labels of biomedical entities based on their CURIEs."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         """Instantiate the PyOBO cache, ensuring PyOBO is installed."""
         try:
             import pyobo
@@ -68,7 +68,6 @@ class PyOBOTextCache(TextCache):
             raise ImportError(f"Can not use {self.__class__.__name__} because pyobo is not installed.") from None
         else:
             self._get_name = pyobo.get_name
-        super().__init__(*args, **kwargs)
 
     def get_texts(self, identifiers: Sequence[str]) -> Sequence[str | None]:
         """Get text for the given CURIEs.
