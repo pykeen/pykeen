@@ -245,8 +245,6 @@ class PipelineResult(Result):
     @property
     def title(self) -> str | None:
         """The title of the experiment."""
-        if self.metadata is None:
-            return None
         return self.metadata.get("title")
 
     def plot_losses(self, **kwargs):
@@ -949,7 +947,6 @@ def _build_model_helper(
     model_kwargs,
     loss,
     loss_kwargs,
-    _device,
     _random_seed,
     regularizer,
     regularizer_kwargs,
@@ -979,7 +976,7 @@ def _build_model_helper(
             logger.warning(
                 f"Cannot specify loss in kwargs ({loss}) and model_kwargs ({_loss}). removing from model_kwargs.",
             )
-    if loss is None and not isinstance(model, Model):
+    if loss is None:
         # When no loss is requested, fall back to the *model's* default loss rather than the loss
         # resolver's default (:class:`~pykeen.losses.MarginRankingLoss`). This is what
         # :meth:`~pykeen.models.Model.__init__` does when it receives ``loss=None``, and what
@@ -990,9 +987,8 @@ def _build_model_helper(
         loss_kwargs = {**(model_cls.loss_default_kwargs or {}), **(loss_kwargs or {})}
     model_kwargs["loss"] = loss_resolver.make(loss, loss_kwargs)
 
-    if not isinstance(model, Model):
-        for param_name, param_default in _get_model_defaults(model).items():
-            model_kwargs.setdefault(param_name, param_default)
+    for param_name, param_default in _get_model_defaults(model).items():
+        model_kwargs.setdefault(param_name, param_default)
 
     return (
         model_resolver.make(
@@ -1096,8 +1092,6 @@ def _handle_dataset(
             }
         )
     else:
-        if dataset_instance is None:
-            raise ValueError("dataset_instance must not be None.")
         _result_tracker.log_params(
             {"dataset": dataset_instance.get_normalized_name(), "dataset_kwargs": dataset_kwargs}
         )
@@ -1164,7 +1158,6 @@ def _handle_model(
             loss_kwargs=loss_kwargs,
             regularizer=regularizer,
             regularizer_kwargs=regularizer_kwargs,
-            _device=_device,
             _random_seed=_random_seed,
             training_triples_factory=training,
         )
