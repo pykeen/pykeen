@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import click
 
-from .. import model_resolver
 from ...constants import AGGREGATIONS
 from ...evaluation import evaluator_resolver
 from ...losses import loss_resolver
@@ -23,13 +22,6 @@ def _make_callback(f):
     return _callback
 
 
-def _make_instantiation_callback(f):
-    def _callback(_, __, value):
-        return f(value)()
-
-    return _callback
-
-
 CLI_OPTIONS = {
     "embedding_dim": click.option(
         "--embedding-dim",
@@ -38,19 +30,7 @@ CLI_OPTIONS = {
         show_default=True,
         help="Embedding dimensions for entities.",
     ),
-    "epsilon": click.option(
-        "--epsilon",
-        type=float,
-        default=0.005,
-        show_default=True,
-    ),
     "loss": loss_resolver.get_option("--loss"),
-    "regularization_factor": click.option(  # ComplEx
-        "--regularization-factor",
-        type=float,
-        default=0.1,
-        show_default=True,
-    ),
     "scoring_fct_norm": click.option(  # SE, TransD, TransE, TransH, TransR, UM
         "--scoring-fct-norm",
         type=float,
@@ -58,22 +38,10 @@ CLI_OPTIONS = {
         show_default=True,
         help="The p-norm to be used",
     ),
-    "soft_weight_constraint": click.option(
-        "--soft-weight-constraint",
-        type=float,
-        default=0.05,
-        show_default=True,
-    ),
     "relation_dim": click.option(  # TransD, TransR
         "--relation-dim",
         type=int,
         default=50,
-        show_default=True,
-    ),
-    "neg_label": click.option(  # ComplEx
-        "--neg-label",
-        type=int,
-        default=-1,
         show_default=True,
     ),
     "input_dropout": click.option(
@@ -82,7 +50,6 @@ CLI_OPTIONS = {
         default=0.2,
         show_default=True,
     ),
-    "inner_model": model_resolver.get_option("--inner-model", default="distmult"),
     "clamp_score": click.option(
         "--clamp-score",
         type=float,
