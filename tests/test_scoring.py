@@ -1,10 +1,7 @@
 """Contract tests for the model scoring API.
 
-These tests pin the shape and value semantics shared by
-:meth:`~pykeen.models.Model.score_hrt`, :meth:`~pykeen.models.Model.score_h`,
-:meth:`~pykeen.models.Model.score_r`, :meth:`~pykeen.models.Model.score_t`, and the
-:meth:`~pykeen.models.Model.score` dispatcher, in particular the ``heads`` /
-``relations`` / ``tails`` restriction, which may be given either shared across the batch
+These tests pin the shape and value semantics of scoring requests passed to
+:meth:`~pykeen.models.Model.forward`, in particular the target IDs, which may be given either shared across the batch
 (shape: ``(num,)``) or per batch element (shape: ``(batch_size, num)``). The latter is
 what grouped sLCWA training relies on, cf.
 :class:`~pykeen.triples.instances.GroupedSLCWABatch`.
@@ -16,10 +13,10 @@ import pytest
 import torch
 
 from pykeen.constants import TARGET_TO_KEYS
-from pykeen.models import UM, DistMult, ERModel, OptionalIndices, TargetScoringBatch, TripleScoringBatch
+from pykeen.models import UM, DistMult, ERModel, Model, OptionalIndices, TargetScoringBatch, TripleScoringBatch
 from pykeen.models.mocks import FixedModel
 from pykeen.triples import KGInfo
-from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, LongTensor, Target
+from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, FloatTensor, LongTensor, Target
 
 NUM_ENTITIES = 7
 NUM_RELATIONS = 5
@@ -70,16 +67,26 @@ def _ids(target: Target, per_batch: bool) -> LongTensor:
     return torch.randint(num, size=size, generator=generator)
 
 
+def _score_hrt(model: Model, hrt_batch: LongTensor, **kwargs) -> FloatTensor:
+    """Score triples."""
+    return model(TripleScoringBatch.from_batch(hrt_batch), **kwargs)
+
+
+def _score(model: Model, hrt_batch: LongTensor, target: Target, ids: LongTensor | None = None, **kwargs) -> FloatTensor:
+    """Score the target position against all or the given candidates."""
+    return model(TargetScoringBatch.from_batch(hrt_batch, target=target, target_ids=ids), **kwargs)
+
+
 def test_score_hrt(model: ERModel, hrt_batch: LongTensor) -> None:
-    """Test that ``score_hrt`` returns one score per triple."""
-    assert model.score_hrt(hrt_batch).shape == (BATCH_SIZE, 1)
+    """Test that scoring triples returns one score per triple."""
+    assert _score_hrt(model, hrt_batch).shape == (BATCH_SIZE,)
 
 
 @pytest.mark.parametrize("target", list(TARGETS))
 def test_score_target_all(model: ERModel, hrt_batch: LongTensor, target: Target) -> None:
     """Test that unrestricted 1:n scoring returns scores for all candidates."""
     num, _ = TARGETS[target]
-    assert model.score(hrt_batch, target=target).shape == (BATCH_SIZE, num)
+    assert _score(model, hrt_batch, target).shape == (BATCH_SIZE, num)
 
 
 @pytest.mark.parametrize("target", list(TARGETS))
@@ -87,7 +94,7 @@ def test_score_target_all(model: ERModel, hrt_batch: LongTensor, target: Target)
 def test_score_target_restricted(model: ERModel, hrt_batch: LongTensor, target: Target, per_batch: bool) -> None:
     """Test that restricted 1:n scoring returns scores for the requested candidates only."""
     ids = _ids(target=target, per_batch=per_batch)
-    assert model.score(hrt_batch, target=target, ids=ids).shape == (BATCH_SIZE, NUM_IDS)
+    assert _score(model, hrt_batch, target, ids).shape == (BATCH_SIZE, NUM_IDS)
 
 
 @pytest.mark.parametrize("target", list(TARGETS))
@@ -97,8 +104,8 @@ def test_restriction_matches_full_scoring(
 ) -> None:
     """Test that restricting the candidates selects a sub-set of the unrestricted scores."""
     ids = _ids(target=target, per_batch=per_batch)
-    full = model.score(hrt_batch, target=target)
-    restricted = model.score(hrt_batch, target=target, ids=ids)
+    full = _score(model, hrt_batch, target)
+    restricted = _score(model, hrt_batch, target, ids)
     expected = full.gather(dim=-1, index=ids.expand(BATCH_SIZE, NUM_IDS))
     torch.testing.assert_close(restricted, expected)
 
@@ -107,12 +114,12 @@ def test_restriction_matches_full_scoring(
 def test_restriction_matches_score_hrt(model: ERModel, hrt_batch: LongTensor, target: Target) -> None:
     """Test that per-batch restricted 1:n scoring agrees with scoring the explicit triples."""
     ids = _ids(target=target, per_batch=True)
-    restricted = model.score(hrt_batch, target=target, ids=ids)
+    restricted = _score(model, hrt_batch, target, ids)
 
     # build the explicit triples corresponding to the restricted scoring
     triples = hrt_batch.unsqueeze(dim=1).repeat(1, NUM_IDS, 1)
     triples[..., list(TARGETS).index(target)] = ids
-    expected = model.score_hrt(triples.view(-1, 3)).view(BATCH_SIZE, NUM_IDS)
+    expected = _score_hrt(model, triples.view(-1, 3)).view(BATCH_SIZE, NUM_IDS)
 
     torch.testing.assert_close(restricted, expected)
 
@@ -122,32 +129,33 @@ def test_restriction_matches_score_hrt(model: ERModel, hrt_batch: LongTensor, ta
 def test_slicing(model: ERModel, hrt_batch: LongTensor, target: Target, ids_kind: str) -> None:
     """Test that slicing does not change the result."""
     ids = None if ids_kind == "none" else _ids(target=target, per_batch=ids_kind == "per_batch")
-    unsliced = model.score(hrt_batch, target=target, ids=ids)
-    sliced = model.score(hrt_batch, target=target, ids=ids, slice_size=2)
+    unsliced = _score(model, hrt_batch, target, ids)
+    sliced = _score(model, hrt_batch, target, ids, slice_size=2)
     torch.testing.assert_close(sliced, unsliced)
 
 
 @pytest.mark.parametrize("target", list(TARGETS))
 @pytest.mark.parametrize("per_batch", [False, True])
-def test_score_dispatch(model: ERModel, hrt_batch: LongTensor, target: Target, per_batch: bool) -> None:
-    """Test that the ``score`` dispatcher agrees with the target-specific method."""
+def test_predict_dispatch(model: ERModel, hrt_batch: LongTensor, target: Target, per_batch: bool) -> None:
+    """Test that ``predict`` agrees with the target-specific methods and the scoring request."""
     _, ids_name = TARGETS[target]
     ids = _ids(target=target, per_batch=per_batch)
-    method = getattr(model, f"score_{target[0]}")
+    method = getattr(model, f"predict_{target[0]}")
 
-    expected = method(hrt_batch[:, TARGET_TO_KEYS[target]], **{ids_name: ids})
-    torch.testing.assert_close(model.score(hrt_batch, target=target, ids=ids), expected)
+    expected = _score(model, hrt_batch, target, ids)
+    torch.testing.assert_close(method(hrt_batch[:, TARGET_TO_KEYS[target]], **{ids_name: ids}), expected)
+    torch.testing.assert_close(model.predict(hrt_batch, target=target, ids=ids), expected)
     # ... and that ``full_batch=False`` skips the column selection
     torch.testing.assert_close(
-        model.score(hrt_batch[:, TARGET_TO_KEYS[target]], target=target, ids=ids, full_batch=False), expected
+        model.predict(hrt_batch[:, TARGET_TO_KEYS[target]], target=target, ids=ids, full_batch=False), expected
     )
 
 
-def test_score_invalid_target(model: ERModel, hrt_batch: LongTensor) -> None:
+def test_predict_invalid_target(model: ERModel, hrt_batch: LongTensor) -> None:
     """Test that an invalid target is rejected."""
     with pytest.raises(ValueError, match="nope"):
         # Deliberately invalid target, to test the error path.
-        model.score(hrt_batch, target="nope")  # type: ignore[arg-type]
+        model.predict(hrt_batch, target="nope")  # type: ignore[arg-type]
 
 
 class TestScoringBatch:
@@ -255,31 +263,28 @@ class TestScoringBatch:
         """Test that slicing a batch without a target is rejected."""
         batch = TripleScoringBatch.from_batch(hrt_batch)
         with pytest.raises(ValueError, match="requires a target"):
-            model._score(batch, slice_size=2)
+            model(batch, slice_size=2)
 
     def test_no_target_scoring(self, model: ERModel, hrt_batch: LongTensor) -> None:
         """Test that scoring without a target picks the triples out of the 1:n scores."""
         batch = TripleScoringBatch.from_batch(hrt_batch)
-        # note: ``score_hrt`` itself delegates here, so it cannot serve as the reference
-        expected = model.score(hrt_batch, target=LABEL_TAIL).gather(dim=-1, index=hrt_batch[:, 2:]).squeeze(dim=-1)
-        torch.testing.assert_close(model._score(batch), expected)
+        expected = _score(model, hrt_batch, LABEL_TAIL).gather(dim=-1, index=hrt_batch[:, 2:]).squeeze(dim=-1)
+        torch.testing.assert_close(model(batch), expected)
 
     def test_no_target_broadcasting(self, model: ERModel, hrt_batch: LongTensor) -> None:
         """Test that scoring without a target broadcasts a block of triples."""
         tails = _ids(target=LABEL_TAIL, per_batch=True)
         batch = TripleScoringBatch.from_transposed_batch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=tails)
         assert batch.batch_shape == (BATCH_SIZE, NUM_IDS)
-        torch.testing.assert_close(
-            model._score(batch), model.score_t(hrt_batch[:, TARGET_TO_KEYS[LABEL_TAIL]], tails=tails)
-        )
+        torch.testing.assert_close(model(batch), model.predict_t(hrt_batch[:, TARGET_TO_KEYS[LABEL_TAIL]], tails=tails))
 
 
-class TestDefaultScore:
-    """Tests for the default :meth:`~pykeen.models.Model._score`, which dispatches to the ``score_*`` methods."""
+class TestFixedModel:
+    """Tests for the scoring requests handled by the :class:`~pykeen.models.mocks.FixedModel`."""
 
     @pytest.fixture
     def model(self) -> FixedModel:
-        """Return a model which does not override ``_score``."""
+        """Return the fixed model."""
         return FixedModel(triples_factory=KGInfo(num_entities=NUM_ENTITIES, num_relations=NUM_RELATIONS))
 
     @staticmethod
@@ -290,7 +295,7 @@ class TestDefaultScore:
     def test_triples(self, model: FixedModel, hrt_batch: LongTensor) -> None:
         """Test scoring triples."""
         torch.testing.assert_close(
-            model._score(TripleScoringBatch.from_batch(hrt_batch)), self._expected(*hrt_batch.unbind(dim=-1))
+            model(TripleScoringBatch.from_batch(hrt_batch)), self._expected(*hrt_batch.unbind(dim=-1))
         )
 
     @pytest.mark.parametrize("target", TARGETS)
@@ -310,20 +315,32 @@ class TestDefaultScore:
                 r = ids
             case "tail":
                 t = ids
-        torch.testing.assert_close(model._score(batch), self._expected(h, r, t).expand(BATCH_SIZE, NUM_IDS))
+        torch.testing.assert_close(model(batch), self._expected(h, r, t).expand(BATCH_SIZE, NUM_IDS))
+
+    @pytest.mark.parametrize("target", TARGETS)
+    def test_target_all(self, model: FixedModel, hrt_batch: LongTensor, target: Target) -> None:
+        """Test scoring a target against all candidates."""
+        num, _ = TARGETS[target]
+        all_ids = torch.arange(num)
+        torch.testing.assert_close(
+            _score(model, hrt_batch, target), _score(model, hrt_batch, target, all_ids.expand(BATCH_SIZE, num))
+        )
 
     def test_broadcast(self, model: FixedModel, hrt_batch: LongTensor) -> None:
         """Test that a broadcast index tensor is expanded to the batch shape."""
         batch = TargetScoringBatch.from_transposed_batch(
             head=hrt_batch[:1, 0], relation=hrt_batch[:, 1], tail=None, target=LABEL_TAIL
         )
-        expected = model.score_t(torch.stack([hrt_batch[:1, 0].expand(BATCH_SIZE), hrt_batch[:, 1]], dim=-1))
-        torch.testing.assert_close(model._score(batch), expected)
+        expected = _score(
+            model,
+            torch.stack([hrt_batch[:1, 0].expand(BATCH_SIZE), hrt_batch[:, 1], hrt_batch[:, 2]], dim=-1),
+            LABEL_TAIL,
+        )
+        torch.testing.assert_close(model(batch), expected)
 
     def test_multiple_batch_dims(self, model: FixedModel, hrt_batch: LongTensor) -> None:
-        """Test that requests with multiple batch dimensions are rejected."""
-        batch = TripleScoringBatch.from_transposed_batch(
-            head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=_ids(target=LABEL_TAIL, per_batch=True)
-        )
-        with pytest.raises(NotImplementedError, match="single batch dimension"):
-            model._score(batch)
+        """Test that requests with multiple batch dimensions are supported."""
+        tails = _ids(target=LABEL_TAIL, per_batch=True)
+        batch = TripleScoringBatch.from_transposed_batch(head=hrt_batch[:, 0], relation=hrt_batch[:, 1], tail=tails)
+        expected = self._expected(hrt_batch[:, 0:1], hrt_batch[:, 1:2], tails)
+        torch.testing.assert_close(model(batch), expected)

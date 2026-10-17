@@ -14,4 +14,4 @@ model: ERModel[FloatTensor, FloatTensor, FloatTensor] = ERModel(
     relation_representations_kwargs={"embedding_dim": 3, "dropout": 0.1},
 )
 batch = torch.as_tensor(data=[[0, 1, 0]]).repeat(10, 1)
-scores = model.score_hrt(batch)
+scores = model.predict_hrt(batch)

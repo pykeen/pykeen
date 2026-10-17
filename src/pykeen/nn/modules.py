@@ -2224,8 +2224,8 @@ class NTNInteraction(
     .. note::
 
         We split the original $k \times 2d$-dimensional $\mathbf{R}_2$ matrix into two parts of shape $k \times d$ to
-        support more efficient 1:n scoring, e.g., in the :meth:`~pykeen.models.Model.score_h` or
-        :meth:`~pykeen.models.Model.score_t` setting.
+        support more efficient 1:n scoring, e.g., in the :meth:`~pykeen.models.Model.predict_h` or
+        :meth:`~pykeen.models.Model.predict_t` setting.
 
     ---
     citation:

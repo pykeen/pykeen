@@ -245,10 +245,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
         drop_last: bool,
         **kwargs: Any,
     ) -> DataLoader[BatchCWABatch]:
-        mapped_triples = triples_factory._add_inverse_triples_if_necessary(
-            mapped_triples=triples_factory.mapped_triples,
-            create_inverse_triples=self.model.use_inverse_triples,
-        )
+        mapped_triples = self.model.prepare_training_triples(triples_factory.mapped_triples)
         dataset = BatchCWADataset(mapped_triples=mapped_triples)
         collate_fn = BatchCWACollator(
             mapped_triples=mapped_triples,
@@ -301,7 +298,7 @@ class BatchCWATrainingLoop(TrainingLoop[BatchCWABatch]):
 
         # calculate scores for all combinations, shape: (num_heads, num_relations, num_tails)
         device = self.model.device
-        scores: FloatTensor = self.model(
+        scores: FloatTensor = self.model._score_grid(
             h_indices=batch["heads"].to(device=device).view(-1, 1, 1),
             r_indices=batch["relations"].to(device=device).view(1, -1, 1),
             t_indices=batch["tails"].to(device=device).view(1, 1, -1),

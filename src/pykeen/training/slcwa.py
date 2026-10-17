@@ -11,6 +11,7 @@ from .training_loop import TrainingLoop
 from ..constants import COLUMN_LABELS
 from ..losses import Loss
 from ..models.base import Model
+from ..models.scoring import TargetScoringBatch, TripleScoringBatch
 from ..sampling import NegativeSampler, negative_sampler_resolver
 from ..triples import CoreTriplesFactory
 from ..triples.instances import (
@@ -53,10 +54,10 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
         :param negative_sampler_kwargs: Keyword arguments to pass to the negative sampler class on instantiation
             for every positive one
         :param grouped: whether to keep negatives grouped by corrupted position and score each group with a single
-            :meth:`~pykeen.models.Model.score_h` / :meth:`~pykeen.models.Model.score_r` /
-            :meth:`~pykeen.models.Model.score_t` call, instead of flattening them to independent triples scored via
-            :meth:`~pykeen.models.Model.score_hrt`. This can substantially speed up training, especially for models
-            with expensive interaction functions or encoders (e.g., ConvE, NodePiece, message passing models).
+            :class:`~pykeen.models.scoring.TargetScoringBatch`, instead of flattening them to independent triples scored
+            via a :class:`~pykeen.models.scoring.TripleScoringBatch`. This can substantially speed up training,
+            especially for models with expensive interaction functions or encoders (e.g., ConvE, NodePiece, message
+            passing models).
 
             This is opt-in and defaults to `False`, because grouping changes the per-target corruption split (cf.
             :class:`~pykeen.sampling.BasicNegativeSampler`), and hence the training signal, and because models with
@@ -105,7 +106,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
         return DataLoader(
             dataset=cls.from_triples_factory(
                 triples_factory,
-                create_inverse_triples=self.model.use_inverse_triples,
+                mapped_triples=self.model.prepare_training_triples(triples_factory.mapped_triples),
+                num_relations=self.model.num_relations,
                 batch_size=batch_size,
                 shuffle=kwargs.pop("shuffle", True),
                 drop_last=drop_last,
@@ -179,8 +181,8 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
         negative_batch = negative_batch.to(model.device)
 
         # Compute negative and positive scores
-        positive_scores = model.score_hrt(positive_batch, mode=mode)
-        negative_scores = model.score_hrt(negative_batch, mode=mode).view(*negative_score_shape)
+        positive_scores = model(TripleScoringBatch.from_batch(positive_batch), mode=mode).unsqueeze(dim=-1)
+        negative_scores = model(TripleScoringBatch.from_batch(negative_batch), mode=mode).view(*negative_score_shape)
 
         return (
             loss.process_slcwa_scores(
@@ -210,7 +212,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
 
         :param model: the model
         :param loss: the loss
-        :param mode: the pass mode, cf. :meth:`~pykeen.models.Model.score_hrt`
+        :param mode: the pass mode, cf. :meth:`~pykeen.models.Model.forward`
         :param batch: the batch of grouped sLCWA training instances
         :param start: the start index of the sub-batch
         :param stop: the stop index of the sub-batch
@@ -233,7 +235,9 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
             if target not in batch["corruptions"]:
                 continue
             replacements = batch["corruptions"][target][start:stop].to(device=model.device)
-            negative_scores_per_target[target] = model.score(positive_batch, target=target, ids=replacements, mode=mode)
+            negative_scores_per_target[target] = model(
+                TargetScoringBatch.from_batch(positive_batch, target=target, target_ids=replacements), mode=mode
+            )
             if masks is not None:
                 mask_per_target[target] = masks[target][start:stop].to(device=model.device)
             if neg_weights is not None:
@@ -258,7 +262,7 @@ class SLCWATrainingLoop(TrainingLoop[SLCWABatch | GroupedSLCWABatch]):
                 neg_weights = neg_weights[positive_filter]
 
         # Compute positive scores
-        positive_scores = model.score_hrt(positive_batch, mode=mode)
+        positive_scores = model(TripleScoringBatch.from_batch(positive_batch), mode=mode).unsqueeze(dim=-1)
 
         return (
             loss.process_slcwa_scores(

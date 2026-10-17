@@ -9,8 +9,9 @@ from typing import Any, ClassVar
 import torch
 
 from .base import Model
+from .scoring import ScoringBatch, TargetScoringBatch, TripleScoringBatch
 from ..triples.triples_factory import KGInfo
-from ..typing import FloatTensor, InductiveMode, LongTensor
+from ..typing import LABEL_RELATION, FloatTensor, InductiveMode
 
 __all__ = [
     "FixedModel",
@@ -72,20 +73,21 @@ class FixedModel(Model):
         """Generate fake scores."""
         return (h * (self.num_entities * self.num_relations) + r * self.num_entities + t).float().requires_grad_(True)
 
-    def score_hrt(self, hrt_batch: LongTensor, **kwargs) -> FloatTensor:  # noqa: D102
-        return self._generate_fake_scores(*hrt_batch.t()).unsqueeze(dim=-1)
-
-    def score_t(self, hr_batch: LongTensor, tails: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
-        if tails is None:
-            tails = torch.arange(self.num_entities, device=hr_batch.device).unsqueeze(dim=0)
-        return self._generate_fake_scores(h=hr_batch[:, 0:1], r=hr_batch[:, 1:2], t=tails)
-
-    def score_r(self, ht_batch: LongTensor, relations: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
-        if relations is None:
-            relations = torch.arange(self.num_relations, device=ht_batch.device).unsqueeze(dim=0)
-        return self._generate_fake_scores(h=ht_batch[:, 0:1], r=relations, t=ht_batch[:, 1:2])
-
-    def score_h(self, rt_batch: LongTensor, heads: LongTensor | None = None, **kwargs) -> FloatTensor:  # noqa: D102
-        if heads is None:
-            heads = torch.arange(self.num_entities, device=rt_batch.device).unsqueeze(dim=0)
-        return self._generate_fake_scores(h=heads, r=rt_batch[:, 0:1], t=rt_batch[:, 1:2])
+    def _score(self, batch: ScoringBatch, *, mode: InductiveMode | None = None) -> FloatTensor:
+        match batch:
+            case TripleScoringBatch():
+                return self._generate_fake_scores(*batch.indices)
+            case TargetScoringBatch():
+                h, r, t = batch.lookup_indices
+                target_ids = batch.target_ids
+                if target_ids is None:
+                    num = self.num_relations if batch.target == LABEL_RELATION else self.num_entities
+                    target_ids = torch.arange(num, device=batch.device)
+                match batch.target:
+                    case "head":
+                        h = target_ids
+                    case "relation":
+                        r = target_ids
+                    case "tail":
+                        t = target_ids
+                return self._generate_fake_scores(h, r, t)

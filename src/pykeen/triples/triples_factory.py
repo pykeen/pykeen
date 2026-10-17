@@ -660,31 +660,6 @@ class CoreTriplesFactory(KGInfo):
             raise ValueError(f"Invalid {relation=}; must be in [0, {self.real_num_relations})")
         return self.relation_inverter.get_inverse_id(relation_id=self.relation_inverter.to_internal(relation))
 
-    def _add_inverse_triples_if_necessary(
-        self, mapped_triples: MappedTriples, create_inverse_triples: bool
-    ) -> MappedTriples:
-        """Add inverse triples if they shall be created.
-
-        :param mapped_triples: shape: (n, 3)
-            the ID-based triples, using real relation IDs.
-        :param create_inverse_triples:
-            whether to add inverse triples
-
-        :returns: shape: (n, 3) or (2n, 3)
-            the triples, with internal relation IDs and inverse triples, if they are to be created;
-            otherwise the input triples.
-        """
-        if not create_inverse_triples:
-            return mapped_triples
-
-        logger.info("Creating inverse triples.")
-        return torch.cat(
-            [
-                self.relation_inverter.to_internal_batch(batch=mapped_triples),
-                self.relation_inverter.to_internal_batch(batch=mapped_triples, invert=True).flip(1),
-            ]
-        )
-
     def get_most_frequent_relations(self, n: int | float) -> set[int]:
         """Get the IDs of the n most frequent relations.
 

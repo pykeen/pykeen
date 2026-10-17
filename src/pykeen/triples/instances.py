@@ -250,12 +250,21 @@ class BaseBatchedSLCWAInstances(
         return num_batches
 
     @classmethod
-    def from_triples_factory(cls, tf: CoreTriplesFactory, create_inverse_triples: bool = False, **kwargs) -> Self:
+    def from_triples_factory(
+        cls,
+        tf: CoreTriplesFactory,
+        mapped_triples: MappedTriples | None = None,
+        num_relations: int | None = None,
+        **kwargs,
+    ) -> Self:
         """Create sLCWA instances for triples factory.
 
         :param tf: The triples factory.
-        :param create_inverse_triples:
-            Whether to add inverse triples.
+        :param mapped_triples:
+            The triples to use instead of the triples factory's, e.g., as prepared by
+            :meth:`~pykeen.models.Model.prepare_training_triples`.
+        :param num_relations:
+            The number of relations to use instead of the triples factory's; has to match the ``mapped_triples``.
         :param kwargs: Additional keyword-based parameters passed to :meth:`__init__`
 
         :returns: The instances.
@@ -270,11 +279,9 @@ class BaseBatchedSLCWAInstances(
             raise AssertionError("sampler is not handled in sLCWA instances")
 
         return cls(
-            mapped_triples=tf._add_inverse_triples_if_necessary(
-                mapped_triples=tf.mapped_triples, create_inverse_triples=create_inverse_triples
-            ),
+            mapped_triples=tf.mapped_triples if mapped_triples is None else mapped_triples,
             num_entities=tf.num_entities,
-            num_relations=2 * tf.real_num_relations if create_inverse_triples else tf.real_num_relations,
+            num_relations=tf.real_num_relations if num_relations is None else num_relations,
             **kwargs,
         )
 
@@ -542,7 +549,8 @@ class LCWAInstances(Instances[LCWABatch]):
         cls,
         tf: CoreTriplesFactory,
         *,
-        create_inverse_triples: bool = False,
+        mapped_triples: MappedTriples | None = None,
+        num_relations: int | None = None,
         target: TargetHint = None,
         loss_weighter: HintOrType[LossWeighter] = None,
         loss_weighter_kwargs: OptionalKwargs = None,
@@ -550,8 +558,11 @@ class LCWAInstances(Instances[LCWABatch]):
         """Create LCWA instances for triples factory.
 
         :param tf: The triples factory.
-        :param create_inverse_triples:
-            Whether to add inverse triples.
+        :param mapped_triples:
+            The triples to use instead of the triples factory's, e.g., as prepared by
+            :meth:`~pykeen.models.Model.prepare_training_triples`.
+        :param num_relations:
+            The number of relations to use instead of the triples factory's; has to match the ``mapped_triples``.
         :param target: The column to predict
         :param loss_weighter: The method to determine sample weights.
         :param loss_weighter_kwargs: Parameters for the method to determine sample weights.
@@ -559,12 +570,9 @@ class LCWAInstances(Instances[LCWABatch]):
         :returns: The instances.
         """
         return cls.from_triples(
-            mapped_triples=tf._add_inverse_triples_if_necessary(
-                mapped_triples=tf.mapped_triples,
-                create_inverse_triples=create_inverse_triples,
-            ),
+            mapped_triples=tf.mapped_triples if mapped_triples is None else mapped_triples,
             num_entities=tf.num_entities,
-            num_relations=2 * tf.real_num_relations if create_inverse_triples else tf.real_num_relations,
+            num_relations=tf.real_num_relations if num_relations is None else num_relations,
             target=target,
             loss_weighter=loss_weighter,
             loss_weighter_kwargs=loss_weighter_kwargs,

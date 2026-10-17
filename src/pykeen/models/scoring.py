@@ -1,18 +1,18 @@
 r"""A unified representation of scoring requests.
 
-The scoring methods of :class:`~pykeen.models.Model` differ only in *which* of the three
+The prediction methods of :class:`~pykeen.models.Model` differ only in *which* of the three
 positions of a triple is scored against many candidates:
-:meth:`~pykeen.models.Model.score_t` scores $(h, r, \*)$,
-:meth:`~pykeen.models.Model.score_h` scores $(\*, r, t)$, and
-:meth:`~pykeen.models.Model.score_r` scores $(h, \*, t)$. :class:`TargetScoringBatch`
+:meth:`~pykeen.models.Model.predict_t` scores $(h, r, \*)$,
+:meth:`~pykeen.models.Model.predict_h` scores $(\*, r, t)$, and
+:meth:`~pykeen.models.Model.predict_r` scores $(h, \*, t)$. :class:`TargetScoringBatch`
 captures that commonality: it holds an index tensor for each position, plus the `target`
 naming the position which is scored against many candidates. Its sibling
 :class:`TripleScoringBatch` covers the remaining case, where all three positions are
 given.
 
-This lets :class:`~pykeen.models.ERModel` implement the three ``1:n`` scoring methods
-once, cf. :meth:`~pykeen.models.ERModel._score`, instead of maintaining three
-near-identical copies of the same broadcasting, slicing, and repetition logic.
+This lets :class:`~pykeen.models.ERModel` implement all scoring variants
+once, cf. :meth:`~pykeen.models.ERModel._score`, instead of maintaining several
+near-identical copies of the same broadcasting and repetition logic.
 
 Both kinds of requests can also be translated between relation ID spaces, cf.
 :class:`~pykeen.inverse.RelationInverter`: :meth:`TargetScoringBatch.to_internal` maps
@@ -27,7 +27,7 @@ from typing import Generic, NamedTuple, Self, TypeAlias, TypeVar, overload
 
 import torch
 
-from ..constants import COLUMN_LABELS, TARGET_TO_INDEX
+from ..constants import COLUMN_LABELS, TARGET_TO_INDEX, TARGET_TO_KEYS
 from ..inverse import RelationInverter
 from ..typing import INVERSE_TARGET, LongTensor, Target
 from ..utils import broadcast_index_shapes, pad_trailing_dims
@@ -81,10 +81,10 @@ class OptionalIndices(NamedTuple):
         """Return the device of the index tensors."""
         return next(index.device for index in self if index is not None)
 
-    def with_target_ids(self, ids: LongTensor, target: Target) -> Self:
+    def with_target_ids(self, ids: LongTensor | None, target: Target) -> Self:
         """Return a copy of this batch with the target's index tensor replaced.
 
-        :param ids: the new target index tensor
+        :param ids: the new target index tensor, or None to score against all candidates
         :param target: the target where to put the new tensor
 
         :returns: the new batch
@@ -205,7 +205,7 @@ class TripleScoringBatch(NamedTuple):
 
     All three index tensors are required, and are broadcast against each other, so that
     the resulting score tensor has shape ``(*batch_shape,)``. This covers
-    :meth:`~pykeen.models.Model.score_hrt`, as well as the general case of scoring an
+    :meth:`~pykeen.models.Model.predict_hrt`, as well as the general case of scoring an
     arbitrarily shaped block of triples.
     """
 
@@ -292,6 +292,37 @@ class TargetScoringBatch(NamedTuple):
         return cls.from_indices(OptionalIndices(head, relation, tail), target)
 
     @classmethod
+    def from_pairs(cls, pairs: LongTensor, target: Target, target_ids: LongTensor | None = None) -> Self:
+        """Construct from the non-target index pairs, scoring the target position against the given candidates.
+
+        :param pairs: shape: (*batch_shape, 2)
+            the (head, relation), (head, tail), or (relation, tail) pairs, in the order of the columns
+        :param target: the position to score against many candidates
+        :param target_ids: shape: (num,) | (*batch_shape, num)
+            the candidates, or None to score against all of them
+
+        :returns: the scoring request
+        """
+        columns = iter(pairs.unbind(dim=-1))
+        return cls.from_indices(
+            OptionalIndices(*(target_ids if label == target else next(columns) for label in COLUMN_LABELS)), target
+        )
+
+    @classmethod
+    def from_batch(cls, batch: LongTensor, target: Target, target_ids: LongTensor | None = None) -> Self:
+        """Construct from an HRT batch, scoring the target position against the given candidates.
+
+        :param batch: shape: (*batch_shape, 3)
+            the full batch; the target column is ignored
+        :param target: the position to score against many candidates
+        :param target_ids: shape: (num,) | (*batch_shape, num)
+            the candidates, or None to score against all of them
+
+        :returns: the scoring request
+        """
+        return cls.from_pairs(batch[..., TARGET_TO_KEYS[target]], target, target_ids)
+
+    @classmethod
     def from_indices(cls, indices: OptionalIndices, target: Target) -> Self:
         """Align the non-target index tensors, infer the batch shape, and validate the target IDs.
 
@@ -318,6 +349,22 @@ class TargetScoringBatch(NamedTuple):
     def target_ids(self) -> LongTensor | None:
         """Return the target's index tensor, or None if scoring against all candidates."""
         return self.indices[TARGET_TO_INDEX[self.target]]
+
+    @property
+    def pairs(self) -> LongTensor:
+        """Return the non-target index tensors, stacked in the order of the columns.
+
+        :returns: shape: (*batch_shape, 2)
+            the (head, relation), (head, tail) or (relation, tail) pairs
+        """
+        return torch.stack(
+            [
+                index.expand(self.batch_shape)
+                for label, index in zip(COLUMN_LABELS, self.indices, strict=True)
+                if label != self.target and index is not None
+            ],
+            dim=-1,
+        )
 
     @property
     def shared_target(self) -> bool:

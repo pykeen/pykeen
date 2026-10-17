@@ -1,7 +1,6 @@
 """Training KGE models based on the LCWA."""
 
 import logging
-from collections.abc import Callable
 from math import ceil
 from typing import ClassVar
 
@@ -9,12 +8,13 @@ from torch.nn import functional
 from torch.utils.data import DataLoader, TensorDataset
 
 from .training_loop import TrainingLoop, _get_num_targets
-from ..constants import get_target_column
+from ..constants import COLUMN_LABELS, get_target_column
 from ..losses import Loss
 from ..models import Model
+from ..models.scoring import TargetScoringBatch
 from ..triples import CoreTriplesFactory, LCWAInstances
 from ..triples.instances import LCWABatch
-from ..typing import FloatTensor, InductiveMode, MappedTriples, TargetHint
+from ..typing import LABEL_HEAD, LABEL_TAIL, FloatTensor, InductiveMode, MappedTriples, Target, TargetHint
 
 __all__ = [
     "LCWATrainingLoop",
@@ -58,16 +58,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         # normalize target column
         self.target = get_target_column(target)
 
-        # The type inference is so confusing between the function switching
-        # and polymorphism introduced by slicability that these need to be ignored
-        if self.target == 0:
-            self.score_method = self.model.score_h
-        elif self.target == 1:
-            self.score_method = self.model.score_r  # type: ignore[assignment]
-        elif self.target == 2:
-            self.score_method = self.model.score_t  # type: ignore[assignment]
-        else:
-            raise ValueError(f"Invalid target column: {self.target}. Must be from {{0, 1, 2}}.")
+        self.target_label: Target = COLUMN_LABELS[self.target]
 
         # Explicit mentioning of num_transductive_entities since in the evaluation there will be a different number
         # of total entities from another inductive inference factory
@@ -84,7 +75,8 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
 
         dataset = LCWAInstances.from_triples_factory(
             triples_factory,
-            create_inverse_triples=self.model.use_inverse_triples,
+            mapped_triples=self.model.prepare_training_triples(triples_factory.mapped_triples),
+            num_relations=self.model.num_relations,
             target=self.target,
             loss_weighter=self.loss_weighter,
             loss_weighter_kwargs=self.loss_weighter_kwargs,
@@ -98,7 +90,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
     @staticmethod
     def _process_batch_static(
         model: Model,
-        score_method: Callable,
+        target: Target,
         loss: Loss,
         num_targets: int,
         mode: InductiveMode | None,
@@ -119,7 +111,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         if batch_weights is not None:
             batch_weights = batch_weights[start:stop].to(device=model.device)
 
-        predictions = score_method(batch_pairs, slice_size=slice_size, mode=mode)
+        predictions = model(TargetScoringBatch.from_pairs(batch_pairs, target=target), slice_size=slice_size, mode=mode)
 
         return (
             loss.process_lcwa_scores(
@@ -142,7 +134,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
     ) -> FloatTensor:
         return self._process_batch_static(
             model=self.model,
-            score_method=self.score_method,
+            target=self.target_label,
             loss=self.loss,
             num_targets=self.num_targets,
             mode=self.mode,
@@ -203,7 +195,9 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
         return (
             # head prediction
             self.loss.process_lcwa_scores(
-                predictions=self.model.score_h(rt_batch=hrt_batch[:, 1:], slice_size=slice_size, mode=self.mode),
+                predictions=self.model(
+                    TargetScoringBatch.from_batch(hrt_batch, target=LABEL_HEAD), slice_size=slice_size, mode=self.mode
+                ),
                 # TODO: exploit sparsity
                 # note: this is different to what we do for LCWA, where we collect *all* training entities
                 #   for which the combination is true
@@ -213,7 +207,9 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
             )
             # tail prediction
             + self.loss.process_lcwa_scores(
-                predictions=self.model.score_t(hr_batch=hrt_batch[:, :-1], slice_size=slice_size, mode=self.mode),
+                predictions=self.model(
+                    TargetScoringBatch.from_batch(hrt_batch, target=LABEL_TAIL), slice_size=slice_size, mode=self.mode
+                ),
                 # TODO: exploit sparsity
                 labels=functional.one_hot(hrt_batch[:, 2], num_classes=self.model.num_entities).float(),
                 label_smoothing=label_smoothing,

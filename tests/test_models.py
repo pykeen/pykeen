@@ -32,6 +32,7 @@ from pykeen.utils import all_in_bounds, extend_batch
 from tests import cases
 from tests.constants import EPSILON
 from tests.test_batch_size_reduction import MockModel
+from tests.utils import forward_hrt, forward_pairs
 
 SKIP_MODULES = {
     Model,
@@ -462,7 +463,7 @@ class TestTransD(cases.DistanceModelTestCase):
 
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 1]], dtype=torch.long)
-        scores = self.instance.score_hrt(hrt_batch=batch)
+        scores = forward_hrt(self.instance, batch).unsqueeze(dim=-1)
         assert scores.shape[0] == 2
         assert scores.shape[1] == 1
         first_score = scores[0].item()
@@ -489,11 +490,11 @@ class TestTransD(cases.DistanceModelTestCase):
 
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0]], dtype=torch.long)
-        scores = self.instance.score_hrt(hrt_batch=batch)
+        scores = forward_hrt(self.instance, batch).unsqueeze(dim=-1)
         assert scores.item() == pytest.approx(-27, abs=0.01)
 
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
-        scores = self.instance.score_hrt(hrt_batch=batch)
+        scores = forward_hrt(self.instance, batch).unsqueeze(dim=-1)
         assert scores.shape[0] == 2
         assert scores.shape[1] == 1
         first_score = scores[0].item()
@@ -538,7 +539,7 @@ class TestTransD(cases.DistanceModelTestCase):
 
         # Compute Scores
         batch = torch.as_tensor(data=[[0, 0, 0], [0, 0, 0]], dtype=torch.long)
-        scores = self.instance.score_hrt(hrt_batch=batch)
+        scores = forward_hrt(self.instance, batch).unsqueeze(dim=-1)
         assert scores.shape[0] == 2
         assert scores.shape[1] == 1
         first_score = scores[0].item()
@@ -755,8 +756,8 @@ class ERModelTests(cases.ModelTestCase):
         tails = torch.randint(
             self.instance.num_entities, size=(self.instance.num_entities // 2,), generator=self.generator
         )
-        sliced_ts = self.instance.score_t(hr_batch=hr_batch, slice_size=2, tails=tails)
-        ts = self.instance.score_t(hr_batch=hr_batch, tails=tails)
+        sliced_ts = forward_pairs(self.instance, hr_batch, LABEL_TAIL, tails, slice_size=2)
+        ts = forward_pairs(self.instance, hr_batch, LABEL_TAIL, tails)
         assert torch.allclose(sliced_ts, ts)
 
 

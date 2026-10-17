@@ -43,9 +43,9 @@ class ScoringSuite:
     def time_score_hrt(self, model: str) -> None:
         """Time scoring individual triples."""
         with torch.inference_mode():
-            self.model.score_hrt(self.hrt_batch)
+            self.model.predict_hrt(self.hrt_batch)
 
     def time_score_t(self, model: str) -> None:
         """Time scoring all tail entities."""
         with torch.inference_mode():
-            self.model.score_t(self.hrt_batch[:, :2])
+            self.model.predict_t(self.hrt_batch[:, :2])

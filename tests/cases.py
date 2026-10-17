@@ -109,7 +109,7 @@ from pykeen.utils import (
 )
 from tests.constants import EPSILON
 from tests.mocks import MockEvaluator
-from tests.utils import needs_packages, rand
+from tests.utils import forward_hrt, forward_pairs, needs_packages, rand
 
 T = TypeVar("T")
 
@@ -941,7 +941,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
             assert r[0].regularizer == self.instance
 
         # Forward pass (should update regularizer)
-        model.score_hrt(hrt_batch=positive_batch)
+        forward_hrt(model, positive_batch)
 
         # Call post_parameter_update (should reset regularizer)
         model.post_parameter_update()
@@ -1195,11 +1195,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
                 self.skipTest(str(e))
             else:
                 raise
-        if score is self.instance.score_r and self.use_inverse_triples:
-            # TODO: look into score_r for inverse relations
-            logger.warning("score_r's shape is not clear yet for models with inverse relations")
-        else:
-            assert tuple(scores.shape) == shape
+        assert tuple(scores.shape) == shape
         self._check_scores(batch, scores)
         # clear buffers for message passing models
         self.instance.post_parameter_update()
@@ -1214,46 +1210,67 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
             with self.subTest(shape=ids.shape):
                 self._test_score(shape=(self.batch_size, k), **kwargs, **{name: ids.to(device=self.instance.device)})
 
+    def _score_pairs(self, target: Target) -> Callable:
+        """Return a function scoring the target against all or the given candidates, via the forward pass."""
+        ids_name = {LABEL_HEAD: "heads", LABEL_RELATION: "relations", LABEL_TAIL: "tails"}[target]
+
+        def score(batch, **kwargs):
+            ids = kwargs.pop(ids_name, None)
+            return forward_pairs(self.instance, batch, target=target, ids=ids, **kwargs)
+
+        return score
+
     def test_score_hrt(self) -> None:
-        """Test the model's ``score_hrt()`` function."""
-        self._test_score(score=self.instance.score_hrt, columns=slice(None), shape=(self.batch_size, 1))
+        """Test scoring triples via the model's forward pass."""
+        self._test_score(
+            score=lambda batch, **kwargs: forward_hrt(self.instance, batch, **kwargs),
+            columns=slice(None),
+            shape=(self.batch_size,),
+        )
 
     def test_score_t(self) -> None:
-        """Test the model's ``score_t()`` function."""
+        """Test scoring tails via the model's forward pass."""
         self._test_score(
-            score=self.instance.score_t, columns=slice(0, 2), shape=(self.batch_size, self.instance.num_entities)
+            score=self._score_pairs(LABEL_TAIL),
+            columns=slice(0, 2),
+            shape=(self.batch_size, self.instance.num_entities),
         )
 
     def test_score_t_multi(self) -> None:
-        """Test the model's ``score_t()`` function with custom tail candidates."""
+        """Test scoring tails via the model's forward pass with custom tail candidates."""
         self._test_score_multi(
-            name="tails", max_id=self.factory.num_entities, score=self.instance.score_t, columns=slice(0, 2)
+            name="tails", max_id=self.factory.num_entities, score=self._score_pairs(LABEL_TAIL), columns=slice(0, 2)
         )
 
     def test_score_r(self) -> None:
-        """Test the model's ``score_r()`` function."""
+        """Test scoring relations via the model's forward pass."""
         self._test_score(
-            score=self.instance.score_r,
+            score=self._score_pairs(LABEL_RELATION),
             columns=[0, 2],
             shape=(self.batch_size, self.instance.num_relations),
         )
 
     def test_score_r_multi(self) -> None:
-        """Test the model's ``score_r()`` function with custom relation candidates."""
+        """Test scoring relations via the model's forward pass with custom relation candidates."""
         self._test_score_multi(
-            name="relations", max_id=self.factory.num_relations, score=self.instance.score_r, columns=[0, 2]
+            name="relations",
+            max_id=self.factory.num_relations,
+            score=self._score_pairs(LABEL_RELATION),
+            columns=[0, 2],
         )
 
     def test_score_h(self) -> None:
-        """Test the model's ``score_h()`` function."""
+        """Test scoring heads via the model's forward pass."""
         self._test_score(
-            score=self.instance.score_h, columns=slice(1, None), shape=(self.batch_size, self.instance.num_entities)
+            score=self._score_pairs(LABEL_HEAD),
+            columns=slice(1, None),
+            shape=(self.batch_size, self.instance.num_entities),
         )
 
     def test_score_h_multi(self) -> None:
-        """Test the model's ``score_h()`` function with custom head candidates."""
+        """Test scoring heads via the model's forward pass with custom head candidates."""
         self._test_score_multi(
-            name="heads", max_id=self.factory.num_entities, score=self.instance.score_h, columns=slice(1, None)
+            name="heads", max_id=self.factory.num_entities, score=self._score_pairs(LABEL_HEAD), columns=slice(1, None)
         )
 
     @pytest.mark.slow
@@ -1422,7 +1439,7 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         # do one optimization step
         opt = optim.SGD(params=self.instance.parameters(), lr=1.0)
         batch = self.factory.mapped_triples[: self.batch_size, :].to(self.instance.device)
-        scores = self.instance.score_hrt(hrt_batch=batch, mode=self.mode)
+        scores = forward_hrt(self.instance, batch, mode=self.mode)
         fake_loss = scores.mean()
         fake_loss.backward()
         opt.step()
@@ -1954,9 +1971,9 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
 
         # Compute scores
         if inverse:
-            scores = self.model.score_h(rt_batch=hrt_batch[:, 1:])
+            scores = self.model.predict_h(hrt_batch[:, 1:], invert=False)
         else:
-            scores = self.model.score_t(hr_batch=hrt_batch[:, :2])
+            scores = self.model.predict_t(hrt_batch[:, :2])
 
         # Compute mask only if required
         if self.instance.requires_positive_mask:
@@ -2229,7 +2246,7 @@ class EvaluationLoopTestCase(GenericTestCase[pykeen.evaluation.evaluation_loop.E
             assert true_scores.shape == (hrt_batch.shape[0], 1)
             # the true score is the score of the evaluated triple, as calculated independently of the target prediction
             with torch.inference_mode():
-                expected = self.instance.model.score_hrt(hrt_batch)
+                expected = self.instance.model.predict_hrt(hrt_batch)
             assert torch.allclose(true_scores, expected)
 
     def test_equivalence(self) -> None:
@@ -2262,16 +2279,16 @@ class EvaluationOnlyModelTestCase(unittest_templates.GenericTestCase[pykeen.mode
         """Verify scores."""
 
     def test_score_t(self):
-        """Test score_t."""
+        """Test predict_t."""
         hr_batch = self.factory.mapped_triples[torch.randint(self.factory.num_triples, size=(self.batch_size,))][:, :2]
-        scores = self.instance.score_t(hr_batch=hr_batch)
+        scores = self.instance.predict_t(hr_batch)
         assert scores.shape == (self.batch_size, self.factory.num_entities)
         self._verify(scores)
 
     def test_score_h(self):
-        """Test score_h."""
+        """Test predict_h."""
         rt_batch = self.factory.mapped_triples[torch.randint(self.factory.num_triples, size=(self.batch_size,))][:, 1:]
-        scores = self.instance.score_h(rt_batch=rt_batch)
+        scores = self.instance.predict_h(rt_batch)
         assert scores.shape == (self.batch_size, self.factory.num_entities)
         self._verify(scores)
 
