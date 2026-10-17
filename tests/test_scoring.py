@@ -19,6 +19,7 @@ from pykeen.constants import TARGET_TO_KEYS
 from pykeen.models import UM, ConvE, DistMult, ERModel, OptionalIndices, TargetScoringBatch, TripleScoringBatch
 from pykeen.models.mocks import FixedModel
 from pykeen.triples import KGInfo
+from pykeen.triples.generation import generate_triples_factory
 from pykeen.typing import LABEL_HEAD, LABEL_RELATION, LABEL_TAIL, LongTensor, Target
 
 NUM_ENTITIES = 7
@@ -129,7 +130,8 @@ def test_slicing(model: ERModel, hrt_batch: LongTensor, target: Target, ids_kind
 
 def test_slicing_batch_norm(hrt_batch: LongTensor) -> None:
     """Test that slicing is rejected for models with batch normalization in training mode."""
-    model = ConvE(triples_factory=KGInfo(num_entities=NUM_ENTITIES, num_relations=NUM_RELATIONS), random_seed=42)
+    triples_factory = generate_triples_factory(num_entities=NUM_ENTITIES, num_relations=NUM_RELATIONS, random_state=42)
+    model = ConvE(triples_factory=triples_factory, random_seed=42)
     h, r, _ = hrt_batch.unsqueeze(dim=-1).unbind(dim=1)
     t = torch.arange(NUM_ENTITIES).unsqueeze(dim=0)
     # in training mode, the result depends on the batch division
