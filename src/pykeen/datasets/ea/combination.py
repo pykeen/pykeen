@@ -335,7 +335,6 @@ class GraphPairCombinator(ABC, Generic[FactoryType]):
         :return:
             updated triples and alignment tensor, as well as parameters for updating label-to-id mappings
         """
-        raise NotImplementedError
 
 
 class DisjointGraphPairCombinator(GraphPairCombinator[FactoryType]):
