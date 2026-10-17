@@ -1598,7 +1598,7 @@ class TriplesFactory(CoreTriplesFactory):
         }.items():
             data[f"{column}_label"] = labeling.label(
                 ids=data[f"{column}_id"],
-                unknown_label=("[unknown_" + column + "]").upper(),
+                unknown_label=f"[unknown_{column}]".upper(),
             )
 
         # Re-order columns
