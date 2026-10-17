@@ -214,7 +214,7 @@ class Sealant:
         sizes = dict(zip(*triples_factory.mapped_triples[:, 1].unique(return_counts=True), strict=False))
         self.relations_to_delete = _select_by_most_pairs(
             size=sizes,
-            components=get_connected_components((a, b) for a, b in self.candidates if a != b),
+            components=get_connected_components(self.candidates),
         )
         logger.info(f"identified {len(self.candidates)} from {self.triples_factory} to delete")
 

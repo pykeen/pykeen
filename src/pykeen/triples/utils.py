@@ -1,7 +1,7 @@
 """Instance creation utilities."""
 
 import pathlib
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from typing import IO
 
 import numpy as np
@@ -23,8 +23,6 @@ __all__ = [
 ]
 
 TRIPLES_DF_COLUMNS = ("head_id", "head_label", "relation_id", "relation_label", "tail_id", "tail_label")
-
-Importer = Callable[[str], LabeledTriples]
 
 #: Functions for specifying exotic resources with a given prefix
 PREFIX_IMPORTER_RESOLVER: FunctionResolver[[str], LabeledTriples] = FunctionResolver.from_entrypoint(
