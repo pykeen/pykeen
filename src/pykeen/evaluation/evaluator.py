@@ -501,7 +501,7 @@ def evaluate(
     for batch in mapped_triples.split(split_size=batch_size):
         # the relation_filter can be re-used (per batch) when we evaluate head *and* tail predictions
         # (which is the standard setting), cf. create_sparse_positive_filter_
-        relation_filter = None
+        relation_filter: BoolTensor | None = None
         for target in targets:
             relation_filter = _evaluate_batch(
                 batch=batch,
@@ -645,7 +645,7 @@ def _evaluate_batch(
     restrict_entities_to: LongTensor | None,
     *,
     mode: InductiveMode | None,
-) -> BoolTensor:
+) -> BoolTensor | None:
     """Evaluate ranking for batch.
 
     :param batch: shape: (batch_size, 3) The batch of currently evaluated triples.
@@ -682,6 +682,7 @@ def _evaluate_batch(
         if column == COLUMN_RELATION:
             # the relation filter is not applicable to relation-based filtering
             positive_filter = create_sparse_positive_relation_filter_(hrt_batch=batch, all_pos_triples=all_pos_triples)
+            relation_filter = None
         else:
             positive_filter, relation_filter = create_sparse_positive_filter_(
                 hrt_batch=batch,
@@ -689,24 +690,23 @@ def _evaluate_batch(
                 relation_filter=relation_filter,
                 filter_col=column,
             )
-    else:
-        positive_filter = relation_filter = None
 
-    if evaluator.filtered:
-        if positive_filter is None:
-            raise ValueError("positive_filter must not be None.")
-        # overwrite filtered scores
-        scores = filter_scores_(scores=scores, filter_batch=positive_filter)
-        # The scores for the true triples have to be rewritten to the scores tensor
-        scores[torch.arange(0, batch.shape[0]), batch[:, column]] = true_scores[:, 0]
+        if evaluator.filtered:
+            # overwrite filtered scores
+            scores = filter_scores_(scores=scores, filter_batch=positive_filter)
+            # The scores for the true triples have to be rewritten to the scores tensor
+            scores[torch.arange(0, batch.shape[0]), batch[:, column]] = true_scores[:, 0]
 
-    # Create a positive mask with the size of the scores from the positive filter
-    if evaluator.requires_positive_mask:
-        if positive_filter is None:
-            raise ValueError("positive_filter must not be None.")
-        positive_mask = create_dense_positive_mask_(zero_tensor=torch.zeros_like(scores), filter_batch=positive_filter)
+        # Create a positive mask with the size of the scores from the positive filter
+        if evaluator.requires_positive_mask:
+            positive_mask = create_dense_positive_mask_(
+                zero_tensor=torch.zeros_like(scores), filter_batch=positive_filter
+            )
+        else:
+            positive_mask = None
+
     else:
-        positive_mask = None
+        relation_filter = positive_mask = None
 
     # Restrict to entities of interest
     if restrict_entities_to is not None:
