@@ -34,6 +34,7 @@ from ..typing import (
     RANK_TYPE_SYNONYMS,
     RANK_TYPES,
     SIDE_BOTH,
+    SIDE_MAPPING,
     SIDES,
     ExtendedTarget,
     FloatTensor,
@@ -106,10 +107,14 @@ def _iter_ranks(
                 side, rank_type, ranks_flat[side, rank_type], num_candidates_flat[side], weights_flat.get(side)
             )
 
-        # combined
-        c_ranks = np.concatenate([ranks_flat[side, rank_type] for side in sides])
-        c_num_candidates = np.concatenate([num_candidates_flat[side] for side in sides])
-        c_weights = None if weights is None else np.concatenate([weights_flat[side] for side in sides])
+        # combined: only head and tail ranks are combined, since their candidates are (a subset of) all entities,
+        # whereas for relation prediction the candidates are all relations, which makes the ranks incomparable
+        both_sides = [side for side in sides if side in SIDE_MAPPING[SIDE_BOTH]]
+        if not both_sides:
+            continue
+        c_ranks = np.concatenate([ranks_flat[side, rank_type] for side in both_sides])
+        c_num_candidates = np.concatenate([num_candidates_flat[side] for side in both_sides])
+        c_weights = None if weights is None else np.concatenate([weights_flat[side] for side in both_sides])
         yield RankPack(SIDE_BOTH, rank_type, c_ranks, c_num_candidates, c_weights)
 
 

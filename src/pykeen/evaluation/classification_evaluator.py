@@ -12,7 +12,7 @@ import numpy as np
 from .evaluator import Evaluator, MetricResults
 from ..constants import TARGET_TO_INDEX
 from ..metrics.classification import ClassificationMetric, classification_metric_resolver
-from ..typing import SIDE_BOTH, ExtendedTarget, FloatTensor, MappedTriples, Target, normalize_target
+from ..typing import SIDE_BOTH, SIDE_MAPPING, ExtendedTarget, FloatTensor, MappedTriples, Target, normalize_target
 
 __all__ = [
     "ClassificationEvaluator",
@@ -82,11 +82,15 @@ def _iter_scores(
             raise ValueError(f"Cannot calculate scores from empty array (y_true.shape={y_true.shape}).")
         yield ScorePack(target=side, y_true=y_true, y_score=y_score)
 
-    # combined
+    # combined: only head and tail scores are combined, since their candidates are (a subset of) all entities,
+    # whereas for relation prediction the candidates are all relations
+    both_sides = [side for side in sides if side in SIDE_MAPPING[SIDE_BOTH]]
+    if not both_sides:
+        return
     yield ScorePack(
         target=SIDE_BOTH,
-        y_true=np.concatenate([y_true_for_side[side] for side in sides]),
-        y_score=np.concatenate([y_score_for_side[side] for side in sides]),
+        y_true=np.concatenate([y_true_for_side[side] for side in both_sides]),
+        y_score=np.concatenate([y_score_for_side[side] for side in both_sides]),
     )
 
 
