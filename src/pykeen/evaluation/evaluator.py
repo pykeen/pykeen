@@ -35,10 +35,10 @@ from ..typing import (
     LABEL_RELATION,
     LABEL_TAIL,
     BoolTensor,
+    EntityColumn,
     InductiveMode,
     MappedTriples,
     Target,
-    TargetColumnOutside,
 )
 from ..utils import (
     FloatTensor,
