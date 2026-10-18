@@ -186,7 +186,12 @@ class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
     ) -> DataLoader[tuple[MappedTriples]]:
         if sampler is not None:
             raise ValueError("Expected sampler is None.")
-        return DataLoader(dataset=TensorDataset(triples_factory.mapped_triples), **kwargs)
+        mapped_triples = triples_factory.mapped_triples
+        # the model's scoring methods operate on its internal relation IDs, which differ from the ones stored in the
+        # triples factory when using inverse relations
+        if self.model.use_inverse_triples:
+            mapped_triples = self.model.relation_inverter.to_internal_batch(batch=mapped_triples)
+        return DataLoader(dataset=TensorDataset(mapped_triples), **kwargs)
 
     def _process_batch(
         self,
