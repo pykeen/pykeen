@@ -546,7 +546,7 @@ def create_sparse_positive_filter_(
         or :data:`~pykeen.typing.COLUMN_TAIL`
     """
     if filter_col not in {COLUMN_HEAD, COLUMN_TAIL}:
-        raise ValueError(f"filter_col must be 0 (head) or 2 (tail), but filter_col={filter_col} was given.")
+        raise ValueError(f"filter_col must be {COLUMN_HEAD} (head) or {COLUMN_TAIL} (tail), but filter_col={filter_col} was given.")
 
     if relation_filter is None:
         relations = hrt_batch[:, 1:2]
