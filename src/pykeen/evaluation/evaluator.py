@@ -545,7 +545,7 @@ def create_sparse_positive_filter_(
         - the relation filter for re-usage.
 
     :raises ValueError: if the `filter_col` is not one of :data:`~pykeen.typing.COLUMN_HEAD`
-        or :data`~pykeen.typing.COLUMN_TAIL`
+        or :data:`~pykeen.typing.COLUMN_TAIL`
     """
     if filter_col not in {COLUMN_HEAD, COLUMN_TAIL}:
         raise ValueError(f"filter_col must be 0 (head) or 2 (tail), but filter_col={filter_col} was given.")
