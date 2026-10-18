@@ -50,6 +50,8 @@ class TransE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         relation_constrainer: Hint[Constrainer] = None,
         regularizer: HintOrType[Regularizer] = None,
         regularizer_kwargs: OptionalKwargs = None,
+        entity_representations_kwargs: OptionalKwargs = None,
+        relation_representations_kwargs: OptionalKwargs = None,
         **kwargs,
     ) -> None:
         r"""Initialize TransE.
@@ -75,6 +77,13 @@ class TransE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param regularizer_kwargs:
             keyword-based parameters for the regularizer
 
+        :param entity_representations_kwargs:
+            Additional keyword arguments passed to the entity representation. These take precedence over
+            the defaults set by this class (e.g. ``embedding_dim``, ``entity_initializer``).
+        :param relation_representations_kwargs:
+            Additional keyword arguments passed to the relation representation. These take precedence over
+            the defaults set by this class (e.g. ``embedding_dim``, ``relation_initializer``).
+
         :param kwargs:
             Remaining keyword arguments to forward to :meth:`~pykeen.models.ERModel.__init__`
 
@@ -84,22 +93,26 @@ class TransE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
            - :class:`~pykeen.nn.modules.NormBasedInteraction` for a description of the parameters
                 ``scoring_fct_norm`` and ``power_norm``.
         """
+        resolved_entity_representations_kwargs = {
+            "shape": embedding_dim,
+            "initializer": entity_initializer,
+            "constrainer": entity_constrainer,
+            "regularizer": regularizer,
+            "regularizer_kwargs": regularizer_kwargs,
+        }
+        resolved_entity_representations_kwargs.update(entity_representations_kwargs or {})
+        resolved_relation_representations_kwargs = {
+            "shape": embedding_dim,
+            "initializer": relation_initializer,
+            "constrainer": relation_constrainer,
+            "regularizer": regularizer,
+            "regularizer_kwargs": regularizer_kwargs,
+        }
+        resolved_relation_representations_kwargs.update(relation_representations_kwargs or {})
         super().__init__(
             interaction=TransEInteraction,
             interaction_kwargs={"p": scoring_fct_norm, "power_norm": power_norm},
-            entity_representations_kwargs={
-                "shape": embedding_dim,
-                "initializer": entity_initializer,
-                "constrainer": entity_constrainer,
-                "regularizer": regularizer,
-                "regularizer_kwargs": regularizer_kwargs,
-            },
-            relation_representations_kwargs={
-                "shape": embedding_dim,
-                "initializer": relation_initializer,
-                "constrainer": relation_constrainer,
-                "regularizer": regularizer,
-                "regularizer_kwargs": regularizer_kwargs,
-            },
+            entity_representations_kwargs=resolved_entity_representations_kwargs,
+            relation_representations_kwargs=resolved_relation_representations_kwargs,
             **kwargs,
         )
