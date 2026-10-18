@@ -4,7 +4,6 @@ from collections.abc import Mapping
 from typing import Any, ClassVar
 
 import torch
-import torch.autograd
 import torch.nn.init
 from class_resolver import OptionalKwargs
 

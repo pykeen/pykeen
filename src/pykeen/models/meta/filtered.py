@@ -7,7 +7,6 @@ import numpy as np
 import scipy.sparse
 import torch
 from class_resolver import HintOrType
-from docdata import parse_docdata
 
 from ..base import Model
 from ..baseline.utils import get_csr_matrix
@@ -35,7 +34,6 @@ __all__ = [
 Indexes = Mapping[Target, Mapping[Target, scipy.sparse.csr_matrix]]
 
 
-@parse_docdata
 class CooccurrenceFilteredModel(Model):
     """A model which filters predictions by co-occurence.
 
