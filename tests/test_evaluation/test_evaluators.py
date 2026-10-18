@@ -22,6 +22,7 @@ from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, OGBEvaluator, RankBasedEvaluator, RankBasedMetricResults
 from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
 from pykeen.evaluation.evaluator import (
+    _evaluate_batch,
     _optimal_batch_size_group_id,
     create_dense_positive_mask_,
     create_sparse_positive_filter_,
@@ -412,23 +413,30 @@ class EvaluatorUtilsTests(unittest.TestCase):
             assert (int(entity_id), *tuple(map(int, same))) in triples
 
     def test_create_sparse_positive_filter_relation(self):
-        """Test relation-based filtering against a brute-force reference."""
+        """Test relation-based filtering."""
         batch_size = 8
         all_triples = Nations().training.mapped_triples
         batch = all_triples[:batch_size, :]
 
         positives = create_sparse_positive_relation_filter_(hrt_batch=batch, all_pos_triples=all_triples)
+        assert positives.ndim == 2
+        assert positives.shape[1] == 2
 
+        found = [tuple(map(int, x)) for x in positives.tolist()]
+        assert len(found) == len(set(found)), "positives must not contain duplicates"
         triples = {tuple(map(int, t)) for t in all_triples.tolist()}
-        expected = {
-            (i, r)
-            for i, (h, _, t) in enumerate(batch.tolist())
-            for r in range(int(all_triples[:, 1].max()) + 1)
-            if (h, r, t) in triples
-        }
-        assert {tuple(map(int, x)) for x in positives.tolist()} == expected
+        hrts = batch.tolist()
+        # soundness: each found relation forms a positive triple with the batch triple's head and tail
+        for i, r in found:
+            h, _, t = hrts[i]
+            assert (h, r, t) in triples
+        # completeness: as many positives per batch triple as there are positive triples with its head and tail
+        num_per_pair = Counter((h, t) for h, _, t in triples)
+        num_found = Counter(i for i, _ in found)
+        for i, (h, _, t) in enumerate(hrts):
+            assert num_found[i] == num_per_pair[h, t]
         # each batch triple is itself a positive
-        assert all((i, int(r)) in expected for i, r in enumerate(batch[:, 1]))
+        assert all((i, r) in found for i, (_, r, _) in enumerate(hrts))
 
     def test_create_sparse_positive_filter_invalid_column(self):
         """Test that relation column is rejected by the head/tail filter."""
@@ -559,6 +567,54 @@ class EvaluatorUtilsTests(unittest.TestCase):
         # Assert correct filtering
         assert (old_tail_scores[~exp_tail_filter_mask] == filtered_tail_scores[~exp_tail_filter_mask]).all()
         assert not torch.isfinite(filtered_tail_scores[exp_tail_filter_mask]).any()
+
+
+class EvaluateBatchRelationTargetTests(unittest.TestCase):
+    """Tests for evaluating the relation target in :func:`_evaluate_batch`."""
+
+    def setUp(self) -> None:
+        """Prepare the model and the triples."""
+        factory = Nations().training
+        self.all_pos_triples = factory.mapped_triples
+        self.batch = self.all_pos_triples[:8]
+        self.model = TransE(triples_factory=factory, random_seed=0)
+        self.num_relations = self.model.num_real_relations
+
+    def _evaluate_head_then_relation(self, filtered: bool) -> np.ndarray:
+        """Evaluate head prediction followed by relation prediction on the same batch, as done in the loop."""
+        evaluator = RankBasedEvaluator(filtered=filtered)
+        kwargs: dict[str, Any] = {
+            "batch": self.batch,
+            "model": self.model,
+            "evaluator": evaluator,
+            "slice_size": None,
+            "all_pos_triples": self.all_pos_triples,
+            "mode": None,
+        }
+        relation_filter = _evaluate_batch(target=LABEL_HEAD, relation_filter=None, restrict_entities_to=None, **kwargs)
+        if filtered:
+            assert relation_filter is not None
+        returned = _evaluate_batch(
+            target=LABEL_RELATION,
+            relation_filter=relation_filter,
+            # the entity restriction must not be applied to the relation scores
+            restrict_entities_to=torch.arange(3),
+            **kwargs,
+        )
+        # the relation filter is passed through for re-use by later entity targets
+        assert returned is relation_filter
+        # all relations remain candidates
+        assert evaluator.num_entities == self.num_relations
+        (ranks,) = evaluator.ranks[LABEL_RELATION, RANK_REALISTIC]
+        assert ranks.shape == (self.batch.shape[0],)
+        assert ((ranks >= 1) & (ranks <= self.num_relations)).all()
+        return ranks
+
+    def test_filtering_does_not_worsen_ranks(self):
+        """Test that filtering other positive relations never worsens the rank of the true relation."""
+        filtered = self._evaluate_head_then_relation(filtered=True)
+        unfiltered = self._evaluate_head_then_relation(filtered=False)
+        assert (filtered <= unfiltered).all()
 
 
 class DummyMetricResults(MetricResults[tuple[ExtendedTarget]]):

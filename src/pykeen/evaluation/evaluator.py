@@ -538,7 +538,7 @@ def create_sparse_positive_filter_(
         which corresponds to filtering head-based and :data:`~pykeen.typing.COLUMN_TAIL`, which corresponds
         to filtering tail-based.
 
-    :returns: - positives, shape: (2, m)
+    :returns: - positives, shape: (m, 2)
               The indices of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
 
@@ -546,7 +546,9 @@ def create_sparse_positive_filter_(
         or :data:`~pykeen.typing.COLUMN_TAIL`
     """
     if filter_col not in {COLUMN_HEAD, COLUMN_TAIL}:
-        raise ValueError(f"filter_col must be {COLUMN_HEAD} (head) or {COLUMN_TAIL} (tail), but filter_col={filter_col} was given.")
+        raise ValueError(
+            f"filter_col must be {COLUMN_HEAD} (head) or {COLUMN_TAIL} (tail), but filter_col={filter_col} was given."
+        )
 
     if relation_filter is None:
         relations = hrt_batch[:, 1:2]
@@ -662,10 +664,9 @@ def _evaluate_batch(
         masks).
     """
     if target == LABEL_RELATION:
-        if restrict_entities_to is not None:
-            raise ValueError("restrict_entities_to should not be passed during relation evaluation")
-        if relation_filter is not None:
-            raise ValueError("relation_filter should not be passed during relation evaluation")
+        # the entity restriction does not apply to relation prediction. Note that the relation filter is not used for
+        # relation prediction either; it is passed through unchanged so that it can be re-used by later targets.
+        restrict_entities_to = None
 
     scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size, mode=mode)
     column = TARGET_TO_INDEX[target]
