@@ -711,7 +711,7 @@ def _evaluate_batch(
             positive_mask = None
 
     else:
-        relation_filter = positive_mask = None
+        positive_mask = None
 
     # Restrict to entities of interest
     if restrict_entities_to is not None:
