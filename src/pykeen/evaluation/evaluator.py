@@ -521,7 +521,7 @@ def create_sparse_positive_filter_(
     all_pos_triples: LongTensor,
     *,
     relation_filter: BoolTensor | None = None,
-    filter_col: TargetColumnOutside,
+    filter_col: EntityColumn,
 ) -> tuple[LongTensor, BoolTensor]:
     """Compute indices of all positives for head- or tail-based filtering.
 
