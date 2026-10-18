@@ -496,9 +496,6 @@ class Embedding(Representation):
         # fixme: work-around until nn.Embedding supports complex
         if self.is_complex:
             x = torch.view_as_complex(x)
-        # verify that contiguity is preserved
-        if not x.is_contiguous():
-            raise ValueError("Expected x.is_contiguous().")
         return x
 
 
@@ -1137,7 +1134,6 @@ class SingleCompGCNRepresentation(Representation):
         super().__init__(max_id=max_id, shape=ShapeError.verify(shape=shape_, reference=shape), **kwargs)
         self.combined = combined
         self.position = position_index
-        self.reset_parameters()
 
     def _plain_forward(
         self,

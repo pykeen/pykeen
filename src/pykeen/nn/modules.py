@@ -528,8 +528,6 @@ class TransFInteraction(Interaction[FloatTensor, FloatTensor, FloatTensor]):
         arxiv: 1505.05253
     """
 
-    # TODO: implement the unbalanced variant from the paper: f(h, r, t) = (h + r)^T t
-
     def forward(self, h: FloatTensor, r: FloatTensor, t: FloatTensor) -> FloatTensor:
         """Evaluate the interaction function.
 
@@ -3584,8 +3582,6 @@ class TripleREInteraction(NormBasedInteraction[FloatTensor, tuple[FloatTensor, F
         # cf. https://github.com/LongYu-360/TripleRE-Add-NodePiece/blob/994216dcb1d718318384368dd0135477f852c6a4/TripleRE%2BNodepiece/ogb_wikikg2/model.py#L317-L328
         # version 2
         if u is not None:
-            # r_head = r_head + u * torch.ones_like(r_head)
-            # r_tail = r_tail + u * torch.ones_like(r_tail)
             r_head = r_head + u
             r_tail = r_tail + u
 

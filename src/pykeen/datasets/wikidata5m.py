@@ -24,7 +24,6 @@ __all__ = [
 
 
 TRANSDUCTIVE_URL = "https://zenodo.org/record/5546383/files/wikidata5m_transductive.tar.gz"
-INDUCTIVE_URL = "https://zenodo.org/record/5546387/files/wikidata5m_inductive.tar.gz"
 
 
 @parse_docdata

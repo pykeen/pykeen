@@ -16,7 +16,6 @@ def create_inductive_dataset(
     num_triples_inference: int,
     num_triples_testing: int,
     random_state: int = 42,
-    # num_triples_validation: Optional[int],
 ) -> InductiveDataset:
     """Create a random inductive dataset.
 

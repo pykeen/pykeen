@@ -4,7 +4,6 @@ import logging
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
-import torch
 from torch import nn
 
 from ..nbase import ERModel
@@ -54,12 +53,6 @@ class ConvE(ERModel[FloatTensor, FloatTensor, tuple[FloatTensor, FloatTensor]]):
     loss_default: ClassVar[type[Loss]] = BCEAfterSigmoidLoss  # type: ignore[type-abstract]
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
-
-    #: If batch normalization is enabled, this is: num_features - C from an expected input of size (N,C,L)
-    bn0: torch.nn.BatchNorm2d | None
-    #: If batch normalization is enabled, this is: num_features - C from an expected input of size (N,C,H,W)
-    bn1: torch.nn.BatchNorm2d | None
-    bn2: torch.nn.BatchNorm1d | None
 
     def __init__(
         self,

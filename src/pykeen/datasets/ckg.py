@@ -71,8 +71,6 @@ class CKGSimpleSource(RemoteSimpleSource):
                 **(self.download_kwargs or {}),
             )
             with tarfile.TarFile.open(raw_path) as tar_file:
-                if tar_file is None:
-                    raise ValueError
                 for tarinfo in tar_file:
                     if not tarinfo.name.startswith("data/imports/") or not tarinfo.name.endswith(".tsv"):
                         continue

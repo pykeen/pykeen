@@ -1,6 +1,5 @@
 """A wrapper which combines an interaction function with NodePiece entity representations."""
 
-import logging
 from collections.abc import Callable, Mapping
 from typing import Any, ClassVar
 
@@ -20,8 +19,6 @@ from ...utils import upgrade_to_sequence
 __all__ = [
     "NodePiece",
 ]
-
-logger = logging.getLogger(__name__)
 
 
 class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):

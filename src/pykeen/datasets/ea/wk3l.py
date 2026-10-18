@@ -99,16 +99,6 @@ class MTransEDataset(EADataset, ABC):
             inner_path=inner_path,
         )
 
-    @classmethod
-    def _relative_path(cls, graph_pair: GraphPair, key: EASide | tuple[EASide, EASide] | None) -> pathlib.PurePath:
-        """Determine the relative path inside the zip file."""
-        return pathlib.PurePosixPath(
-            "data",
-            cls.DATASET_NAME,
-            graph_pair,
-            cls.FILE_NAMES[graph_pair, key],
-        )
-
     def _load_df(self, key: EASide | tuple[EASide, EASide] | None, names: Sequence[Hashable]) -> pd.DataFrame:
         source = self._get_source(self.graph_pair, key)
         with source.open() as file:

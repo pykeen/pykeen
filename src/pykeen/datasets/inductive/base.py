@@ -110,8 +110,6 @@ class LazyInductiveDataset(InductiveDataset):
     _inductive_testing: TriplesFactory | None = None
     #: The actual instance of the validation factory, which is exposed to the user through `inductive_validation`
     _inductive_validation: TriplesFactory | None = None
-    #: The directory in which the cached data is stored
-    cache_root: pathlib.Path
 
     @property
     def transductive_training(self) -> TriplesFactory:  # type: ignore[override]
@@ -152,9 +150,6 @@ class LazyInductiveDataset(InductiveDataset):
         return self._transductive_training is not None and self._inductive_inference is not None
 
     def _load(self) -> None:
-        raise NotImplementedError
-
-    def _load_validation(self) -> None:
         raise NotImplementedError
 
     def _help_cache(
