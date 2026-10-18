@@ -537,7 +537,7 @@ def create_sparse_positive_filter_(
     :param relation_filter: shape: (batch_size, num_positive_triples) A boolean mask R[i, j] which is True iff the j-th
         positive triple contains the same relation as the i-th triple in the batch.
     :param filter_col: The column along which to filter. Allowed are :data:`~pykeen.typing.COLUMN_HEAD`,
-        which corresponds to filtering head-based and :data`~pykeen.typing.COLUMN_TAIL`, which corresponds
+        which corresponds to filtering head-based and :data:`~pykeen.typing.COLUMN_TAIL`, which corresponds
         to filtering tail-based.
 
     :returns: - positives, shape: (2, m)
