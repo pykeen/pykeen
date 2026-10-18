@@ -663,8 +663,11 @@ def _evaluate_batch(
     :raises ValueError: if all positive triples are required (either due to filtered evaluation, or requiring dense
         masks).
     """
-    scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size, mode=mode)
     column = TARGET_TO_INDEX[target]
+    if restrict_entities_to is not None and column == COLUMN_RELATION:
+        raise ValueError("restrict_entities_to should not be passed during relation evaluation")
+
+    scores = model.predict(hrt_batch=batch, target=target, slice_size=slice_size, mode=mode)
 
     # the true score is required for ranking, independent of whether the filtered protocol is used;
     # filtering only decides whether the *other* positives are masked out beforehand.
@@ -702,6 +705,8 @@ def _evaluate_batch(
             positive_mask = create_dense_positive_mask_(
                 zero_tensor=torch.zeros_like(scores), filter_batch=positive_filter
             )
+            if restrict_entities_to is not None:
+                positive_mask = positive_mask[:, restrict_entities_to]
         else:
             positive_mask = None
 
@@ -711,8 +716,6 @@ def _evaluate_batch(
     # Restrict to entities of interest
     if restrict_entities_to is not None:
         scores = scores[:, restrict_entities_to]
-        if positive_mask is not None:
-            positive_mask = positive_mask[:, restrict_entities_to]
 
     # process scores
     evaluator.process_scores_(
