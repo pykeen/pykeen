@@ -11,20 +11,24 @@ INF = float("inf")
 
 def test_from_scores_nan_and_inf():
     """Test hand-computed ranks with NaN-filtered and infinite candidate scores."""
-    true_score = torch.as_tensor([[1.0], [1.0]])
+    true_score = torch.as_tensor([[1.0], [1.0], [INF], [-INF]])
     all_scores = torch.as_tensor(
         [
             # true score is contained; +inf and 1.0 (tie) are better/equal, NaN is filtered, -inf is worse
             [1.0, INF, 1.0, NAN, -INF, 0.0],
             # only the true score and +inf remain
             [NAN, 1.0, INF, NAN, INF, NAN],
+            # +inf true score ties with the other +inf
+            [INF, INF, 1.0, -INF, NAN, NAN],
+            # -inf true score ties with the other -inf, all finite and +inf are better
+            [-INF, -INF, 0.0, NAN, INF, NAN],
         ]
     )
     ranks = Ranks.from_scores(true_score=true_score, all_scores=all_scores)
-    assert ranks.number_of_options.tolist() == [5, 3]
-    assert ranks.optimistic.tolist() == [2, 3]
-    assert ranks.pessimistic.tolist() == [3, 3]
-    assert ranks.realistic.tolist() == [2.5, 3.0]
+    assert ranks.number_of_options.tolist() == [5, 3, 4, 4]
+    assert ranks.optimistic.tolist() == [2, 3, 1, 3]
+    assert ranks.pessimistic.tolist() == [3, 3, 2, 4]
+    assert ranks.realistic.tolist() == [2.5, 3.0, 1.5, 3.5]
 
 
 def test_from_scores_invariant():
