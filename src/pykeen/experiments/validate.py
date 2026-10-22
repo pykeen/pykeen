@@ -60,8 +60,6 @@ def iterate_config_paths() -> Iterable[tuple[str, pathlib.Path, pathlib.Path]]:
         if model_directory.name not in model_resolver.lookup_dict:
             continue
         for config in model_directory.iterdir():
-            if config.name.startswith("hpo"):
-                continue
             path = model_directory.joinpath(config)
             if not path.is_file() or path.suffix not in CONFIGURATION_FILE_FORMATS:
                 continue

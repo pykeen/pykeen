@@ -54,7 +54,6 @@ class InductiveERModel(ERModel):
         )
         # entity representation kwargs may contain a triples factory, which needs to be replaced
         entity_representations_kwargs = entity_representations_kwargs or {}
-        # entity_representations_kwargs.pop("triples_factory", None)
         # note: this is *not* a nn.ModuleDict; the modules have to be registered elsewhere
         _mode_to_representations = {TRAINING: self.entity_representations}
         if "triples_factory" in entity_representations_kwargs:
