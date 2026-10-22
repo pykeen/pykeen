@@ -89,9 +89,16 @@ types of representations via a categorical parameter:
     :end-before: # %% custom objective
 
 Note that :func:`~pykeen.hpo.hpo_pipeline` samples all parameters for each trial, i.e., ``hidden_dim`` is sampled even
-if the plain embedding is chosen, where it is ignored. For conditional search spaces, write your own :mod:`optuna`
-objective, which can still use :func:`~pykeen.pipeline.pipeline` to train and evaluate the model. Make sure to evaluate
-on the validation triples, and keep the test triples for the final evaluation:
+if the plain embedding is chosen, where it is ignored. With the default, independent TPE sampler, this mostly means that
+``hidden_dim`` itself is optimized less efficiently, since its ignored values also enter its model. It is more harmful
+with grid search, where each ignored value repeats the same configuration, and with samplers that model the parameters
+jointly, e.g., multivariate TPE or CMA-ES, for which ignored parameters add noise. Ignored parameters also show up in
+the reported best parameters and parameter importances.
+
+For such conditional search spaces, write your own :mod:`optuna` objective, which only suggests a parameter when it is
+used, and still uses :func:`~pykeen.pipeline.pipeline` to train and evaluate the model. The multivariate TPE sampler
+with ``group=True`` then models the different sub-spaces separately. Make sure to evaluate on the validation triples,
+and keep the test triples for the final evaluation:
 
 .. literalinclude:: /examples/howto/customizing_representations.py
     :start-after: # %% custom objective

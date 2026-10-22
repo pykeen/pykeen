@@ -108,5 +108,7 @@ def objective(trial: optuna.Trial) -> float:
     return result.get_metric("hits@10")
 
 
-study = optuna.create_study(direction="maximize")
+# model the sub-spaces of the conditional search space separately
+sampler = optuna.samplers.TPESampler(multivariate=True, group=True)
+study = optuna.create_study(direction="maximize", sampler=sampler)
 study.optimize(objective, n_trials=4)
