@@ -4,7 +4,8 @@ import contextlib
 import importlib
 import pathlib
 import unittest
-from collections.abc import Mapping, MutableMapping, Sequence
+import warnings
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from typing import Any, ClassVar
 
 import pytest
@@ -12,6 +13,7 @@ import torch
 import unittest_templates
 
 import pykeen.models
+from pykeen.datasets import Nations
 from pykeen.datasets.nations import NATIONS_TRAIN_PATH
 from pykeen.models import (
     ERModel,
@@ -784,3 +786,31 @@ class CooccurrenceFilteredModelTests(cases.ModelTestCase):
                     expected = full[:, ids] if ids.ndim == 1 else full.gather(dim=1, index=ids)
                     restricted = self.instance.predict(hrt_batch=hrt_batch, target=target, ids=ids)
                     torch.testing.assert_close(restricted, expected)
+
+
+@pytest.mark.parametrize(
+    ("model_cls", "name", "label"),
+    [
+        (pykeen.models.DistMult, "entity_representations_kwargs", "entity"),
+        (pykeen.models.DistMult, "relation_representations_kwargs", "relation"),
+        (pykeen.models.HolE, "entity_representation_kwargs", "entity"),
+        (pykeen.models.HolE, "relation_representation_kwargs", "relation"),
+    ],
+)
+def test_deprecated_representation_kwargs(
+    model_cls: Callable[..., pykeen.models.ERModel], name: str, label: str
+) -> None:
+    """Test that deprecated model-specific representation parameters warn, but still take effect."""
+    triples_factory = Nations().training
+    with pytest.warns(DeprecationWarning, match=f"'{name}'"):
+        model = model_cls(triples_factory=triples_factory, **{name: {"trainable": False}})
+    representations = getattr(model, f"{label}_representations")
+    assert not any(p.requires_grad for p in representations.parameters())
+
+
+@pytest.mark.parametrize("model_cls", [pykeen.models.DistMult, pykeen.models.HolE])
+def test_no_deprecation_warning_by_default(model_cls: Callable[..., pykeen.models.ERModel]) -> None:
+    """Test that the models do not warn about deprecated parameters which are not passed."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        model_cls(triples_factory=Nations().training)
