@@ -289,7 +289,7 @@ class LCWAEvaluationDataset(Dataset[Mapping[Target, tuple[MappedTriples, torch.T
         # prepare filter indices if required
         if filtered:
             if not additional_filter_triples:
-                logger.warning("Enabled filtered evaluation, but not additional filter triples are passed.")
+                logger.warning("Enabled filtered evaluation, but no additional filter triples are passed.")
             df = pd.DataFrame(
                 data=torch.cat([mapped_triples, *(get_mapped_triples(x) for x in additional_filter_triples)]),
                 columns=COLUMN_LABELS,
