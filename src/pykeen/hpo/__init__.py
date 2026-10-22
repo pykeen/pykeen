@@ -532,6 +532,23 @@ Also notice that the search space of grid search grows fast with increasing numb
 and thus grid search is less efficient than other search strategies in finding good configurations,
 cf. https://jmlr.csail.mit.edu/papers/v13/bergstra12a.html.
 
+.. _hpo_unused_parameters:
+
+.. note::
+
+    :func:`~pykeen.hpo.hpo_pipeline` samples all hyper-parameters in each trial, including those which do not have an
+    effect for the chosen value of another hyper-parameter, e.g., the hidden dimension of a transformation which is only
+    used for one of several choices of entity representations. With the default, independent TPE sampler, this mostly
+    means that such a hyper-parameter itself is optimized less efficiently, since its ignored values also enter its
+    model. It is more harmful with grid search, where each ignored value repeats the same configuration, and with
+    samplers which model the hyper-parameters jointly, e.g., multivariate TPE or CMA-ES, for which ignored
+    hyper-parameters add noise. Ignored hyper-parameters also show up in the reported best parameters and parameter
+    importances.
+
+    For such conditional search spaces, write your own :mod:`optuna` objective, which only suggests a hyper-parameter
+    when it is used, and use ``TPESampler(multivariate=True, group=True)``, which models the different sub-spaces
+    separately. See :ref:`customizing_representations` for an example.
+
 Full Examples
 -------------
 The examples above have shown the permutation of one setting at a time. This
