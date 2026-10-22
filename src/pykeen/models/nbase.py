@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from abc import ABC
 from collections import defaultdict
 from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -51,6 +52,26 @@ CUSTOMIZING_REPRESENTATIONS_HINT = (
     "To customize the representations or the interaction function, use pykeen.models.ERModel directly, "
     f"cf. {CUSTOMIZING_REPRESENTATIONS_URL}"
 )
+
+
+def _warn_deprecated_representation_kwargs(model_name: str, **kwargs: OptionalKwargs) -> None:
+    """Warn about deprecated, model-specific parameters for representations, which are not None.
+
+    :param model_name:
+        the name of the model
+    :param kwargs:
+        the model-specific parameters, by name
+    """
+    for name, value in kwargs.items():
+        if value is None:
+            continue
+        warnings.warn(
+            f"Passing '{name}' to {model_name} is deprecated and will be removed in a future release. To customize "
+            f"the representations, use pykeen.models.ERModel directly, cf. {CUSTOMIZING_REPRESENTATIONS_URL}",
+            DeprecationWarning,
+            # user code -> forbid_kwargs' wrapper -> model's __init__ -> this function
+            stacklevel=4,
+        )
 
 
 class _NewAbstractModel(Model, ABC):
