@@ -117,11 +117,13 @@ from __future__ import annotations
 import ftplib
 import functools
 import hashlib
+import inspect
 import json
 import logging
 import operator
 import pathlib
 import pickle
+import re
 import time
 from collections.abc import Collection, Iterable, Mapping, MutableMapping
 from dataclasses import dataclass, field
@@ -145,7 +147,7 @@ from ..evaluation.evaluation_loop import LCWAEvaluationLoop
 from ..evaluation.evaluator import normalize_flattened_metric_results
 from ..losses import Loss, loss_resolver
 from ..lr_schedulers import LRScheduler, lr_scheduler_resolver
-from ..models import InductiveERModel, Model, make_model_cls, model_resolver
+from ..models import ERModel, InductiveERModel, Model, make_model_cls, model_resolver
 from ..nn.modules import Interaction
 from ..optimizers import optimizer_resolver
 from ..regularizers import Regularizer, regularizer_resolver
@@ -994,14 +996,49 @@ def _build_model_helper(
         for param_name, param_default in _get_model_defaults(model).items():
             model_kwargs.setdefault(param_name, param_default)
 
-    return (
-        model_resolver.make(
+    try:
+        model_instance = model_resolver.make(
             model,
             triples_factory=training_triples_factory,
             **model_kwargs,
-        ),
-        model_kwargs,
-    )
+        )
+    except TypeError as error:
+        _raise_er_model_parameter_hint(error=error, model=model)
+        raise
+    return model_instance, model_kwargs
+
+
+#: matches the error raised when a keyword argument is passed to a function, which already provides it itself
+_MULTIPLE_VALUES_PATTERN = re.compile(r"got multiple values for keyword argument '(\w+)'")
+
+
+def _raise_er_model_parameter_hint(error: TypeError, model: HintType[Model]) -> None:
+    """Raise a more helpful error, if a model was given an :class:`~pykeen.models.ERModel` parameter it sets itself.
+
+    Many models, e.g., :class:`~pykeen.models.TransE`, fill in parameters of :class:`~pykeen.models.ERModel`,
+    such as ``entity_representations_kwargs``, themselves. Passing them via ``model_kwargs`` thus fails.
+
+    :param error:
+        the original error
+    :param model:
+        the model hint
+
+    :raises TypeError:
+        if the error was caused by passing a parameter of :class:`~pykeen.models.ERModel`
+    """
+    match = _MULTIPLE_VALUES_PATTERN.search(str(error))
+    if match is None:
+        return
+    name = match.group(1)
+    if name not in inspect.signature(ERModel.__init__).parameters:
+        return
+    model_name = model_resolver.lookup(model).__name__
+    raise TypeError(
+        f"{model_name} sets '{name}' itself, so it cannot be passed via model_kwargs. To customize the "
+        f"representations or the interaction function, use pykeen.models.ERModel directly, e.g., "
+        f"pipeline(model=ERModel, model_kwargs=dict(interaction=..., {name}=...)), or subclass it. For details, see "
+        f"https://pykeen.readthedocs.io/en/stable/howto/troubleshooting.html#customizing-a-model-s-representations",
+    ) from error
 
 
 def _handle_random_seed(

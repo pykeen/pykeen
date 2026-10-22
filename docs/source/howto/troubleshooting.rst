@@ -55,3 +55,43 @@ modify the state dict accordingly before loading it. For example:
     Even if the state dict can be loaded, there is still a risk that the the weights are used differently. This can lead
     to a difference in model behavior. To be sure that the model is still functioning the same way, you should also
     check some model predictions and inspect *how* the model definition has changed.
+
+Customizing a Model's Representations
+-------------------------------------
+
+Most models, e.g., :class:`~pykeen.models.TransE`, are thin wrappers around :class:`~pykeen.models.ERModel`, which fill
+in the interaction function as well as the entity and relation representations themselves. Passing any of those via
+``model_kwargs`` thus fails with an exception like this one:
+
+.. code-block::
+
+    TypeError: TransE sets 'entity_representations_kwargs' itself, so it cannot be passed via model_kwargs. ...
+
+Instead, use :class:`~pykeen.models.ERModel` directly and combine an interaction function with the representations of
+your choice:
+
+.. literalinclude:: /examples/howto/customizing_representations.py
+    :start-after: # %% customize via ERModel
+    :end-before: # %% subclass for HPO
+
+Hyperparameter Optimization
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:func:`~pykeen.hpo.hpo_pipeline` samples flat parameters of the model's constructor, e.g., ``embedding_dim``, but not
+entries of nested dictionaries like ``entity_representations_kwargs``. To optimize the hyperparameters of customized
+representations, write a small subclass of :class:`~pykeen.models.ERModel`, which exposes the hyperparameters as
+parameters of its constructor and provides their ranges in ``hpo_default``. This also allows ensuring that dimensions
+which have to match, e.g., the entity and relation dimension for TransE, are always tied, and choosing between different
+types of representations via a categorical parameter:
+
+.. literalinclude:: /examples/howto/customizing_representations.py
+    :start-after: # %% subclass for HPO
+    :end-before: # %% custom objective
+
+Note that :func:`~pykeen.hpo.hpo_pipeline` samples all parameters for each trial, i.e., ``hidden_dim`` is sampled even
+if the plain embedding is chosen, where it is ignored. For conditional search spaces, write your own :mod:`optuna`
+objective, which can still use :func:`~pykeen.pipeline.pipeline` to train and evaluate the model. Make sure to evaluate
+on the validation triples, and keep the test triples for the final evaluation:
+
+.. literalinclude:: /examples/howto/customizing_representations.py
+    :start-after: # %% custom objective
