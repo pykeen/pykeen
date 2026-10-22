@@ -310,6 +310,11 @@ The HPO pipeline does not support optimizing over the hyper-parameters for each
 initializer. If you are interested in this, consider rolling your own ablation
 study pipeline.
 
+Similarly, parameters which are nested in dictionaries, e.g., ``entity_representations_kwargs``, cannot be optimized
+directly. To optimize customized representations, e.g., choosing between different types of entity representations,
+see :ref:`customizing_representations`, which shows how to write a small :class:`~pykeen.models.ERModel` subclass
+exposing them as flat hyper-parameters, and how to write a custom :mod:`optuna` objective for conditional search spaces.
+
 Optimizing the Loss
 ~~~~~~~~~~~~~~~~~~~
 While each model has its own default loss, you can explicitly specify a loss

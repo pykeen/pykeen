@@ -56,6 +56,8 @@ modify the state dict accordingly before loading it. For example:
     to a difference in model behavior. To be sure that the model is still functioning the same way, you should also
     check some model predictions and inspect *how* the model definition has changed.
 
+.. _customizing_representations:
+
 Customizing a Model's Representations
 -------------------------------------
 
