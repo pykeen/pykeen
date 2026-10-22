@@ -802,8 +802,10 @@ def test_deprecated_representation_kwargs(
 ) -> None:
     """Test that deprecated model-specific representation parameters warn, but still take effect."""
     triples_factory = Nations().training
-    with pytest.warns(DeprecationWarning, match=f"'{name}'"):
+    with pytest.warns(DeprecationWarning, match=f"'{name}'") as record:
         model = model_cls(triples_factory=triples_factory, **{name: {"trainable": False}})
+    # the warning points to the caller
+    assert {w.filename for w in record if name in str(w.message)} == {__file__}
     representations = getattr(model, f"{label}_representations")
     assert not any(p.requires_grad for p in representations.parameters())
 
