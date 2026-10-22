@@ -7,12 +7,13 @@ import torch
 from class_resolver import HintOrType
 from torch.nn.init import normal_
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, SoftplusLoss
 from ...nn.modules import ComplExInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import FloatTensor, Hint, Initializer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "ComplEx",
@@ -48,6 +49,12 @@ class ComplEx(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         "normalize": True,
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

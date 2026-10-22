@@ -6,10 +6,11 @@ from typing import Any, ClassVar
 from class_resolver import Hint, HintOrType, ResolverKey, update_docstring_with_resolver_keys
 from torch import nn
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import NTNInteraction
 from ...typing import FloatTensor, Initializer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "NTN",
@@ -63,6 +64,12 @@ class NTN(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor, FloatTensor, Floa
 
     @update_docstring_with_resolver_keys(
         ResolverKey(name="non_linearity", resolver="class_resolver.contrib.torch.activation_resolver")
+    )
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
     )
     def __init__(
         self,

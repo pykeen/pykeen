@@ -6,10 +6,12 @@ from typing import Any, ClassVar
 import torch.nn as nn
 
 from .base import LiteralModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.combination import GatedCombination
 from ...nn.modules import DistMultInteraction, Interaction
 from ...triples import TriplesNumericLiteralsFactory
+from ...utils import forbid_kwargs
 
 __all__ = [
     "DistMultLiteralGated",
@@ -41,6 +43,14 @@ class DistMultLiteralGated(LiteralModel):
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {"margin": 0.0}
     interaction_cls: ClassVar[type[Interaction]] = DistMultInteraction
 
+    @forbid_kwargs(
+        "combination",
+        "combination_kwargs",
+        "entity_representations_kwargs",
+        "interaction",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,

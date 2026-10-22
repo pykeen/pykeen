@@ -5,7 +5,7 @@ from typing import Any, ClassVar
 
 import torch
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn import quaternion
@@ -13,7 +13,7 @@ from ...nn.init import init_quaternions
 from ...nn.modules import QuatEInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Constrainer, FloatTensor, Hint, Initializer
-from ...utils import get_expected_norm
+from ...utils import forbid_kwargs, get_expected_norm
 
 __all__ = [
     "QuatE",
@@ -58,6 +58,12 @@ class QuatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         "normalize": True,
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

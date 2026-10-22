@@ -5,12 +5,12 @@ from typing import Any, ClassVar
 
 from class_resolver import OptionalKwargs
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_, xavier_uniform_, xavier_uniform_norm_
 from ...nn.modules import TransDInteraction
 from ...typing import Constrainer, FloatTensor, Hint, Initializer
-from ...utils import clamp_norm
+from ...utils import clamp_norm, forbid_kwargs
 
 __all__ = [
     "TransD",
@@ -44,6 +44,12 @@ class TransD(
         "relation_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

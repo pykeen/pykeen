@@ -6,11 +6,12 @@ from typing import Any, ClassVar
 from torch.nn import functional
 from torch.nn.init import uniform_
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import Loss, NSSALoss
 from ...nn.modules import PairREInteraction
 from ...typing import FloatTensor, Hint, Initializer, Normalizer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "PairRE",
@@ -57,6 +58,13 @@ class PairRE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         "dim": -1,
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "interaction_kwargs",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         embedding_dim: int = 200,

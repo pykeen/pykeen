@@ -5,12 +5,14 @@ from typing import Any, ClassVar
 
 from torch.nn.init import uniform_
 
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import NSSALoss
 from ...models import ERModel
 from ...nn.init import uniform_norm_
 from ...nn.modules import BoxEInteraction
 from ...typing import FloatTensor, Hint, Initializer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "BoxE",
@@ -53,6 +55,13 @@ class BoxE(
     loss_default = NSSALoss
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {"margin": 3, "adversarial_temperature": 2.0, "reduction": "sum"}
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "interaction_kwargs",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

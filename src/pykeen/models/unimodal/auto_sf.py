@@ -3,10 +3,11 @@
 from collections.abc import Mapping, Sequence
 from typing import Any, ClassVar
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import AutoSFInteraction
 from ...typing import Representation, Sign
+from ...utils import forbid_kwargs
 
 __all__ = [
     "AutoSF",
@@ -45,6 +46,13 @@ class AutoSF(ERModel[Representation, Representation, Representation]):
         "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "interaction_kwargs",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         embedding_dim: int = 256,

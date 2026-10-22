@@ -3,11 +3,12 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_
 from ...nn.modules import UMInteraction
 from ...typing import FloatTensor, Hint, Initializer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "UM",
@@ -35,6 +36,13 @@ class UM(ERModel[FloatTensor, tuple[()], FloatTensor]):
         "scoring_fct_norm": {"type": int, "low": 1, "high": 2},
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "interaction_kwargs",
+        "relation_representations",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

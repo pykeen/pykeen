@@ -63,6 +63,26 @@ contains configuration for the initializers, constrainers, and regularizers for 
 class-level defaults for hyper-parameters and hyper-parameter optimization. Modifying these is covered in other
 tutorials.
 
+Since the model fills in some parameters of :class:`~pykeen.models.ERModel` itself, e.g., ``interaction``, passing them
+again, e.g., via ``model_kwargs`` in the pipeline, would fail with a ``TypeError`` about multiple values for the same
+keyword argument. Decorate the constructor with :func:`~pykeen.utils.forbid_kwargs` to reject them with an explanation
+instead:
+
+.. code-block:: python
+
+    from pykeen.utils import forbid_kwargs
+
+
+    class DistMult(ERModel):
+        @forbid_kwargs(
+            "interaction",
+            "entity_representations",
+            "entity_representations_kwargs",
+            "relation_representations",
+            "relation_representations_kwargs",
+        )
+        def __init__(self, embedding_dim: int = 50, **kwargs) -> None: ...
+
 Specifying Defaults
 ~~~~~~~~~~~~~~~~~~~
 

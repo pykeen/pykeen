@@ -3,10 +3,11 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import TorusEInteraction
 from ...typing import FloatTensor, Hint, Initializer, Normalizer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "TorusE",
@@ -31,6 +32,13 @@ class TorusE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         "p": {"type": int, "low": 1, "high": 2},
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "interaction_kwargs",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         embedding_dim: int = 256,

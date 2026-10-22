@@ -7,11 +7,13 @@ import torch
 import torch.nn as nn
 
 from .base import LiteralModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEWithLogitsLoss, Loss
 from ...nn import ComplexSeparatedCombination, ConcatProjectionCombination
 from ...nn.modules import ComplExInteraction, Interaction
 from ...triples import TriplesNumericLiteralsFactory
+from ...utils import forbid_kwargs
 
 __all__ = [
     "ComplExLiteral",
@@ -42,6 +44,14 @@ class ComplExLiteral(LiteralModel):
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
     interaction_cls: ClassVar[type[Interaction]] = ComplExInteraction
 
+    @forbid_kwargs(
+        "combination",
+        "combination_kwargs",
+        "entity_representations_kwargs",
+        "interaction",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         triples_factory: TriplesNumericLiteralsFactory,

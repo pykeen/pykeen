@@ -60,12 +60,12 @@ Customizing a Model's Representations
 -------------------------------------
 
 Most models, e.g., :class:`~pykeen.models.TransE`, are thin wrappers around :class:`~pykeen.models.ERModel`, which fill
-in the interaction function as well as the entity and relation representations themselves. Passing any of those via
-``model_kwargs`` thus fails with an exception like this one:
+in the interaction function as well as the entity and relation representations themselves. Passing any of those, e.g.,
+via ``model_kwargs``, thus fails with an exception like this one:
 
 .. code-block::
 
-    TypeError: TransE sets 'entity_representations_kwargs' itself, so it cannot be passed via model_kwargs. ...
+    TypeError: TransE.__init__() sets 'entity_representations_kwargs' itself, so it cannot be passed as a keyword argument. ...
 
 Instead, use :class:`~pykeen.models.ERModel` directly, which takes the interaction function and the representations as
 parameters. See :ref:`customizing_representations` for examples, including hyper-parameter optimization.

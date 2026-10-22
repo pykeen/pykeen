@@ -1149,6 +1149,27 @@ class ModelTestCase(unittest_templates.GenericTestCase[Model]):
         optimizer = SGD(params=self.instance.get_grad_params(), lr=1.0)
         assert optimizer is not None
 
+    def test_forbidden_kwargs(self):
+        """Test that the model rejects parameters of :class:`ERModel` which it fills in itself with an explanation.
+
+        cf. :func:`pykeen.utils.forbid_kwargs`
+        """
+        if not issubclass(self.cls, ERModel):
+            raise SkipTest(f"{self.cls.__name__} is not an ERModel")
+        for name in inspect.signature(ERModel.__init__).parameters:
+            if name in {"self", "kwargs", "triples_factory"} or name in self.instance_kwargs:
+                continue
+            with self.subTest(name=name):
+                kwargs: dict[str, Any] = {**self.instance_kwargs, name: None}
+                error: Exception | None = None
+                try:
+                    self.cls(**kwargs)
+                except Exception as e:  # noqa: BLE001 -- other errors, e.g., due to the invalid value, are fine
+                    error = e
+                assert not (isinstance(error, TypeError) and "multiple values for keyword argument" in str(error)), (
+                    f"{self.cls.__name__} sets {name!r} itself, but does not forbid it via forbid_kwargs"
+                )
+
     def test_reset_parameters_(self):
         """Test :func:`Model.reset_parameters_`."""
         # get model parameters

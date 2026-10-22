@@ -4,7 +4,7 @@ import itertools
 import pathlib
 import tempfile
 import unittest
-from typing import Any, ClassVar
+from typing import ClassVar
 from unittest import mock
 
 import pytest
@@ -596,27 +596,7 @@ def test_loading_training_triples_factory(tf_cls: type[CoreTriplesFactory]):
         tf_cls.from_path_binary(pathlib.Path(directory, "training_triples"))
 
 
-@pytest.mark.parametrize("name", ["interaction", "entity_representations_kwargs", "relation_representations_kwargs"])
-def test_pipeline_er_model_parameter_hint(name: str):
-    """Test that passing an ERModel parameter which the model sets itself points to the ERModel route."""
-    with pytest.raises(TypeError, match=f"TransE sets '{name}' itself") as exc_info:
-        pipeline(dataset="Nations", model="TransE", model_kwargs={name: {}})
-    # the original error is kept for debugging
-    assert isinstance(exc_info.value.__cause__, TypeError)
-    assert "multiple values" in str(exc_info.value.__cause__)
-
-
-@pytest.mark.parametrize(
-    ("model", "model_kwargs", "message"),
-    [
-        ("TransE", {"foo": 1}, "unexpected keyword argument 'foo'"),
-        # the triples factory clashes with the one passed by the pipeline, not with one set by the model
-        ("TransE", {"triples_factory": None}, "multiple values for keyword argument 'triples_factory'"),
-        (ERModel, {"interaction": "TransE", "triples_factory": None}, "multiple values for keyword argument"),
-    ],
-)
-def test_pipeline_unrelated_type_error_unchanged(model, model_kwargs: dict[str, Any], message: str):
-    """Test that other errors during model instantiation are passed on unchanged."""
-    with pytest.raises(TypeError, match=message) as exc_info:
-        pipeline(dataset="Nations", model=model, model_kwargs=model_kwargs)
-    assert exc_info.value.__cause__ is None
+def test_pipeline_forbidden_model_kwargs():
+    """Test that passing a parameter which the model fills in itself explains how to customize it instead."""
+    with pytest.raises(TypeError, match=r"sets 'entity_representations_kwargs' itself.*ERModel directly"):
+        pipeline(dataset="Nations", model="TransE", model_kwargs={"entity_representations_kwargs": {}})

@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import NodePieceRepresentation, SubsetRepresentation, representation_resolver
 from ...nn.modules import DistMultInteraction, Interaction
@@ -14,7 +14,7 @@ from ...nn.node_piece import RelationTokenizer, Tokenizer, tokenizer_resolver
 from ...regularizers import Regularizer
 from ...triples.triples_factory import CoreTriplesFactory
 from ...typing import Constrainer, FloatTensor, Initializer, Normalizer, OneOrSequence
-from ...utils import upgrade_to_sequence
+from ...utils import forbid_kwargs, upgrade_to_sequence
 
 __all__ = [
     "NodePiece",
@@ -38,6 +38,13 @@ class NodePiece(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     }
 
+    @forbid_kwargs(
+        "entity_representations",
+        "entity_representations_kwargs",
+        "relation_representations",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

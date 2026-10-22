@@ -88,6 +88,7 @@ __all__ = [
     "extend_batch",
     "fix_dataclass_init_docs",
     "flatten_dictionary",
+    "forbid_kwargs",
     "format_relative_comparison",
     "get_batchnorm_modules",
     "get_benchmark",
@@ -1878,6 +1879,50 @@ def circular_correlation(a: FloatTensor, b: FloatTensor) -> FloatTensor:
     p_fft = a_fft * b_fft
     # inverse real FFT
     return torch.fft.irfft(p_fft, n=a.shape[-1], dim=-1)
+
+
+def forbid_kwargs(*names: str, message: str | None = None) -> Callable[[Callable[P, X]], Callable[P, X]]:
+    """Reject the given keyword arguments, e.g., because the decorated function fills them in itself.
+
+    This is useful for subclasses, which pass some of their parent's parameters themselves, and forward any remaining
+    keyword arguments. Without it, passing one of these parameters fails with a ``TypeError`` about multiple values
+    for the same keyword argument, which does not explain why.
+
+    >>> class Parent:
+    ...     def __init__(self, a: int = 0, b: int = 0): ...
+    >>> class Child(Parent):
+    ...     @forbid_kwargs("a")
+    ...     def __init__(self, **kwargs):
+    ...         super().__init__(a=1, **kwargs)
+    >>> Child(a=2)
+    Traceback (most recent call last):
+    ...
+    TypeError: Child.__init__() sets 'a' itself, so it cannot be passed as a keyword argument.
+
+    :param names:
+        the names of the forbidden keyword arguments
+    :param message:
+        an additional message to append to the error, e.g., describing alternatives
+
+    :return:
+        a decorator
+    """
+
+    def decorator(func: Callable[P, X]) -> Callable[P, X]:
+        @functools.wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> X:
+            if forbidden := [name for name in names if name in kwargs]:
+                quoted = ", ".join(map(repr, forbidden))
+                verb = "it" if len(forbidden) == 1 else "they"
+                error = f"{func.__qualname__}() sets {quoted} itself, so {verb} cannot be passed as a keyword argument."
+                if message:
+                    error = f"{error} {message}"
+                raise TypeError(error)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 @overload

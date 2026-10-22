@@ -5,11 +5,12 @@ from typing import Any, ClassVar
 
 from torch.nn.init import uniform_
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...losses import BCEAfterSigmoidLoss, Loss
 from ...nn.modules import ERMLPEInteraction
 from ...typing import FloatTensor, Hint, Initializer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "ERMLPE",
@@ -48,6 +49,13 @@ class ERMLPE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     #: The default parameters for the default loss function class
     loss_default_kwargs: ClassVar[Mapping[str, Any]] = {}
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "interaction_kwargs",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

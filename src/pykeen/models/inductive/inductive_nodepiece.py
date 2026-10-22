@@ -9,6 +9,7 @@ import torch
 from class_resolver import Hint, HintOrType, OptionalKwargs
 
 from .base import InductiveERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import (
     ConcatAggregationCombination,
@@ -21,6 +22,7 @@ from ...nn import (
 )
 from ...nn.node_piece import RelationTokenizer
 from ...triples.triples_factory import CoreTriplesFactory
+from ...utils import forbid_kwargs
 
 __all__ = [
     "InductiveNodePiece",
@@ -46,6 +48,13 @@ class InductiveNodePiece(InductiveERModel):
         "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     }
 
+    @forbid_kwargs(
+        "entity_representations",
+        "entity_representations_kwargs",
+        "relation_representations",
+        "testing_factory",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,
