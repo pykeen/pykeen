@@ -56,8 +56,6 @@ modify the state dict accordingly before loading it. For example:
     to a difference in model behavior. To be sure that the model is still functioning the same way, you should also
     check some model predictions and inspect *how* the model definition has changed.
 
-.. _customizing_representations:
-
 Customizing a Model's Representations
 -------------------------------------
 
@@ -69,34 +67,5 @@ in the interaction function as well as the entity and relation representations t
 
     TypeError: TransE sets 'entity_representations_kwargs' itself, so it cannot be passed via model_kwargs. ...
 
-Instead, use :class:`~pykeen.models.ERModel` directly and combine an interaction function with the representations of
-your choice:
-
-.. literalinclude:: /examples/howto/customizing_representations.py
-    :start-after: # %% customize via ERModel
-    :end-before: # %% subclass for HPO
-
-Hyperparameter Optimization
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-:func:`~pykeen.hpo.hpo_pipeline` samples flat parameters of the model's constructor, e.g., ``embedding_dim``, but not
-entries of nested dictionaries like ``entity_representations_kwargs``. To optimize the hyperparameters of customized
-representations, write a small subclass of :class:`~pykeen.models.ERModel`, which exposes the hyperparameters as
-parameters of its constructor and provides their ranges in ``hpo_default``. This also allows ensuring that dimensions
-which have to match, e.g., the entity and relation dimension for TransE, are always tied, and choosing between different
-types of representations via a categorical parameter:
-
-.. literalinclude:: /examples/howto/customizing_representations.py
-    :start-after: # %% subclass for HPO
-    :end-before: # %% custom objective
-
-Note that :func:`~pykeen.hpo.hpo_pipeline` samples all parameters for each trial, i.e., ``hidden_dim`` is sampled even
-if the plain embedding is chosen, where it is ignored. For how this affects the search, see :ref:`this note
-<hpo_unused_parameters>`.
-
-For such conditional search spaces, write your own :mod:`optuna` objective, which only suggests a parameter when it is
-used, and still uses :func:`~pykeen.pipeline.pipeline` to train and evaluate the model. Make sure to evaluate on the
-validation triples, and keep the test triples for the final evaluation:
-
-.. literalinclude:: /examples/howto/customizing_representations.py
-    :start-after: # %% custom objective
+Instead, use :class:`~pykeen.models.ERModel` directly, which takes the interaction function and the representations as
+parameters. See :ref:`customizing_representations` for examples, including hyper-parameter optimization.

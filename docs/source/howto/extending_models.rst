@@ -188,3 +188,43 @@ classes in the ``model`` argument.
         dataset="Nations",
         loss="NSSA",
     )
+
+.. _customizing_representations:
+
+Customizing the Representations of an Existing Model
+----------------------------------------------------
+
+Most models, e.g., :class:`~pykeen.models.TransE`, fill in the interaction function as well as the entity and relation
+representations themselves, and thus do not accept parameters such as ``entity_representations_kwargs``. To customize
+them, use :class:`~pykeen.models.ERModel` directly with the pipeline, and combine an interaction function with the
+representations of your choice:
+
+.. literalinclude:: /examples/howto/customizing_representations.py
+    :start-after: # %% customize via ERModel
+    :end-before: # %% subclass for HPO
+
+Optimizing the Hyper-parameters of Custom Representations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:func:`~pykeen.hpo.hpo_pipeline` samples flat parameters of the model's constructor, e.g., ``embedding_dim``, but not
+entries of nested dictionaries like ``entity_representations_kwargs``. To optimize the hyper-parameters of customized
+representations, write a small subclass of :class:`~pykeen.models.ERModel`, which exposes them as parameters of its
+constructor, and provides their ranges in ``hpo_default`` as described above. This also allows ensuring that dimensions
+which have to match, e.g., the entity and relation dimension for TransE, are always tied, and choosing between different
+types of representations via a categorical parameter:
+
+.. literalinclude:: /examples/howto/customizing_representations.py
+    :start-after: # %% subclass for HPO
+    :end-before: # %% custom objective
+
+Conditional Search Spaces
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:func:`~pykeen.hpo.hpo_pipeline` samples all parameters for each trial, i.e., in the example above, ``hidden_dim`` is
+sampled even if the plain embedding is chosen, where it is ignored. For how this affects the search, see :ref:`this note
+<hpo_unused_parameters>`. For such conditional search spaces, write your own :mod:`optuna` objective, which only
+suggests a parameter when it is used, and still uses :func:`~pykeen.pipeline.pipeline` to train and evaluate the model.
+Make sure to evaluate on the validation triples, and keep the test triples for the final evaluation:
+
+.. literalinclude:: /examples/howto/customizing_representations.py
+    :start-after: # %% custom objective
