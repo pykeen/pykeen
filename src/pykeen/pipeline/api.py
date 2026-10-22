@@ -1030,7 +1030,8 @@ def _raise_er_model_parameter_hint(error: TypeError, model: HintType[Model]) -> 
     if match is None:
         return
     name = match.group(1)
-    if name not in inspect.signature(ERModel.__init__).parameters:
+    # the triples factory is passed by the pipeline itself, not by the model
+    if name == "triples_factory" or name not in inspect.signature(ERModel.__init__).parameters:
         return
     model_name = model_resolver.lookup(model).__name__
     raise TypeError(

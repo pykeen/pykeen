@@ -4,7 +4,7 @@ import itertools
 import pathlib
 import tempfile
 import unittest
-from typing import ClassVar
+from typing import Any, ClassVar
 from unittest import mock
 
 import pytest
@@ -606,8 +606,17 @@ def test_pipeline_er_model_parameter_hint(name: str):
     assert "multiple values" in str(exc_info.value.__cause__)
 
 
-def test_pipeline_unrelated_type_error_unchanged():
+@pytest.mark.parametrize(
+    ("model", "model_kwargs", "message"),
+    [
+        ("TransE", {"foo": 1}, "unexpected keyword argument 'foo'"),
+        # the triples factory clashes with the one passed by the pipeline, not with one set by the model
+        ("TransE", {"triples_factory": None}, "multiple values for keyword argument 'triples_factory'"),
+        (ERModel, {"interaction": "TransE", "triples_factory": None}, "multiple values for keyword argument"),
+    ],
+)
+def test_pipeline_unrelated_type_error_unchanged(model, model_kwargs: dict[str, Any], message: str):
     """Test that other errors during model instantiation are passed on unchanged."""
-    with pytest.raises(TypeError, match="unexpected keyword argument 'foo'") as exc_info:
-        pipeline(dataset="Nations", model="TransE", model_kwargs={"foo": 1})
+    with pytest.raises(TypeError, match=message) as exc_info:
+        pipeline(dataset="Nations", model=model, model_kwargs=model_kwargs)
     assert exc_info.value.__cause__ is None
