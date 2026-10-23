@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 from class_resolver import Hint, HintOrType
 from torch import nn
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.message_passing import Decomposition, RGCNRepresentation
 from ...nn.modules import Interaction
@@ -15,6 +15,7 @@ from ...nn.weighting import EdgeWeighting
 from ...regularizers import Regularizer
 from ...triples import CoreTriplesFactory
 from ...typing import FloatTensor, Initializer, RelationRepresentation
+from ...utils import forbid_kwargs
 
 __all__ = [
     "RGCN",
@@ -77,6 +78,12 @@ class RGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
         # num_blocks=dict(type=int, low=2, high=20, q=1),
     }
 
+    @forbid_kwargs(
+        "entity_representations",
+        "entity_representations_kwargs",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

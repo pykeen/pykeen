@@ -5,12 +5,13 @@ from typing import Any, ClassVar
 
 from class_resolver import Hint, HintOrType
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...inverse import RelationInverter, relation_inverter_resolver
 from ...nn.modules import DistMultInteraction, Interaction
 from ...nn.representation import CombinedCompGCNRepresentations
 from ...triples import CoreTriplesFactory
 from ...typing import FloatTensor, RelationRepresentation
+from ...utils import forbid_kwargs
 
 __all__ = [
     "CompGCN",
@@ -35,6 +36,7 @@ class CompGCN(ERModel[FloatTensor, RelationRepresentation, FloatTensor]):
         "embedding_dim": {"type": int, "low": 32, "high": 512, "q": 32},
     }
 
+    @forbid_kwargs("entity_representations", "relation_representations", message=CUSTOMIZING_REPRESENTATIONS_HINT)
     def __init__(
         self,
         *,

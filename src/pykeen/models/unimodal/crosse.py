@@ -6,11 +6,12 @@ from typing import Any, ClassVar
 from class_resolver import HintOrType, ResolverKey, update_docstring_with_resolver_keys
 from torch import FloatTensor, nn
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_uniform_
 from ...nn.modules import CrossEInteraction
 from ...typing import Hint, Initializer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "CrossE",
@@ -40,6 +41,13 @@ class CrossE(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
 
     @update_docstring_with_resolver_keys(
         ResolverKey("combination_activation", "class_resolver.contrib.torch.activation_resolver")
+    )
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "interaction_kwargs",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
     )
     def __init__(
         self,

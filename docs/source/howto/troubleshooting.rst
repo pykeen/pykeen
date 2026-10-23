@@ -55,3 +55,17 @@ modify the state dict accordingly before loading it. For example:
     Even if the state dict can be loaded, there is still a risk that the the weights are used differently. This can lead
     to a difference in model behavior. To be sure that the model is still functioning the same way, you should also
     check some model predictions and inspect *how* the model definition has changed.
+
+Customizing a Model's Representations
+-------------------------------------
+
+Most models, e.g., :class:`~pykeen.models.TransE`, are thin wrappers around :class:`~pykeen.models.ERModel`, which fill
+in the interaction function as well as the entity and relation representations themselves. Passing any of those, e.g.,
+via ``model_kwargs``, thus fails with an exception like this one:
+
+.. code-block::
+
+    TypeError: TransE.__init__() sets 'entity_representations_kwargs' itself, so it cannot be passed as a keyword argument. ...
+
+Instead, use :class:`~pykeen.models.ERModel` directly, which takes the interaction function and the representations as
+parameters. See :ref:`customizing_representations` for examples, including hyper-parameter optimization.

@@ -7,12 +7,12 @@ import torch
 import torch.nn.init
 from class_resolver import OptionalKwargs
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransRInteraction
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...typing import Constrainer, FloatTensor, Hint, Initializer
-from ...utils import clamp_norm
+from ...utils import clamp_norm, forbid_kwargs
 
 __all__ = [
     "TransR",
@@ -59,6 +59,13 @@ class TransR(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         "scoring_fct_norm": {"type": int, "low": 1, "high": 2},
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "interaction_kwargs",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

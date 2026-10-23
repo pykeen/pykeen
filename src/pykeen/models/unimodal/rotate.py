@@ -6,12 +6,12 @@ from typing import Any, ClassVar
 import torch
 from class_resolver import HintOrType, OptionalKwargs
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...nn.init import init_phases, xavier_uniform_
 from ...nn.modules import RotatEInteraction
 from ...regularizers import Regularizer
 from ...typing import Constrainer, FloatTensor, Hint, Initializer
-from ...utils import complex_normalize
+from ...utils import complex_normalize, forbid_kwargs
 
 __all__ = [
     "RotatE",
@@ -54,6 +54,12 @@ class RotatE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         "embedding_dim": {"type": int, "low": 32, "high": 1024, "q": 16},
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

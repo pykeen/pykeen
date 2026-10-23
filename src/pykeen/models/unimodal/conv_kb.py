@@ -6,11 +6,12 @@ from typing import Any, ClassVar
 
 from torch.nn.init import uniform_
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_DROPOUT_HPO_RANGE, DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import ConvKBInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import FloatTensor, Hint, Initializer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "ConvKB",
@@ -53,6 +54,13 @@ class ConvKB(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         "apply_only_once": True,
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "interaction_kwargs",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

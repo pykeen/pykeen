@@ -594,3 +594,9 @@ def test_loading_training_triples_factory(tf_cls: type[CoreTriplesFactory]):
     with tempfile.TemporaryDirectory() as directory:
         result.save_to_directory(directory)
         tf_cls.from_path_binary(pathlib.Path(directory, "training_triples"))
+
+
+def test_pipeline_forbidden_model_kwargs():
+    """Test that passing a parameter which the model fills in itself explains how to customize it instead."""
+    with pytest.raises(TypeError, match=r"sets 'entity_representations_kwargs' itself.*ERModel directly"):
+        pipeline(dataset="Nations", model="TransE", model_kwargs={"entity_representations_kwargs": {}})

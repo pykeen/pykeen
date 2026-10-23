@@ -3,10 +3,11 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import TransFInteraction
 from ...typing import FloatTensor, Hint, Initializer, Normalizer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "TransF",
@@ -33,6 +34,12 @@ class TransF(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         "embedding_dim": DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE,
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         embedding_dim: int = 128,

@@ -6,12 +6,13 @@ from typing import Any, ClassVar
 from class_resolver import Hint, HintOrType, OptionalKwargs
 from torch.nn import functional
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import TransEInteraction
 from ...nn.init import xavier_uniform_, xavier_uniform_norm_
 from ...regularizers import Regularizer
 from ...typing import Constrainer, FloatTensor, Initializer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "TransE",
@@ -38,6 +39,13 @@ class TransE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         "scoring_fct_norm": {"type": int, "low": 1, "high": 2},
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "interaction_kwargs",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

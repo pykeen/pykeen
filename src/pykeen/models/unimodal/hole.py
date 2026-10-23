@@ -5,12 +5,12 @@ from typing import Any, ClassVar
 
 from class_resolver import Hint, OptionalKwargs
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import HolEInteraction
 from ...nn.init import xavier_uniform_
 from ...typing import Constrainer, FloatTensor, Initializer
-from ...utils import clamp_norm
+from ...utils import clamp_norm, forbid_kwargs
 
 __all__ = [
     "HolE",
@@ -52,6 +52,12 @@ class HolE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     #: The default settings for the entity constrainer
     entity_constrainer_default_kwargs: ClassVar[Mapping[str, Any]] = {"maxnorm": 1.0, "p": 2, "dim": -1}
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         *,

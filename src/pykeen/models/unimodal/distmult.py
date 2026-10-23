@@ -6,12 +6,13 @@ from typing import Any, ClassVar
 from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch.nn import functional
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_norm_, xavier_uniform_
 from ...nn.modules import DistMultInteraction
 from ...regularizers import LpRegularizer, Regularizer
 from ...typing import Constrainer, FloatTensor, Hint, Initializer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "DistMult",
@@ -64,6 +65,7 @@ class DistMult(ERModel[FloatTensor, FloatTensor, FloatTensor]):
     @update_docstring_with_resolver_keys(
         ResolverKey(name="regularizer", resolver="pykeen.regularizers.regularizer_resolver")
     )
+    @forbid_kwargs("interaction", message=CUSTOMIZING_REPRESENTATIONS_HINT)
     def __init__(
         self,
         *,

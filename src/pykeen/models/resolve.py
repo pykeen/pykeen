@@ -61,9 +61,10 @@ from typing import Any
 
 from class_resolver import OptionalKwargs
 
-from .nbase import ERModel
+from .nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ..nn.modules import Interaction, interaction_resolver
 from ..typing import HeadRepresentation, RelationRepresentation, TailRepresentation
+from ..utils import forbid_kwargs
 
 __all__ = [
     "make_model",
@@ -141,6 +142,12 @@ def make_model_cls(
     class ChildERModel(ERModel[HeadRepresentation, RelationRepresentation, TailRepresentation]):
         """A ad-hoc child class of ERModel."""
 
+        @forbid_kwargs(
+            "entity_representations_kwargs",
+            "interaction",
+            "relation_representations_kwargs",
+            message=CUSTOMIZING_REPRESENTATIONS_HINT,
+        )
         def __init__(self, **kwargs) -> None:
             """Initialize the model."""
             super().__init__(

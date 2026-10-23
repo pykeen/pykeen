@@ -7,12 +7,12 @@ import torch
 from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch.nn.init import uniform_
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import KG2EInteraction
 from ...nn.sim import KG2ESimilarity
 from ...typing import Constrainer, FloatTensor, Hint, Initializer
-from ...utils import clamp_norm
+from ...utils import clamp_norm, forbid_kwargs
 
 __all__ = [
     "KG2E",
@@ -50,6 +50,13 @@ class KG2E(ERModel[tuple[FloatTensor, FloatTensor], tuple[FloatTensor, FloatTens
 
     @update_docstring_with_resolver_keys(
         ResolverKey(name="dist_similarity", resolver="pykeen.nn.sim.kg2e_similarity_resolver")
+    )
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "interaction_kwargs",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
     )
     def __init__(
         self,

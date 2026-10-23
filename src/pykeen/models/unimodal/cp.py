@@ -3,10 +3,11 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
-from ..nbase import ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.modules import CPInteraction
 from ...typing import FloatTensor, Hint, Initializer, Normalizer
+from ...utils import forbid_kwargs
 
 __all__ = [
     "CP",
@@ -38,6 +39,12 @@ class CP(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         "rank": {"type": int, "low": 2, "high": 2048, "log": True},
     }
 
+    @forbid_kwargs(
+        "entity_representations_kwargs",
+        "interaction",
+        "relation_representations_kwargs",
+        message=CUSTOMIZING_REPRESENTATIONS_HINT,
+    )
     def __init__(
         self,
         embedding_dim: int = 64,

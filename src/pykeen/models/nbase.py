@@ -41,6 +41,17 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+#: the documentation on how to customize the representations of a model
+CUSTOMIZING_REPRESENTATIONS_URL = (
+    "https://pykeen.readthedocs.io/en/stable/howto/troubleshooting.html#customizing-a-model-s-representations"
+)
+
+#: the hint for models which fill in parameters of :class:`ERModel` themselves, cf. :func:`~pykeen.utils.forbid_kwargs`
+CUSTOMIZING_REPRESENTATIONS_HINT = (
+    "To customize the representations or the interaction function, use pykeen.models.ERModel directly, "
+    f"cf. {CUSTOMIZING_REPRESENTATIONS_URL}"
+)
+
 
 class _NewAbstractModel(Model, ABC):
     """An abstract class for knowledge graph embedding models (KGEMs).
