@@ -10,7 +10,7 @@ from collections.abc import Collection, Iterator, Sequence
 
 from class_resolver import ClassResolver, OneOrManyHintOrType, OneOrManyOptionalKwargs
 
-from .utils import MetricSelection, ResultListenerAdapter
+from .utils import BestMetricListener, MetricSelection
 from ..trackers.base import ResultTracker
 
 __all__ = [
@@ -90,13 +90,13 @@ class BestCheckpointKeeper(CheckpointKeeper):
     metric_selection: MetricSelection
 
     # note: internal detail
-    _adapter: ResultListenerAdapter = dataclasses.field(init=False)
+    _listener: BestMetricListener = dataclasses.field(init=False)
 
     def __post_init__(self):
-        self._adapter = ResultListenerAdapter(self.result_tracker, metric_selection=self.metric_selection)
+        self._listener = BestMetricListener(self.result_tracker, metric_selection=self.metric_selection)
 
     def __call__(self, steps: Sequence[int]) -> Iterator[int]:  # noqa: D102  # dunder override, see D105
-        return filter(self._adapter.is_best, steps)
+        return filter(self._listener.is_best, steps)
 
 
 @dataclasses.dataclass
