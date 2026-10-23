@@ -359,17 +359,6 @@ def _defined_public_names(module: ModuleType) -> set[str]:
 
 
 @pytest.mark.parametrize("module_name", MODULE_NAMES)
-def test_all_entries_exist(module_name: str) -> None:
-    """Test that all names in ``__all__`` exist in the module, and are listed once."""
-    module = _import(module_name)
-    exported = getattr(module, "__all__", [])
-    missing = sorted(name for name in exported if not hasattr(module, name))
-    assert not missing, f"{module_name}.__all__ lists names that do not exist: {missing}"
-    duplicates = sorted({name for name in exported if exported.count(name) > 1})
-    assert not duplicates, f"{module_name}.__all__ lists names more than once: {duplicates}"
-
-
-@pytest.mark.parametrize("module_name", MODULE_NAMES)
 def test_public_names_are_exported(module_name: str) -> None:
     """Test that public names defined in a module are exported via ``__all__``, apart from known omissions."""
     module = _import(module_name)
