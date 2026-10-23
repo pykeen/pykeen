@@ -1,5 +1,6 @@
 """Utility class for storing ranks."""
 
+import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
@@ -8,9 +9,10 @@ import torch
 from ..typing import RANK_OPTIMISTIC, RANK_PESSIMISTIC, RANK_REALISTIC, FloatTensor, LongTensor, RankType
 
 __all__ = [
-    "RankBuilder",
     "Ranks",
 ]
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -20,7 +22,7 @@ class Ranks:
     #: The optimistic rank is the rank when assuming all options with an equal score are placed
     #: behind the current test triple.
     #: shape: (batch_size,)
-    optimistic: FloatTensor
+    optimistic: LongTensor
 
     #: The realistic rank is the average of the optimistic and pessimistic rank, and hence the expected rank
     #: over all permutations of the elements with the same score as the currently considered option.
@@ -30,18 +32,18 @@ class Ranks:
     #: The pessimistic rank is the rank when assuming all options with an equal score are placed
     #: in front of current test triple.
     #: shape: (batch_size,)
-    pessimistic: FloatTensor
+    pessimistic: LongTensor
 
     #: The number of options is the number of items considered in the ranking. It may change for
     #: filtered evaluation
     #: shape: (batch_size,)
     number_of_options: LongTensor
 
-    def items(self) -> Iterable[tuple[RankType, FloatTensor]]:
+    def items(self) -> Iterable[tuple[RankType, FloatTensor | LongTensor]]:
         """Iterate over pairs of rank types and their associated tensors."""
         yield from self.to_type_dict().items()
 
-    def to_type_dict(self) -> Mapping[RankType, FloatTensor]:
+    def to_type_dict(self) -> Mapping[RankType, FloatTensor | LongTensor]:
         """Return mapping from rank-type to rank value tensor."""
         return {
             RANK_OPTIMISTIC: self.optimistic,
@@ -65,6 +67,12 @@ class Ranks:
         :return:
             a data structure containing the (filtered) ranks.
         """
+        # A NaN true score compares False against everything, which silently yields
+        # optimistic=1, pessimistic=0. We cannot rank such a triple, so at least warn.
+        # Note that this check requires a device synchronization.
+        if torch.isnan(true_score).any():
+            logger.warning("true_score contains NaN; the resulting ranks for these entries are meaningless.")
+
         # The optimistic rank is the rank when assuming all options with an
         # equal score are placed behind the currently considered. Hence, the
         # rank is the number of options with better scores, plus one, as the
@@ -85,8 +93,9 @@ class Ranks:
         realistic_rank = (optimistic_rank + pessimistic_rank).float() * 0.5
 
         # We set values which should be ignored to NaN, hence the number of options
-        # which should be considered is given by
-        number_of_options = torch.isfinite(all_scores).sum(dim=1)
+        # which should be considered is given by the number of non-NaN entries.
+        # Infinite scores must be counted, since they take part in the rank computation above.
+        number_of_options = (~torch.isnan(all_scores)).sum(dim=1)
 
         return cls(
             optimistic=optimistic_rank,
@@ -94,82 +103,3 @@ class Ranks:
             realistic=realistic_rank,
             number_of_options=number_of_options,
         )
-
-
-@dataclass
-class RankBuilder:
-    """
-    Incremental rank builder.
-
-    The incremental rank builder can be used to calculate ranks whenever we do not have access to all candidate scores
-    at once, but are able to iterate over (batches of) them, e.g., in combination with score slicing. And advantage
-    over the current slicing implementation is that we do not need to be able to store all scores, but can already
-    start aggregating them.
-
-    In general, the following pattern can be used.
-
-    We start by initializing the builder with a (batch of) true score(s)
-
-    >>> import torch
-    >>> from pykeen.evaluation.ranks import RankBuilder
-    >>> builder = RankBuilder(y_true=torch.as_tensor([0.2, 0.1]))
-
-    Now, we iterate over batches of scores, e.g., `2 * 15` scores at once. Note that all but the last dimension have
-    to match the shape of `y_true`. Also notice that the operation does *not* work in-place, but rather returns an
-    updated object. This does not pose a serious memory problem, since each RankBuilder object only holds references to
-    tensors, and does not copy the tensors themselves.
-
-    >>> for _ in range(10):
-    ...    builder = builder.update(y_pred=torch.rand(2, 15))
-
-    After we aggregated all batches, we can obtain the ranks by
-
-    >>> ranks = builder.compute()
-
-    Note that this pattern is somewhat similar to the one found in :mod:`torchmetrics`, except that it works on
-    "sub-batch" / "slice" basis rather than batch level.
-    """
-
-    # TODO: unused?
-
-    #: the scores of the true choice, shape: (*bs), dtype: float
-    y_true: torch.Tensor
-
-    #: the number of scores which were larger than the true score, shape: (*bs), dtype: long
-    larger: torch.Tensor | int = 0
-
-    #: the number of scores which were not smaller than the true score, shape: (*bs), dtype: long
-    not_smaller: torch.Tensor | int = 0
-
-    #: the total number of compared scores, shape: (*bs), dtype: long
-    total: torch.Tensor | int = 0
-
-    def update(self, y_pred: FloatTensor) -> "RankBuilder":
-        """Update the rank builder with a batch of scores.
-
-        :param y_pred: shape: (*bs, partial_num_choices)
-            the predicted scores, which are aligned to the batch of true scores
-
-        :return:
-            the updated rank builder
-        """
-        return RankBuilder(
-            y_true=self.y_true,
-            larger=self.larger + (y_pred > self.y_true.unsqueeze(dim=-1)).sum(dim=-1),
-            not_smaller=self.not_smaller + (y_pred >= self.y_true.unsqueeze(dim=-1)).sum(dim=-1),
-            total=self.total + torch.isfinite(y_pred).sum(dim=-1),
-        )
-
-    def compute(self) -> Ranks:
-        """Calculate the ranks for the aggregated counts.
-
-        :return:
-            a rank object for different rank types
-        """
-        optimistic = self.larger + 1
-        pessimistic = self.not_smaller + 1
-        realistic = optimistic + pessimistic
-        if isinstance(realistic, torch.Tensor):
-            realistic = realistic.float()
-        realistic = 0.5 * realistic
-        return Ranks(optimistic=optimistic, pessimistic=pessimistic, realistic=realistic, number_of_options=self.total)
