@@ -381,7 +381,7 @@ def test_package_reexports_are_consistent(package_name: str) -> None:
     """Test that a name which a package exports is the same object as in the submodule which exports it."""
     package = _import(package_name)
     exported = set(getattr(package, "__all__", []))
-    inconsistent = []
+    inconsistent: list[str] = []
     for info in pkgutil.iter_modules(package.__path__, prefix=f"{package_name}."):
         try:
             submodule = _import(info.name)
