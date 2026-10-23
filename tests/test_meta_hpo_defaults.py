@@ -135,12 +135,18 @@ def _collect_components() -> list[Component]:
             )
         )
 
+    def _make_from_kwargs(cls: type) -> Callable[[Mapping[str, Any]], object]:
+        def _make(config: Mapping[str, Any]) -> object:
+            return cls(**config)
+
+        return _make
+
     for name, cls in sorted(loss_resolver.lookup_dict.items()):
-        components.append(Component("loss", name, cls, cls.hpo_default, cls.__init__, (), lambda c, cls=cls: cls(**c)))
+        components.append(Component("loss", name, cls, cls.hpo_default, cls.__init__, (), _make_from_kwargs(cls)))
 
     for name, cls in sorted(regularizer_resolver.lookup_dict.items()):
         components.append(
-            Component("regularizer", name, cls, cls.hpo_default, cls.__init__, (), lambda c, cls=cls: cls(**c))
+            Component("regularizer", name, cls, cls.hpo_default, cls.__init__, (), _make_from_kwargs(cls))
         )
 
     def _make_optimizer(cls: type) -> Callable[[Mapping[str, Any]], object]:
