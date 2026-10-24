@@ -594,3 +594,31 @@ def test_loading_training_triples_factory(tf_cls: type[CoreTriplesFactory]):
     with tempfile.TemporaryDirectory() as directory:
         result.save_to_directory(directory)
         tf_cls.from_path_binary(pathlib.Path(directory, "training_triples"))
+
+
+def test_trans_e_entity_representations_kwargs_via_pipeline():
+    """Passing entity_representations_kwargs in model_kwargs should not raise TypeError.
+
+    Regression test for https://github.com/pykeen/pykeen/issues/1441.
+    Before the fix, TransE (and similar models) hard-coded entity_representations_kwargs in
+    their super().__init__() call without accepting it as an explicit parameter, so passing
+    it via model_kwargs caused "got multiple values for keyword argument".
+    """
+    result = pipeline(
+        dataset="nations",
+        model="TransE",
+        model_kwargs={"entity_representations_kwargs": {}},
+        training_kwargs={"num_epochs": 0},
+    )
+    assert result.model is not None
+
+
+def test_trans_e_relation_representations_kwargs_via_pipeline():
+    """Passing relation_representations_kwargs in model_kwargs should not raise TypeError."""
+    result = pipeline(
+        dataset="nations",
+        model="TransE",
+        model_kwargs={"relation_representations_kwargs": {}},
+        training_kwargs={"num_epochs": 0},
+    )
+    assert result.model is not None
