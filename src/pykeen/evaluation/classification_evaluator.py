@@ -46,8 +46,13 @@ class ClassificationMetricResults(MetricResults[ClassificationMetricKey]):
             s = classification_metric_resolver.make(query=None).key
         # side?.metric
         parts = s.split(".")
+        if len(parts) > 2:
+            raise ValueError(f"Invalid metric key={s!r}: expected the format `[side.]metric`.")
         side = normalize_target(None if len(parts) < 2 else parts[0])
-        metric = parts[-1]
+        try:
+            metric = classification_metric_resolver.make(parts[-1]).key
+        except KeyError as error:
+            raise ValueError(f"Unknown classification metric: {parts[-1]!r}") from error
         return ClassificationMetricKey(side=side, metric=metric)
 
     @classmethod
@@ -123,7 +128,7 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
         dense_positive_mask: FloatTensor | None = None,
     ) -> None:
         if dense_positive_mask is None:
-            raise KeyError("Sklearn evaluators need the positive mask!")
+            raise ValueError("Sklearn evaluators need the positive mask!")
 
         # Transfer to cpu and convert to numpy
         scores_np = scores.detach().cpu().numpy()
@@ -134,8 +139,6 @@ class ClassificationEvaluator(Evaluator[ClassificationMetricKey]):
         # Ensure that each key gets counted only once
         for i in range(keys.shape[0]):
             key = tuple(map(int, keys[i]))
-            if len(key) != 2:
-                raise ValueError("Expected len(key) == 2.")
             key = cast(tuple[int, int], key)
             self.all_scores[target][key] = scores_np[i]
             self.all_positives[target][key] = dense_positive_mask_np[i]

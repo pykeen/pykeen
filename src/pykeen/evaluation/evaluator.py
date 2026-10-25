@@ -106,13 +106,15 @@ class MetricResults(Generic[MetricKeyType]):
         for compound_key, metric_value in self.data.items():
             partial_result = result
             for key_part in compound_key[:-1]:
-                partial_result.setdefault(str(key_part), {})
-                partial_result = partial_result[key_part]
+                partial_result = partial_result.setdefault(str(key_part), {})
             partial_result[str(compound_key[-1])] = metric_value
         return result
 
     def to_df(self) -> pd.DataFrame:
         """Output the metrics as a pandas dataframe."""
+        if not self.data:
+            # without any key, the key fields (and thus the columns) are unknown
+            return pd.DataFrame(columns=["Value"])
         one_key = next(iter(self.data.keys()))
         # assert isinstance(one_key, NamedTuple)
         # TODO: should we enforce this?
@@ -326,7 +328,7 @@ class Evaluator(ABC, Generic[MetricKeyType]):
             # `Module.to` is in-place; undo the move, e.g., when called mid-training or after a fallback to cpu
             model.to(original_device)
         stop = timeit.default_timer()
-        logger.info("Evaluation took %.2fs seconds", stop - start)
+        logger.info("Evaluation took %.2fs", stop - start)
         return result
 
     def _evaluate_on_device(
@@ -520,7 +522,7 @@ def create_sparse_positive_filter_(
     :param filter_col: The column along which to filter. Allowed are {0, 2}, where 0 corresponds to filtering head-based
         and 2 corresponds to filtering tail-based.
 
-    :returns: - positives, shape: (2, m)
+    :returns: - positives, shape: (m, 2)
               The indices of positives in format [(batch_index, entity_id)].
         - the relation filter for re-usage.
 
@@ -631,7 +633,7 @@ def _evaluate_batch(
     if evaluator.filtered or evaluator.requires_positive_mask:
         if all_pos_triples is None:
             raise ValueError(
-                "If filtering_necessary of positive_masks_required is True, all_pos_triples has to be "
+                "If filtering_necessary or positive_masks_required is True, all_pos_triples has to be "
                 "provided, but is None."
             )
 
