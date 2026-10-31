@@ -5,7 +5,7 @@ from typing import Any, ClassVar
 
 from class_resolver import Hint, OptionalKwargs
 
-from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel, _warn_deprecated_representation_kwargs
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn import HolEInteraction
 from ...nn.init import xavier_uniform_
@@ -86,14 +86,27 @@ class HolE(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param entity_representation_kwargs:
             additional keyword-based parameters passed to the entity representation
 
+            .. deprecated:: 1.11.2
+
+                Use :class:`~pykeen.models.ERModel` directly instead, cf. :ref:`customizing_representations`.
+
         :param relation_initializer:
             the initializer for relation representations
         :param relation_representation_kwargs:
-            additional keyword-based parameters passed to the entity representation
+            additional keyword-based parameters passed to the relation representation
+
+            .. deprecated:: 1.11.2
+
+                Use :class:`~pykeen.models.ERModel` directly instead, cf. :ref:`customizing_representations`.
 
         :param kwargs:
             additional keyword-based parameters passed to :meth:`ERModel.__init__`
         """
+        _warn_deprecated_representation_kwargs(
+            model_name="HolE",
+            entity_representation_kwargs=entity_representation_kwargs,
+            relation_representation_kwargs=relation_representation_kwargs,
+        )
         super().__init__(
             interaction=HolEInteraction,
             entity_representations_kwargs=dict(

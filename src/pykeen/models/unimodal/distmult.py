@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 from class_resolver import HintOrType, OptionalKwargs, ResolverKey, update_docstring_with_resolver_keys
 from torch.nn import functional
 
-from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel
+from ..nbase import CUSTOMIZING_REPRESENTATIONS_HINT, ERModel, _warn_deprecated_representation_kwargs
 from ...constants import DEFAULT_EMBEDDING_HPO_EMBEDDING_DIM_RANGE
 from ...nn.init import xavier_normal_norm_, xavier_uniform_
 from ...nn.modules import DistMultInteraction
@@ -101,12 +101,25 @@ class DistMult(ERModel[FloatTensor, FloatTensor, FloatTensor]):
         :param entity_representations_kwargs:
             Additional parameters to ``entity_representations_kwargs`` passed to :class:`~pykeen.models.ERModel`.
             Note that those take precedence of those which are filled in by this class.
+
+            .. deprecated:: 1.11.2
+
+                Use :class:`~pykeen.models.ERModel` directly instead, cf. :ref:`customizing_representations`.
         :param relation_representations_kwargs:
             Additional parameters to ``relation_representations_kwargs`` passed to :class:`~pykeen.models.ERModel`.
             Note that those take precedence of those which are filled in by this class.
+
+            .. deprecated:: 1.11.2
+
+                Use :class:`~pykeen.models.ERModel` directly instead, cf. :ref:`customizing_representations`.
         :param kwargs:
             Remaining keyword arguments to forward to :class:`~pykeen.models.ERModel`
         """
+        _warn_deprecated_representation_kwargs(
+            model_name="DistMult",
+            entity_representations_kwargs=entity_representations_kwargs,
+            relation_representations_kwargs=relation_representations_kwargs,
+        )
         if regularizer is LpRegularizer and regularizer_kwargs is None:
             regularizer_kwargs = DistMult.regularizer_default_kwargs
         resolved_entity_representations_kwargs = {
