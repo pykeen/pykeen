@@ -20,7 +20,11 @@ from more_itertools import pairwise
 from pykeen.constants import COLUMN_LABELS
 from pykeen.datasets import Nations
 from pykeen.evaluation import Evaluator, MetricResults, OGBEvaluator, RankBasedEvaluator, RankBasedMetricResults
-from pykeen.evaluation.classification_evaluator import ClassificationEvaluator, ClassificationMetricResults
+from pykeen.evaluation.classification_evaluator import (
+    ClassificationEvaluator,
+    ClassificationMetricResults,
+    _iter_scores,
+)
 from pykeen.evaluation.evaluator import (
     _optimal_batch_size_group_id,
     create_dense_positive_mask_,
@@ -33,6 +37,7 @@ from pykeen.evaluation.rank_based_evaluator import (
     MacroRankBasedEvaluator,
     RankBasedMetricKey,
     SampledRankBasedEvaluator,
+    _iter_ranks,
     sample_negatives,
     summarize_values,
 )
@@ -530,6 +535,88 @@ class EvaluatorUtilsTests(unittest.TestCase):
         # Assert correct filtering
         assert (old_tail_scores[~exp_tail_filter_mask] == filtered_tail_scores[~exp_tail_filter_mask]).all()
         assert not torch.isfinite(filtered_tail_scores[exp_tail_filter_mask]).any()
+
+
+class IterRanksTests(unittest.TestCase):
+    """Tests for the aggregation of ranks across targets in :func:`_iter_ranks`."""
+
+    @staticmethod
+    def _packs(targets: Collection[Target], weighted: bool = False) -> dict[tuple[ExtendedTarget, str], np.ndarray]:
+        generator = np.random.default_rng(seed=0)
+        sizes = {LABEL_HEAD: 3, LABEL_TAIL: 4, LABEL_RELATION: 5}
+        ranks = {
+            (target, rank_type): [generator.integers(1, 10, size=sizes[target]).astype(float)]
+            for target in targets
+            for rank_type in RANK_TYPES
+        }
+        num_candidates = {target: [np.full(sizes[target], fill_value=10)] for target in targets}
+        weights = {target: [generator.random(size=sizes[target])] for target in targets} if weighted else None
+        packs = list(_iter_ranks(ranks=ranks, num_candidates=num_candidates, weights=weights))
+        keys = [(pack.target, pack.rank_type) for pack in packs]
+        assert len(keys) == len(set(keys)), "each (target, rank_type) must be yielded once"
+        for pack in packs:
+            assert len(pack.ranks) == len(pack.num_candidates)
+            if weighted:
+                assert pack.weights is not None
+                assert len(pack.weights) == len(pack.ranks)
+        return {(pack.target, pack.rank_type): pack.ranks for pack in packs}
+
+    def test_both_excludes_relation(self):
+        """Test that the combined side contains head and tail ranks, but not relation ranks."""
+        for weighted in (False, True):
+            with self.subTest(weighted=weighted):
+                packs = self._packs(targets=(LABEL_HEAD, LABEL_TAIL, LABEL_RELATION), weighted=weighted)
+                for rank_type in RANK_TYPES:
+                    assert (LABEL_RELATION, rank_type) in packs
+                    expected = np.concatenate([packs[LABEL_HEAD, rank_type], packs[LABEL_TAIL, rank_type]])
+                    assert sorted(packs[SIDE_BOTH, rank_type]) == sorted(expected)
+
+    def test_relation_only_has_no_both(self):
+        """Test that relation-only evaluation yields no combined side."""
+        packs = self._packs(targets=(LABEL_RELATION,))
+        assert {target for target, _ in packs} == {LABEL_RELATION}
+
+    def test_single_entity_side(self):
+        """Test that the combined side equals the single entity side if only one is evaluated."""
+        packs = self._packs(targets=(LABEL_TAIL, LABEL_RELATION))
+        for rank_type in RANK_TYPES:
+            assert sorted(packs[SIDE_BOTH, rank_type]) == sorted(packs[LABEL_TAIL, rank_type])
+
+
+class IterScoresTests(unittest.TestCase):
+    """Tests for the aggregation of scores across targets in :func:`_iter_scores`."""
+
+    @staticmethod
+    def _packs(targets: Collection[Target]) -> dict[ExtendedTarget, tuple[np.ndarray, np.ndarray]]:
+        generator = np.random.default_rng(seed=0)
+        num_keys = {LABEL_HEAD: 2, LABEL_TAIL: 3, LABEL_RELATION: 4}
+        num_candidates = {LABEL_HEAD: 5, LABEL_TAIL: 5, LABEL_RELATION: 7}
+        all_scores = {
+            target: {(i, 0): generator.random(size=num_candidates[target]) for i in range(num_keys[target])}
+            for target in targets
+        }
+        all_positives = {
+            target: {key: generator.random(size=value.shape) < 0.5 for key, value in scores.items()}
+            for target, scores in all_scores.items()
+        }
+        packs = list(_iter_scores(all_scores=all_scores, all_positives=all_positives))
+        targets_found = [pack.target for pack in packs]
+        assert len(targets_found) == len(set(targets_found)), "each target must be yielded once"
+        for pack in packs:
+            assert pack.y_true.shape == pack.y_score.shape
+        return {pack.target: (pack.y_true, pack.y_score) for pack in packs}
+
+    def test_both_excludes_relation(self):
+        """Test that the combined side contains head and tail scores, but not relation scores."""
+        packs = self._packs(targets=(LABEL_HEAD, LABEL_TAIL, LABEL_RELATION))
+        assert LABEL_RELATION in packs
+        for i in range(2):
+            expected = np.concatenate([packs[LABEL_HEAD][i], packs[LABEL_TAIL][i]])
+            assert sorted(packs[SIDE_BOTH][i]) == sorted(expected)
+
+    def test_relation_only_has_no_both(self):
+        """Test that relation-only evaluation yields no combined side."""
+        assert set(self._packs(targets=(LABEL_RELATION,))) == {LABEL_RELATION}
 
 
 class DummyMetricResults(MetricResults[tuple[ExtendedTarget]]):
