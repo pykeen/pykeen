@@ -309,7 +309,7 @@ def predict_r_uncertain(
     return predict_uncertain_helper(
         model=model,
         batch=ht_batch,
-        score_method=model.score_r,
+        score_method=model.score_r_inverse if model.use_inverse_triples else model.score_r,
         num_samples=num_samples,
         slice_size=slice_size,
         mode=mode,

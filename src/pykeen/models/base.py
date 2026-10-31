@@ -759,3 +759,10 @@ class Model(nn.Module, ABC):
             head=heads, relation=rt_batch[:, 0], tail=rt_batch[:, 1], target=LABEL_HEAD
         )
         return self._score_extended(batch, invert=True, **kwargs)
+
+    def score_r_inverse(self, ht_batch: LongTensor, *, relations: LongTensor | None = None, **kwargs):
+        """Score all rels for a batch of (h,t)-pairs using the rel predictions for the inverses $(t,*_{inv},h)$."""
+        batch = TargetScoringBatch.from_transposed_batch(
+            head=ht_batch[:, 0], relation=relations, tail=ht_batch[:, 1], target=LABEL_RELATION
+        )
+        return self._score_extended(batch, invert=True, **kwargs)
