@@ -143,6 +143,27 @@ Let's create a training loop and validation / test evaluators:
 
 .. literalinclude:: ../examples/tutorial/inductive_lp/02_training.py
 
+Using the Pipeline
+------------------
+
+You can also train and evaluate an inductive model with :func:`pykeen.pipeline.pipeline`. Pass the training and test
+factories separately, and provide the inference graph through ``model_kwargs``. The inference graph supplies the
+relations used to represent unseen entities; the held-out test triples are used only for evaluation.
+
+.. literalinclude:: ../examples/tutorial/inductive_lp/pipeline.py
+
+The training loop's ``mode="training"`` selects representations from the training graph. The evaluator's
+``mode="testing"`` selects representations from the inference graph. For this dataset, validation and testing share the
+same inference graph, so no separate ``test_factory`` is needed in ``model_kwargs``.
+
+The rank-based evaluator ranks against all entities in the inference graph. For filtered test evaluation, explicitly
+provide the known inference and validation triples through ``additional_filter_triples``; the test triples are included
+automatically. Do not add the transductive training triples to this filter: their entity IDs belong to a different
+graph.
+
+This example downloads the public dataset on its first run and trains for five epochs on CPU. The small embedding size
+and short training run demonstrate the API; they are not settings for reproducing published benchmark results.
+
 Full Inductive LP Example
 -------------------------
 
