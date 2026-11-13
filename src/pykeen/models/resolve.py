@@ -1,7 +1,7 @@
 """A :class:`~pykeen.models.ERModel` can be constructed from :class:`~pykeen.nn.modules.Interaction`.
 
 The new style-class, :class:`~pykeen.models.ERModel` abstracts the interaction away from the representations
-such that different interactions can be used interchangably. A new model can be constructed directly from the
+such that different interactions can be used interchangeably. A new model can be constructed directly from the
 interaction module, given a ``dimensions`` mapping. In each :class:`~pykeen.nn.modules.Interaction`, there
 is a field called ``entity_shape`` and ``relation_shape`` that allows for using eigen-notation for defining
 the different dimensions of the model. Most models share the ``d`` dimensionality for both the entity and relation

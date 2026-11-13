@@ -191,7 +191,7 @@ def filter_map_alignment(
         the ID-based alignment in new IDs
 
     :raises ValueError:
-        if the datatype of the alignment data frame is imcompatible (neither string nor integer).
+        if the datatype of the alignment data frame is incompatible (neither string nor integer).
     """
     # convert labels to IDs
     for side, tf in zip(EA_SIDES, (left, right), strict=False):

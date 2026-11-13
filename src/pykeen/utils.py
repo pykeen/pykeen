@@ -255,7 +255,7 @@ def clamp_norm(
     p: str | int = "fro",
     dim: int | Iterable[int] | None = None,
 ) -> torch.Tensor:
-    """Ensure that a tensor's norm does not exceeds some threshold.
+    """Ensure that a tensor's norm does not exceed some threshold.
 
     :param x:
         The vector.

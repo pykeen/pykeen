@@ -932,7 +932,7 @@ def consume_scores(
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
     for raw_batch in tqdm(data_loader, desc="scoring", unit="batch", unit_scale=True, leave=False):
         batch = raw_batch.to(model.device)
-        # calculate batch scores onces
+        # calculate batch scores once
         scores = model.predict(batch, target=dataset.target, full_batch=False, mode=mode)
         # consume by all consumers
         for consumer in consumers:

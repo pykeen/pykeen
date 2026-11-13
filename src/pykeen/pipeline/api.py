@@ -65,8 +65,8 @@ of the negative sampler could be used as in:
    The ``negative_sampler`` keyword argument should not be used if the LCWA is being used.
    In general, all other options are available under either training approach.
 
-The type of evaluation perfomed can be specified with the ``evaluator`` keyword. By default,
-rank-based evaluation is used. It can be given explictly as in:
+The type of evaluation performed can be specified with the ``evaluator`` keyword. By default,
+rank-based evaluation is used. It can be given explicitly as in:
 
 .. literalinclude:: /examples/first_steps/pipeline_basics.py
     :lines: 67-72

@@ -1,6 +1,6 @@
 r"""Loss functions integrated in PyKEEN.
 
-Rather than re-using the built-in loss functions in PyTorch, we have elected to re-implement
+Rather than reusing the built-in loss functions in PyTorch, we have elected to re-implement
 some of the code from :mod:`torch.nn.modules.loss` in order to encode the three different
 links of loss functions accepted by PyKEEN in a class hierarchy. This allows for PyKEEN to more
 dynamically handle different kinds of loss functions as well as share code. Further, it gives
@@ -75,7 +75,7 @@ Pairwise Loss Functions
 A pairwise loss is applied to a pair of triples - a positive and a negative one. It is defined as $L: \mathcal{K}
 \times \mathcal{\bar{K}} \rightarrow \mathbb{R}$ and computes a real value for the pair.
 
-All loss functions implemented in PyKEEN induce an auxillary loss function based on the chosen interaction
+All loss functions implemented in PyKEEN induce an auxiliary loss function based on the chosen interaction
 function $L{*}: \mathbb{R} \times \mathbb{R} \rightarrow \mathbb{R}$ that simply passes the scores through.
 Note that $L$ is often used interchangbly with $L^{*}$.
 
@@ -525,7 +525,7 @@ class PairwiseLoss(Loss):
             The positive and negative scores need to be broadcastable.
 
         .. note ::
-            If given, the positve/negative weight needs to be broadcastable to the respective scores.
+            If given, the positive/negative weight needs to be broadcastable to the respective scores.
 
         :param pos_scores:
             The positive scores.

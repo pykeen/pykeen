@@ -409,7 +409,7 @@ def test_negative_sampler_kwargs():
         observed_num_negs_per_pos.append(kwargs.get("num_negs_per_pos"))
         old_init(*args, **kwargs)
 
-    # run a small pipline
+    # run a small pipeline
     with mock.patch.object(NegativeSampler, "__init__", mock_init):
         pipeline(
             # use sampled training loop ...

@@ -137,7 +137,7 @@ Added
 
 Changed
 ~~~~~~~
-- Reimplment SE (https://github.com/pykeen/pykeen/pull/521)
+- Reimplement SE (https://github.com/pykeen/pykeen/pull/521)
   and NTN (https://github.com/pykeen/pykeen/pull/522) with new-style models
 - Generalize pairwise loss and pointwise loss hierarchies (https://github.com/pykeen/pykeen/pull/540)
 - Update to use PyTorch 1.9 functionality (https://github.com/pykeen/pykeen/pull/489)
@@ -377,7 +377,7 @@ Added
 - Checkpoint functionality (https://github.com/pykeen/pykeen/pull/123)
 - Random triple generation (https://github.com/pykeen/pykeen/pull/201)
 - Make negative sampler corruption scheme configurable (https://github.com/pykeen/pykeen/pull/209)
-- Add predict with inverse tripels pipeline (https://github.com/pykeen/pykeen/pull/208)
+- Add predict with inverse triples pipeline (https://github.com/pykeen/pykeen/pull/208)
 - Add generalize p-norm to regularizer (https://github.com/pykeen/pykeen/pull/225)
 
 Changed

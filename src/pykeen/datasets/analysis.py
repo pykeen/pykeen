@@ -271,7 +271,7 @@ def get_relation_pattern_types_df(
         dataset.__class__.__name__.lower(), f"relation_patterns_v{_RELATION_PATTERN_CACHE_VERSION}_{ph}.tsv.xz"
     )
 
-    # re-use cached file if possible
+    # reuse cached file if possible
     if not cache_path.is_file() or force:
         # select triples
         mapped_triples = torch.cat([dataset.factory_dict[part].mapped_triples for part in parts], dim=0).tolist()

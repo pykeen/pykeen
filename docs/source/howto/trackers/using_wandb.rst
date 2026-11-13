@@ -2,7 +2,7 @@ Using Weights and Biases
 ========================
 
 `Weights and Biases <http://wandb.ai/>`_ (WANDB) is a service for tracking experimental results and various artifacts
-appearing whn training ML models.
+appearing when training ML models.
 
 After `registering <https://app.wandb.ai/login?signup=true>`_ for WANDB, do the following:
 

@@ -12,7 +12,7 @@ remaining triples $(h,r,t) \in \mathcal{T} \setminus \mathcal{K}_{\text{closed}}
 constructing a knowledge graph $\mathcal{K}_{\text{open}}$ under the open world assumption, the labels of the remaining
 triples $(h,r,t) \in \mathcal{T} \setminus \mathcal{K}_{\text{open}}$ are unknown.
 
-Becuase most knowledge graphs are generated under the open world assumption, negative sampling techniques must be
+Because most knowledge graphs are generated under the open world assumption, negative sampling techniques must be
 employed during the training of knowledge graph embedding models to avoid over-generalization.
 
 Corruption
@@ -27,8 +27,8 @@ Corrupt relations :math:`\mathcal{R}(h, r, t) = \{(h, r', t) \mid r' \in \mathca
 Corrupt tails     :math:`\mathcal{T}(h, r, t) = \{(h, r, t') \mid t' \in \mathcal{E} \land t' \neq t\}`
 ================= =====================================================================================
 
-Typically, the corrupt relations operation $\mathcal{R}(h, r, t)$ is omitted becuase the evaluation of knowledge graph
-embedding models on the link prediction task only consideres the goodness of head prediction and tail prediction, but
+Typically, the corrupt relations operation $\mathcal{R}(h, r, t)$ is omitted because the evaluation of knowledge graph
+embedding models on the link prediction task only considers the goodness of head prediction and tail prediction, but
 not relation prediction. Therefore, the set of candidate negative triples $\mathcal{N}(h, r, t)$ for a given known
 positive triple $(h,r,t) \in \mathcal{K}$ is given by:
 
@@ -74,7 +74,7 @@ It can be set explicitly with:
     )
 
 In general, the behavior of the negative sampler can be modified when using the :func:`~pykeen.pipeline.pipeline` by
-passing the ``negative_sampler_kwargs`` argument. In order to explicitly specifiy which of the head, relation, and tail
+passing the ``negative_sampler_kwargs`` argument. In order to explicitly specify which of the head, relation, and tail
 corruption methods are used, the ``corruption_schema`` argument can be used. For example, to use all three, the
 collection ``('h', 'r', 't')`` can be passed as in the following:
 

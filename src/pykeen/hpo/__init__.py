@@ -48,7 +48,7 @@ samples, training loops), these values are stored in the default valeues of the 
 
 Some components contain strategies for doing hyper-parameter optimization. When you call the
 :func:`~pykeen.hpo.hpo_pipeline`, the following steps are taken to determine what happens for each hyper-parameter
-in each componenent:
+in each component:
 
 1. If an explicit value was passed, use it.
 2. If no explicit value was passed and an HPO strategy was passed, use the explicit strategy.
@@ -85,7 +85,7 @@ Each model, loss, regularizer, negative sampler, and training loop specify a cla
 in which there's a dictionary with all of the default strategies. They keys match up to the arguments in their
 respective ``__init__()`` functions.
 
-Since optimizers aren't re-implemented in PyKEEN, there's a specfic dictionary at
+Since optimizers aren't re-implemented in PyKEEN, there's a specific dictionary at
 :py:attr:`~pykeen.optimizers.optimizers_hpo_defaults` containing their strategies. It's debatable whether
 you should optimize the optimizers (yo dawg), so you can always choose to set the learning rate ``lr`` to a constant
 value.
@@ -213,7 +213,7 @@ so if you want to pick from $10, 20, ... 100$, you can do:
 ... )
 
 This actually also works with logarithmic reweighting, since it is still technically on a linear scale,
-but with probabilites reweighted logarithmically. So now you'd pick from one of $[10]$ or $[20, 30, 40, ..., 100]$
+but with probabilities reweighted logarithmically. So now you'd pick from one of $[10]$ or $[20, 30, 40, ..., 100]$
 with the same probability
 
 >>> from pykeen.hpo import hpo_pipeline
@@ -280,7 +280,7 @@ size (``q``), such that 100, 200, 300, 400, and 500 are searched.
     upper bound will be omitted.
 
 If you want to optimize the entity initializer, you can use the ``type='categorical'`` type,
-which requres a ``choices=[...]`` key with a list of choices. This works for strings, integers,
+which requires a ``choices=[...]`` key with a list of choices. This works for strings, integers,
 floats, etc.
 
 >>> from pykeen.hpo import hpo_pipeline
@@ -336,7 +336,7 @@ Unlike the model's hyper-parameters, the models don't store the strategies for
 optimizing the loss functions' hyper-parameters. The pre-configured strategies
 are stored in the loss function's class variable :py:attr:`~pykeen.losses.Loss.hpo_default`.
 
-However, similarily to how you would specify ``model_kwargs_ranges``, you can
+However, similarly to how you would specify ``model_kwargs_ranges``, you can
 specify the ``loss_kwargs_ranges`` explicitly, as in the following example.
 
 >>> from pykeen.hpo import hpo_pipeline

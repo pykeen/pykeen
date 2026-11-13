@@ -40,7 +40,7 @@ The same navigation through MLflow can be done for this example.
 Reusing Experiments
 -------------------
 
-In the MLflow UI, you'll see that experiments are assigned an ID. This means you can re-use the same ID to group
+In the MLflow UI, you'll see that experiments are assigned an ID. This means you can reuse the same ID to group
 different sub-experiments together using the ``experiment_id`` keyword argument instead of ``experiment_name``.
 
 .. literalinclude:: /examples/howto/using_mlflow.py

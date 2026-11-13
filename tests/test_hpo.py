@@ -83,11 +83,11 @@ class TestHPOObjective(unittest.TestCase):
         mock_end_run.assert_called_once_with(success=False)
 
     def test_re_raise_memory_error(self):
-        """Check that memory errors are re-raised (to be catched by study.optimize)."""
+        """Check that memory errors are re-raised (to be caught by study.optimize)."""
         self._test_re_raise(exception_cls=MemoryError)
 
     def test_re_raise_runtime_error(self):
-        """Check that runtime errors are re-raised (to be catched by study.optimize)."""
+        """Check that runtime errors are re-raised (to be caught by study.optimize)."""
         self._test_re_raise(exception_cls=RuntimeError)
 
 

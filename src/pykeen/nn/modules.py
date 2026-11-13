@@ -3244,7 +3244,7 @@ class BoxEInteraction(
         # Size is learned separately and applied to normalized shape
         delta_final = size_pos * delta_norm
 
-        # Compute potential boundaries by applying the shape in substraction
+        # Compute potential boundaries by applying the shape in subtraction
         first_bound = base - 0.5 * delta_final
 
         # and in addition

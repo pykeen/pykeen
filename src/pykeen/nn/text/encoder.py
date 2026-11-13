@@ -120,7 +120,7 @@ class CharacterEmbeddingTextEncoder(TextEncoder):
 
     This encoder uses base representations for each character from a given alphabet, as well as two special tokens
     for unknown character and padding. To encoder a sentence, it converts it to a sequence of characters, obtains
-    the invidual characters representations and aggregates these representations to a single one.
+    the individual characters representations and aggregates these representations to a single one.
 
     With :class:`~pykeen.nn.representation.Embedding` character representation and :func:`torch.mean` aggregation,
     this encoder is similar to a bag-of-characters model with trainable character embeddings. Therefore, it is

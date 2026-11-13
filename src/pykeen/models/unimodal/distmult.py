@@ -89,7 +89,7 @@ class DistMult(ERModel[FloatTensor, FloatTensor, FloatTensor]):
 
         :param relation_initializer:
             The method used to initialize the relation embedding. Defaults to using Xavier/Glorot uniform first and
-            then normalizing te unit L2 length.
+            then normalizing the unit $L_2$ length.
         :param regularizer:
             The *relation* representation regularizer.
         :param regularizer_kwargs:

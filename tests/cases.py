@@ -950,7 +950,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         assert self.instance.term == 0.0
 
     def _check_reset(self, instance: Regularizer | None = None):
-        """Verify that the regularizer is in resetted state."""
+        """Verify that the regularizer is in reset state."""
         if instance is None:
             instance = self.instance
         # regularization term should be zero
@@ -1899,18 +1899,18 @@ class SplitterTestCase(GenericTestCase[Splitter]):
 
     def _test_split(self, ratios: float | Sequence[float], exp_parts: int):
         """Test splitting."""
-        splitted = self.instance.split(
+        split_triples = self.instance.split(
             mapped_triples=self.mapped_triples,
             ratios=ratios,
             random_state=None,
         )
-        assert len(splitted) == exp_parts
+        assert len(split_triples) == exp_parts
         # check that no triple got lost
         assert triple_tensor_to_set(self.mapped_triples) == set().union(
-            *(triple_tensor_to_set(triples) for triples in splitted)
+            *(triple_tensor_to_set(triples) for triples in split_triples)
         )
         # check that all entities are covered in first part
-        assert get_entities(splitted[0]) == self.all_entities
+        assert get_entities(split_triples[0]) == self.all_entities
 
     def test_split_two(self):
         """Test splitting into two parts."""
@@ -1960,7 +1960,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
 
         # Compute mask only if required
         if self.instance.requires_positive_mask:
-            # TODO: Re-use filtering code
+            # TODO: Reuse filtering code
             triples = self.factory.mapped_triples.to(self.model.device)
             if inverse:
                 sel_col, start_col = 0, 1

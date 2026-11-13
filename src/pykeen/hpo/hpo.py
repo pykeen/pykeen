@@ -1,4 +1,4 @@
-"""Hyper-parameter optimiziation in PyKEEN."""
+"""Hyper-parameter optimization in PyKEEN."""
 
 import dataclasses
 import ftplib
@@ -311,7 +311,7 @@ class Objective:
         except (MemoryError, RuntimeError):
             # close run in result tracker
             result_tracker.end_run(success=False)
-            # raise the error again (which will be catched in study.optimize)
+            # raise the error again (which will be caught in study.optimize)
             raise
         else:
             if self.save_model_directory:
