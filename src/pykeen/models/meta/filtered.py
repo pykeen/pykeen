@@ -92,7 +92,7 @@ class CooccurrenceFilteredModel(Model):
         :param inference_fill_value:
             the inference fill value
         :param conjunctive:
-            whether to use conjuction or disjunction to combine non-filter masks
+            whether to use conjunction or disjunction to combine non-filter masks
         :param inference_factory:
             the inference graph's triples factory for inductive base models; used for creating the co-occurrence
             masks for the modes "validation" and "testing", whose triples are both queries against this graph. If the

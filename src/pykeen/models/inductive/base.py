@@ -16,7 +16,7 @@ class InductiveERModel(ERModel):
     """A base class for inductive models.
 
     This model assumes a shared set of relations between all triple sets (e.g., training and validation), and a separate
-    inference factory used during validation. During testing time, either the validation factory is re-used or another
+    inference factory used during validation. During testing time, either the validation factory is reused or another
     separate testing factory may be provided.
     """
 
@@ -42,7 +42,7 @@ class InductiveERModel(ERModel):
         :param entity_representations_kwargs: additional keyword-based parameters for the training entity
             representations
         :param validation_factory: the validation factory
-        :param testing_factory: the testing factory. If None, the validation factory is re-used, i.e., validation and
+        :param testing_factory: the testing factory. If None, the validation factory is reused, i.e., validation and
             test entities come from the same (unseen) set of entities.
         :param kwargs: additional keyword-based parameters passed to :meth:`ERModel.__init__`
         """

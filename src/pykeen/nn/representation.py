@@ -1503,7 +1503,7 @@ class PartitionRepresentation(Representation):
     .. literalinclude:: ../examples/nn/representation/partition.py
 
     .. note ::
-        For this simple but often occuring case, we provide a more convenient specialized
+        For this simple but often occurring case, we provide a more convenient specialized
         :class:`~pykeen.nn.representation.BackfillRepresentation`.
 
     ---

@@ -70,7 +70,7 @@ class TransH(ERModel[FloatTensor, tuple[FloatTensor, FloatTensor], FloatTensor])
         scoring_fct_norm: int = 2,
         power_norm: bool = False,
         entity_initializer: Hint[Initializer] = init.xavier_normal_,
-        # note: this parameter is not named "entity_regularizer" for compatability with the
+        # note: this parameter is not named "entity_regularizer" for compatibility with the
         #       regularizer-specific HPO code
         regularizer: HintOrType[Regularizer] = None,
         regularizer_kwargs: OptionalKwargs = None,

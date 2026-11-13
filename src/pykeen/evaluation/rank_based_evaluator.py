@@ -766,6 +766,6 @@ class MacroRankBasedEvaluator(RankBasedEvaluator):
     def _get_rank_packs(self) -> list[RankPack]:
         self._check_not_empty()
         # compute macro weights
-        # note: we wrap the array into a list to be able to re-use _iter_ranks
+        # note: we wrap the array into a list to be able to reuse _iter_ranks
         weights = {target: [self._calculate_weights(keys=keys)] for target, keys in self.keys.items()}
         return list(_iter_ranks(ranks=self.ranks, num_candidates=self.num_candidates, weights=weights))

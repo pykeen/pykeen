@@ -402,8 +402,8 @@ def _optimal_batch_size_group_id(kwargs: Mapping[str, Any]) -> int:
     optimized separately) and for the model (its architecture, and thus memory footprint, is fixed
     for the lifetime of the instance). Tensors, in contrast, are often re-created for each call,
     e.g., `all_pos_triples` is rebuilt in every :meth:`Evaluator.evaluate` call, so their identity
-    would prevent re-using the cache across calls (e.g., for periodic evaluation during training)
-    and could even produce arbitrary hits after an `id` is re-used. Since memory consumption depends
+    would prevent reusing the cache across calls (e.g., for periodic evaluation during training)
+    and could even produce arbitrary hits after an `id` is reused. Since memory consumption depends
     mainly on their size, they enter the key via `(shape, dtype, device)`.
 
     This is safe although memory consumption is partially value-dependent: with filtering, the
@@ -483,7 +483,7 @@ def evaluate(
 
     # batch-wise processing
     for batch in mapped_triples.split(split_size=batch_size):
-        # the relation_filter can be re-used (per batch) when we evaluate head *and* tail predictions
+        # the relation_filter can be reused (per batch) when we evaluate head *and* tail predictions
         # (which is the standard setting), cf. create_sparse_positive_filter_
         relation_filter = None
         for target in targets:
@@ -611,11 +611,11 @@ def _evaluate_batch(
     :param evaluator: The evaluator
     :param slice_size: An optional slice size for computing the scores.
     :param all_pos_triples: All positive triples (required if filtering is necessary).
-    :param relation_filter: The relation filter. Can be re-used.
+    :param relation_filter: The relation filter. Can be reused.
     :param restrict_entities_to: Restriction to evaluate only for these entities.
     :param mode: the inductive mode, or None for transductive evaluation
 
-    :returns: The relation filter, which can be re-used for the same batch.
+    :returns: The relation filter, which can be reused for the same batch.
 
     :raises ValueError: if all positive triples are required (either due to filtered evaluation, or requiring dense
         masks).

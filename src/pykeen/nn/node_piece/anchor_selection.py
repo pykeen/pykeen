@@ -77,7 +77,7 @@ class AnchorSelection(ExtraReprMixin, ABC):
             the output size may be smaller, if there are not enough candidates remaining.
 
         :param anchor_ranking: shape: (n,) the anchor node IDs sorted by preference, where the first one is the most
-            preferrable.
+            preferable.
         :param known_anchors: shape: (m,) a collection of already known anchors
 
         :returns: shape: (m + num_anchors,) the extended anchors, i.e., the known ones and `num_anchors` novel ones.
@@ -174,7 +174,7 @@ class RandomAnchorSelection(SingleSelection):
         num_anchors: int = 32,
         random_seed: int | None = None,
     ) -> None:
-        """Initialize the selection stragegy.
+        """Initialize the selection strategy.
 
         :param num_anchors: the number of anchors to select
         :param random_seed: the random seed to use.

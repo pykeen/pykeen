@@ -198,9 +198,9 @@ class CSGraphAnchorSearcher(AnchorSearcher):
         adjacency = edge_index_to_sparse_matrix(
             edge_index=torch.as_tensor(edge_index, dtype=torch.long), num_nodes=n
         ).coalesce()
-        # convert to scipy sparse coo
+        # convert to scipy sparse COO
         adjacency = scipy.sparse.coo_matrix((adjacency.values(), adjacency.indices()), shape=adjacency.shape)
-        # symmetrize once, such that the breadth-first search can operate on a directed graph; the sum of two coo
+        # symmetrize once, such that the breadth-first search can operate on a directed graph; the sum of two COO
         # matrices is csr already, so the explicit conversion is a no-op guard
         adjacency = (adjacency + adjacency.transpose()).tocsr()
         num_anchors = len(anchors)
