@@ -20,7 +20,7 @@ class TestAnnotated(unittest.TestCase):
     """Test all datasets are annotated."""
 
     def test_annotated(self):
-        """Check :func:`pykeen.utils_docs.with_structured_docstr`` was properly applied ot all datasets."""
+        """Check :func:`pykeen.utils_docs.with_structured_docstr`` was properly applied to all datasets."""
         for name, cls in sorted(dataset_resolver.lookup_dict.items()):
             with self.subTest(name=name):
                 try:
@@ -37,7 +37,7 @@ class TestAnnotated(unittest.TestCase):
                     assert k in docdata["statistics"], f"statistics are missing {k}"
                     assert isinstance(docdata["statistics"][k], int)
 
-                # Check either a github link or author/publication information is given
+                # Check either a GitHub link or author/publication information is given
                 citation = docdata["citation"]
                 assert ("author" in citation and "link" in citation and "year" in citation) or "github" in citation
 
