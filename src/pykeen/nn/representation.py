@@ -982,8 +982,8 @@ class CombinedCompGCNRepresentations(nn.Module):
             relations. Should match the one of the model using these representations. Defaults to
             :class:`~pykeen.inverse.DefaultRelationInverter`.
         :raises ValueError: For several invalid combinations of arguments:
-            1. If the dimensions were given as an integer but no number of layers were given
-            2. If the dimensions were given as a ist but it does not match the number of layers that were given
+            1. If the dimensions were given as an integer, but no number of layers were given
+            2. If the dimensions were given as an integer, but it does not match the number of layers that were given
         """
         super().__init__()
         # note: representations are always created for both, relations and their inverses, independent of the
