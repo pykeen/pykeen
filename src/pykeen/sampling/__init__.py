@@ -28,7 +28,7 @@ Corrupt tails     :math:`\mathcal{T}(h, r, t) = \{(h, r, t') \mid t' \in \mathca
 ================= =====================================================================================
 
 Typically, the corrupt relations operation $\mathcal{R}(h, r, t)$ is omitted because the evaluation of knowledge graph
-embedding models on the link prediction task only consideres the goodness of head prediction and tail prediction, but
+embedding models on the link prediction task only considers the goodness of head prediction and tail prediction, but
 not relation prediction. Therefore, the set of candidate negative triples $\mathcal{N}(h, r, t)$ for a given known
 positive triple $(h,r,t) \in \mathcal{K}$ is given by:
 
