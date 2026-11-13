@@ -950,7 +950,7 @@ class RegularizerTestCase(GenericTestCase[Regularizer]):
         assert self.instance.term == 0.0
 
     def _check_reset(self, instance: Regularizer | None = None):
-        """Verify that the regularizer is in resetted state."""
+        """Verify that the regularizer is in reset state."""
         if instance is None:
             instance = self.instance
         # regularization term should be zero
@@ -1960,7 +1960,7 @@ class EvaluatorTestCase(unittest_templates.GenericTestCase[Evaluator]):
 
         # Compute mask only if required
         if self.instance.requires_positive_mask:
-            # TODO: Re-use filtering code
+            # TODO: Reuse filtering code
             triples = self.factory.mapped_triples.to(self.model.device)
             if inverse:
                 sel_col, start_col = 0, 1
