@@ -14,6 +14,7 @@ four kinds of content: learning-oriented *tutorials*, goal-oriented *how-to guid
 
     installation
     tutorial/first_steps
+    tutorial/parameter_groups
     tutorial/translational_toy_example
     tutorial/inductive_lp
 

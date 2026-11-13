@@ -103,6 +103,8 @@ You might want to detach them from the GPU and convert to a :class:`numpy.ndarra
 .. literalinclude:: ../examples/first_steps/using_learned_embeddings.py
     :lines: 48
 
+.. _beyond-the-pipeline:
+
 Beyond the Pipeline
 -------------------
 
