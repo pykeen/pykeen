@@ -99,7 +99,7 @@ inference graph, cf. :meth:`~pykeen.models.InductiveERModel.replace_entity_repre
 
 At the moment, PyKEEN also provides two fully-configured inductive NodePiece implementations:
 :class:`~pykeen.models.InductiveNodePiece` and :class:`~pykeen.models.InductiveNodePieceGNN`. Both inductive versions of
-NodePiece train an encoder on top of the vocabulary of relational *tokens* that can be easily re-used at inference time.
+NodePiece train an encoder on top of the vocabulary of relational *tokens* that can be easily reused at inference time.
 :class:`~pykeen.models.InductiveNodePieceGNN` additionally performs message passing over the *inductive_inference* graph
 after building node representations from the vocabulary. By default, message passing is performed with a 2-layer
 CompGCN. :class:`~pykeen.models.InductiveNodePiece` and :class:`~pykeen.models.InductiveNodePieceGNN` can be paired with

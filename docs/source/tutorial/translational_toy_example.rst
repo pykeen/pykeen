@@ -52,7 +52,7 @@ pipeline.
     :alt: Troubleshooting Image 3
 
 There was a lot of interesting follow-up discussion at `!99 <https://github.com/pykeen/pykeen/pull/99>`_ during which
-this code was implemented for re-use. One of the interesting points is that the relation plot is only applicable for
+this code was implemented for reuse. One of the interesting points is that the relation plot is only applicable for
 translational distance models like TransE. Further, when models whose embeddings are higher than 2, a dimensionality
 reduction method must be used. For this, one of many of the tools from scikit-learn can be chosen. However, to make sure
 that the entities and relations are projected on the same axis, the dimensionality reduction model is first trained on

@@ -13,7 +13,7 @@ relations = Embedding(max_id=dataset.num_relations, embedding_dim=embedding_dim)
 entities = FeaturizedMessagePassingRepresentation(
     triples_factory=dataset.training,
     base_kwargs={"shape": embedding_dim},
-    relation_representation=relations,  # re-use relation representation here
+    relation_representation=relations,  # reuse relation representation here
     layers="gat",
     layers_kwargs={
         "in_channels": embedding_dim,

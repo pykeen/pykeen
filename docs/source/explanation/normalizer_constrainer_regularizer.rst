@@ -37,7 +37,7 @@ This method can be seen as a `relaxation <https://en.wikipedia.org/wiki/Relaxati
 problem that ignores the constraints and projects the (approximate) solution of the unconstrained problem back into the
 constraint set.
 
-Constrainers guarantee the constraint *after each gradient step*, but may violate the constaints in between.
+Constrainers guarantee the constraint *after each gradient step*, but may violate the constraints in between.
 
 Constrainers are applied in :meth:`~pykeen.nn.representation.Representation.post_parameter_update`.
 
