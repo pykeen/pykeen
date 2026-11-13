@@ -1298,6 +1298,15 @@ class CrossEntropyLoss(SetwiseLoss):
         )
         # use sparse version of cross entropy
         true_indices = positive_scores.new_zeros(size=positive_scores.shape[:-1], dtype=torch.long)
+        if batch_filter is not None and label_smoothing is not None and 0.0 < label_smoothing <= 1.0:
+            # Smooth only over retained candidates. Filtered scores are -inf, so assigning them
+            # any target probability would produce an infinite loss.
+            log_probabilities = functional.log_softmax(scores, dim=-1)
+            negative_log_probabilities = log_probabilities[:, 1:].masked_fill(~batch_filter, 0.0)
+            smooth_loss = -(log_probabilities[:, 0] + negative_log_probabilities.sum(dim=-1))
+            smooth_loss = smooth_loss / (1 + batch_filter.sum(dim=-1))
+            loss = -(1.0 - label_smoothing) * log_probabilities[:, 0] + label_smoothing * smooth_loss
+            return self._reduction_method(loss)
         # calculate cross entropy loss
         return functional.cross_entropy(
             input=scores,
