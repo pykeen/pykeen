@@ -667,7 +667,7 @@ class TestLogCumSumExp(unittest.TestCase):
         np.testing.assert_array_equal(logcumsumexp(np.full(shape=(3,), fill_value=-np.inf)), -np.inf)
 
     def test_shape(self):
-        """Test the output shape for ND input."""
+        """Test the output shape for n-dimensional input."""
         a = self.generator.normal(size=(2, 3, 4))
         # default: flatten, like np.cumsum
         np.testing.assert_allclose(logcumsumexp(a), logcumsumexp(a.ravel()))
