@@ -706,7 +706,7 @@ class TrainingLoop(ABC, Generic[BatchType]):
         """Train the KGE model, see docstring for :func:`TrainingLoop.train`."""
         # When using early stopping models have to be saved separately at the best epoch, since the training loop will
         # due to the patience continue to train after the best epoch and thus alter the model
-        # -> the temporay file has to be created outside, which we check here
+        # -> the temporary file has to be created outside, which we check here
         if (
             stopper is not None
             and not only_size_probing

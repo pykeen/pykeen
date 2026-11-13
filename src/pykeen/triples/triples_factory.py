@@ -340,7 +340,7 @@ class KGInfo(ExtraReprMixin):
         :param num_entities:
             the number of entities.
         :param num_relations:
-            the number of relations, excluding artifical inverse relations.
+            the number of relations, excluding artificial inverse relations.
         """
         self.num_entities = num_entities
         self.real_num_relations = num_relations
@@ -1741,11 +1741,11 @@ def get_mapped_triples(
         raise ValueError("All parameters were None.")
 
     if isinstance(x, torch.Tensor):
-        # delegate to keyword-based get_mapped_triples to re-use optional validation logic
+        # delegate to keyword-based get_mapped_triples to reuse optional validation logic
         return get_mapped_triples(mapped_triples=x)
 
     if isinstance(x, CoreTriplesFactory):
-        # delegate to keyword-based get_mapped_triples to re-use optional validation logic
+        # delegate to keyword-based get_mapped_triples to reuse optional validation logic
         return get_mapped_triples(mapped_triples=x.mapped_triples)
 
     # only labeled triples are remaining

@@ -158,7 +158,7 @@ class LCWATrainingLoop(TrainingLoop[LCWABatch]):
         return ceil(self.num_targets / 2)
 
 
-# note: we use Tuple[Tensor] here, so we can re-use TensorDataset instead of having to create a custom one
+# note: we use Tuple[Tensor] here, so we can reuse TensorDataset instead of having to create a custom one
 class SymmetricLCWATrainingLoop(TrainingLoop[tuple[MappedTriples]]):
     r"""A "symmetric" LCWA scoring heads *and* tails at once.
 

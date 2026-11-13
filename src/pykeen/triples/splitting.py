@@ -90,7 +90,7 @@ def _split_triples(
         The random number generator for reproducible splits.
 
     :return:
-        The splitted triples.
+        The split triples.
     """
     triples_groups = _random_split_tensor(mapped_triples, sizes=sizes, generator=generator)
     logger.info(
